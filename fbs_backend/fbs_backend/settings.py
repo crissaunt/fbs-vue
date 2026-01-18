@@ -15,7 +15,6 @@ from decouple import config
 # PayMongo Configuration
 PAYMONGO_SECRET_KEY = config('PAYMONGO_SECRET_KEY', default='')
 PAYMONGO_PUBLIC_KEY = config('PAYMONGO_PUBLIC_KEY', default='')
-SECRET_KEY = config('SECRET_KEY', default='')
 
 
 from pathlib import Path
@@ -28,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-
+SECRET_KEY = 'django-insecure-@uj@r0lnpe2q(syvnf4ou2ps5tbx4&tkl#ysznn4_w*@5ej7vi'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
