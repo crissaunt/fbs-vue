@@ -1,0 +1,10 @@
+asgiref==3.x.x
+Django==6.0.x
+djangorestframework==3.x.x
+djangorestframework-simplejwt==5.x.x  (optional)
+djoser==2.x.x
+django-cors-headers==4.x.x
+sqlparse==0.x.x
+tzdata==202x.x
+
+# pip freeze > requirements.txt

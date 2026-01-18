@@ -1,11 +1,13 @@
+# app.models.py
+
 from django.db import models
-from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.apps import apps
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 
 
 # ============================================================
@@ -20,6 +22,7 @@ class Country(models.Model):
         return self.name
 
 
+
 # ============================================================
 # AIRLINE + SEAT CLASS + AIRCRAFT
 # ============================================================
@@ -30,7 +33,6 @@ class Airline(models.Model):
     def __str__(self):
         return f"{self.code} - {self.name}"
 
-
 class SeatClass(models.Model):
     name = models.CharField(max_length=50)
     price_multiplier = models.DecimalField(
@@ -38,8 +40,9 @@ class SeatClass(models.Model):
         decimal_places=2,
         default=1.00
     )
-    airline = models.ForeignKey(Airline, on_delete=models.CASCADE, related_name="seat_classes", null=True)
+    airline = models.ForeignKey(Airline, on_delete=models.CASCADE, related_name="seat_classes", null=True, blank=True)
     description = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)  # Add this line
 
     class Meta:
         unique_together = ("airline", "name")
@@ -275,7 +278,20 @@ class Seat(models.Model):
         return features
 
 
-
+class SeatClassFeature(models.Model):
+    """Model for storing seat class features dynamically"""
+    seat_class = models.ForeignKey(SeatClass, on_delete=models.CASCADE, related_name='features')
+    feature = models.CharField(max_length=200)
+    icon = models.CharField(max_length=100, blank=True, null=True)
+    display_order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        ordering = ['seat_class', 'display_order']
+        unique_together = ['seat_class', 'feature']
+    
+    def __str__(self):
+        return f"{self.seat_class.name} - {self.feature}"
 
 # ============================================================
 # TRAVEL INSURANCE SYSTEM
@@ -811,12 +827,17 @@ class BookingInsuranceRecord(models.Model):
 # ============================================================
 class PassengerInfo(models.Model):
     TYPE_CHOICES = [("Adult", "Adult"), ("Child", "Child"), ("Infant", "Infant")]
+    TITLE_CHOICES = [
+        ("MR", "Mr."),
+        ("MRS", "Mrs."),
+        ("MS", "Ms.")
+    ]
 
     first_name = models.CharField(max_length=100)
     middle_name = models.CharField(max_length=100, blank=True, null=True)
     last_name = models.CharField(max_length=100)
-    gender = models.CharField(max_length=10)
-    date_of_birth = models.DateField()
+    title = models.CharField(max_length=10, choices=TITLE_CHOICES, default="MR")  # Changed from gender to title
+    date_of_birth = models.DateField(null=True, blank=True)  # Make optional
     passport_number = models.CharField(max_length=50, blank=True, null=True)
     nationality = models.CharField(max_length=100, null=True, blank=True)
     passenger_type = models.CharField(max_length=10, choices=TYPE_CHOICES, default="Adult")
@@ -836,11 +857,15 @@ class PassengerInfo(models.Model):
         if self.middle_name:
             return f"{self.first_name} {self.middle_name} {self.last_name}"
         return f"{self.first_name} {self.last_name}"
-
-
+    
+    def get_title_display(self):
+        """Get the display value for title"""
+        return dict(self.TITLE_CHOICES).get(self.title, self.title)
 # ============================================================
 # BOOKING SYSTEM
 # ============================================================
+
+
 class Booking(models.Model):
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='bookings')
     trip_type = models.CharField(
@@ -860,6 +885,14 @@ class Booking(models.Model):
     insurance_total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     tax_total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
+    # ADD THIS FIELD: Store total amount from frontend
+    total_amount = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0.00,
+        help_text="Total amount from frontend calculation"
+    )
+    
     class Meta:
         indexes = [
             models.Index(fields=['user', 'created_at']),
@@ -868,14 +901,6 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"Booking {self.id} - {self.user.get_full_name()}"
-
-    def save(self, *args, **kwargs):
-        # Calculate totals when booking is first created
-        if self._state.adding:
-            self.base_fare_total = self._calculate_base_fare_total()
-            self.insurance_total = self._calculate_insurance_total()
-            self.tax_total = self._calculate_tax_total()
-        super().save(*args, **kwargs)
     
     def _calculate_base_fare_total(self):
         total = Decimal('0.00')
@@ -900,15 +925,33 @@ class Booking(models.Model):
     def payment(self):
         return self.payments.last()
     
+    # KEEP this property for backward compatibility
     @property
-    def total_amount(self):
+    def calculated_total_amount(self):
+        """Calculate total from components"""
         return self.base_fare_total + self.insurance_total + self.tax_total
     
     @property
     def has_insurance(self):
         """Check if any passenger has insurance"""
         return any(detail.has_insurance for detail in self.details.all())
+    
 
+
+class BookingContact(models.Model):
+    booking = models.OneToOneField(Booking, on_delete=models.CASCADE, related_name='contact')
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    email = models.EmailField()
+    phone = models.CharField(max_length=50)
+    title = models.CharField(max_length=10, default='MR')
+    middle_name = models.CharField(max_length=100, blank=True, null=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Contact for Booking {self.booking.id}"
 
 # ============================================================
 # ADD-ONS SYSTEM
@@ -1013,6 +1056,15 @@ class AddOn(models.Model):
 # BOOKING DETAIL
 # ============================================================
 class BookingDetail(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending Payment'),
+        ('confirmed', 'Confirmed'),
+        ('cancelled', 'Cancelled'),
+        ('checkin', 'Ready for Check-in'),
+        ('boarding', 'Boarding'),
+        ('completed', 'Completed'),
+    ]
+    
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name="details")
     passenger = models.ForeignKey(PassengerInfo, on_delete=models.CASCADE)
     schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE)
@@ -1023,12 +1075,28 @@ class BookingDetail(models.Model):
     tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     addons = models.ManyToManyField(AddOn, blank=True, related_name='booking_details')
     
+    # Add status field at BookingDetail level
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    # Add passenger type reference
+    passenger_type = models.CharField(
+        max_length=10,
+        choices=PassengerInfo.TYPE_CHOICES,
+        null=True,
+        blank=True
+    )
+    
     class Meta:
         indexes = [
             models.Index(fields=['booking', 'seat']),
+            models.Index(fields=['status', 'booking_date']),
         ]
 
     def save(self, *args, **kwargs):
+        # Set passenger type from passenger if not set
+        if not self.passenger_type and self.passenger:
+            self.passenger_type = self.passenger.passenger_type
+        
         # Only calculate price on creation
         is_new = self._state.adding
         if is_new and self.seat:
@@ -1051,32 +1119,57 @@ class BookingDetail(models.Model):
 
         return base_price * multiplier * factor
     
+    # Add methods for Django Admin (not just properties)
+    def get_insurance_cost(self):
+        """Method to get insurance cost for admin display"""
+        if hasattr(self, 'insurance_record') and self.insurance_record:
+            return self.insurance_record.sale_price
+        return Decimal('0.00')
+    get_insurance_cost.short_description = "Insurance Cost"
+    
+    def get_has_insurance(self):
+        """Method to check if has insurance for admin display"""
+        return hasattr(self, 'insurance_record') and self.insurance_record is not None
+    get_has_insurance.short_description = "Has Insurance"
+    get_has_insurance.boolean = True
+    
+    def get_insurance_policy_number(self):
+        """Method to get insurance policy number for admin display"""
+        if hasattr(self, 'insurance_record') and self.insurance_record:
+            return self.insurance_record.policy_number
+        return None
+    get_insurance_policy_number.short_description = "Policy Number"
+    
+    def get_total_amount(self):
+        """Method to calculate total amount for admin display"""
+        return self.price + self.get_insurance_cost() + self.tax_amount
+    get_total_amount.short_description = "Total Amount"
+    
+    # Keep properties for other uses
     @property
     def has_insurance(self):
-        return hasattr(self, 'insurance_record') and self.insurance_record is not None
+        """Property to check if has insurance"""
+        return self.get_has_insurance()
     
     @property
     def insurance_cost(self):
-        if self.has_insurance:
-            return self.insurance_record.sale_price
-        return Decimal('0.00')
+        """Property to get insurance cost"""
+        return self.get_insurance_cost()
     
     @property
     def insurance_policy_number(self):
-        if self.has_insurance:
-            return self.insurance_record.policy_number
-        return None
+        """Property to get insurance policy number"""
+        return self.get_insurance_policy_number()
+    
+    @property
+    def total_amount(self):
+        """Property to calculate total amount"""
+        return self.get_total_amount()
     
     @property
     def total_with_insurance(self):
         """Get total price including insurance"""
         return self.price + self.insurance_cost + self.tax_amount
-    
-    @property
-    def total_amount(self):
-        """Get total price including insurance and tax"""
-        return self.price + self.insurance_cost + self.tax_amount
-
 
 # ============================================================
 # SIGNAL TO CREATE INSURANCE RECORD WHEN ADDED
@@ -1118,13 +1211,12 @@ def create_insurance_record_if_needed(sender, instance, created, **kwargs):
 def create_seats_for_schedule(sender, instance, created, **kwargs):
     """
     Auto-generate seats when a new schedule is created.
-    This is now properly scoped to Schedule model only.
     """
     if created:
         from django.db import transaction
         
-        SeatClass = apps.get_model('flightapp', 'SeatClass')
-        Seat = apps.get_model('flightapp', 'Seat')
+        # Import the models directly instead of using apps.get_model
+        from .models import SeatClass, Seat
         
         aircraft = instance.flight.aircraft
         
@@ -1156,6 +1248,8 @@ def create_seats_for_schedule(sender, instance, created, **kwargs):
                             schedule=instance,
                             seat_class=seat_class,
                             seat_number=f"{seat_number:03d}",
+                            row=None,  # Add required fields
+                            column=None,
                             is_available=True
                         ))
                         seat_number += 1
@@ -1420,17 +1514,19 @@ def reserve_seat_with_lock(seat_id, booking_detail_id):
 # ============================================================
 
 # Add property to BookingDetail
-@property
-def booking_detail_total_amount(self):
-    """Calculate total for this booking detail including insurance and tax."""
-    return self.price + self.insurance_cost + self.tax_amount
+# @property
+# def booking_detail_total_amount(self):
+#     """Calculate total for this booking detail including insurance and tax."""
+#     return self.price + self.insurance_cost + self.tax_amount
 
-BookingDetail.total_amount = booking_detail_total_amount
+# BookingDetail.total_amount = booking_detail_total_amount
 
-# Add properties to Booking
-@property
-def booking_total_amount(self):
-    """Calculate total booking amount including insurance and tax."""
-    return self.base_fare_total + self.insurance_total + self.tax_total
 
-Booking.total_amount = booking_total_amount
+# @property
+# def booking_total_amount(self):
+#     """Calculate total booking amount including insurance and tax."""
+#     return self.base_fare_total + self.insurance_total + self.tax_total
+
+# Booking.total_amount = booking_total_amount
+
+# Booking.total_amount = booking_total_amount

@@ -9,6 +9,14 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
+import os
+from decouple import config
+
+# PayMongo Configuration
+PAYMONGO_SECRET_KEY = config('PAYMONGO_SECRET_KEY', default='')
+PAYMONGO_PUBLIC_KEY = config('PAYMONGO_PUBLIC_KEY', default='')
+SECRET_KEY = config('SECRET_KEY', default='')
+
 
 from pathlib import Path
 
@@ -20,7 +28,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-@uj@r0lnpe2q(syvnf4ou2ps5tbx4&tkl#ysznn4_w*@5ej7vi'
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -61,6 +69,13 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
+# settings.py
+from decouple import config
+
+# PayMongo configuration
+PAYMONGO_USERNAME = config('PAYMONGO_USERNAME', default='')
+PAYMONGO_PASSWORD = config('PAYMONGO_PASSWORD', default='')
+PAYMONGO_API_URL = config('PAYMONGO_API_URL', default='https://api.paymongo.com/v1')
 
 # Application definition
 

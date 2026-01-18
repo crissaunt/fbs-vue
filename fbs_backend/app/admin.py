@@ -5,8 +5,29 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.db.models import Count, Sum, Avg
 from .models import *
+from .models import SeatClass, Schedule
 
 
+@admin.register(BookingContact)
+class BookingContactAdmin(admin.ModelAdmin):
+    list_display = ('booking', 'first_name', 'last_name', 'email', 'phone', 'created_at')
+    list_filter = ('created_at', 'title')
+    search_fields = ('first_name', 'last_name', 'email', 'phone', 'booking__id')
+    readonly_fields = ('created_at', 'updated_at')
+    
+    # Simple fieldsets with only the fields that exist in your model
+    fieldsets = (
+        ('Contact Information', {
+            'fields': (
+                'booking',
+                ('title', 'first_name', 'middle_name', 'last_name'),
+                ('email', 'phone'),
+            )
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+        }),
+    )
 # ============================================================
 # INLINE ADMIN CLASSES
 # ============================================================
@@ -74,9 +95,18 @@ class PlanCoverageInline(admin.TabularInline):
 class BookingDetailInline(admin.TabularInline):
     model = BookingDetail
     extra = 0
-    fields = ('passenger', 'schedule', 'seat', 'price', 'has_insurance')
-    readonly_fields = ('has_insurance', 'total_amount')
+    fields = ('passenger', 'schedule', 'seat', 'price', 'get_has_insurance', 'status')
+    readonly_fields = ('get_has_insurance', 'get_total_amount')
     show_change_link = True
+    
+    def get_has_insurance(self, obj):
+        return obj.get_has_insurance()
+    get_has_insurance.short_description = "Has Insurance"
+    get_has_insurance.boolean = True
+    
+    def get_total_amount(self, obj):
+        return obj.get_total_amount()
+    get_total_amount.short_description = "Total"
 
 
 class BookingTaxInline(admin.TabularInline):
@@ -144,20 +174,27 @@ class AirlineAdmin(admin.ModelAdmin):
     seat_class_count.short_description = 'Seat Classes'
 
 
+class SeatClassFeatureInline(admin.TabularInline):
+    model = SeatClassFeature
+    extra = 1
 @admin.register(SeatClass)
 class SeatClassAdmin(admin.ModelAdmin):
-    list_display = ('name', 'airline', 'price_multiplier', 'description_short')
-    list_filter = ('airline', 'price_multiplier')
-    search_fields = ('name', 'airline__name')
-    ordering = ('airline', 'price_multiplier')
-    raw_id_fields = ('airline',)
+    list_display = ['name', 'airline', 'price_multiplier', 'is_active']
+    list_filter = ['airline', 'is_active']
+    search_fields = ['name', 'airline__name']
+    inlines = [SeatClassFeatureInline]
     
     def description_short(self, obj):
         if obj.description:
             return obj.description[:50] + '...' if len(obj.description) > 50 else obj.description
         return '-'
     description_short.short_description = 'Description'
-
+    
+@admin.register(SeatClassFeature)
+class SeatClassFeatureAdmin(admin.ModelAdmin):
+    list_display = ['seat_class', 'feature', 'display_order', 'is_active']
+    list_filter = ['seat_class', 'is_active']
+    search_fields = ['feature', 'seat_class__name']
 
 @admin.register(Aircraft)
 class AircraftAdmin(admin.ModelAdmin):
@@ -448,9 +485,9 @@ class BookingInsuranceRecordAdmin(admin.ModelAdmin):
 
 @admin.register(PassengerInfo)
 class PassengerInfoAdmin(admin.ModelAdmin):
-    list_display = ('get_full_name', 'gender', 'date_of_birth', 'passenger_type', 
+    list_display = ('get_full_name', 'title', 'date_of_birth', 'passenger_type', 
                     'nationality', 'booking_count', 'has_passport')
-    list_filter = ('passenger_type', 'gender', 'nationality')
+    list_filter = ('passenger_type', 'title', 'nationality')
     search_fields = ('first_name', 'last_name', 'passport_number')
     ordering = ('last_name', 'first_name')
     raw_id_fields = ('linked_adult',)
@@ -473,13 +510,13 @@ class PassengerInfoAdmin(admin.ModelAdmin):
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'trip_type', 'status', 'created_at', 
-                    'total_amount', 'has_insurance', 'payment_status')
+                    'get_total_amount', 'get_has_insurance', 'payment_status')
     list_filter = ('status', 'trip_type', 'created_at', 'user')
     search_fields = ('id', 'user__username', 'user__email', 'user__first_name', 'user__last_name')
     date_hierarchy = 'created_at'
     ordering = ('-created_at',)
     inlines = [BookingDetailInline, BookingTaxInline, PaymentInline]
-    readonly_fields = ('created_at', 'total_amount', 'has_insurance', 'financial_summary')
+    readonly_fields = ('created_at', 'get_total_amount', 'get_has_insurance', 'financial_summary')
     
     fieldsets = (
         ('Booking Information', {
@@ -487,9 +524,18 @@ class BookingAdmin(admin.ModelAdmin):
         }),
         ('Financial Summary', {
             'fields': ('base_fare_total', 'insurance_total', 'tax_total', 
-                      'total_amount', 'financial_summary')
+                      'get_total_amount', 'financial_summary')
         }),
     )
+
+    def get_total_amount(self, obj):
+        return obj.total_amount
+    get_total_amount.short_description = "Total Amount"
+    
+    def get_has_insurance(self, obj):
+        return obj.has_insurance
+    get_has_insurance.short_description = "Has Insurance"
+    get_has_insurance.boolean = True
     
     def payment_status(self, obj):
         payment = obj.payment
@@ -516,32 +562,34 @@ class BookingAdmin(admin.ModelAdmin):
     cancel_bookings.short_description = "Cancel selected bookings"
 
 
+
 @admin.register(BookingDetail)
 class BookingDetailAdmin(admin.ModelAdmin):
     list_display = ('id', 'booking_link', 'passenger', 'schedule', 'seat', 
-                    'price', 'tax_amount', 'insurance_cost', 'total_amount', 'has_insurance')
-    list_filter = ('seat_class', 'schedule__flight__airline', 'booking__status')
+                    'price', 'tax_amount', 'get_insurance_cost', 'get_total_amount', 'get_has_insurance', 'status')
+    list_filter = ('seat_class', 'schedule__flight__airline', 'booking__status', 'status')
     search_fields = ('booking__id', 'passenger__first_name', 'passenger__last_name',
                      'seat__seat_number', 'schedule__flight__flight_number')
     raw_id_fields = ('booking', 'passenger', 'schedule', 'seat', 'seat_class')
     filter_horizontal = ('addons',)
-    readonly_fields = ('total_amount', 'has_insurance', 'insurance_policy_number', 'booking_date')
+    readonly_fields = ('get_total_amount', 'get_has_insurance', 'get_insurance_policy_number', 
+                       'booking_date', 'get_insurance_cost', 'passenger_type')
     
     fieldsets = (
         ('Booking Information', {
-            'fields': ('booking', 'passenger', 'booking_date')
+            'fields': ('booking', 'passenger', 'passenger_type', 'booking_date', 'status')
         }),
         ('Flight Details', {
             'fields': ('schedule', 'seat', 'seat_class')
         }),
         ('Financials', {
-            'fields': ('price', 'tax_amount', 'insurance_cost', 'total_amount')
+            'fields': ('price', 'tax_amount', 'get_insurance_cost', 'get_total_amount')
         }),
         ('Add-ons', {
             'fields': ('addons',)
         }),
         ('Insurance', {
-            'fields': ('has_insurance', 'insurance_policy_number')
+            'fields': ('get_has_insurance', 'get_insurance_policy_number')
         }),
     )
     

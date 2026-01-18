@@ -1,0 +1,1368 @@
+<template>
+  <div class="pal-bg">
+    <div class="container pal-layout">
+      <main class="main-content">
+        <div class="trip-type-header">
+          <h2 class="page-title">Flight Add-ons</h2>
+          <div class="trip-type-badge" :class="{ 'round-trip': bookingStore.isRoundTrip, 'one-way': !bookingStore.isRoundTrip }">
+            {{ tripTypeInfo }}
+          </div>
+        </div>
+
+        <!-- Show flight summary -->
+        <div v-if="flightInfo.length > 0" class="flight-summary-card">
+          <div class="flight-summary-header">
+            <h3>Your Flights</h3>
+          </div>
+          <div class="flight-summary-body">
+            <div v-for="flight in flightInfo" :key="flight.type" class="flight-item">
+              <div class="flight-type">{{ flight.type }}</div>
+              <div class="flight-details">
+                <span class="flight-number">{{ flight.flight }}</span>
+                <span class="flight-route">{{ flight.route }}</span>
+              </div>
+              <div class="flight-price">₱{{ flight.price.toLocaleString() }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Flight Segment Tabs for Round Trips -->
+        <div v-if="bookingStore.isRoundTrip" class="flight-segment-tabs">
+          <div 
+            v-for="segment in flightSegments" 
+            :key="segment.key"
+            @click="activeSegment = segment.key"
+            :class="['segment-tab', { active: activeSegment === segment.key }]"
+          >
+            <div class="segment-icon">
+              <span v-if="segment.key === 'depart'">✈️</span>
+              <span v-else>🔄</span>
+            </div>
+            <div class="segment-label">{{ segment.label }}</div>
+            <div class="segment-flight">{{ segment.flight }}</div>
+          </div>
+        </div>
+
+        <div class="square-tabs-container">
+          <div class="square-tabs-grid">
+            <div 
+              @click="currentTab = 'baggage'"
+              :class="['square-tab', { active: currentTab === 'baggage' }]"
+            >
+              <div class="tab-icon">🧳</div>
+              <div class="tab-label">Baggage</div>
+            </div>
+            
+            <div 
+              @click="$router.push({ name: 'SeatSelection' })"
+              :class="['square-tab seat-tab', { active: $route.name === 'SeatSelection' }]"
+            >
+              <div class="tab-icon">💺</div>
+              <div class="tab-label">Seats</div>
+            </div>
+            
+            <div 
+              @click="currentTab = 'meals'"
+              :class="['square-tab', { active: currentTab === 'meals' }]"
+            >
+              <div class="tab-icon">🍱</div>
+              <div class="tab-label">Meals</div>
+            </div>
+            
+            <div 
+              @click="currentTab = 'wheelchair'"
+              :class="['square-tab', { active: currentTab === 'wheelchair' }]"
+            >
+              <div class="tab-icon">♿</div>
+              <div class="tab-label">Assistance</div>
+            </div>
+          </div>
+          
+          <div class="active-tab-indicator" :style="indicatorStyle"></div>
+        </div>
+
+        <div class="addon-workspace">
+          <div v-if="isLoading" class="loading-state">
+            <p>Fetching available services for your flight...</p>
+          </div>
+
+          <template v-else>
+            <!-- Baggage Tab - Card Layout -->
+            <div v-if="currentTab === 'baggage'" class="tab-pane">
+              <h3>Select Extra Baggage</h3>
+              <div class="segment-notice" v-if="bookingStore.isRoundTrip">
+                <span class="notice-icon">ℹ️</span>
+                <span>You are selecting baggage for the <strong>{{ activeSegmentLabel }}</strong> flight</span>
+              </div>
+              
+              <div v-for="p in bookingStore.passengers" :key="p.key" class="p-addon-row">
+                <div class="p-info"><strong>{{ p.firstName }} {{ p.lastName }}</strong> ({{ p.type }})</div>
+                <div class="option-grid">
+                  <div 
+                    v-for="opt in baggageOptions" 
+                    :key="opt.id"
+                    :class="['opt-card', { selected: getBaggageSelection(p.key)?.id === opt.id }]"
+                    @click="selectBaggageDirect(p, opt)"
+                  >
+                    <span class="weight">{{ opt.formatted_weight }}</span>
+                    <span class="price">₱{{ parseFloat(opt.price).toLocaleString() }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Meals Tab - Card Layout -->
+            <div v-if="currentTab === 'meals'" class="tab-pane">
+              <h3>Select In-flight Meals</h3>
+              <div class="segment-notice" v-if="bookingStore.isRoundTrip">
+                <span class="notice-icon">ℹ️</span>
+                <span>You are selecting meals for the <strong>{{ activeSegmentLabel }}</strong> flight</span>
+              </div>
+              
+              <div v-for="p in bookingStore.passengers" :key="p.key" class="p-addon-row">
+                <div class="p-info"><strong>{{ p.firstName }} {{ p.lastName }}</strong></div>
+                <div class="meal-options-grid">
+                  <!-- No Meal Option -->
+                  <div 
+                    :class="['meal-card', { selected: !getMealSelection(p.key) }]"
+                    @click="selectMealDirect(p, null)"
+                  >
+                    <div class="meal-icon">🚫</div>
+                    <div class="meal-details">
+                      <div class="meal-name">No Meal</div>
+                      <div class="meal-price">No additional cost</div>
+                    </div>
+                  </div>
+                  
+                  <!-- Meal Options -->
+                  <div 
+                    v-for="meal in mealOptions" 
+                    :key="meal.id"
+                    :class="['meal-card', { selected: getMealSelection(p.key)?.id === meal.id }]"
+                    @click="selectMealDirect(p, meal)"
+                  >
+                    <div class="meal-icon">
+                      <span v-if="meal.meal_type === 'vegetarian'">🥬</span>
+                      <span v-else-if="meal.meal_type === 'vegan'">🌱</span>
+                      <span v-else-if="meal.meal_type === 'halal'">☪️</span>
+                      <span v-else-if="meal.meal_type === 'kosher'">✡️</span>
+                      <span v-else-if="meal.meal_type === 'child'">👶</span>
+                      <span v-else-if="meal.meal_type === 'infant'">🍼</span>
+                      <span v-else>🍽️</span>
+                    </div>
+                    <div class="meal-details">
+                      <div class="meal-name">{{ meal.name }}</div>
+                      <div class="meal-type">{{ meal.get_meal_type_display }}</div>
+                      <div class="meal-description">{{ meal.description }}</div>
+                      <div v-if="meal.calories" class="meal-calories">{{ meal.calories }} calories</div>
+                      <div class="meal-price">₱{{ parseFloat(meal.price).toLocaleString() }}</div>
+                    </div>
+                    <div v-if="meal.allergens" class="meal-allergens">
+                      <small>⚠️ Contains: {{ meal.allergens }}</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Assistance Tab - Card Layout -->
+            <div v-if="currentTab === 'wheelchair'" class="tab-pane">
+              <h3>Select Special Assistance</h3>
+              <div class="segment-notice" v-if="bookingStore.isRoundTrip">
+                <span class="notice-icon">ℹ️</span>
+                <span>You are selecting assistance for the <strong>{{ activeSegmentLabel }}</strong> flight</span>
+              </div>
+              
+              <div v-for="p in bookingStore.passengers" :key="p.key" class="p-addon-row">
+                <div class="p-info"><strong>{{ p.firstName }} {{ p.lastName }}</strong></div>
+                <div class="assistance-options-grid">
+                  <!-- No Assistance Option -->
+                  <div 
+                    :class="['assistance-card', { selected: !getAssistanceSelection(p.key) }]"
+                    @click="selectAssistanceDirect(p, null)"
+                  >
+                    <div class="assistance-icon">🚶</div>
+                    <div class="assistance-details">
+                      <div class="assistance-name">No Assistance Needed</div>
+                      <div class="assistance-description">I can manage without special assistance</div>
+                    </div>
+                  </div>
+                  
+                  <!-- Assistance Options -->
+                  <div 
+                    v-for="service in assistanceOptions" 
+                    :key="service.id"
+                    :class="['assistance-card', { selected: getAssistanceSelection(p.key) === service.id, free: service.price === 0 }]"
+                    @click="selectAssistanceDirect(p, service)"
+                  >
+                    <div class="assistance-icon">
+                      <span v-if="service.service_type === 'wheelchair'">♿</span>
+                      <span v-else-if="service.service_type === 'boarding'">👵</span>
+                      <span v-else-if="service.service_type === 'medical'">🏥</span>
+                      <span v-else-if="service.service_type === 'unaccompanied_minor'">👦</span>
+                      <span v-else-if="service.service_type === 'pet'">🐕</span>
+                      <span v-else>🛂</span>
+                    </div>
+                    <div class="assistance-details">
+                      <div class="assistance-name">{{ service.name }}</div>
+                      <div class="assistance-type">{{ service.get_service_type_display }}</div>
+                      <div class="assistance-description">{{ service.description }}</div>
+                      <div class="assistance-notice">{{ service.advance_notice_text }}</div>
+                      <div v-if="service.special_requirements" class="assistance-requirements">
+                        <small>📋 {{ service.special_requirements }}</small>
+                      </div>
+                      <div class="assistance-price">
+                        <span v-if="service.price > 0">₱{{ parseFloat(service.price).toLocaleString() }}</span>
+                        <span v-else>Free service</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <div class="footer-nav">
+          <button class="btn-back" @click="$router.back()">BACK</button>
+          <button class="btn-continue" @click="saveAndContinue">CONTINUE TO PAYMENT</button>
+        </div>
+      </main>
+
+      <aside class="sidebar">
+        <div class="summary-card sticky">
+          <div class="summary-header">Price Breakdown</div>
+          <div class="summary-body">
+            <!-- Show flight breakdown -->
+            <div v-if="flightInfo.length > 0" class="flight-breakdown">
+              <div v-for="flight in flightInfo" :key="flight.type" class="price-line flight-line">
+                <span>{{ flight.type }}: {{ flight.flight }}</span> 
+                <span>₱{{ flight.price.toLocaleString() }}</span>
+              </div>
+              
+              <!-- Show passenger multiplier -->
+              <div class="price-line passenger-line">
+                <span>× {{ bookingStore.passengerCount.adults + bookingStore.passengerCount.children }} Passengers</span>
+                <span></span>
+              </div>
+            </div>
+
+            <div class="price-line" v-if="totalSeats > 0">
+              <span>Seat Selection Fee</span> 
+              <span>₱{{ totalSeats.toLocaleString() }}</span>
+            </div>
+
+            <div class="price-line" v-if="totalBaggage > 0">
+              <span>Baggage</span> 
+              <span>₱{{ totalBaggage.toLocaleString() }}</span>
+            </div>
+
+            <div class="price-line" v-if="totalMeals > 0">
+              <span>Meals</span> 
+              <span>₱{{ totalMeals.toLocaleString() }}</span>
+            </div>
+
+            <div class="price-line" v-if="totalAssistance > 0">
+              <span>Assistance</span> 
+              <span>₱{{ totalAssistance.toLocaleString() }}</span>
+            </div>
+
+            <hr>
+
+            <div class="total-row">
+              <span>Total</span> 
+              <span class="final-amt">₱{{ grandTotal.toLocaleString() }}</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div v-if="showConfirmationModal" class="modal-overlay" @click.self="closeConfirmationModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>{{ modalTitle }}</h3>
+          <button class="modal-close" @click="closeConfirmationModal">×</button>
+        </div>
+        
+        <div class="modal-body">
+          <div v-if="modalType === 'baggage'">
+            <p><strong>Passenger:</strong> {{ modalData.passenger.firstName }} {{ modalData.passenger.lastName }} ({{ modalData.passenger.type }})</p>
+            <p><strong>Flight:</strong> {{ activeSegmentLabel }}</p>
+            <template v-if="modalData.option">
+              <p><strong>Baggage:</strong> {{ modalData.option.formatted_weight }} Extra Baggage</p>
+              <p><strong>Price:</strong> ₱{{ parseFloat(modalData.option.price).toLocaleString() }}</p>
+              <p class="modal-note">This baggage will be added to your booking and cannot be changed after payment.</p>
+            </template>
+            <template v-else>
+              <p><strong>Action:</strong> Remove Baggage Selection</p>
+              <p class="modal-note warning">You are removing the selected baggage for this passenger. This action cannot be undone.</p>
+            </template>
+          </div>
+          
+          <div v-else-if="modalType === 'meal'">
+            <p><strong>Passenger:</strong> {{ modalData.passenger.firstName }} {{ modalData.passenger.lastName }}</p>
+            <p><strong>Flight:</strong> {{ activeSegmentLabel }}</p>
+            <template v-if="modalData.option">
+              <p><strong>Meal:</strong> {{ modalData.option.name }}</p>
+              <p><strong>Type:</strong> {{ modalData.option.get_meal_type_display }}</p>
+              <p><strong>Description:</strong> {{ modalData.option.description }}</p>
+              <p v-if="modalData.option.calories"><strong>Calories:</strong> {{ modalData.option.calories }}</p>
+              <p v-if="modalData.option.allergens"><strong>Allergens:</strong> {{ modalData.option.allergens }}</p>
+              <p><strong>Price:</strong> ₱{{ parseFloat(modalData.option.price).toLocaleString() }}</p>
+              <p class="modal-note">Meals cannot be changed within 24 hours of departure.</p>
+            </template>
+            <template v-else>
+              <p><strong>Action:</strong> No Meal Selected</p>
+              <p class="modal-note">You are selecting no meal for this passenger.</p>
+            </template>
+          </div>
+          
+          <div v-else-if="modalType === 'assistance'">
+            <p><strong>Passenger:</strong> {{ modalData.passenger.firstName }} {{ modalData.passenger.lastName }}</p>
+            <p><strong>Flight:</strong> {{ activeSegmentLabel }}</p>
+            <template v-if="modalData.option">
+              <p><strong>Service:</strong> {{ modalData.option.name }}</p>
+              <p><strong>Type:</strong> {{ modalData.option.get_service_type_display }}</p>
+              <p><strong>Description:</strong> {{ modalData.option.description }}</p>
+              <p><strong>Notice Required:</strong> {{ modalData.option.advance_notice_text }}</p>
+              <p v-if="modalData.option.special_requirements"><strong>Requirements:</strong> {{ modalData.option.special_requirements }}</p>
+              <p v-if="modalData.option.price > 0">
+                <strong>Price:</strong> ₱{{ parseFloat(modalData.option.price).toLocaleString() }}
+              </p>
+              <p v-else>
+                <strong>Price:</strong> Free service
+              </p>
+              <p class="modal-note">Please ensure you arrive at the airport 2 hours before departure for assistance services.</p>
+            </template>
+            <template v-else>
+              <p><strong>Action:</strong> No Assistance Selected</p>
+              <p class="modal-note">You are selecting no special assistance for this passenger.</p>
+            </template>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button class="modal-cancel" @click="closeConfirmationModal">Cancel</button>
+          <button class="modal-confirm" @click="confirmSelection">Confirm Selection</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+<script setup>
+import { ref, reactive, computed, onMounted } from 'vue';
+import { useBookingStore } from '@/stores/booking';
+import { useRouter, useRoute } from 'vue-router';
+import { addonService } from '@/services/booking/addonService';
+
+const bookingStore = useBookingStore();
+const router = useRouter();
+const route = useRoute();
+
+const currentTab = ref('baggage');
+const activeSegment = ref('depart'); // 'depart' or 'return'
+const isLoading = ref(true);
+
+// Modal state
+const showConfirmationModal = ref(false);
+const modalType = ref(''); // 'baggage', 'meal', 'assistance'
+const modalTitle = ref('');
+const modalData = ref({
+  passenger: null,
+  option: null,
+  passengerKey: '',
+  isDeselecting: false
+});
+
+// API Data
+const baggageOptions = ref([]);
+const mealOptions = ref([]);
+const assistanceOptions = ref([]);
+
+// Update selectedAddons structure to support both depart and return for round trips
+const selectedAddons = reactive({
+  baggage: {
+    depart: {},    // { passengerKey: baggageObject } for depart
+    return: {}     // { passengerKey: baggageObject } for return
+  },
+  meals: {
+    depart: {},    // { passengerKey: mealObject } for depart
+    return: {}     // { passengerKey: mealObject } for return
+  },
+  wheelchair: {
+    depart: {},    // { passengerKey: assistanceId } for depart
+    return: {}     // { passengerKey: assistanceId } for return
+  },
+  seats: bookingStore.addons?.seats || {}
+});
+
+// Add trip type info
+const tripTypeInfo = computed(() => {
+  return bookingStore.isRoundTrip ? 'Round Trip' : 'One Way';
+});
+
+// Flight segments for round trips
+const flightSegments = computed(() => {
+  const segments = [
+    {
+      key: 'depart',
+      label: 'Depart Flight',
+      flight: bookingStore.selectedOutbound?.flight_number || 'N/A'
+    }
+  ];
+  
+  if (bookingStore.isRoundTrip) {
+    segments.push({
+      key: 'return',
+      label: 'Return Flight',
+      flight: bookingStore.selectedReturn?.flight_number || 'N/A'
+    });
+  }
+  
+  return segments;
+});
+
+// Active segment label
+const activeSegmentLabel = computed(() => {
+  const segment = flightSegments.value.find(s => s.key === activeSegment.value);
+  return segment ? segment.label : 'Flight';
+});
+
+// Flight info computed
+const flightInfo = computed(() => {
+  const info = [];
+  
+  if (bookingStore.selectedOutbound) {
+    info.push({
+      type: 'Outbound',
+      flight: bookingStore.selectedOutbound.flight_number,
+      route: `${bookingStore.selectedOutbound.origin} → ${bookingStore.selectedOutbound.destination}`,
+      price: parseFloat(bookingStore.selectedOutbound.price || 0)
+    });
+  }
+  
+  if (bookingStore.isRoundTrip && bookingStore.selectedReturn) {
+    info.push({
+      type: 'Return',
+      flight: bookingStore.selectedReturn.flight_number,
+      route: `${bookingStore.selectedReturn.origin} → ${bookingStore.selectedReturn.destination}`,
+      price: parseFloat(bookingStore.selectedReturn.price || 0)
+    });
+  }
+  
+  return info;
+});
+
+// Helper to get selection for current segment
+const getBaggageSelection = (passengerKey) => {
+  return selectedAddons.baggage[activeSegment.value]?.[passengerKey] || null;
+};
+
+const getMealSelection = (passengerKey) => {
+  return selectedAddons.meals[activeSegment.value]?.[passengerKey] || null;
+};
+
+const getAssistanceSelection = (passengerKey) => {
+  return selectedAddons.wheelchair[activeSegment.value]?.[passengerKey] || null;
+};
+
+onMounted(async () => {
+  try {
+    // First, migrate store to new format
+    bookingStore.migrateAddonsToNewFormat();
+    
+    const airlineId = bookingStore.selectedOutbound?.airline_id || bookingStore.selectedOutbound?.airline;
+    
+    const [bagRes, mealRes, assistRes] = await Promise.all([
+      addonService.getBaggageOptions(airlineId),
+      addonService.getMealOptions(airlineId),
+      addonService.getAssistanceServices(airlineId)
+    ]);
+    
+    baggageOptions.value = bagRes.data || [];
+    mealOptions.value = mealRes.data || [];
+    assistanceOptions.value = assistRes.data || [];
+
+    // Load existing selections from store if they exist
+    console.log("📦 Loading existing add-ons from store...");
+    
+    // Directly use store data since it's already in new format
+    selectedAddons.baggage = {
+      depart: { ...bookingStore.addons.baggage.depart },
+      return: { ...bookingStore.addons.baggage.return }
+    };
+    
+    selectedAddons.meals = {
+      depart: { ...bookingStore.addons.meals.depart },
+      return: { ...bookingStore.addons.meals.return }
+    };
+    
+    selectedAddons.wheelchair = {
+      depart: { ...bookingStore.addons.wheelchair.depart },
+      return: { ...bookingStore.addons.wheelchair.return }
+    };
+    
+    // Handle seats
+    if (bookingStore.addons.seats) {
+      console.log("💺 Seats from store:", bookingStore.addons.seats);
+      selectedAddons.seats = { ...bookingStore.addons.seats };
+    }
+    
+    console.log("✅ Final selectedAddons:", selectedAddons);
+  } catch (error) {
+    console.error("Failed to load add-ons:", error);
+  } finally {
+    isLoading.value = false;
+  }
+});
+
+// Helper for dynamic price lookup
+const findPrice = (list, id) => {
+  const item = list.find(i => i.id === id);
+  return item ? parseFloat(item.price) : 0;
+};
+
+const getOptionById = (list, id) => {
+  return list.find(i => i.id === id) || null;
+};
+
+// Direct selection handlers for cards - UPDATED with store calls
+const selectBaggageDirect = (passenger, option) => {
+  const passengerKey = passenger.key;
+  const currentSelection = getBaggageSelection(passengerKey);
+  
+  // Check if already selected (compare by ID)
+  if (currentSelection && currentSelection.id === option.id) {
+    // Deselect
+    selectedAddons.baggage[activeSegment.value][passengerKey] = null;
+    bookingStore.removeBaggageAddon(passengerKey, activeSegment.value);
+    console.log(`❌ Removed baggage for passenger ${passengerKey} on ${activeSegmentLabel.value}`);
+  } else {
+    // Select - store full object
+    const baggageObj = {
+      id: option.id,
+      price: parseFloat(option.price) || 0,
+      formatted_weight: option.formatted_weight,
+      name: option.formatted_weight
+    };
+    selectedAddons.baggage[activeSegment.value][passengerKey] = baggageObj;
+    bookingStore.updateBaggageAddon(passengerKey, baggageObj, activeSegment.value);
+    console.log(`✅ Added ${option.formatted_weight} baggage for passenger ${passengerKey} on ${activeSegmentLabel.value}: ₱${option.price}`);
+  }
+};
+
+const selectMealDirect = (passenger, option) => {
+  const passengerKey = passenger.key;
+  const currentSelection = getMealSelection(passengerKey);
+  
+  if (!option) {
+    // Select "No Meal"
+    selectedAddons.meals[activeSegment.value][passengerKey] = null;
+    bookingStore.removeMealAddon(passengerKey, activeSegment.value);
+    console.log(`❌ No meal for passenger ${passengerKey} on ${activeSegmentLabel.value}`);
+  } else {
+    // Check if already selected (compare by ID)
+    if (currentSelection && currentSelection.id === option.id) {
+      // Deselect if already selected
+      selectedAddons.meals[activeSegment.value][passengerKey] = null;
+      bookingStore.removeMealAddon(passengerKey, activeSegment.value);
+      console.log(`❌ Removed meal for passenger ${passengerKey} on ${activeSegmentLabel.value}`);
+    } else {
+      // Select new meal - store full object
+      const mealObj = {
+        id: option.id,
+        price: parseFloat(option.price) || 0,
+        name: option.name,
+        meal_type: option.meal_type,
+        description: option.description
+      };
+      selectedAddons.meals[activeSegment.value][passengerKey] = mealObj;
+      bookingStore.updateMealAddon(passengerKey, mealObj, activeSegment.value);
+      console.log(`✅ Added ${option.name} meal for passenger ${passengerKey} on ${activeSegmentLabel.value}: ₱${option.price}`);
+    }
+  }
+};
+
+const selectAssistanceDirect = (passenger, option) => {
+  const passengerKey = passenger.key;
+  
+  if (!option) {
+    // Select "No Assistance"
+    selectedAddons.wheelchair[activeSegment.value][passengerKey] = null;
+    bookingStore.removeAssistanceAddon(passengerKey, activeSegment.value);
+    console.log(`❌ No assistance for passenger ${passengerKey} on ${activeSegmentLabel.value}`);
+  } else {
+    // Select assistance
+    if (getAssistanceSelection(passengerKey) === option.id) {
+      // Deselect if already selected
+      selectedAddons.wheelchair[activeSegment.value][passengerKey] = null;
+      bookingStore.removeAssistanceAddon(passengerKey, activeSegment.value);
+      console.log(`❌ Removed assistance for passenger ${passengerKey} on ${activeSegmentLabel.value}`);
+    } else {
+      // Select new assistance - store ID only
+      selectedAddons.wheelchair[activeSegment.value][passengerKey] = option.id;
+      bookingStore.updateAssistanceAddon(passengerKey, option.id, activeSegment.value);
+      console.log(`✅ Added ${option.name} assistance for passenger ${passengerKey} on ${activeSegmentLabel.value}: ${option.price > 0 ? '₱' + option.price : 'Free'}`);
+    }
+  }
+};
+
+// Confirmation Modal Functions - UPDATED with store calls
+const showMealConfirmation = (passenger, option) => {
+  const passengerKey = passenger.key;
+  const currentSelection = getMealSelection(passengerKey);
+  let currentOption = null;
+  
+  if (currentSelection && typeof currentSelection === 'object') {
+    currentOption = getOptionById(mealOptions.value, currentSelection.id);
+  } else if (currentSelection) {
+    currentOption = getOptionById(mealOptions.value, currentSelection);
+  }
+  
+  modalType.value = 'meal';
+  modalTitle.value = option ? 'Confirm Meal Selection' : 'Remove Meal Selection';
+  modalData.value = {
+    passenger,
+    option: option,
+    passengerKey: passenger.key,
+    isDeselecting: !option && currentOption
+  };
+  showConfirmationModal.value = true;
+};
+
+const showAssistanceConfirmation = (passenger, option) => {
+  const passengerKey = passenger.key;
+  const currentOption = getOptionById(assistanceOptions.value, getAssistanceSelection(passengerKey));
+  
+  modalType.value = 'assistance';
+  modalTitle.value = option ? 'Confirm Assistance Service' : 'Remove Assistance Service';
+  modalData.value = {
+    passenger,
+    option: option,
+    passengerKey: passenger.key,
+    isDeselecting: !option && currentOption
+  };
+  showConfirmationModal.value = true;
+};
+
+const closeConfirmationModal = () => {
+  showConfirmationModal.value = false;
+  
+  // Reset modal data
+  modalData.value = { passenger: null, option: null, passengerKey: '', isDeselecting: false };
+  modalType.value = '';
+  modalTitle.value = '';
+};
+
+const confirmSelection = () => {
+  const { passengerKey, option, isDeselecting } = modalData.value;
+  
+  if (modalType.value === 'meal') {
+    if (!option) {
+      // Remove meal selection
+      selectedAddons.meals[activeSegment.value][passengerKey] = null;
+      bookingStore.removeMealAddon(passengerKey, activeSegment.value);
+      console.log(`❌ Removed meal for passenger ${passengerKey} on ${activeSegmentLabel.value}`);
+    } else {
+      // Select meal - store as object
+      const mealObj = {
+        id: option.id,
+        price: parseFloat(option.price) || 0,
+        name: option.name,
+        meal_type: option.meal_type,
+        description: option.description
+      };
+      selectedAddons.meals[activeSegment.value][passengerKey] = mealObj;
+      bookingStore.updateMealAddon(passengerKey, mealObj, activeSegment.value);
+      console.log(`✅ Added ${option.name} meal for passenger ${passengerKey} on ${activeSegmentLabel.value}: ₱${option.price}`);
+    }
+  }
+  else if (modalType.value === 'assistance') {
+    if (!option) {
+      // Remove assistance selection
+      selectedAddons.wheelchair[activeSegment.value][passengerKey] = null;
+      bookingStore.removeAssistanceAddon(passengerKey, activeSegment.value);
+      console.log(`❌ Removed assistance for passenger ${passengerKey} on ${activeSegmentLabel.value}`);
+    } else {
+      // Select assistance
+      selectedAddons.wheelchair[activeSegment.value][passengerKey] = option.id;
+      bookingStore.updateAssistanceAddon(passengerKey, option.id, activeSegment.value);
+      console.log(`✅ Added ${option.name} assistance for passenger ${passengerKey} on ${activeSegmentLabel.value}: ${option.price > 0 ? '₱' + option.price : 'Free'}`);
+    }
+  }
+  
+  closeConfirmationModal();
+};
+
+// Indicator Position Logic
+const indicatorStyle = computed(() => {
+  const tabs = ['baggage', 'seat', 'meals', 'wheelchair'];
+  const activeTab = currentTab.value === 'seat' ? 'seat' : currentTab.value;
+  const currentIndex = tabs.indexOf(activeTab);
+  return {
+    left: `${(currentIndex * 100 / 4) + 12.5}%`,
+    transform: 'translateX(-50%)'
+  };
+});
+
+// Updated Base Fare Calculation for Round Trips
+const baseFare = computed(() => {
+  let totalBasePrice = 0;
+  
+  // Add outbound flight price
+  if (bookingStore.selectedOutbound?.price) {
+    totalBasePrice += parseFloat(bookingStore.selectedOutbound.price);
+  }
+  
+  // Add return flight price if round trip
+  if (bookingStore.isRoundTrip && bookingStore.selectedReturn?.price) {
+    totalBasePrice += parseFloat(bookingStore.selectedReturn.price);
+  }
+  
+  // Multiply by number of paying passengers (adults + children)
+  const payingPassengerCount = bookingStore.passengerCount.adults + bookingStore.passengerCount.children;
+  return totalBasePrice * payingPassengerCount;
+});
+
+// Updated totals to include both depart and return for round trips
+const totalBaggage = computed(() => {
+  let total = 0;
+  
+  // Sum baggage for depart
+  Object.values(selectedAddons.baggage.depart || {}).forEach(baggage => {
+    if (!baggage) return;
+    if (typeof baggage === 'object' && baggage.price !== undefined) {
+      total += parseFloat(baggage.price);
+    } else {
+      const option = baggageOptions.value.find(opt => opt.id == baggage);
+      total += (option ? parseFloat(option.price) : 0);
+    }
+  });
+  
+  // Sum baggage for return if round trip
+  if (bookingStore.isRoundTrip) {
+    Object.values(selectedAddons.baggage.return || {}).forEach(baggage => {
+      if (!baggage) return;
+      if (typeof baggage === 'object' && baggage.price !== undefined) {
+        total += parseFloat(baggage.price);
+      } else {
+        const option = baggageOptions.value.find(opt => opt.id == baggage);
+        total += (option ? parseFloat(option.price) : 0);
+      }
+    });
+  }
+  
+  return total;
+});
+
+const totalMeals = computed(() => {
+  let total = 0;
+  
+  // Sum meals for depart
+  Object.values(selectedAddons.meals.depart || {}).forEach(meal => {
+    if (!meal) return;
+    if (typeof meal === 'object' && meal.price !== undefined) {
+      total += parseFloat(meal.price);
+    } else {
+      const option = mealOptions.value.find(m => m.id == meal);
+      total += (option ? parseFloat(option.price) : 0);
+    }
+  });
+  
+  // Sum meals for return if round trip
+  if (bookingStore.isRoundTrip) {
+    Object.values(selectedAddons.meals.return || {}).forEach(meal => {
+      if (!meal) return;
+      if (typeof meal === 'object' && meal.price !== undefined) {
+        total += parseFloat(meal.price);
+      } else {
+        const option = mealOptions.value.find(m => m.id == meal);
+        total += (option ? parseFloat(option.price) : 0);
+      }
+    });
+  }
+  
+  return total;
+});
+
+const totalAssistance = computed(() => {
+  let total = 0;
+  
+  // Sum assistance for depart
+  Object.values(selectedAddons.wheelchair.depart || {}).forEach(assistanceId => {
+    if (!assistanceId) return;
+    total += findPrice(assistanceOptions.value, assistanceId);
+  });
+  
+  // Sum assistance for return if round trip
+  if (bookingStore.isRoundTrip) {
+    Object.values(selectedAddons.wheelchair.return || {}).forEach(assistanceId => {
+      if (!assistanceId) return;
+      total += findPrice(assistanceOptions.value, assistanceId);
+    });
+  }
+  
+  return total;
+});
+
+const totalSeats = computed(() => {
+  const selections = Object.values(selectedAddons.seats || {});
+  
+  return selections.reduce((sum, seat) => {
+    const seatPrice = parseFloat(seat.final_price) || 0;
+    return sum + seatPrice;
+  }, 0);
+});
+
+// Use bookingStore.grandTotal for consistency
+const grandTotal = computed(() => {
+  return bookingStore.grandTotal || (baseFare.value + totalSeats.value + totalBaggage.value + totalMeals.value + totalAssistance.value);
+});
+
+const saveAndContinue = () => {
+  // Save to Pinia - using the updated setAddons method
+  bookingStore.setAddons(JSON.parse(JSON.stringify(selectedAddons)));
+
+  // --- DEBUG LOG START ---
+  console.group("🛒 ADD-ONS PURCHASE SUMMARY");
+  console.log("Trip Type:", tripTypeInfo.value);
+  console.log("Active Segment:", activeSegment.value);
+  
+  // Show flight info
+  console.log("✈️ FLIGHT DETAILS:");
+  flightInfo.value.forEach(flight => {
+    console.log(`  ${flight.type}: ${flight.flight} (${flight.route}) - ₱${flight.price.toLocaleString()}`);
+  });
+  
+  console.log("Passenger Selections:", JSON.parse(JSON.stringify(selectedAddons)));
+  
+  // Calculate individual totals
+  const baggageTotal = totalBaggage.value;
+  const mealsTotal = totalMeals.value;
+  const assistanceTotal = totalAssistance.value;
+  const seatExtrasTotal = totalSeats.value;
+  const baseFareTotal = baseFare.value;
+  
+  const receipt = {
+    "Base Fare": `₱${baseFareTotal.toLocaleString()}`,
+    "Seat Extras": `₱${seatExtrasTotal.toLocaleString()}`,
+    "Baggage": `₱${baggageTotal.toLocaleString()}`,
+    "Meals": `₱${mealsTotal.toLocaleString()}`,
+    "Assistance": `₱${assistanceTotal.toLocaleString()}`
+  };
+  
+  console.table(receipt);
+  
+  // Summary of totals
+  console.log("📊 TOTALS SUMMARY:");
+  console.log("Add-ons Total:", `₱${(baggageTotal + mealsTotal + assistanceTotal + seatExtrasTotal).toLocaleString()}`);
+  console.log("Flight Base Total:", `₱${baseFareTotal.toLocaleString()}`);
+  console.log("Store Grand Total:", `₱${bookingStore.grandTotal.toLocaleString()}`);
+  console.log("Calculated Grand Total:", `₱${grandTotal.value.toLocaleString()}`);
+  
+  // Show passenger count
+  const payingPassengers = bookingStore.passengerCount.adults + bookingStore.passengerCount.children;
+  console.log(`Passengers (adults+children): ${payingPassengers}`);
+  
+  // Show segment breakdown for round trips
+  if (bookingStore.isRoundTrip) {
+    console.log("🔄 SEGMENT BREAKDOWN:");
+    
+    // Depart segment
+    const departBaggage = Object.values(selectedAddons.baggage.depart || {}).filter(Boolean).length;
+    const departMeals = Object.values(selectedAddons.meals.depart || {}).filter(Boolean).length;
+    const departAssistance = Object.values(selectedAddons.wheelchair.depart || {}).filter(Boolean).length;
+    
+    console.log("Depart Flight Add-ons:");
+    console.log(`  Baggage: ${departBaggage} selections`);
+    console.log(`  Meals: ${departMeals} selections`);
+    console.log(`  Assistance: ${departAssistance} selections`);
+    
+    // Return segment
+    const returnBaggage = Object.values(selectedAddons.baggage.return || {}).filter(Boolean).length;
+    const returnMeals = Object.values(selectedAddons.meals.return || {}).filter(Boolean).length;
+    const returnAssistance = Object.values(selectedAddons.wheelchair.return || {}).filter(Boolean).length;
+    
+    console.log("Return Flight Add-ons:");
+    console.log(`  Baggage: ${returnBaggage} selections`);
+    console.log(`  Meals: ${returnMeals} selections`);
+    console.log(`  Assistance: ${returnAssistance} selections`);
+  }
+  
+  // Show what's stored in Pinia
+  console.group("📦 PINIA STORAGE CHECK");
+  console.log("Baggage in Pinia:", bookingStore.addons.baggage);
+  console.log("Meals in Pinia:", bookingStore.addons.meals);
+  console.log("Assistance in Pinia:", bookingStore.addons.wheelchair);
+  console.log("Seats in Pinia:", bookingStore.addons.seats);
+  console.groupEnd();
+  
+  console.groupEnd();
+  // --- DEBUG LOG END ---
+
+  router.push({ name: 'ReviewBooking' });
+};
+</script>
+
+
+<style scoped>
+/* Keeping your exact original styles */
+.pal-bg { background: #f4f7f9; min-height: 100vh; padding: 40px 0; }
+.pal-layout { display: grid; grid-template-columns: 1fr 350px; gap: 30px; max-width: 1200px; margin: 0 auto; }
+.page-title { color: #003870; font-weight: 800; margin-bottom: 25px; font-size: 1.8rem; }
+
+.square-tabs-container { position: relative; margin-bottom: 30px; background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.square-tabs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; position: relative; z-index: 2; }
+.square-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 15px; background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; text-align: center; min-height: 100px; }
+.square-tab.active { background: linear-gradient(135deg, #003870 0%, #002a54 100%); border-color: #003870; color: white; }
+.square-tab.seat-tab { border-style: dashed; }
+.tab-icon { font-size: 1.8rem; margin-bottom: 8px; }
+.tab-label { font-weight: 600; font-size: 0.95rem; }
+.active-tab-indicator { position: absolute; bottom: 0; left: 0; width: 25%; height: 4px; background: #d11241; border-radius: 2px; transition: left 0.4s ease; z-index: 1; }
+
+.addon-workspace { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea; min-height: 400px; }
+.loading-state { display: flex; align-items: center; justify-content: center; height: 200px; color: #666; }
+
+.tab-pane h3 { color: #003870; margin-bottom: 25px; font-size: 1.3rem; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; }
+
+/* Baggage Grid Styles */
+.option-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px; }
+.opt-card { border: 2px solid #e0e0e0; padding: 20px 15px; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s; background: white; }
+.opt-card.selected { border-color: #003870; background: #eef4ff; font-weight: bold; }
+.opt-card .weight { display: block; font-size: 1.1rem; margin-bottom: 8px; font-weight: 700; color: #003870; }
+.opt-card .price { display: block; color: #d11241; font-weight: 700; }
+
+/* Meal Grid Styles */
+.meal-options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px; }
+.meal-card { border: 2px solid #e0e0e0; padding: 15px; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: white; display: flex; flex-direction: column; min-height: 180px; }
+.meal-card.selected { border-color: #003870; background: #eef4ff; }
+.meal-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+.meal-icon { font-size: 2rem; text-align: center; margin-bottom: 10px; }
+.meal-details { flex: 1; }
+.meal-name { font-weight: 700; color: #003870; margin-bottom: 5px; font-size: 1rem; }
+.meal-type { font-size: 0.85rem; color: #666; margin-bottom: 8px; font-style: italic; }
+.meal-description { font-size: 0.9rem; color: #555; margin-bottom: 8px; line-height: 1.3; }
+.meal-calories { font-size: 0.8rem; color: #888; margin-bottom: 8px; }
+.meal-price { font-weight: 700; color: #d11241; font-size: 1.1rem; margin-top: auto; }
+.meal-allergens { font-size: 0.75rem; color: #d11241; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #eee; }
+
+/* Assistance Grid Styles */
+.assistance-options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px; }
+.assistance-card { border: 2px solid #e0e0e0; padding: 15px; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: white; display: flex; flex-direction: column; min-height: 200px; }
+.assistance-card.selected { border-color: #003870; background: #eef4ff; }
+.assistance-card.free { border-color: #28a745; }
+.assistance-card.free.selected { background: #e8f5e9; }
+.assistance-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+.assistance-icon { font-size: 2rem; text-align: center; margin-bottom: 10px; }
+.assistance-details { flex: 1; }
+.assistance-name { font-weight: 700; color: #003870; margin-bottom: 5px; font-size: 1rem; }
+.assistance-type { font-size: 0.85rem; color: #666; margin-bottom: 8px; font-style: italic; }
+.assistance-description { font-size: 0.9rem; color: #555; margin-bottom: 8px; line-height: 1.3; }
+.assistance-notice { font-size: 0.8rem; color: #888; margin-bottom: 8px; }
+.assistance-requirements { font-size: 0.75rem; color: #666; margin-bottom: 8px; }
+.assistance-price { font-weight: 700; color: #d11241; font-size: 1.1rem; margin-top: auto; }
+.assistance-card.free .assistance-price { color: #28a745; }
+
+/* Common Styles */
+.p-addon-row { margin-bottom: 30px; padding-bottom: 25px; border-bottom: 1px solid #eee; }
+.p-info { margin-bottom: 15px; font-size: 1rem; }
+
+.footer-nav { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; }
+.btn-back { padding: 15px 30px; background: #666; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.btn-continue { padding: 15px 40px; background: #d11241; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; }
+
+.summary-card { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eaeaea; }
+.sticky { position: sticky; top: 20px; }
+.summary-header { background: #003870; color: white; padding: 20px; text-align: center; font-weight: 700; border-radius: 12px 12px 0 0; }
+.summary-body { padding: 25px; }
+.price-line { display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed #eee; font-size: 0.95rem; }
+.total-row { display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 2px solid #eee; font-size: 1.2rem; font-weight: 700; }
+.final-amt { color: #d11241; font-size: 1.5rem; font-weight: 900; }
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  background: #003870;
+  color: white;
+  border-radius: 12px 12px 0 0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: white;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.modal-body {
+  padding: 25px;
+}
+
+.modal-body p {
+  margin: 10px 0;
+  line-height: 1.6;
+}
+
+.modal-note {
+  font-size: 0.9rem;
+  color: #666;
+  font-style: italic;
+  padding: 10px;
+  background: #f9f9f9;
+  border-radius: 6px;
+  margin-top: 15px !important;
+}
+
+.modal-note.warning {
+  color: #d11241;
+  background: #ffe6e6;
+  border-left: 4px solid #d11241;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 20px;
+  border-top: 1px solid #eee;
+}
+
+.modal-cancel {
+  padding: 10px 20px;
+  background: #666;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.modal-confirm {
+  padding: 10px 20px;
+  background: #d11241;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+/* Add new styles for trip type header */
+.trip-type-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.trip-type-badge {
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.trip-type-badge.round-trip {
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 2px solid #1565c0;
+}
+
+.trip-type-badge.one-way {
+  background: #f3e5f5;
+  color: #7b1fa2;
+  border: 2px solid #7b1fa2;
+}
+
+/* Flight summary card styles */
+.flight-summary-card {
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  border: 1px solid #eaeaea;
+}
+
+.flight-summary-header {
+  background: #f8f9fa;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  border-radius: 12px 12px 0 0;
+}
+
+.flight-summary-header h3 {
+  margin: 0;
+  color: #003870;
+  font-size: 1.2rem;
+}
+
+.flight-summary-body {
+  padding: 20px;
+}
+
+.flight-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px dashed #eee;
+}
+
+.flight-item:last-child {
+  border-bottom: none;
+}
+
+.flight-type {
+  font-weight: bold;
+  color: #003870;
+  min-width: 80px;
+}
+
+.flight-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.flight-number {
+  font-weight: bold;
+  color: #333;
+}
+
+.flight-route {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.flight-price {
+  font-weight: bold;
+  color: #d11241;
+  min-width: 100px;
+  text-align: right;
+}
+
+/* Update summary card styles */
+.flight-line {
+  font-size: 0.9rem;
+  padding: 5px 0;
+}
+
+.passenger-line {
+  color: #666;
+  font-style: italic;
+  padding: 5px 0 10px 0;
+  border-bottom: 1px dashed #eee;
+  margin-bottom: 10px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .trip-type-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .flight-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  
+  .flight-price {
+    text-align: left;
+    min-width: auto;
+  }
+}
+
+@media (max-width: 992px) {
+  .pal-layout { grid-template-columns: 1fr; }
+  .square-tabs-grid { grid-template-columns: repeat(2, 1fr); }
+  .active-tab-indicator { width: 50%; }
+  
+  .option-grid,
+  .meal-options-grid,
+  .assistance-options-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal-content {
+    width: 95%;
+    margin: 10px;
+  }
+  
+  .modal-footer {
+    flex-direction: column;
+  }
+  
+  .modal-cancel, .modal-confirm {
+    width: 100%;
+  }
+}
+
+
+
+/* Add new styles for flight segment tabs */
+.flight-segment-tabs {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 25px;
+  background: white;
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.segment-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 15px;
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.segment-tab.active {
+  background: linear-gradient(135deg, #003870 0%, #002a54 100%);
+  border-color: #003870;
+  color: white;
+}
+
+.segment-icon {
+  font-size: 1.8rem;
+  margin-bottom: 8px;
+}
+
+.segment-label {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 5px;
+}
+
+.segment-flight {
+  font-size: 0.85rem;
+  opacity: 0.8;
+  font-family: monospace;
+}
+
+.segment-notice {
+  background: #e3f2fd;
+  padding: 12px 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-left: 4px solid #1565c0;
+}
+
+.notice-icon {
+  font-size: 1.2rem;
+}
+
+/* Update existing styles for better layout */
+.pal-layout { 
+  display: grid; 
+  grid-template-columns: 1fr 400px; 
+  gap: 30px; 
+  max-width: 1300px; 
+  margin: 0 auto; 
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .pal-layout { 
+    grid-template-columns: 1fr 350px; 
+  }
+}
+
+@media (max-width: 992px) {
+  .pal-layout { 
+    grid-template-columns: 1fr; 
+  }
+  
+  .flight-segment-tabs {
+    flex-direction: column;
+  }
+  
+  .segment-tab {
+    flex-direction: row;
+    gap: 15px;
+    text-align: left;
+    justify-content: flex-start;
+  }
+  
+  .segment-icon {
+    margin-bottom: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .segment-tab {
+    padding: 15px 10px;
+  }
+  
+  .segment-label {
+    font-size: 0.9rem;
+  }
+  
+  .segment-flight {
+    font-size: 0.8rem;
+  }
+}
+
+</style>

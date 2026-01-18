@@ -1,0 +1,1008 @@
+<template>
+  <div class="pal-bg">
+    <!-- Loading State -->
+    <div v-if="isLoading" class="loading-state">
+      <div class="loading-spinner"></div>
+      <p>Loading your booking details...</p>
+    </div>
+
+    <!-- No Data State -->
+    <div v-else-if="!hasFlightData" class="no-data-message">
+      <h3>No flight data found</h3>
+      <p>Please go back and select a flight first.</p>
+      <button @click="$router.push({ name: 'SearchFlights' })" class="btn-back">
+        Back to Flight Search
+      </button>
+    </div>
+
+    <!-- Main Content -->
+    <div v-else class="container review-layout">
+      <main class="main-content">
+        <h2 class="page-title">Review Your Booking</h2>
+
+        <section class="review-section">
+          <div class="section-header">
+            <span class="icon">✈️</span>
+            <h3>Flight Details</h3>
+            <span class="trip-type-badge" :class="{ 'round-trip': bookingStore.isRoundTrip, 'one-way': !bookingStore.isRoundTrip }">
+              {{ bookingStore.isRoundTrip ? 'Round Trip' : 'One Way' }}
+            </span>
+          </div>
+          <div class="review-card">
+            <div class="flight-summary" v-if="bookingStore.selectedOutbound">
+              <div class="route-info">
+                <span class="badge">Depart</span>
+                <strong>{{ bookingStore.selectedOutbound.origin }} → {{ bookingStore.selectedOutbound.destination }}</strong>
+              </div>
+              <div class="detail-grid">
+                <div><small>Flight:</small> {{ bookingStore.selectedOutbound.flight_number }}</div>
+                <div><small>Departure:</small> {{ formatDate(bookingStore.selectedOutbound.departure_time) }}</div>
+                <div><small>Class:</small> {{ bookingStore.selectedOutbound.class_type || 'Economy' }}</div>
+                <div><small>Price per person:</small> ₱{{ parseFloat(bookingStore.selectedOutbound.price).toLocaleString() }}</div>
+              </div>
+            </div>
+
+            <div class="flight-summary mt-3" v-if="bookingStore.selectedReturn">
+              <div class="route-info">
+                <span class="badge return">Return</span>
+                <strong>{{ bookingStore.selectedReturn.origin }} → {{ bookingStore.selectedReturn.destination }}</strong>
+              </div>
+              <div class="detail-grid">
+                <div><small>Flight:</small> {{ bookingStore.selectedReturn.flight_number }}</div>
+                <div><small>Departure:</small> {{ formatDate(bookingStore.selectedReturn.departure_time) }}</div>
+                <div><small>Price per person:</small> ₱{{ parseFloat(bookingStore.selectedReturn.price).toLocaleString() }}</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="review-section">
+          <div class="section-header">
+            <span class="icon">👥</span>
+            <h3>Passengers & Add-ons</h3>
+          </div>
+          
+          <!-- Depart Flight Add-ons -->
+          <div class="review-card" v-if="bookingStore.selectedOutbound">
+            <div class="segment-header">
+              <h4>Depart Flight Add-ons</h4>
+              <span class="flight-badge">{{ bookingStore.selectedOutbound.flight_number }}</span>
+            </div>
+            <table class="review-table">
+              <thead>
+                <tr>
+                  <th>Passenger</th>
+                  <th>Seat</th>
+                  <th>Baggage</th>
+                  <th>Meal</th>
+                  <th>Assistance</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="p in bookingStore.passengers" :key="p.key">
+                  <td>
+                    <strong>{{ p.title }} {{ p.firstName }} {{ p.lastName }}</strong>
+                    <div class="sub-text">{{ p.type }}</div>
+                  </td>
+                  <td>{{ getSeatLabel(p.key) }}</td>
+                  <td>{{ getBaggageLabel(p.key, 'depart') }}</td>
+                  <td>{{ getMealLabel(p.key, 'depart') }}</td>
+                  <td>{{ getAssistanceLabel(p.key, 'depart') }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Return Flight Add-ons (only for round trips) -->
+          <div class="review-card mt-3" v-if="bookingStore.isRoundTrip && bookingStore.selectedReturn">
+            <div class="segment-header">
+              <h4>Return Flight Add-ons</h4>
+              <span class="flight-badge return">{{ bookingStore.selectedReturn.flight_number }}</span>
+            </div>
+            <table class="review-table">
+              <thead>
+                <tr>
+                  <th>Passenger</th>
+                  <th>Baggage</th>
+                  <th>Meal</th>
+                  <th>Assistance</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="p in bookingStore.passengers" :key="p.key">
+                  <td>
+                    <strong>{{ p.title }} {{ p.firstName }} {{ p.lastName }}</strong>
+                    <div class="sub-text">{{ p.type }}</div>
+                  </td>
+                  <td>{{ getBaggageLabel(p.key, 'return') }}</td>
+                  <td>{{ getMealLabel(p.key, 'return') }}</td>
+                  <td>{{ getAssistanceLabel(p.key, 'return') }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="review-section">
+          <div class="section-header">
+            <span class="icon">📧</span>
+            <h3>Contact Information</h3>
+          </div>
+          <div class="review-card contact-grid">
+            <div class="contact-item">
+              <label>Full Name</label>
+              <p>{{ bookingStore.contactInfo.title }} {{ bookingStore.contactInfo.firstName }} {{ bookingStore.contactInfo.lastName }}</p>
+            </div>
+            <div class="contact-item">
+              <label>Email Address</label>
+              <p>{{ bookingStore.contactInfo.email }}</p>
+            </div>
+            <div class="contact-item">
+              <label>Phone Number</label>
+              <p>{{ bookingStore.contactInfo.phone }}</p>
+            </div>
+          </div>
+        </section>
+
+        <div class="footer-nav">
+          <button class="btn-back" @click="$router.back()">EDIT DETAILS</button>
+          <button class="btn-continue" @click="confirmBooking" :disabled="isProcessing">
+            <span v-if="isProcessing">Processing...</span>
+            <span v-else>PROCEED TO PAYMENT</span>
+          </button>
+        </div>
+      </main>
+
+      <aside class="sidebar">
+        <div class="summary-card sticky">
+          <div class="summary-header">Payment Summary</div>
+          <div class="summary-body">
+            <!-- Flight Base Fares -->
+            <div class="flight-base-summary" v-if="bookingStore.selectedOutbound">
+              <div class="price-line">
+                <span>Depart Flight ({{ payingPassengerCount }} Pax)</span>
+                <span>₱{{ departBaseFare.toLocaleString() }}</span>
+              </div>
+              <div class="price-line" v-if="bookingStore.selectedReturn">
+                <span>Return Flight ({{ payingPassengerCount }} Pax)</span>
+                <span>₱{{ returnBaseFare.toLocaleString() }}</span>
+              </div>
+            </div>
+
+            <!-- Add-ons -->
+            <div class="addons-summary">
+              <div class="price-line" v-if="totalSeatsPrice > 0">
+                <span>Seat Selection</span>
+                <span>₱{{ totalSeatsPrice.toLocaleString() }}</span>
+              </div>
+              <div class="price-line" v-if="totalBaggagePrice > 0">
+                <span>Extra Baggage</span>
+                <span>₱{{ totalBaggagePrice.toLocaleString() }}</span>
+              </div>
+              <div class="price-line" v-if="totalMealsPrice > 0">
+                <span>Meal Selection</span>
+                <span>₱{{ totalMealsPrice.toLocaleString() }}</span>
+              </div>
+              <div class="price-line" v-if="totalAssistancePrice > 0">
+                <span>Special Assistance</span>
+                <span>₱{{ totalAssistancePrice.toLocaleString() }}</span>
+              </div>
+            </div>
+
+            <hr>
+            <div class="total-row">
+              <span>Grand Total</span>
+              <span class="final-amt">₱{{ grandTotal.toLocaleString() }}</span>
+            </div>
+            <div class="passenger-count">
+              <small>{{ payingPassengerCount }} paying passengers</small>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { computed, ref, onMounted } from 'vue';
+import { useBookingStore } from '@/stores/booking';
+import { useRouter } from 'vue-router';
+import { addonService } from '@/services/booking/addonService';
+import { bookingService } from '@/services/booking/bookingService';
+
+const bookingStore = useBookingStore();
+const router = useRouter();
+
+const isLoading = ref(true);
+const isProcessing = ref(false);
+const baggageOptions = ref([]);
+const mealOptions = ref([]);
+const assistanceOptions = ref([]);
+
+onMounted(async () => {
+  try {
+    // Migrate store to new format if needed
+    bookingStore.migrateAddonsToNewFormat();
+    
+    const airlineId = bookingStore.selectedOutbound?.airline_code || bookingStore.selectedOutbound?.airline;
+    if (!airlineId) {
+      isLoading.value = false;
+      return;
+    }
+
+    const results = await Promise.allSettled([
+      addonService.getBaggageOptions(airlineId),
+      addonService.getMealOptions(airlineId),
+      addonService.getAssistanceServices(airlineId)
+    ]);
+
+    if (results[0].status === 'fulfilled') baggageOptions.value = results[0].value.data || [];
+    if (results[1].status === 'fulfilled') mealOptions.value = results[1].value.data || [];
+    if (results[2].status === 'fulfilled') assistanceOptions.value = results[2].value.data || [];
+
+  } catch (error) {
+    console.error("Review page data fetch error:", error);
+  } finally {
+    isLoading.value = false;
+  }
+});
+
+// Helper functions
+const getItemById = (list, id) => {
+  if (!id || !list) return null;
+  return list.find(item => item.id === id);
+};
+
+const getOptionById = (list, id) => {
+  if (!id || !list) return null;
+  return list.find(item => item.id == id);
+};
+
+const getBaggageLabel = (passengerKey, segment = 'depart') => {
+  const baggage = bookingStore.addons?.baggage?.[segment]?.[passengerKey];
+  if (!baggage) return 'Standard (Free)';
+  
+  if (typeof baggage === 'object' && baggage.formatted_weight) {
+    return `${baggage.formatted_weight} (₱${parseFloat(baggage.price).toLocaleString()})`;
+  }
+  
+  const option = baggageOptions.value.find(o => o.id == baggage);
+  return option ? `${option.formatted_weight} (₱${parseFloat(option.price).toLocaleString()})` : 'Extra Baggage';
+};
+
+const getMealLabel = (passengerKey, segment = 'depart') => {
+  const meal = bookingStore.addons?.meals?.[segment]?.[passengerKey];
+  if (!meal) return 'No meal';
+  
+  if (typeof meal === 'object' && meal.name) {
+    return meal.name;
+  }
+  
+  const option = mealOptions.value.find(m => m.id == meal);
+  return option ? option.name : 'Pre-ordered Meal';
+};
+
+const getAssistanceLabel = (passengerKey, segment = 'depart') => {
+  const assistanceId = bookingStore.addons?.wheelchair?.[segment]?.[passengerKey];
+  if (!assistanceId) return 'No assistance';
+  
+  const option = assistanceOptions.value.find(a => a.id == assistanceId);
+  return option ? option.name : 'Special Assistance';
+};
+
+const getSeatLabel = (passengerKey) => {
+  const seat = bookingStore.addons?.seats?.[passengerKey];
+  if (!seat) return 'Not selected';
+  
+  return `${seat.seat_code || 'N/A'} (₱${parseFloat(seat.final_price || 0).toLocaleString()})`;
+};
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return 'N/A';
+  try {
+    return new Date(dateStr).toLocaleString('en-US', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    });
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return 'Invalid date';
+  }
+};
+
+// Computed Properties
+const hasFlightData = computed(() => {
+  return !!bookingStore.selectedOutbound && !!bookingStore.selectedOutbound.price;
+});
+
+const payingPassengerCount = computed(() => {
+  const { adults = 0, children = 0 } = bookingStore.passengerCount || {};
+  return adults + children;
+});
+
+const departBaseFare = computed(() => {
+  const outboundPrice = parseFloat(bookingStore.selectedOutbound?.price) || 0;
+  return outboundPrice * payingPassengerCount.value;
+});
+
+const returnBaseFare = computed(() => {
+  if (!bookingStore.selectedReturn) return 0;
+  const returnPrice = parseFloat(bookingStore.selectedReturn?.price) || 0;
+  return returnPrice * payingPassengerCount.value;
+});
+
+const totalSeatsPrice = computed(() => {
+  const seats = bookingStore.addons?.seats || {};
+  return Object.values(seats).reduce((sum, seat) => {
+    if (!seat) return sum;
+    const seatPrice = parseFloat(seat.final_price) || 0;
+    return sum + seatPrice;
+  }, 0);
+});
+
+const totalBaggagePrice = computed(() => {
+  let total = 0;
+  const segments = bookingStore.isRoundTrip ? ['depart', 'return'] : ['depart'];
+  
+  segments.forEach(segment => {
+    const baggage = bookingStore.addons?.baggage?.[segment] || {};
+    Object.values(baggage).forEach(baggageItem => {
+      if (typeof baggageItem === 'object' && baggageItem.price !== undefined) {
+        total += (parseFloat(baggageItem.price) || 0);
+      } else {
+        const option = getItemById(baggageOptions.value, baggageItem);
+        total += (option ? parseFloat(option.price) : 0);
+      }
+    });
+  });
+  
+  return total;
+});
+
+const totalMealsPrice = computed(() => {
+  let total = 0;
+  const segments = bookingStore.isRoundTrip ? ['depart', 'return'] : ['depart'];
+  
+  segments.forEach(segment => {
+    const meals = bookingStore.addons?.meals?.[segment] || {};
+    Object.values(meals).forEach(meal => {
+      if (typeof meal === 'object' && meal.price !== undefined) {
+        total += (parseFloat(meal.price) || 0);
+      }
+    });
+  });
+  
+  return total;
+});
+
+const totalAssistancePrice = computed(() => {
+  let total = 0;
+  const segments = bookingStore.isRoundTrip ? ['depart', 'return'] : ['depart'];
+  
+  segments.forEach(segment => {
+    const assistance = bookingStore.addons?.wheelchair?.[segment] || {};
+    Object.values(assistance).forEach(assistanceId => {
+      if (assistanceId) {
+        const option = assistanceOptions.value.find(a => a.id == assistanceId);
+        if (option && option.price) {
+          total += parseFloat(option.price);
+        }
+      }
+    });
+  });
+  
+  return total;
+});
+
+const grandTotal = computed(() => {
+  return bookingStore.grandTotal || (departBaseFare.value + returnBaseFare.value + totalSeatsPrice.value + totalBaggagePrice.value + totalMealsPrice.value + totalAssistancePrice.value);
+});
+
+// Validation function
+const validateBooking = () => {
+  const errors = [];
+  
+  if (!bookingStore.selectedOutbound) {
+    errors.push('Please select an outbound flight');
+  }
+  
+  if (bookingStore.isRoundTrip && !bookingStore.selectedReturn) {
+    errors.push('Please select a return flight for round trip');
+  }
+  
+  if (!bookingStore.passengers || bookingStore.passengers.length === 0) {
+    errors.push('Please add passenger information');
+  }
+  
+  // Validate each passenger
+  bookingStore.passengers.forEach((p, index) => {
+    const passengerNum = index + 1;
+    
+    if (!p.firstName || p.firstName.trim() === '') {
+      errors.push(`Passenger ${passengerNum}: First name is required`);
+    }
+    
+    if (!p.lastName || p.lastName.trim() === '') {
+      errors.push(`Passenger ${passengerNum}: Last name is required`);
+    }
+    
+    if (!p.title) {
+      errors.push(`Passenger ${passengerNum}: Title (Mr/Ms/Mrs) is required`);
+    }
+    
+    if (!p.dateOfBirth) {
+      errors.push(`Passenger ${passengerNum}: Date of birth is required`);
+    } else {
+      const date = new Date(p.dateOfBirth);
+      if (isNaN(date.getTime())) {
+        errors.push(`Passenger ${passengerNum}: Invalid date of birth format`);
+      }
+    }
+    
+    if (!p.key) {
+      errors.push(`Passenger ${passengerNum}: Missing passenger key`);
+    }
+  });
+  
+  // Validate contact info
+  if (!bookingStore.contactInfo?.firstName || bookingStore.contactInfo?.firstName.trim() === '') {
+    errors.push('Contact person first name is required');
+  }
+  
+  if (!bookingStore.contactInfo?.lastName || bookingStore.contactInfo?.lastName.trim() === '') {
+    errors.push('Contact person last name is required');
+  }
+  
+  if (!bookingStore.contactInfo?.email || !/\S+@\S+\.\S+/.test(bookingStore.contactInfo.email)) {
+    errors.push('Please enter a valid email address');
+  }
+  
+  if (!bookingStore.contactInfo?.phone || bookingStore.contactInfo.phone.length < 7) {
+    errors.push('Please enter a valid phone number');
+  }
+  
+  return errors;
+};
+
+// Helper to get default date of birth
+const getDefaultDOB = () => {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - 20);
+  return date.toISOString().split('T')[0];
+};
+
+// Prepare passengers for submission
+const preparePassengersForSubmission = () => {
+  console.log('🔍 Preparing passengers for submission...');
+  
+  const preparedPassengers = bookingStore.passengers.map((p, index) => {
+    let dateOfBirth = p.dateOfBirth;
+    if (dateOfBirth) {
+      const parsedDate = new Date(dateOfBirth);
+      if (isNaN(parsedDate.getTime())) {
+        dateOfBirth = getDefaultDOB();
+      } else {
+        dateOfBirth = parsedDate.toISOString().split('T')[0];
+      }
+    } else {
+      dateOfBirth = getDefaultDOB();
+    }
+    
+    return {
+      key: p.key || `pax_${index + 1}`,
+      firstName: p.firstName || '',
+      lastName: p.lastName || '',
+      middleName: p.middleName || '',
+      title: p.title || 'MR',
+      dateOfBirth: dateOfBirth,
+      nationality: p.nationality || 'Philippines',
+      passportNumber: p.passportNumber || '',
+      type: p.type || 'Adult'
+    };
+  });
+  
+  console.log('✅ Prepared passengers:', preparedPassengers);
+  return preparedPassengers;
+};
+
+const confirmBooking = async () => {
+  isProcessing.value = true;
+  
+  try {
+    // Validate data before proceeding
+    const errors = validateBooking();
+    if (errors.length > 0) {
+      alert(errors.join('\n'));
+      isProcessing.value = false;
+      return;
+    }
+    
+    const preparedPassengers = preparePassengersForSubmission();
+    
+    // DEBUG: Check all data
+    console.log('🔍 DEBUG - Booking Store State for Review:');
+    console.log('Trip Type:', bookingStore.tripType);
+    console.log('Is Round Trip:', bookingStore.isRoundTrip);
+    console.log('Passengers:', JSON.stringify(bookingStore.passengers, null, 2));
+    console.log('Addons Structure:', JSON.stringify(bookingStore.addons, null, 2));
+    console.log('Depart Base Fare:', departBaseFare.value);
+    console.log('Return Base Fare:', returnBaseFare.value);
+    console.log('Total Add-ons:', {
+      seats: totalSeatsPrice.value,
+      baggage: totalBaggagePrice.value,
+      meals: totalMealsPrice.value,
+      assistance: totalAssistancePrice.value
+    });
+    console.log('Calculated Total:', grandTotal.value);
+    console.log('Store Grand Total:', bookingStore.grandTotal);
+    
+    // Format booking data for API
+    const bookingData = bookingService.formatBookingData(bookingStore);
+    
+    console.log('📞 Calling createBooking API...');
+    const response = await bookingService.createBooking(bookingData);
+    
+    console.log('✅ Booking response:', response);
+    
+    if (response.success) {
+      bookingStore.saveBookingConfirmation(response);
+      localStorage.setItem('current_booking', JSON.stringify({
+        id: response.booking_id,
+        reference: response.booking_reference,
+        total: response.total_amount,
+        status: response.status,
+        created_at: new Date().toISOString()
+      }));
+      
+      router.push({
+        name: 'Payment',
+        query: { 
+          bookingId: response.booking_id,
+          amount: response.total_amount 
+        }
+      });
+    } else {
+      console.error('❌ Booking creation failed:', response.error);
+      let errorMsg = response.error;
+      
+      if (typeof response.error === 'object') {
+        errorMsg = 'Validation errors:\n';
+        Object.entries(response.error).forEach(([field, errors]) => {
+          errorMsg += `• ${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}\n`;
+        });
+      }
+      
+      alert('Failed to create booking: ' + errorMsg);
+      isProcessing.value = false;
+    }
+    
+  } catch (error) {
+    console.error('❌ Booking creation error:', error);
+    
+    let errorMessage = 'Failed to create booking. Please try again.';
+    
+    if (error.response) {
+      console.error('Error response data:', error.response.data);
+      console.error('Error status:', error.response.status);
+      
+      if (error.response.data) {
+        if (error.response.data.errors) {
+          errorMessage = 'Validation errors:\n';
+          Object.entries(error.response.data.errors).forEach(([field, errors]) => {
+            errorMessage += `• ${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}\n`;
+          });
+        } else if (error.response.data.error) {
+          if (typeof error.response.data.error === 'object') {
+            errorMessage = 'Validation errors:\n';
+            Object.entries(error.response.data.error).forEach(([field, errors]) => {
+              errorMessage += `• ${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}\n`;
+            });
+          } else {
+            errorMessage = error.response.data.error;
+          }
+        }
+      }
+    } else if (error.request) {
+      console.error('Error request:', error.request);
+      errorMessage = 'Network error. Please check your connection.';
+    } else {
+      errorMessage = error.message;
+    }
+    
+    alert(`Booking Error: ${errorMessage}`);
+    isProcessing.value = false;
+  }
+};
+</script>
+
+
+
+<style scoped>
+.pal-bg { 
+  background: #f4f7f9; 
+  min-height: 100vh; 
+  padding: 40px 0; 
+}
+
+.review-layout { 
+  display: grid; 
+  grid-template-columns: 1fr 350px; 
+  gap: 30px; 
+  max-width: 1100px; 
+  margin: 0 auto; 
+}
+
+.page-title { 
+  color: #003870; 
+  font-weight: 800; 
+  margin-bottom: 25px; 
+  font-size: 1.8rem;
+}
+
+.review-section { 
+  margin-bottom: 30px; 
+}
+
+.section-header { 
+  display: flex; 
+  align-items: center; 
+  gap: 10px; 
+  margin-bottom: 15px; 
+}
+
+.section-header h3 { 
+  color: #003870; 
+  margin: 0; 
+  font-size: 1.2rem; 
+}
+
+.review-card { 
+  background: white; 
+  border-radius: 12px; 
+  padding: 25px; 
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+  border: 1px solid #eee; 
+}
+
+.review-card.no-padding { 
+  padding: 0; 
+  overflow: hidden; 
+}
+
+.badge { 
+  background: #003870; 
+  color: white; 
+  padding: 2px 8px; 
+  border-radius: 4px; 
+  font-size: 0.7rem; 
+  text-transform: uppercase; 
+  margin-right: 10px; 
+}
+
+.badge.return { 
+  background: #d11241; 
+}
+
+.flight-summary { 
+  padding-bottom: 15px; 
+}
+
+.detail-grid { 
+  display: grid; 
+  grid-template-columns: repeat(3, 1fr); 
+  margin-top: 10px; 
+  color: #555; 
+}
+
+.review-table { 
+  width: 100%; 
+  border-collapse: collapse; 
+}
+
+.review-table th { 
+  background: #f8f9fa; 
+  text-align: left; 
+  padding: 12px 20px; 
+  font-size: 0.85rem; 
+  color: #666; 
+}
+
+.review-table td { 
+  padding: 15px 20px; 
+  border-top: 1px solid #eee; 
+  font-size: 0.95rem; 
+}
+
+.sub-text { 
+  font-size: 0.75rem; 
+  color: #888; 
+}
+
+.contact-grid { 
+  display: grid; 
+  grid-template-columns: repeat(3, 1fr); 
+  gap: 20px; 
+}
+
+.contact-item label { 
+  display: block; 
+  font-size: 0.75rem; 
+  color: #888; 
+  text-transform: uppercase; 
+}
+
+.contact-item p { 
+  margin: 5px 0 0; 
+  font-weight: 600; 
+  color: #333; 
+}
+
+/* Sticky Sidebar */
+.summary-card { 
+  background: white; 
+  border-radius: 12px; 
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+}
+
+.sticky { 
+  position: sticky; 
+  top: 20px; 
+}
+
+.summary-header { 
+  background: #003870; 
+  color: white; 
+  padding: 20px; 
+  text-align: center; 
+  font-weight: 700; 
+  border-radius: 12px 12px 0 0; 
+}
+
+.summary-body { 
+  padding: 20px; 
+}
+
+.price-line { 
+  display: flex; 
+  justify-content: space-between; 
+  margin-bottom: 10px; 
+  font-size: 0.9rem; 
+}
+
+.total-row { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-top: 15px; 
+  font-weight: 700; 
+}
+
+.final-amt { 
+  color: #d11241; 
+  font-size: 1.4rem; 
+}
+
+.footer-nav { 
+  display: flex; 
+  justify-content: space-between; 
+  margin-top: 30px; 
+}
+
+.btn-back { 
+  padding: 12px 25px; 
+  border: 1px solid #ccc; 
+  background: white; 
+  border-radius: 6px; 
+  cursor: pointer; 
+  font-weight: 600;
+}
+
+.btn-continue { 
+  padding: 12px 40px; 
+  background: #d11241; 
+  color: white; 
+  border: none; 
+  border-radius: 6px; 
+  font-weight: 700; 
+  cursor: pointer; 
+}
+
+.btn-continue:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* Loading and Error States */
+.loading-state, .no-data-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+  padding: 40px;
+}
+
+.loading-state p {
+  color: #666;
+  font-size: 1.2rem;
+  margin-top: 15px;
+}
+
+.loading-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #003870;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.no-data-message {
+  background: white;
+  border-radius: 12px;
+  max-width: 500px;
+  margin: 40px auto;
+  padding: 40px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.no-data-message h3 {
+  color: #003870;
+  margin-bottom: 15px;
+  font-size: 1.5rem;
+}
+
+.no-data-message p {
+  color: #666;
+  margin-bottom: 25px;
+  font-size: 1rem;
+}
+
+.no-data-message .btn-back {
+  background: #003870;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .review-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .detail-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  .footer-nav {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .footer-nav button {
+    width: 100%;
+  }
+  
+  .review-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .pal-bg {
+    padding: 20px 0;
+  }
+  
+  .review-card {
+    padding: 15px;
+  }
+  
+  .page-title {
+    font-size: 1.5rem;
+  }
+}
+
+.trip-type-badge {
+  margin-left: auto;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.trip-type-badge.round-trip {
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #1565c0;
+}
+
+.trip-type-badge.one-way {
+  background: #f3e5f5;
+  color: #7b1fa2;
+  border: 1px solid #7b1fa2;
+}
+
+.segment-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.segment-header h4 {
+  margin: 0;
+  color: #003870;
+  font-size: 1.1rem;
+}
+
+.flight-badge {
+  background: #003870;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.flight-badge.return {
+  background: #d11241;
+}
+
+.flight-base-summary {
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #eee;
+}
+
+.flight-base-summary .price-line {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.addons-summary {
+  margin-top: 10px;
+}
+
+.passenger-count {
+  text-align: center;
+  margin-top: 10px;
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.mt-3 {
+  margin-top: 15px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .segment-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .trip-type-badge {
+    margin-left: 0;
+    align-self: flex-start;
+  }
+}
+</style>
