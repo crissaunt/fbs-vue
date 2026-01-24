@@ -6,6 +6,7 @@ import AddonsView from '@/views/booking/AddonsView.vue';
 import SeatSelection from '@/views/booking/SeatSelectionView.vue';
 import ReviewBooking from '@/views/booking/ReviewBookingView.vue';
 import Payment from '@/views/booking/PaymentView.vue';
+import BookingDetails from '@/views/booking/BookingDetailsView.vue';
 import { useBookingStore } from '@/stores/booking';
 import AirbusA321Layout from '@/components/seatmaps/AirbusA321Layout.vue';
 
@@ -62,6 +63,12 @@ const routes = [
     path: '/payment',
     name: 'Payment',
     component: Payment
+  },
+  {
+    path: '/booking/:reference',
+    name: 'BookingDetails',
+    component: () => import('@/views/booking/BookingDetailsView.vue'),
+    props: true
   },
   {
   path: '/payment-callback',

@@ -1,8 +1,8 @@
 <template>
-  <!-- <div v-if="timeLeft > 0" class="timer-banner" :class="{ 'timer-warn': timeLeft < 300 }">
+  <div v-if="timeLeft > 0" class="timer-banner" :class="{ 'timer-warn': timeLeft < 300 }">
     <span class="clock-icon">⏳</span>
     <span class="timer-text">Session expires in: <strong>{{ formattedTime }}</strong></span>
-  </div> -->
+  </div>
 </template>
 
 <script setup>

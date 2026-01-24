@@ -222,7 +222,38 @@ const assistanceOptions = ref([]);
 
 onMounted(async () => {
   try {
-    // Migrate store to new format if needed
+    // Debug: Log current store state
+    console.log('📊 ========== PINIA STORE STATE ==========');
+    console.log('🎫 Trip Type:', bookingStore.tripType, '(Round Trip:', bookingStore.isRoundTrip + ')');
+    
+    // Flight data
+    console.log('✈️ Outbound Flight:', bookingStore.selectedOutbound);
+    console.log('🔄 Return Flight:', bookingStore.selectedReturn);
+    
+    // Passenger data
+    console.log('👥 Passenger Count:', bookingStore.passengerCount);
+    console.log('📋 Passengers:', JSON.parse(JSON.stringify(bookingStore.passengers)));
+    
+    // Contact info
+    console.log('📞 Contact Info:', JSON.parse(JSON.stringify(bookingStore.contactInfo)));
+    
+    // Add-ons (deep clone to avoid reactivity issues)
+    console.log('🎯 Add-ons Structure:', JSON.parse(JSON.stringify(bookingStore.addons)));
+    
+    // Financial calculations
+    console.log('💰 Financial Summary:');
+    console.log('  - Combined Base Price:', bookingStore.combinedBasePrice);
+    console.log('  - Total Add-ons Price:', bookingStore.totalAddonsPrice);
+    console.log('  - Grand Total (computed):', bookingStore.grandTotal);
+    console.log('  - Booking Total (stored):', bookingStore.booking_total);
+    
+    // Session info
+    const sessionStatus = bookingStore.checkSession();
+    console.log('⏰ Session Status:', sessionStatus);
+    
+    console.log('📊 ========== END PINIA STORE ==========');
+
+    // Rest of your existing code...
     bookingStore.migrateAddonsToNewFormat();
     
     const airlineId = bookingStore.selectedOutbound?.airline_code || bookingStore.selectedOutbound?.airline;
@@ -263,6 +294,9 @@ const getBaggageLabel = (passengerKey, segment = 'depart') => {
   const baggage = bookingStore.addons?.baggage?.[segment]?.[passengerKey];
   if (!baggage) return 'Standard (Free)';
   
+  // Handle null or undefined baggage
+  if (baggage === null || baggage === undefined) return 'Standard (Free)';
+  
   if (typeof baggage === 'object' && baggage.formatted_weight) {
     return `${baggage.formatted_weight} (₱${parseFloat(baggage.price).toLocaleString()})`;
   }
@@ -295,7 +329,9 @@ const getSeatLabel = (passengerKey) => {
   const seat = bookingStore.addons?.seats?.[passengerKey];
   if (!seat) return 'Not selected';
   
-  return `${seat.seat_code || 'N/A'} (₱${parseFloat(seat.final_price || 0).toLocaleString()})`;
+  // Use seat_price instead of final_price
+  const price = parseFloat(seat.seat_price) || 0;
+  return `${seat.seat_code || 'N/A'} (₱${price.toLocaleString()})`;
 };
 
 const formatDate = (dateStr) => {
@@ -313,7 +349,8 @@ const formatDate = (dateStr) => {
 
 // Computed Properties
 const hasFlightData = computed(() => {
-  return !!bookingStore.selectedOutbound && !!bookingStore.selectedOutbound.price;
+  const outbound = bookingStore.selectedOutbound;
+  return !!outbound && typeof outbound === 'object' && 'price' in outbound;
 });
 
 const payingPassengerCount = computed(() => {
@@ -336,7 +373,8 @@ const totalSeatsPrice = computed(() => {
   const seats = bookingStore.addons?.seats || {};
   return Object.values(seats).reduce((sum, seat) => {
     if (!seat) return sum;
-    const seatPrice = parseFloat(seat.final_price) || 0;
+    // Use seat_price instead of final_price
+    const seatPrice = parseFloat(seat.seat_price) || 0;
     return sum + seatPrice;
   }, 0);
 });
@@ -348,6 +386,9 @@ const totalBaggagePrice = computed(() => {
   segments.forEach(segment => {
     const baggage = bookingStore.addons?.baggage?.[segment] || {};
     Object.values(baggage).forEach(baggageItem => {
+      // Check if baggageItem exists and is not null
+      if (!baggageItem) return;
+      
       if (typeof baggageItem === 'object' && baggageItem.price !== undefined) {
         total += (parseFloat(baggageItem.price) || 0);
       } else {
@@ -367,6 +408,9 @@ const totalMealsPrice = computed(() => {
   segments.forEach(segment => {
     const meals = bookingStore.addons?.meals?.[segment] || {};
     Object.values(meals).forEach(meal => {
+      // Check if meal exists and is not null
+      if (!meal) return;
+      
       if (typeof meal === 'object' && meal.price !== undefined) {
         total += (parseFloat(meal.price) || 0);
       }
@@ -383,11 +427,12 @@ const totalAssistancePrice = computed(() => {
   segments.forEach(segment => {
     const assistance = bookingStore.addons?.wheelchair?.[segment] || {};
     Object.values(assistance).forEach(assistanceId => {
-      if (assistanceId) {
-        const option = assistanceOptions.value.find(a => a.id == assistanceId);
-        if (option && option.price) {
-          total += parseFloat(option.price);
-        }
+      // Check if assistanceId exists and is not null
+      if (!assistanceId) return;
+      
+      const option = assistanceOptions.value.find(a => a.id == assistanceId);
+      if (option && option.price) {
+        total += parseFloat(option.price);
       }
     });
   });

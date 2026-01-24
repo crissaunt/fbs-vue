@@ -1,1265 +1,3 @@
-<script setup>
-import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
-import { useBookingStore } from '@/stores/booking';
-import { useRoute, useRouter } from 'vue-router';
-import flightService from '@/services/booking/flightService';
-import { format, parseISO, isSameDay, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
-
-const route = useRoute();
-const router = useRouter();
-const bookingStore = useBookingStore();
-
-const flights = ref([]);
-const filteredFlights = ref([]);
-const loading = ref(true);
-const showFilters = ref(false);
-const showNoResults = ref(false);
-
-// Timeout handling
-const fetchTimeout = ref(null);
-const timeoutCountdown = ref(5);
-const countdownInterval = ref(null);
-
-// Search Edit Feature State
-const showEditSearch = ref(false);
-const editSearchForm = ref({
-  origin: '',
-  destination: '',
-  departure: '',
-  returnDate: '',
-  adults: 1,
-  children: 0,
-  infants: 0,
-  tripType: 'one-way'
-});
-
-// Multi-step selection
-const selectionPhase = ref('outbound');
-
-// Confirmation modal
-const showConfirmation = ref(false);
-const selectedFlight = ref(null);
-
-// Session expired modal
-const showSessionExpired = ref(false);
-
-// Seat classes modal state
-const showSeatClassesModal = ref(false);
-const selectedFlightForSeats = ref(null);
-const availableSeatClasses = ref([]);
-
-// Seat class features from API
-const seatClassFeatures = ref({});
-
-// Filter State
-const filters = ref({
-  minPrice: null,
-  maxPrice: null,
-  departureTime: 'all',
-  airline: 'all',
-  flightType: 'all',
-  sortBy: 'departure_time',
-  hasAvailableSeats: false,
-  seatClass: 'all',
-});
-
-// Date filter state
-const dateFilter = ref({
-  selectedDate: null,
-  dateRange: 'exact',
-  availableDates: []
-});
-
-// 7-day date selector state
-const dateSelector = ref({
-  currentWeekStart: null,
-  weekDays: [],
-  selectedDay: null
-});
-
-// Filter options
-const filterOptions = ref({
-  departureTimes: [
-    { value: 'all', label: 'Any Time' },
-    { value: 'morning', label: 'Morning (5AM - 11AM)' },
-    { value: 'afternoon', label: 'Afternoon (12PM - 5PM)' },
-    { value: 'evening', label: 'Evening (6PM - 11PM)' },
-    { value: 'night', label: 'Night (12AM - 4AM)' },
-  ],
-  flightTypes: [
-    { value: 'all', label: 'All Flights' },
-    { value: 'domestic', label: 'Domestic Only' },
-    { value: 'international', label: 'International Only' },
-  ],
-  airlines: [],
-  seatClasses: [
-    { value: 'all', label: 'All Classes' },
-  ],
-  sortOptions: [
-    { value: 'departure_time', label: 'Departure Time (Earliest)' },
-    { value: 'price_low', label: 'Price (Low to High)' },
-    { value: 'price_high', label: 'Price (High to Low)' },
-    { value: 'duration', label: 'Duration (Shortest)' },
-  ],
-  dateRanges: [
-    { value: 'exact', label: 'Exact date only' },
-    { value: 'plusMinus1', label: '±1 day' },
-    { value: 'plusMinus2', label: '±2 days' },
-    { value: 'plusMinus3', label: '±3 days' },
-  ]
-});
-
-// Session watcher
-const sessionWatcher = ref(null);
-
-// Load seat class features from API
-const loadSeatClassFeatures = async () => {
-  try {
-    const response = await flightService.getSeatClassFeatures();
-    if (response.data) {
-      seatClassFeatures.value = response.data;
-      console.log('✅ Seat class features loaded:', seatClassFeatures.value);
-      
-      // Update filter options dynamically
-      updateSeatClassFilterOptions();
-    }
-  } catch (error) {
-    console.error('❌ Failed to load seat class features:', error);
-  }
-};
-
-// Update seat class filter options dynamically
-const updateSeatClassFilterOptions = () => {
-  // Start with default "All Classes" option
-  const seatClassOptions = [{ value: 'all', label: 'All Classes' }];
-  
-  // Add seat classes from loaded features
-  if (Object.keys(seatClassFeatures.value).length > 0) {
-    Object.keys(seatClassFeatures.value).forEach(className => {
-      const formattedName = className.split('_').map(word => 
-        word.charAt(0).toUpperCase() + word.slice(1)
-      ).join(' ');
-      
-      seatClassOptions.push({
-        value: className,
-        label: formattedName
-      });
-    });
-  } else {
-    // Fallback to default seat classes
-    seatClassOptions.push(
-      { value: 'economy', label: 'Economy' },
-      { value: 'business', label: 'Business' },
-      { value: 'first', label: 'First Class' },
-      { value: 'premium_economy', label: 'Premium Economy' }
-    );
-  }
-  
-  filterOptions.value.seatClasses = seatClassOptions;
-};
-
-// Use trip type from Pinia store
-const tripType = computed(() => bookingStore.tripType || route.query.tripType);
-const isRoundTrip = computed(() => tripType.value === 'round_trip' || tripType.value === 'round-trip');
-
-// Check if outbound is already selected
-const hasOutboundSelected = computed(() => {
-  return bookingStore.selectedOutbound !== null && bookingStore.selectedOutbound !== undefined;
-});
-
-// Computed for current search date
-const currentSearchDate = computed(() => {
-  return selectionPhase.value === 'outbound' ? route.query.departure : route.query.returnDate;
-});
-
-// Initialize edit search form with current route values
-const initializeEditSearch = () => {
-  // Check session first
-  const sessionCheck = bookingStore.checkSession();
-  if (!sessionCheck.valid) {
-    showSessionExpiredModal();
-    return;
-  }
-
-  editSearchForm.value = {
-    origin: route.query.origin || '',
-    destination: route.query.destination || '',
-    departure: route.query.departure || '',
-    returnDate: route.query.returnDate || '',
-    adults: parseInt(route.query.adults) || 1,
-    children: parseInt(route.query.children) || 0,
-    infants: parseInt(route.query.infants) || 0,
-    tripType: route.query.tripType || 'one-way'
-  };
-  showEditSearch.value = true;
-};
-
-// Submit edited search
-const submitEditedSearch = () => {
-  const searchParams = {
-    ...editSearchForm.value,
-    adults: editSearchForm.value.adults.toString(),
-    children: editSearchForm.value.children.toString(),
-    infants: editSearchForm.value.infants.toString()
-  };
-  
-  // Update store
-  bookingStore.setTripType(editSearchForm.value.tripType);
-  
-  // Navigate with new search params
-  router.push({
-    name: 'SearchResults',
-    query: searchParams
-  });
-  
-  showEditSearch.value = false;
-  
-  // Reload flights with new params
-  setTimeout(() => {
-    fetchFlights();
-  }, 100);
-};
-
-// Session expired modal handler
-const showSessionExpiredModal = () => {
-  showSessionExpired.value = true;
-  
-  // Auto redirect after 5 seconds
-  setTimeout(() => {
-    bookingStore.resetBooking();
-    router.push({ name: 'Home' });
-  }, 5000);
-};
-
-// Handle showing seat classes for a flight
-const showSeatClasses = (flight) => {
-  selectedFlightForSeats.value = flight;
-  
-  // Extract seat classes from flight data
-  availableSeatClasses.value = extractSeatClassesFromFlight(flight);
-  
-  showSeatClassesModal.value = true;
-};
-
-// Extract seat classes from flight data
-const extractSeatClassesFromFlight = (flight) => {
-  if (!flight) return [];
-  
-  // If seat_classes is an array of strings
-  if (Array.isArray(flight.seat_classes) && flight.seat_classes.length > 0) {
-    // Check if first item is string or object
-    if (typeof flight.seat_classes[0] === 'string') {
-      return flight.seat_classes.map(className => ({
-        name: className,
-        description: getSeatClassDescription(className),
-        price: calculateSeatClassPrice(flight.price, className),
-        icon: getSeatClassIcon(className),
-        features: getSeatClassFeatures(className)
-      }));
-    } else if (typeof flight.seat_classes[0] === 'object') {
-      return flight.seat_classes.map(seatClass => ({
-        name: seatClass.name || seatClass.class_name || seatClass.value || 'Unknown',
-        description: seatClass.description || getSeatClassDescription(seatClass.name || seatClass.class_name),
-        price: seatClass.price || calculateSeatClassPrice(flight.price, seatClass.name || seatClass.class_name),
-        icon: getSeatClassIcon(seatClass.name || seatClass.class_name),
-        features: seatClass.features || getSeatClassFeatures(seatClass.name || seatClass.class_name)
-      }));
-    }
-  }
-  
-  // If no seat classes found, return default classes with dynamic features
-  const defaultClasses = [
-    { 
-      name: 'Economy', 
-      description: getSeatClassDescription('economy'), 
-      price: flight.price, 
-      icon: getSeatClassIcon('economy'),
-      features: getSeatClassFeatures('economy')
-    },
-    { 
-      name: 'Business', 
-      description: getSeatClassDescription('business'), 
-      price: calculateSeatClassPrice(flight.price, 'business'), 
-      icon: getSeatClassIcon('business'),
-      features: getSeatClassFeatures('business')
-    },
-    { 
-      name: 'First Class', 
-      description: getSeatClassDescription('first'), 
-      price: calculateSeatClassPrice(flight.price, 'first'), 
-      icon: getSeatClassIcon('first'),
-      features: getSeatClassFeatures('first')
-    }
-  ];
-  
-  return defaultClasses;
-};
-
-// Calculate seat class price based on base price
-const calculateSeatClassPrice = (basePrice, className) => {
-  const priceMultipliers = {
-    'economy': 1.0,
-    'business': 1.8,
-    'first': 2.5,
-    'premium_economy': 1.3
-  };
-  
-  const key = className.toLowerCase().replace(' ', '_');
-  const multiplier = priceMultipliers[key] || 1.0;
-  return basePrice * multiplier;
-};
-
-// Helper function to get seat class description
-const getSeatClassDescription = (className) => {
-  const descriptions = {
-    'economy': 'Standard seat with essential amenities, complimentary snacks, and in-flight entertainment',
-    'business': 'Extra legroom, premium service, priority boarding, and enhanced meal options',
-    'first': 'Luxury seating, gourmet meals, premium entertainment, and exclusive lounge access',
-    'premium_economy': 'More legroom, enhanced meal service, and priority check-in',
-    'first_class': 'Luxury seating, gourmet meals, premium entertainment, and exclusive lounge access',
-    'business_class': 'Extra legroom, premium service, priority boarding, and enhanced meal options'
-  };
-  
-  const key = className.toLowerCase().replace(' ', '_');
-  return descriptions[key] || 'Premium seating with enhanced services';
-};
-
-// Helper function to get seat class icon
-const getSeatClassIcon = (className) => {
-  const icons = {
-    'economy': 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
-    'business': 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
-    'first': 'M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7'
-  };
-  
-  const key = className.toLowerCase().split(' ')[0];
-  return icons[key] || icons.economy;
-};
-
-// Helper function to get seat class features (Dynamically from API or fallback)
-const getSeatClassFeatures = (className) => {
-  if (!className) return [];
-  
-  const key = className.toLowerCase().replace(' ', '_');
-  
-  // Try to get from API data first
-  if (seatClassFeatures.value[key] && seatClassFeatures.value[key].length > 0) {
-    return seatClassFeatures.value[key];
-  }
-  
-  // If not found, check for similar keys
-  for (const [apiKey, features] of Object.entries(seatClassFeatures.value)) {
-    if (className.toLowerCase().includes(apiKey.replace('_', ' ')) || 
-        apiKey.includes(className.toLowerCase().replace(' ', '_'))) {
-      return features;
-    }
-  }
-  
-  // Return empty array instead of fallback features
-  return [];
-};
-
-// Handle seat class selection
-const handleSeatClassSelection = (seatClass) => {
-  console.log('✅ Selected seat class:', seatClass.name);
-  
-  // Store the selected seat class with the flight
-  selectedFlight.value = {
-    ...selectedFlight.value,
-    selected_seat_class: seatClass.name,
-    selected_seat_price: seatClass.price,
-    price: seatClass.price,
-    original_price: selectedFlightForSeats.value?.price || selectedFlight.value?.price,
-    seat_class_features: seatClass.features
-  };
-  
-  // Store the flight in Pinia (this will be used later)
-  if (selectedFlight.value) {
-    // Create a flight object with seat class info
-    const flightWithSeatClass = {
-      ...selectedFlight.value,
-      price: seatClass.price,
-      original_price: selectedFlightForSeats.value?.price || selectedFlight.value?.price,
-      seat_class: seatClass.name,
-      selected_seat_class: seatClass.name,
-      seat_class_details: seatClass
-    };
-    
-    // Store in Pinia based on selection phase
-    if (isRoundTrip.value) {
-      if (selectionPhase.value === 'outbound') {
-        bookingStore.selectFlight(flightWithSeatClass, 'outbound');
-        console.log('✅ Outbound flight with seat class saved to store');
-      } else {
-        bookingStore.selectFlight(flightWithSeatClass, 'return');
-        console.log('✅ Return flight with seat class saved to store');
-      }
-    } else {
-      bookingStore.selectFlight(flightWithSeatClass, 'outbound');
-      console.log('✅ One-way flight with seat class saved to store');
-    }
-  }
-  
-  // Close seat classes modal
-  showSeatClassesModal.value = false;
-  
-  // Show confirmation modal
-  showConfirmation.value = true;
-};
-
-// Cancel seat class selection
-const cancelSeatClassSelection = () => {
-  console.log('❌ Cancelled seat class selection');
-  showSeatClassesModal.value = false;
-  selectedFlightForSeats.value = null;
-};
-
-// Sync route query with store on mount
-onMounted(() => {
-  console.log('🚀 SearchResults mounted');
-  console.log('Route Query:', route.query);
-  
-  // Check session validity
-  const sessionCheck = bookingStore.checkSession();
-  if (!sessionCheck.valid) {
-    console.log('❌ Session invalid, redirecting to home');
-    router.push({ name: 'Home' });
-    return;
-  }
-  
-  if (route.query.tripType && !bookingStore.tripType) {
-    bookingStore.setTripType(route.query.tripType);
-  }
-  
-  console.log('Trip Type from Store:', bookingStore.tripType);
-  console.log('Trip Type from Route:', route.query.tripType);
-  console.log('Is Round Trip:', isRoundTrip.value);
-  console.log('Has Outbound Selected:', hasOutboundSelected.value);
-  
-  // AUTO-SWITCH TO RETURN PHASE IF OUTBOUND IS ALREADY SELECTED
-  if (isRoundTrip.value && hasOutboundSelected.value) {
-    console.log('🔄 Outbound already selected, switching to return phase');
-    selectionPhase.value = 'return';
-  }
-  
-  console.log('Initial Phase:', selectionPhase.value);
-  
-  // Load seat class features first
-  loadSeatClassFeatures().then(() => {
-    fetchFlights();
-  });
-  
-  // Start session check interval
-  sessionWatcher.value = setInterval(() => {
-    const sessionCheck = bookingStore.checkSession();
-    if (!sessionCheck.valid && sessionCheck.expired) {
-      console.log('⏰ Session expired, redirecting to home');
-      clearInterval(sessionWatcher.value);
-      showSessionExpiredModal();
-    }
-  }, 30000);
-});
-
-onUnmounted(() => {
-  // Clean up all intervals and timeouts
-  if (sessionWatcher.value) {
-    clearInterval(sessionWatcher.value);
-  }
-  if (fetchTimeout.value) {
-    clearTimeout(fetchTimeout.value);
-  }
-  if (countdownInterval.value) {
-    clearInterval(countdownInterval.value);
-  }
-});
-
-// Watch for filter changes
-watch([filters, dateFilter], () => {
-  applyFilters();
-}, { deep: true });
-
-// Watch for outbound selection changes to auto-switch phase
-watch(hasOutboundSelected, (newValue) => {
-  if (isRoundTrip.value && newValue) {
-    console.log('🔄 Outbound selection detected, switching to return phase');
-    selectionPhase.value = 'return';
-    // Fetch return flights
-    setTimeout(() => {
-      fetchFlights();
-    }, 100);
-  }
-});
-
-// Extract unique dates from flights
-const extractAvailableDates = (flightsList) => {
-  const datesSet = new Set();
-  flightsList.forEach(flight => {
-    if (flight.departure_time) {
-      const date = new Date(flight.departure_time);
-      const dateString = format(date, 'yyyy-MM-dd');
-      datesSet.add(dateString);
-    }
-  });
-  return Array.from(datesSet).sort();
-};
-
-// Initialize 7-day date selector
-const initializeDateSelector = () => {
-  const searchDate = new Date(currentSearchDate.value);
-  dateSelector.value.currentWeekStart = startOfWeek(searchDate, { weekStartsOn: 0 });
-  
-  // Generate 7 days starting from week start
-  dateSelector.value.weekDays = eachDayOfInterval({
-    start: dateSelector.value.currentWeekStart,
-    end: addDays(dateSelector.value.currentWeekStart, 6)
-  }).map(date => ({
-    date: date,
-    dateString: format(date, 'yyyy-MM-dd'),
-    dayName: format(date, 'EEE'),
-    dayNumber: format(date, 'd'),
-    monthName: format(date, 'MMM'),
-    fullDate: format(date, 'yyyy-MM-dd'),
-    isAvailable: dateFilter.value.availableDates.includes(format(date, 'yyyy-MM-dd')),
-    isSelected: format(date, 'yyyy-MM-dd') === dateFilter.value.selectedDate,
-    isToday: isSameDay(date, new Date()),
-    isSearchDate: isSameDay(date, new Date(currentSearchDate.value))
-  }));
-  
-  // Set selected day
-  dateSelector.value.selectedDay = dateFilter.value.selectedDate;
-};
-
-// Navigate to previous week
-const prevWeek = () => {
-  dateSelector.value.currentWeekStart = subDays(dateSelector.value.currentWeekStart, 7);
-  updateWeekDays();
-};
-
-// Navigate to next week
-const nextWeek = () => {
-  dateSelector.value.currentWeekStart = addDays(dateSelector.value.currentWeekStart, 7);
-  updateWeekDays();
-};
-
-// Navigate to current week
-const goToCurrentWeek = () => {
-  const searchDate = new Date(currentSearchDate.value);
-  dateSelector.value.currentWeekStart = startOfWeek(searchDate, { weekStartsOn: 0 });
-  updateWeekDays();
-  
-  // Also reset date filter to search date
-  dateFilter.value.selectedDate = currentSearchDate.value;
-  dateFilter.value.dateRange = 'exact';
-  applyFilters();
-};
-
-// Update week days based on current week start
-const updateWeekDays = () => {
-  dateSelector.value.weekDays = eachDayOfInterval({
-    start: dateSelector.value.currentWeekStart,
-    end: addDays(dateSelector.value.currentWeekStart, 6)
-  }).map(date => ({
-    date: date,
-    dateString: format(date, 'yyyy-MM-dd'),
-    dayName: format(date, 'EEE'),
-    dayNumber: format(date, 'd'),
-    monthName: format(date, 'MMM'),
-    fullDate: format(date, 'yyyy-MM-dd'),
-    isAvailable: dateFilter.value.availableDates.includes(format(date, 'yyyy-MM-dd')),
-    isSelected: format(date, 'yyyy-MM-dd') === dateFilter.value.selectedDate,
-    isToday: isSameDay(date, new Date()),
-    isSearchDate: isSameDay(date, new Date(currentSearchDate.value))
-  }));
-};
-
-// Select a day from the 7-day selector
-const selectDay = (day) => {
-  if (day.isAvailable) {
-    dateSelector.value.selectedDay = day.dateString;
-    dateFilter.value.selectedDate = day.dateString;
-    dateFilter.value.dateRange = 'exact';
-    applyFilters();
-  }
-};
-
-// Apply filters to flights
-const applyFilters = () => {
-  if (flights.value.length === 0) return;
-  
-  let result = [...flights.value];
-  
-  // Date filter
-  if (dateFilter.value.selectedDate) {
-    const selectedDate = new Date(dateFilter.value.selectedDate);
-    
-    result = result.filter(f => {
-      if (!f.departure_time) return false;
-      
-      const flightDate = new Date(f.departure_time);
-      const flightDateStr = format(flightDate, 'yyyy-MM-dd');
-      const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-      
-      if (dateFilter.value.dateRange === 'exact') {
-        return flightDateStr === selectedDateStr;
-      } else {
-        const daysRange = parseInt(dateFilter.value.dateRange.replace('plusMinus', ''));
-        const minDate = subDays(selectedDate, daysRange);
-        const maxDate = addDays(selectedDate, daysRange);
-        
-        return flightDate >= minDate && flightDate <= maxDate;
-      }
-    });
-  }
-  
-  // Price filter
-  if (filters.value.minPrice) {
-    result = result.filter(f => f.price >= parseFloat(filters.value.minPrice));
-  }
-  if (filters.value.maxPrice) {
-    result = result.filter(f => f.price <= parseFloat(filters.value.maxPrice));
-  }
-  
-  // Departure time filter
-  if (filters.value.departureTime !== 'all') {
-    result = result.filter(f => {
-      const hour = new Date(f.departure_time).getHours();
-      switch (filters.value.departureTime) {
-        case 'morning': return hour >= 5 && hour <= 11;
-        case 'afternoon': return hour >= 12 && hour <= 17;
-        case 'evening': return hour >= 18 && hour <= 23;
-        case 'night': return hour >= 0 && hour <= 4 || hour === 24;
-        default: return true;
-      }
-    });
-  }
-  
-  // Airline filter
-  if (filters.value.airline !== 'all') {
-    result = result.filter(f => f.airline_code === filters.value.airline);
-  }
-  
-  // Flight type filter
-  if (filters.value.flightType !== 'all') {
-    result = result.filter(f => {
-      if (filters.value.flightType === 'domestic') {
-        return f.is_domestic === true;
-      } else if (filters.value.flightType === 'international') {
-        return f.is_domestic === false;
-      }
-      return true;
-    });
-  }
-  
-  // Available seats filter
-  if (filters.value.hasAvailableSeats) {
-    result = result.filter(f => f.available_seats > 0);
-  }
-  
-  // Seat class filter
-  if (filters.value.seatClass !== 'all') {
-    result = result.filter(f => {
-      if (f.available_classes && Array.isArray(f.available_classes)) {
-        return f.available_classes.includes(filters.value.seatClass);
-      }
-      
-      if (f.seat_classes && Array.isArray(f.seat_classes)) {
-        return f.seat_classes.some(seatClass => {
-          if (typeof seatClass === 'string') {
-            return seatClass.toLowerCase() === filters.value.seatClass.toLowerCase();
-          } else if (seatClass && typeof seatClass === 'object') {
-            const className = seatClass.name || seatClass.class_name || seatClass.value || '';
-            return className.toLowerCase() === filters.value.seatClass.toLowerCase();
-          }
-          return false;
-        });
-      }
-      
-      return true;
-    });
-  }
-  
-  // Sort flights
-  result.sort((a, b) => {
-    switch (filters.value.sortBy) {
-      case 'price_low':
-        return a.price - b.price;
-      case 'price_high':
-        return b.price - a.price;
-      case 'duration':
-        return (a.duration_minutes || 0) - (b.duration_minutes || 0);
-      case 'departure_time':
-      default:
-        return new Date(a.departure_time) - new Date(b.departure_time);
-    }
-  });
-  
-  filteredFlights.value = result;
-};
-
-// Reset all filters
-const resetFilters = () => {
-  filters.value = {
-    minPrice: null,
-    maxPrice: null,
-    departureTime: 'all',
-    airline: 'all',
-    flightType: 'all',
-    sortBy: 'departure_time',
-    hasAvailableSeats: false,
-    seatClass: 'all',
-  };
-  
-  dateFilter.value = {
-    selectedDate: currentSearchDate.value,
-    dateRange: 'exact',
-    availableDates: []
-  };
-  
-  goToCurrentWeek();
-  filteredFlights.value = [...flights.value];
-};
-
-// Reset date filter only
-const resetDateFilter = () => {
-  dateFilter.value.selectedDate = currentSearchDate.value;
-  dateFilter.value.dateRange = 'exact';
-  goToCurrentWeek();
-  applyFilters();
-};
-
-// Get unique airlines from flights
-const extractAirlines = (flightsList) => {
-  const airlinesSet = new Set();
-  flightsList.forEach(flight => {
-    if (flight.airline_code && flight.airline_name) {
-      airlinesSet.add({
-        code: flight.airline_code,
-        name: flight.airline_name
-      });
-    }
-  });
-  return Array.from(airlinesSet);
-};
-
-// Get price range for price slider
-const priceRange = computed(() => {
-  if (flights.value.length === 0) return { min: 0, max: 1000 };
-  
-  const prices = flights.value.map(f => f.price);
-  return {
-    min: Math.min(...prices),
-    max: Math.max(...prices)
-  };
-});
-
-// Get unique dates for date filter dropdown
-const uniqueDates = computed(() => {
-  if (!dateFilter.value.availableDates.length) return [];
-  
-  return dateFilter.value.availableDates.map(dateStr => {
-    const date = new Date(dateStr);
-    return {
-      value: dateStr,
-      label: format(date, 'EEEE, MMMM d, yyyy'),
-      shortLabel: format(date, 'MMM d, yyyy'),
-      date: date
-    };
-  });
-});
-
-// Handle flight selection
-const handleSelectFlight = (flight) => {
-  // Check session before proceeding
-  const sessionCheck = bookingStore.checkSession();
-  if (!sessionCheck.valid) {
-    showSessionExpiredModal();
-    return;
-  }
-
-  console.log('✈️ Flight clicked:', flight.flight_number, 'Phase:', selectionPhase.value);
-  
-  // Refresh session on user interaction
-  bookingStore.startSession();
-  
-  // Store the selected flight for confirmation
-  selectedFlight.value = flight;
-  
-  // First show seat classes modal instead of confirmation
-  showSeatClasses(flight);
-};
-
-// Confirm selection
-const confirmSelection = () => {
-  if (!selectedFlight.value) return;
-  
-  // Refresh session
-  bookingStore.startSession();
-  
-  if (isRoundTrip.value) {
-    if (selectionPhase.value === 'outbound') {
-      console.log('✅ CONFIRMING OUTBOUND FLIGHT FOR ROUND-TRIP');
-      console.log('Flight:', selectedFlight.value.flight_number);
-      console.log('Seat Class:', selectedFlight.value.selected_seat_class);
-      console.log('Price with seat class: ₱', Number(selectedFlight.value.price).toLocaleString());
-      
-      // Flight already stored in handleSelectFlight with seat class
-      logFlightSelection(selectedFlight.value, 'outbound');
-      
-      // Move to return phase
-      selectionPhase.value = 'return';
-      fetchFlights();
-      window.scrollTo(0, 0);
-    } else {
-      console.log('✅ CONFIRMING COMPLETE ROUND-TRIP BOOKING');
-      
-      // Log both flights with seat class info
-      if (bookingStore.selectedOutbound) {
-        console.log('Outbound Seat Class:', bookingStore.selectedOutbound.seat_class);
-        console.log('Outbound Price with Seat Class: ₱', Number(bookingStore.selectedOutbound.price).toLocaleString());
-      }
-      
-      console.log('Return Seat Class:', selectedFlight.value.selected_seat_class);
-      console.log('Return Price with Seat Class: ₱', Number(selectedFlight.value.price).toLocaleString());
-      
-      logFlightSelection(selectedFlight.value, 'return');
-      logCompleteBooking();
-      
-      router.push({ name: 'PassengerDetails' });
-    }
-  } else {
-    console.log('✅ CONFIRMING ONE-WAY BOOKING');
-    console.log('Flight:', selectedFlight.value.flight_number);
-    console.log('Seat Class:', selectedFlight.value.selected_seat_class);
-    console.log('Price with seat class: ₱', Number(selectedFlight.value.price).toLocaleString());
-    
-    // One-way flight already stored with seat class in handleSeatClassSelection
-    logFlightSelection(selectedFlight.value, 'outbound');
-    
-    router.push({ name: 'PassengerDetails' });
-  }
-  
-  showConfirmation.value = false;
-  selectedFlight.value = null;
-};
-
-// Cancel selection
-const cancelSelection = () => {
-  console.log('❌ Cancelled selection');
-  showConfirmation.value = false;
-  selectedFlight.value = null;
-};
-
-// Helper function to log flight selection
-const logFlightSelection = (flight, type) => {
-  console.log(`📝 ${type.toUpperCase()} FLIGHT SELECTED:`);
-  console.log(`  Flight: ${flight.flight_number}`);
-  console.log(`  Seat Class: ${flight.selected_seat_class || flight.seat_class || 'Not selected'}`);
-  console.log(`  Route: ${flight.origin} → ${flight.destination}`);
-  console.log(`  Departure: ${formatTime(flight.departure_time)} on ${formatDate(flight.departure_time)}`);
-  console.log(`  Price: ₱${Number(flight.price).toLocaleString()}`);
-  if (flight.original_price && flight.price !== flight.original_price) {
-    console.log(`  Base Price: ₱${Number(flight.original_price).toLocaleString()}`);
-    console.log(`  Seat Class Upcharge: ₱${Number(flight.price - flight.original_price).toLocaleString()}`);
-  }
-  console.log('');
-};
-
-// Helper function to log complete booking
-const logCompleteBooking = () => {
-  console.log('📊 COMPLETE BOOKING SUMMARY:');
-  console.log('============================');
-  console.log(`Trip Type: ${bookingStore.tripType || tripType.value}`);
-  
-  if (bookingStore.selectedOutbound) {
-    const outbound = bookingStore.selectedOutbound;
-    console.log('Outbound:');
-    console.log(`  ${outbound.flight_number}: ${outbound.origin} → ${outbound.destination}`);
-    console.log(`  Departure: ${formatTime(outbound.departure_time)}`);
-    console.log(`  Seat Class: ${outbound.selected_seat_class || outbound.seat_class || 'Not selected'}`);
-    console.log(`  Price: ₱${Number(outbound.price).toLocaleString()}`);
-  }
-  
-  if (bookingStore.selectedReturn) {
-    const returnFlight = bookingStore.selectedReturn;
-    console.log('Return:');
-    console.log(`  ${returnFlight.flight_number}: ${returnFlight.origin} → ${returnFlight.destination}`);
-    console.log(`  Departure: ${formatTime(returnFlight.departure_time)}`);
-    console.log(`  Seat Class: ${returnFlight.selected_seat_class || returnFlight.seat_class || 'Not selected'}`);
-    console.log(`  Price: ₱${Number(returnFlight.price).toLocaleString()}`);
-  }
-  
-  console.log('============================');
-};
-
-// Format seat classes for display
-const formatSeatClasses = (seatClasses) => {
-  if (!seatClasses || !Array.isArray(seatClasses)) return '';
-  
-  return seatClasses.map(sc => {
-    if (typeof sc === 'string') {
-      return sc;
-    } else if (sc && typeof sc === 'object') {
-      return sc.name || sc.class_name || sc.value || 'Unknown';
-    }
-    return 'Unknown';
-  }).join(', ');
-};
-
-const fetchFlights = async () => {
-  loading.value = true;
-  showNoResults.value = false;
-  timeoutCountdown.value = 5;
-  
-  // Clear any existing timeout and interval
-  if (fetchTimeout.value) {
-    clearTimeout(fetchTimeout.value);
-  }
-  if (countdownInterval.value) {
-    clearInterval(countdownInterval.value);
-  }
-  
-  // Start countdown timer
-  countdownInterval.value = setInterval(() => {
-    if (timeoutCountdown.value > 0) {
-      timeoutCountdown.value--;
-    } else {
-      clearInterval(countdownInterval.value);
-    }
-  }, 1000);
-  
-  // Set timeout to show no results after 5 seconds
-  fetchTimeout.value = setTimeout(() => {
-    if (loading.value) {
-      console.log('⏰ Timeout reached - showing no flights message');
-      showNoResults.value = true;
-      loading.value = false;
-      flights.value = [];
-      filteredFlights.value = [];
-      clearInterval(countdownInterval.value);
-    }
-  }, 5000);
-
-  try {
-    const isReturnPhase = selectionPhase.value === 'return';
-    
-    const params = {
-      origin: isReturnPhase ? route.query.destination : route.query.origin,
-      destination: isReturnPhase ? route.query.origin : route.query.destination,
-      departure: isReturnPhase ? route.query.returnDate : route.query.departure
-    };
-
-    console.log('📡 Fetching flights:', {
-      phase: selectionPhase.value,
-      tripType: bookingStore.tripType,
-      params: params
-    });
-
-    const response = await flightService.getSchedules(params);
-    
-    // Clear timeout and interval since we got a response
-    clearInterval(countdownInterval.value);
-    clearTimeout(fetchTimeout.value);
-    
-    flights.value = response.data || [];
-    filteredFlights.value = [...flights.value];
-    
-    // DEBUG: Log flight data structure
-    if (flights.value.length > 0) {
-      console.log('First flight structure:', flights.value[0]);
-      console.log('seat_classes type:', typeof flights.value[0].seat_classes);
-      console.log('seat_classes value:', flights.value[0].seat_classes);
-      if (flights.value[0].seat_classes && Array.isArray(flights.value[0].seat_classes)) {
-        console.log('First seat class item:', flights.value[0].seat_classes[0]);
-        console.log('First seat class type:', typeof flights.value[0].seat_classes[0]);
-      }
-    }
-    
-    // Check if response has data
-    if (!response.data || response.data.length === 0) {
-      showNoResults.value = true;
-    } else {
-      showNoResults.value = false;
-    }
-    
-    // Extract unique airlines for filter dropdown
-    const airlinesList = extractAirlines(flights.value);
-    filterOptions.value.airlines = [
-      { value: 'all', label: 'All Airlines' },
-      ...airlinesList.map(a => ({ value: a.code, label: a.name }))
-    ];
-    
-    // Extract unique dates for date filter
-    dateFilter.value.availableDates = extractAvailableDates(flights.value);
-    dateFilter.value.selectedDate = currentSearchDate.value;
-    
-    // Initialize date selector
-    initializeDateSelector();
-    
-    console.log(`📊 Received ${flights.value.length} ${selectionPhase.value} flights`);
-    console.log('Available dates:', dateFilter.value.availableDates);
-    console.log('Airlines found:', airlinesList);
-    
-    // Apply initial filters
-    applyFilters();
-    
-  } catch (error) {
-    console.error("❌ API Error:", error);
-    
-    // Clear timeout and interval on error
-    clearInterval(countdownInterval.value);
-    clearTimeout(fetchTimeout.value);
-    
-    showNoResults.value = true;
-    flights.value = [];
-    filteredFlights.value = [];
-  } finally {
-    loading.value = false;
-  }
-};
-
-// Retry fetching flights
-const retryFetchFlights = () => {
-  showNoResults.value = false;
-  fetchFlights();
-};
-
-// Format time
-const formatTime = (dateTimeString) => {
-  if (!dateTimeString) return '';
-  const date = new Date(dateTimeString);
-  return date.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
-};
-
-// Format date
-const formatDate = (dateTimeString) => {
-  if (!dateTimeString) return '';
-  const date = new Date(dateTimeString);
-  return date.toLocaleDateString('en-PH', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
-};
-
-// Format date short
-const formatDateShort = (dateTimeString) => {
-  if (!dateTimeString) return '';
-  const date = new Date(dateTimeString);
-  return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
-};
-
-// Format date for display
-const formatDateDisplay = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return format(date, 'EEEE, MMMM d, yyyy');
-};
-
-// Format week range for display
-const formatWeekRange = computed(() => {
-  if (!dateSelector.value.currentWeekStart) return '';
-  const weekEnd = addDays(dateSelector.value.currentWeekStart, 6);
-  return `${format(dateSelector.value.currentWeekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
-});
-
-// Format duration
-const formatDuration = (minutes) => {
-  if (!minutes) return '';
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hours}h ${mins}m`;
-};
-
-// Get selected flights summary for display
-const selectedFlightsSummary = computed(() => {
-  const summary = [];
-  
-  if (bookingStore.selectedOutbound) {
-    // For one-way trips, don't show "Outbound" label
-    const typeLabel = isRoundTrip.value ? 'Outbound' : 'Flight';
-    
-    summary.push({
-      type: typeLabel,
-      flight: bookingStore.selectedOutbound.flight_number,
-      route: `${bookingStore.selectedOutbound.origin} → ${bookingStore.selectedOutbound.destination}`,
-      time: formatTime(bookingStore.selectedOutbound.departure_time),
-      date: formatDate(bookingStore.selectedOutbound.departure_time),
-      price: Number(bookingStore.selectedOutbound.price).toLocaleString(),
-      selected_seat_class: bookingStore.selectedOutbound.selected_seat_class || bookingStore.selectedOutbound.seat_class
-    });
-  }
-  
-  if (bookingStore.selectedReturn) {
-    summary.push({
-      type: 'Return',
-      flight: bookingStore.selectedReturn.flight_number,
-      route: `${bookingStore.selectedReturn.origin} → ${bookingStore.selectedReturn.destination}`,
-      time: formatTime(bookingStore.selectedReturn.departure_time),
-      date: formatDate(bookingStore.selectedReturn.departure_time),
-      price: Number(bookingStore.selectedReturn.price).toLocaleString(),
-      selected_seat_class: bookingStore.selectedReturn.selected_seat_class || bookingStore.selectedReturn.seat_class
-    });
-  }
-  
-  return summary;
-});
-
-// Get total price
-const totalPrice = computed(() => {
-  let total = 0;
-  if (bookingStore.selectedOutbound) {
-    total += Number(bookingStore.selectedOutbound.price);
-  }
-  if (bookingStore.selectedReturn) {
-    total += Number(bookingStore.selectedReturn.price);
-  }
-  return total;
-});
-
-// Get modal title based on trip type and phase
-const modalTitle = computed(() => {
-  if (isRoundTrip.value) {
-    if (selectionPhase.value === 'outbound') {
-      return 'Confirm Outbound Flight';
-    } else {
-      return 'Confirm Return Flight';
-    }
-  }
-  return 'Confirm Flight Selection';
-});
-
-// Get confirm button text
-const confirmButtonText = computed(() => {
-  if (isRoundTrip.value) {
-    if (selectionPhase.value === 'outbound') {
-      return 'Confirm Outbound';
-    } else {
-      return 'Confirm Round-Trip';
-    }
-  }
-  return 'Confirm Flight';
-});
-
-// Get flight statistics
-const flightStats = computed(() => {
-  const total = flights.value.length;
-  const filtered = filteredFlights.value.length;
-  const lowestPrice = filteredFlights.value.length > 0 
-    ? Math.min(...filteredFlights.value.map(f => f.price))
-    : 0;
-  const highestPrice = filteredFlights.value.length > 0
-    ? Math.max(...filteredFlights.value.map(f => f.price))
-    : 0;
-  
-  return {
-    total,
-    filtered,
-    lowestPrice,
-    highestPrice,
-    priceRange: `${lowestPrice.toLocaleString()} - ${highestPrice.toLocaleString()}`
-  };
-});
-
-// Get current date filter display
-const dateFilterDisplay = computed(() => {
-  if (!dateFilter.value.selectedDate) return 'No date selected';
-  
-  const dateLabel = formatDateDisplay(dateFilter.value.selectedDate);
-  const rangeLabel = filterOptions.value.dateRanges.find(r => r.value === dateFilter.value.dateRange)?.label;
-  
-  return `${dateLabel} (${rangeLabel})`;
-});
-
-// Check if date filter is active
-const isDateFilterActive = computed(() => {
-  return dateFilter.value.selectedDate !== currentSearchDate.value || dateFilter.value.dateRange !== 'exact';
-});
-
-// Check if current week contains selected date
-const currentWeekContainsSelectedDate = computed(() => {
-  if (!dateFilter.value.selectedDate || !dateSelector.value.weekDays.length) return false;
-  
-  const selectedDateStr = dateFilter.value.selectedDate;
-  return dateSelector.value.weekDays.some(day => day.dateString === selectedDateStr);
-});
-
-// Get phase-specific route info
-const phaseRouteInfo = computed(() => {
-  if (selectionPhase.value === 'outbound') {
-    return {
-      origin: route.query.origin,
-      destination: route.query.destination,
-      date: route.query.departure
-    };
-  } else {
-    return {
-      origin: route.query.destination,
-      destination: route.query.origin,
-      date: route.query.returnDate
-    };
-  }
-});
-
-// Get phase-specific button text
-const selectButtonText = computed(() => {
-  if (isRoundTrip.value) {
-    return selectionPhase.value === 'outbound' ? 'Select Outbound' : 'Select Return';
-  }
-  return 'Select Flight';
-});
-
-// Go back to outbound phase (for round trip)
-const goBackToOutbound = () => {
-  console.log('⬅️ Going back to outbound phase');
-  selectionPhase.value = 'outbound';
-  fetchFlights();
-  window.scrollTo(0, 0);
-};
-
-// Get available seat class options from flights
-const availableSeatClassOptions = computed(() => {
-  // Start with "All Classes"
-  const options = [{ value: 'all', label: 'All Classes' }];
-  
-  // Get unique seat classes from flights
-  const uniqueClasses = new Set();
-  
-  flights.value.forEach(flight => {
-    if (flight.available_classes && Array.isArray(flight.available_classes)) {
-      flight.available_classes.forEach(className => {
-        const key = className.toLowerCase().replace(' ', '_');
-        uniqueClasses.add(key);
-      });
-    }
-    
-    if (flight.seat_classes && Array.isArray(flight.seat_classes)) {
-      flight.seat_classes.forEach(seatClass => {
-        if (typeof seatClass === 'string') {
-          const key = seatClass.toLowerCase().replace(' ', '_');
-          uniqueClasses.add(key);
-        } else if (typeof seatClass === 'object') {
-          const className = seatClass.name || seatClass.class_name || '';
-          if (className) {
-            const key = className.toLowerCase().replace(' ', '_');
-            uniqueClasses.add(key);
-          }
-        }
-      });
-    }
-  });
-  
-  // Convert to options
-  Array.from(uniqueClasses).forEach(className => {
-    const formattedName = className.split('_').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-    
-    options.push({
-      value: className,
-      label: formattedName
-    });
-  });
-  
-  return options;
-});
-</script>
-
 <template>
   <div class="min-h-screen bg-gray-50">
     
@@ -1513,6 +251,10 @@ const availableSeatClassOptions = computed(() => {
                     </div>
                     <div class="font-semibold text-pink-500">
                       ₱{{ Number(bookingStore.selectedOutbound?.price || 0).toLocaleString() }}
+                      <div v-if="bookingStore.selectedOutbound?.original_price && bookingStore.selectedOutbound.price !== bookingStore.selectedOutbound.original_price" 
+                           class="text-xs text-green-600">
+                        (Base: ₱{{ Number(bookingStore.selectedOutbound.original_price).toLocaleString() }})
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1534,6 +276,10 @@ const availableSeatClassOptions = computed(() => {
                     </div>
                     <div class="font-semibold text-pink-500">
                       ₱{{ Number(selectedFlight?.price || 0).toLocaleString() }}
+                      <div v-if="selectedFlight?.original_price && selectedFlight.price !== selectedFlight.original_price" 
+                           class="text-xs text-green-600">
+                        (Base: ₱{{ Number(selectedFlight.original_price).toLocaleString() }})
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1550,6 +296,10 @@ const availableSeatClassOptions = computed(() => {
                 </h3>
                 <div class="text-lg font-bold text-pink-500">
                   ₱{{ Number(selectedFlight?.price).toLocaleString() }}
+                  <div v-if="selectedFlight?.original_price && selectedFlight.price !== selectedFlight.original_price" 
+                       class="text-xs text-green-600">
+                    (Base: ₱{{ Number(selectedFlight.original_price).toLocaleString() }})
+                  </div>
                 </div>
               </div>
               
@@ -1566,7 +316,7 @@ const availableSeatClassOptions = computed(() => {
                       <div class="text-lg font-bold text-pink-600">{{ selectedFlight.selected_seat_class }}</div>
                     </div>
                     <div v-if="selectedFlight.original_price && selectedFlight.price !== selectedFlight.original_price" 
-                         class="text-sm text-pink-500">
+                         class="text-lg font-bold text-pink-500">
                       +₱{{ Number(selectedFlight.price - selectedFlight.original_price).toLocaleString() }}
                     </div>
                   </div>
@@ -1625,7 +375,7 @@ const availableSeatClassOptions = computed(() => {
     </div>
     
     <!-- Session Expired Modal -->
-    <div v-if="showSessionExpired" class="fixed inset-0 bg-black/70 z-[60px] flex items-center justify-center p-4">
+    <div v-if="showSessionExpired" class="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4">
       <div class="bg-white rounded-sm shadow-2xl w-full max-w-md">
         <div class="p-6 border-b border-gray-200">
           <div class="flex items-center justify-center mb-4">
@@ -1778,6 +528,9 @@ const availableSeatClassOptions = computed(() => {
                   <div class="text-sm text-gray-500">{{ item.time }} • {{ item.date }}</div>
                   <div v-if="item.selected_seat_class" class="text-sm text-pink-600 font-medium">
                     Seat Class: {{ item.selected_seat_class }}
+                    <span v-if="item.seat_class_price && item.base_price" class="text-xs">
+                      (+₱{{ Number(item.seat_class_price - item.base_price).toLocaleString() }})
+                    </span>
                   </div>
                 </div>
                 <div class="font-bold text-pink-500">₱{{ item.price }}</div>
@@ -2243,13 +996,17 @@ const availableSeatClassOptions = computed(() => {
                       </div>
                       
                       <!-- Show selected seat class if already chosen -->
-                      <div v-if="bookingStore.selectedOutbound?.flight_number === f.flight_number && bookingStore.selectedOutbound?.selected_seat_class" 
+                      <div v-if="isRoundTrip && selectionPhase === 'outbound' && bookingStore.selectedOutbound?.flight_number === f.flight_number" 
                            class="text-sm text-pink-600 font-medium mt-1">
-                        ✓ Selected: {{ bookingStore.selectedOutbound.selected_seat_class }}
+                        ✓ Selected: {{ bookingStore.selectedOutbound.selected_seat_class || bookingStore.selectedOutbound.seat_class || 'Not selected' }}
                       </div>
-                      <div v-else-if="bookingStore.selectedReturn?.flight_number === f.flight_number && bookingStore.selectedReturn?.selected_seat_class" 
+                      <div v-else-if="isRoundTrip && selectionPhase === 'return' && bookingStore.selectedReturn?.flight_number === f.flight_number" 
                            class="text-sm text-pink-600 font-medium mt-1">
-                        ✓ Selected: {{ bookingStore.selectedReturn.selected_seat_class }}
+                        ✓ Selected: {{ bookingStore.selectedReturn.selected_seat_class || bookingStore.selectedReturn.seat_class || 'Not selected' }}
+                      </div>
+                      <div v-else-if="!isRoundTrip && bookingStore.selectedOutbound?.flight_number === f.flight_number" 
+                           class="text-sm text-pink-600 font-medium mt-1">
+                        ✓ Selected: {{ bookingStore.selectedOutbound.selected_seat_class || bookingStore.selectedOutbound.seat_class || 'Not selected' }}
                       </div>
                     </div>
                     
@@ -2271,7 +1028,1437 @@ const availableSeatClassOptions = computed(() => {
   </div>
 </template>
 
-<style>
+<script setup>
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
+import { useBookingStore } from '@/stores/booking';
+import { useRoute, useRouter } from 'vue-router';
+import flightService from '@/services/booking/flightService';
+import { format, parseISO, isSameDay, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
+
+const route = useRoute();
+const router = useRouter();
+const bookingStore = useBookingStore();
+
+const flights = ref([]);
+const filteredFlights = ref([]);
+const loading = ref(true);
+const showFilters = ref(false);
+const showNoResults = ref(false);
+
+// Timeout handling
+const fetchTimeout = ref(null);
+const timeoutCountdown = ref(5);
+const countdownInterval = ref(null);
+
+// Search Edit Feature State
+const showEditSearch = ref(false);
+const editSearchForm = ref({
+  origin: '',
+  destination: '',
+  departure: '',
+  returnDate: '',
+  adults: 1,
+  children: 0,
+  infants: 0,
+  tripType: 'one-way'
+});
+
+// Multi-step selection
+const selectionPhase = ref('outbound');
+
+// Confirmation modal
+const showConfirmation = ref(false);
+const selectedFlight = ref(null);
+
+// Session expired modal
+const showSessionExpired = ref(false);
+
+// Seat classes modal state
+const showSeatClassesModal = ref(false);
+const selectedFlightForSeats = ref(null);
+const availableSeatClasses = ref([]);
+
+// Seat class features from API
+const seatClassFeatures = ref({});
+
+// Filter State
+const filters = ref({
+  minPrice: null,
+  maxPrice: null,
+  departureTime: 'all',
+  airline: 'all',
+  flightType: 'all',
+  sortBy: 'departure_time',
+  hasAvailableSeats: false,
+  seatClass: 'all',
+});
+
+// Date filter state
+const dateFilter = ref({
+  selectedDate: null,
+  dateRange: 'exact',
+  availableDates: []
+});
+
+// 7-day date selector state
+const dateSelector = ref({
+  currentWeekStart: null,
+  weekDays: [],
+  selectedDay: null
+});
+
+// Filter options
+const filterOptions = ref({
+  departureTimes: [
+    { value: 'all', label: 'Any Time' },
+    { value: 'morning', label: 'Morning (5AM - 11AM)' },
+    { value: 'afternoon', label: 'Afternoon (12PM - 5PM)' },
+    { value: 'evening', label: 'Evening (6PM - 11PM)' },
+    { value: 'night', label: 'Night (12AM - 4AM)' },
+  ],
+  flightTypes: [
+    { value: 'all', label: 'All Flights' },
+    { value: 'domestic', label: 'Domestic Only' },
+    { value: 'international', label: 'International Only' },
+  ],
+  airlines: [],
+  seatClasses: [
+    { value: 'all', label: 'All Classes' },
+  ],
+  sortOptions: [
+    { value: 'departure_time', label: 'Departure Time (Earliest)' },
+    { value: 'price_low', label: 'Price (Low to High)' },
+    { value: 'price_high', label: 'Price (High to Low)' },
+    { value: 'duration', label: 'Duration (Shortest)' },
+  ],
+  dateRanges: [
+    { value: 'exact', label: 'Exact date only' },
+    { value: 'plusMinus1', label: '±1 day' },
+    { value: 'plusMinus2', label: '±2 days' },
+    { value: 'plusMinus3', label: '±3 days' },
+  ]
+});
+
+// Session watcher
+const sessionWatcher = ref(null);
+
+// Load seat class features from API
+const loadSeatClassFeatures = async () => {
+  try {
+    const response = await flightService.getSeatClassFeatures();
+    if (response.data) {
+      seatClassFeatures.value = response.data;
+      console.log('✅ Seat class features loaded:', seatClassFeatures.value);
+      
+      // Update filter options dynamically
+      updateSeatClassFilterOptions();
+    }
+  } catch (error) {
+    console.error('❌ Failed to load seat class features:', error);
+  }
+};
+
+// Update seat class filter options dynamically
+const updateSeatClassFilterOptions = () => {
+  // Start with default "All Classes" option
+  const seatClassOptions = [{ value: 'all', label: 'All Classes' }];
+  
+  // Add seat classes from loaded features
+  if (Object.keys(seatClassFeatures.value).length > 0) {
+    Object.keys(seatClassFeatures.value).forEach(className => {
+      const formattedName = className.split('_').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
+      
+      seatClassOptions.push({
+        value: className,
+        label: formattedName
+      });
+    });
+  } else {
+    // Fallback to default seat classes
+    seatClassOptions.push(
+      { value: 'economy', label: 'Economy' },
+      { value: 'business', label: 'Business' },
+      { value: 'first', label: 'First Class' },
+      { value: 'premium_economy', label: 'Premium Economy' }
+    );
+  }
+  
+  filterOptions.value.seatClasses = seatClassOptions;
+};
+
+// Use trip type from Pinia store
+const tripType = computed(() => bookingStore.tripType || route.query.tripType);
+const isRoundTrip = computed(() => tripType.value === 'round_trip' || tripType.value === 'round-trip');
+
+// Check if outbound is already selected
+const hasOutboundSelected = computed(() => {
+  return bookingStore.selectedOutbound !== null && bookingStore.selectedOutbound !== undefined;
+});
+
+// Check if return is already selected
+const hasReturnSelected = computed(() => {
+  return bookingStore.selectedReturn !== null && bookingStore.selectedReturn !== undefined;
+});
+
+// Computed for current search date
+const currentSearchDate = computed(() => {
+  return selectionPhase.value === 'outbound' ? route.query.departure : route.query.returnDate;
+});
+
+// Initialize edit search form with current route values
+const initializeEditSearch = () => {
+  // Check session first
+  const sessionCheck = bookingStore.checkSession();
+  if (!sessionCheck.valid) {
+    showSessionExpiredModal();
+    return;
+  }
+
+  editSearchForm.value = {
+    origin: route.query.origin || '',
+    destination: route.query.destination || '',
+    departure: route.query.departure || '',
+    returnDate: route.query.returnDate || '',
+    adults: parseInt(route.query.adults) || 1,
+    children: parseInt(route.query.children) || 0,
+    infants: parseInt(route.query.infants) || 0,
+    tripType: route.query.tripType || 'one-way'
+  };
+  showEditSearch.value = true;
+};
+
+// Submit edited search
+const submitEditedSearch = () => {
+  const searchParams = {
+    ...editSearchForm.value,
+    adults: editSearchForm.value.adults.toString(),
+    children: editSearchForm.value.children.toString(),
+    infants: editSearchForm.value.infants.toString()
+  };
+  
+  // Update store
+  bookingStore.setTripType(editSearchForm.value.tripType);
+  
+  // Navigate with new search params
+  router.push({
+    name: 'SearchResults',
+    query: searchParams
+  });
+  
+  showEditSearch.value = false;
+  
+  // Reload flights with new params
+  setTimeout(() => {
+    fetchFlights();
+  }, 100);
+};
+
+// Session expired modal handler
+const showSessionExpiredModal = () => {
+  showSessionExpired.value = true;
+  
+  // Auto redirect after 5 seconds
+  setTimeout(() => {
+    bookingStore.resetBooking();
+    router.push({ name: 'Home' });
+  }, 5000);
+};
+
+// Handle showing seat classes for a flight
+const showSeatClasses = (flight) => {
+  selectedFlightForSeats.value = flight;
+  
+  // Extract seat classes from flight data
+  availableSeatClasses.value = extractSeatClassesFromFlight(flight);
+  
+  showSeatClassesModal.value = true;
+};
+
+// Extract seat classes from flight data
+const extractSeatClassesFromFlight = (flight) => {
+  if (!flight) return [];
+  
+  // Try different possible structures
+  let seatClasses = [];
+  
+  // Structure 1: flight.available_classes array
+  if (Array.isArray(flight.available_classes) && flight.available_classes.length > 0) {
+    seatClasses = flight.available_classes.map(className => ({
+      name: className,
+      description: getSeatClassDescription(className),
+      price: calculateSeatClassPrice(flight.price, className),
+      icon: getSeatClassIcon(className),
+      features: getSeatClassFeatures(className)
+    }));
+  }
+  // Structure 2: flight.seat_classes array
+  else if (Array.isArray(flight.seat_classes) && flight.seat_classes.length > 0) {
+    seatClasses = flight.seat_classes.map(seatClass => {
+      if (typeof seatClass === 'string') {
+        return {
+          name: seatClass,
+          description: getSeatClassDescription(seatClass),
+          price: calculateSeatClassPrice(flight.price, seatClass),
+          icon: getSeatClassIcon(seatClass),
+          features: getSeatClassFeatures(seatClass)
+        };
+      } else if (typeof seatClass === 'object') {
+        return {
+          name: seatClass.name || seatClass.class_name || seatClass.value || 'Unknown',
+          description: seatClass.description || getSeatClassDescription(seatClass.name || seatClass.class_name),
+          price: seatClass.price || calculateSeatClassPrice(flight.price, seatClass.name || seatClass.class_name),
+          icon: getSeatClassIcon(seatClass.name || seatClass.class_name),
+          features: seatClass.features || getSeatClassFeatures(seatClass.name || seatClass.class_name)
+        };
+      }
+      return null;
+    }).filter(Boolean);
+  }
+  // Structure 3: Use loaded seat class features
+  else if (Object.keys(seatClassFeatures.value).length > 0) {
+    seatClasses = Object.keys(seatClassFeatures.value).map(className => {
+      const formattedName = className.split('_').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
+      
+      return {
+        name: formattedName,
+        description: getSeatClassDescription(className),
+        price: calculateSeatClassPrice(flight.price, className),
+        icon: getSeatClassIcon(className),
+        features: seatClassFeatures.value[className]
+      };
+    });
+  }
+  // Default fallback
+  else {
+    seatClasses = [
+      { 
+        name: 'Economy', 
+        description: getSeatClassDescription('economy'), 
+        price: flight.price, 
+        icon: getSeatClassIcon('economy'),
+        features: getSeatClassFeatures('economy')
+      },
+      { 
+        name: 'Business', 
+        description: getSeatClassDescription('business'), 
+        price: calculateSeatClassPrice(flight.price, 'business'), 
+        icon: getSeatClassIcon('business'),
+        features: getSeatClassFeatures('business')
+      },
+      { 
+        name: 'First Class', 
+        description: getSeatClassDescription('first'), 
+        price: calculateSeatClassPrice(flight.price, 'first'), 
+        icon: getSeatClassIcon('first'),
+        features: getSeatClassFeatures('first')
+      }
+    ];
+  }
+  
+  return seatClasses;
+};
+
+// Calculate seat class price based on base price
+const calculateSeatClassPrice = (basePrice, className) => {
+  const priceMultipliers = {
+    'economy': 1.0,
+    'business': 1.8,
+    'first': 2.5,
+    'premium_economy': 1.3,
+    'first_class': 2.5,
+    'business_class': 1.8,
+    'premium_economy': 1.3
+  };
+  
+  const key = className.toLowerCase().replace(' ', '_');
+  const multiplier = priceMultipliers[key] || 1.0;
+  return Math.round(basePrice * multiplier);
+};
+
+// Helper function to get seat class description
+const getSeatClassDescription = (className) => {
+  const descriptions = {
+    'economy': 'Standard seat with essential amenities, complimentary snacks, and in-flight entertainment',
+    'business': 'Extra legroom, premium service, priority boarding, and enhanced meal options',
+    'first': 'Luxury seating, gourmet meals, premium entertainment, and exclusive lounge access',
+    'premium_economy': 'More legroom, enhanced meal service, and priority check-in',
+    'first_class': 'Luxury seating, gourmet meals, premium entertainment, and exclusive lounge access',
+    'business_class': 'Extra legroom, premium service, priority boarding, and enhanced meal options',
+    'premium_economy': 'More legroom, enhanced meal service, and priority check-in'
+  };
+  
+  const key = className.toLowerCase().replace(' ', '_');
+  return descriptions[key] || 'Premium seating with enhanced services';
+};
+
+// Helper function to get seat class icon
+const getSeatClassIcon = (className) => {
+  const icons = {
+    'economy': 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
+    'business': 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
+    'first': 'M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7'
+  };
+  
+  const key = className.toLowerCase().split(' ')[0];
+  return icons[key] || icons.economy;
+};
+
+// Helper function to get seat class features (Dynamically from API or fallback)
+const getSeatClassFeatures = (className) => {
+  if (!className) return [];
+  
+  const key = className.toLowerCase().replace(' ', '_');
+  
+  // Try to get from API data first
+  if (seatClassFeatures.value[key] && seatClassFeatures.value[key].length > 0) {
+    return seatClassFeatures.value[key];
+  }
+  
+  // If not found, check for similar keys
+  for (const [apiKey, features] of Object.entries(seatClassFeatures.value)) {
+    if (className.toLowerCase().includes(apiKey.replace('_', ' ')) || 
+        apiKey.includes(className.toLowerCase().replace(' ', '_'))) {
+      return features;
+    }
+  }
+  
+  // Fallback features
+  const fallbackFeatures = {
+    'economy': [
+      'Standard legroom',
+      'Complimentary snacks',
+      'In-flight entertainment',
+      'One carry-on bag'
+    ],
+    'business': [
+      'Extra legroom',
+      'Priority boarding',
+      'Enhanced meal service',
+      'Additional baggage allowance',
+      'Premium entertainment'
+    ],
+    'first': [
+      'Luxury seating',
+      'Gourmet meals',
+      'Premium entertainment',
+      'Exclusive lounge access',
+      'Priority everything',
+      'Additional baggage'
+    ],
+    'premium_economy': [
+      'More legroom than economy',
+      'Enhanced meal service',
+      'Priority check-in',
+      'Additional baggage'
+    ]
+  };
+  
+  const fallbackKey = Object.keys(fallbackFeatures).find(k => 
+    className.toLowerCase().includes(k.toLowerCase())
+  ) || 'economy';
+  
+  return fallbackFeatures[fallbackKey] || fallbackFeatures.economy;
+};
+
+// Handle seat class selection
+const handleSeatClassSelection = (seatClass) => {
+  console.log('✅ Selected seat class:', seatClass.name);
+  
+  // Use the flight from the seat class modal
+  const flightToStore = selectedFlightForSeats.value;
+  
+  if (!flightToStore) {
+    console.error('❌ No flight found for seat class selection');
+    return;
+  }
+  
+  // Create a flight object with seat class info
+  const flightWithSeatClass = {
+    ...flightToStore,
+    price: seatClass.price,
+    original_price: flightToStore.price, // Store original price
+    base_price: flightToStore.price, // Also store as base_price
+    seat_class: seatClass.name,
+    selected_seat_class: seatClass.name,
+    seat_class_details: seatClass,
+    seat_class_features: seatClass.features
+  };
+  
+  console.log('💾 Flight with seat class to store:', {
+    flight_number: flightWithSeatClass.flight_number,
+    seat_class: flightWithSeatClass.selected_seat_class,
+    price: flightWithSeatClass.price,
+    original_price: flightWithSeatClass.original_price,
+    selection_phase: selectionPhase.value
+  });
+  
+  // Store in Pinia based on selection phase
+  if (isRoundTrip.value) {
+    if (selectionPhase.value === 'outbound') {
+      bookingStore.selectFlight(flightWithSeatClass, 'outbound');
+      console.log('✅ Outbound flight with seat class saved to store:', {
+        flight: flightWithSeatClass.flight_number,
+        seat_class: flightWithSeatClass.selected_seat_class,
+        price: flightWithSeatClass.price
+      });
+    } else {
+      bookingStore.selectFlight(flightWithSeatClass, 'return');
+      console.log('✅ Return flight with seat class saved to store:', {
+        flight: flightWithSeatClass.flight_number,
+        seat_class: flightWithSeatClass.selected_seat_class,
+        price: flightWithSeatClass.price
+      });
+    }
+  } else {
+    bookingStore.selectFlight(flightWithSeatClass, 'outbound');
+    console.log('✅ One-way flight with seat class saved to store:', {
+      flight: flightWithSeatClass.flight_number,
+      seat_class: flightWithSeatClass.selected_seat_class,
+      price: flightWithSeatClass.price
+    });
+  }
+  
+  // Close seat classes modal
+  showSeatClassesModal.value = false;
+  selectedFlightForSeats.value = null;
+  
+  // Show confirmation modal - pass the flight with seat class
+  selectedFlight.value = flightWithSeatClass;
+  showConfirmation.value = true;
+};
+
+// Cancel seat class selection
+const cancelSeatClassSelection = () => {
+  console.log('❌ Cancelled seat class selection');
+  showSeatClassesModal.value = false;
+  selectedFlightForSeats.value = null;
+};
+
+// Helper to log complete booking details
+const logCompleteBookingDetails = () => {
+  console.log('📊 COMPLETE BOOKING DETAILS:');
+  console.log('============================');
+  console.log(`Trip Type: ${bookingStore.tripType}`);
+  
+  if (bookingStore.selectedOutbound) {
+    const outbound = bookingStore.selectedOutbound;
+    console.log('Outbound Flight:');
+    console.log(`  Flight: ${outbound.flight_number}`);
+    console.log(`  Route: ${outbound.origin} → ${outbound.destination}`);
+    console.log(`  Departure: ${formatTime(outbound.departure_time)}`);
+    console.log(`  Seat Class: ${outbound.selected_seat_class || outbound.seat_class || 'Not selected'}`);
+    console.log(`  Price with Seat Class: ₱${Number(outbound.price).toLocaleString()}`);
+    if (outbound.original_price) {
+      console.log(`  Base Price: ₱${Number(outbound.original_price).toLocaleString()}`);
+    }
+  }
+  
+  if (bookingStore.selectedReturn) {
+    const returnFlight = bookingStore.selectedReturn;
+    console.log('Return Flight:');
+    console.log(`  Flight: ${returnFlight.flight_number}`);
+    console.log(`  Route: ${returnFlight.origin} → ${returnFlight.destination}`);
+    console.log(`  Departure: ${formatTime(returnFlight.departure_time)}`);
+    console.log(`  Seat Class: ${returnFlight.selected_seat_class || returnFlight.seat_class || 'Not selected'}`);
+    console.log(`  Price with Seat Class: ₱${Number(returnFlight.price).toLocaleString()}`);
+    if (returnFlight.original_price) {
+      console.log(`  Base Price: ₱${Number(returnFlight.original_price).toLocaleString()}`);
+    }
+  }
+  
+  const total = (bookingStore.selectedOutbound?.price || 0) + (bookingStore.selectedReturn?.price || 0);
+  console.log(`Total: ₱${Number(total).toLocaleString()}`);
+  console.log('============================');
+};
+
+// Sync route query with store on mount
+onMounted(() => {
+  console.log('🚀 SearchResults mounted');
+  console.log('Route Query:', route.query);
+  
+  // Initialize session
+  bookingStore.initSession();
+  
+  // Check session validity
+  const sessionCheck = bookingStore.checkSession();
+  if (!sessionCheck.valid) {
+    console.log('❌ Session invalid, redirecting to home');
+    router.push({ name: 'Home' });
+    return;
+  }
+  
+  if (route.query.tripType && !bookingStore.tripType) {
+    bookingStore.setTripType(route.query.tripType);
+  }
+  
+  console.log('Trip Type from Store:', bookingStore.tripType);
+  console.log('Trip Type from Route:', route.query.tripType);
+  console.log('Is Round Trip:', isRoundTrip.value);
+  console.log('Has Outbound Selected:', hasOutboundSelected.value);
+  console.log('Has Return Selected:', hasReturnSelected.value);
+  
+  // AUTO-SWITCH TO RETURN PHASE IF OUTBOUND IS ALREADY SELECTED
+  if (isRoundTrip.value && hasOutboundSelected.value && !hasReturnSelected.value) {
+    console.log('🔄 Outbound already selected, switching to return phase');
+    selectionPhase.value = 'return';
+  }
+  
+  console.log('Initial Phase:', selectionPhase.value);
+  
+  // Load seat class features first
+  loadSeatClassFeatures().then(() => {
+    fetchFlights();
+  });
+  
+  // Start session check interval
+  sessionWatcher.value = setInterval(() => {
+    const sessionCheck = bookingStore.checkSession();
+    if (!sessionCheck.valid && sessionCheck.expired) {
+      console.log('⏰ Session expired, redirecting to home');
+      clearInterval(sessionWatcher.value);
+      showSessionExpiredModal();
+    }
+  }, 30000);
+});
+
+onUnmounted(() => {
+  // Clean up all intervals and timeouts
+  if (sessionWatcher.value) {
+    clearInterval(sessionWatcher.value);
+  }
+  if (fetchTimeout.value) {
+    clearTimeout(fetchTimeout.value);
+  }
+  if (countdownInterval.value) {
+    clearInterval(countdownInterval.value);
+  }
+});
+
+// Watch for filter changes
+watch([filters, dateFilter], () => {
+  applyFilters();
+}, { deep: true });
+
+// Watch for outbound selection changes to auto-switch phase
+watch(hasOutboundSelected, (newValue) => {
+  if (isRoundTrip.value && newValue && !hasReturnSelected.value) {
+    console.log('🔄 Outbound selection detected, switching to return phase');
+    selectionPhase.value = 'return';
+    
+    // Clear any existing selected return flight
+    if (bookingStore.selectedReturn) {
+      console.log('🧹 Clearing previous return selection');
+      bookingStore.selectedReturn = null;
+    }
+    
+    // Fetch return flights
+    setTimeout(() => {
+      fetchFlights();
+    }, 100);
+  }
+});
+
+// Extract unique dates from flights
+const extractAvailableDates = (flightsList) => {
+  const datesSet = new Set();
+  flightsList.forEach(flight => {
+    if (flight.departure_time) {
+      const date = new Date(flight.departure_time);
+      const dateString = format(date, 'yyyy-MM-dd');
+      datesSet.add(dateString);
+    }
+  });
+  return Array.from(datesSet).sort();
+};
+
+// Initialize 7-day date selector
+const initializeDateSelector = () => {
+  const searchDate = new Date(currentSearchDate.value);
+  dateSelector.value.currentWeekStart = startOfWeek(searchDate, { weekStartsOn: 0 });
+  
+  // Generate 7 days starting from week start
+  dateSelector.value.weekDays = eachDayOfInterval({
+    start: dateSelector.value.currentWeekStart,
+    end: addDays(dateSelector.value.currentWeekStart, 6)
+  }).map(date => ({
+    date: date,
+    dateString: format(date, 'yyyy-MM-dd'),
+    dayName: format(date, 'EEE'),
+    dayNumber: format(date, 'd'),
+    monthName: format(date, 'MMM'),
+    fullDate: format(date, 'yyyy-MM-dd'),
+    isAvailable: dateFilter.value.availableDates.includes(format(date, 'yyyy-MM-dd')),
+    isSelected: format(date, 'yyyy-MM-dd') === dateFilter.value.selectedDate,
+    isToday: isSameDay(date, new Date()),
+    isSearchDate: isSameDay(date, new Date(currentSearchDate.value))
+  }));
+  
+  // Set selected day
+  dateSelector.value.selectedDay = dateFilter.value.selectedDate;
+};
+
+// Navigate to previous week
+const prevWeek = () => {
+  dateSelector.value.currentWeekStart = subDays(dateSelector.value.currentWeekStart, 7);
+  updateWeekDays();
+};
+
+// Navigate to next week
+const nextWeek = () => {
+  dateSelector.value.currentWeekStart = addDays(dateSelector.value.currentWeekStart, 7);
+  updateWeekDays();
+};
+
+// Navigate to current week
+const goToCurrentWeek = () => {
+  const searchDate = new Date(currentSearchDate.value);
+  dateSelector.value.currentWeekStart = startOfWeek(searchDate, { weekStartsOn: 0 });
+  updateWeekDays();
+  
+  // Also reset date filter to search date
+  dateFilter.value.selectedDate = currentSearchDate.value;
+  dateFilter.value.dateRange = 'exact';
+  applyFilters();
+};
+
+// Update week days based on current week start
+const updateWeekDays = () => {
+  dateSelector.value.weekDays = eachDayOfInterval({
+    start: dateSelector.value.currentWeekStart,
+    end: addDays(dateSelector.value.currentWeekStart, 6)
+  }).map(date => ({
+    date: date,
+    dateString: format(date, 'yyyy-MM-dd'),
+    dayName: format(date, 'EEE'),
+    dayNumber: format(date, 'd'),
+    monthName: format(date, 'MMM'),
+    fullDate: format(date, 'yyyy-MM-dd'),
+    isAvailable: dateFilter.value.availableDates.includes(format(date, 'yyyy-MM-dd')),
+    isSelected: format(date, 'yyyy-MM-dd') === dateFilter.value.selectedDate,
+    isToday: isSameDay(date, new Date()),
+    isSearchDate: isSameDay(date, new Date(currentSearchDate.value))
+  }));
+};
+
+// Select a day from the 7-day selector
+const selectDay = (day) => {
+  if (day.isAvailable) {
+    dateSelector.value.selectedDay = day.dateString;
+    dateFilter.value.selectedDate = day.dateString;
+    dateFilter.value.dateRange = 'exact';
+    applyFilters();
+  }
+};
+
+// Apply filters to flights
+const applyFilters = () => {
+  if (flights.value.length === 0) return;
+  
+  let result = [...flights.value];
+  
+  // Date filter
+  if (dateFilter.value.selectedDate) {
+    const selectedDate = new Date(dateFilter.value.selectedDate);
+    
+    result = result.filter(f => {
+      if (!f.departure_time) return false;
+      
+      const flightDate = new Date(f.departure_time);
+      const flightDateStr = format(flightDate, 'yyyy-MM-dd');
+      const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+      
+      if (dateFilter.value.dateRange === 'exact') {
+        return flightDateStr === selectedDateStr;
+      } else {
+        const daysRange = parseInt(dateFilter.value.dateRange.replace('plusMinus', ''));
+        const minDate = subDays(selectedDate, daysRange);
+        const maxDate = addDays(selectedDate, daysRange);
+        
+        return flightDate >= minDate && flightDate <= maxDate;
+      }
+    });
+  }
+  
+  // Price filter
+  if (filters.value.minPrice) {
+    result = result.filter(f => f.price >= parseFloat(filters.value.minPrice));
+  }
+  if (filters.value.maxPrice) {
+    result = result.filter(f => f.price <= parseFloat(filters.value.maxPrice));
+  }
+  
+  // Departure time filter
+  if (filters.value.departureTime !== 'all') {
+    result = result.filter(f => {
+      const hour = new Date(f.departure_time).getHours();
+      switch (filters.value.departureTime) {
+        case 'morning': return hour >= 5 && hour <= 11;
+        case 'afternoon': return hour >= 12 && hour <= 17;
+        case 'evening': return hour >= 18 && hour <= 23;
+        case 'night': return hour >= 0 && hour <= 4 || hour === 24;
+        default: return true;
+      }
+    });
+  }
+  
+  // Airline filter
+  if (filters.value.airline !== 'all') {
+    result = result.filter(f => f.airline_code === filters.value.airline);
+  }
+  
+  // Flight type filter
+  if (filters.value.flightType !== 'all') {
+    result = result.filter(f => {
+      if (filters.value.flightType === 'domestic') {
+        return f.is_domestic === true;
+      } else if (filters.value.flightType === 'international') {
+        return f.is_domestic === false;
+      }
+      return true;
+    });
+  }
+  
+  // Available seats filter
+  if (filters.value.hasAvailableSeats) {
+    result = result.filter(f => f.available_seats > 0);
+  }
+  
+  // Seat class filter
+  if (filters.value.seatClass !== 'all') {
+    result = result.filter(f => {
+      if (f.available_classes && Array.isArray(f.available_classes)) {
+        return f.available_classes.includes(filters.value.seatClass);
+      }
+      
+      if (f.seat_classes && Array.isArray(f.seat_classes)) {
+        return f.seat_classes.some(seatClass => {
+          if (typeof seatClass === 'string') {
+            return seatClass.toLowerCase() === filters.value.seatClass.toLowerCase();
+          } else if (seatClass && typeof seatClass === 'object') {
+            const className = seatClass.name || seatClass.class_name || seatClass.value || '';
+            return className.toLowerCase() === filters.value.seatClass.toLowerCase();
+          }
+          return false;
+        });
+      }
+      
+      return true;
+    });
+  }
+  
+  // Sort flights
+  result.sort((a, b) => {
+    switch (filters.value.sortBy) {
+      case 'price_low':
+        return a.price - b.price;
+      case 'price_high':
+        return b.price - a.price;
+      case 'duration':
+        return (a.duration_minutes || 0) - (b.duration_minutes || 0);
+      case 'departure_time':
+      default:
+        return new Date(a.departure_time) - new Date(b.departure_time);
+    }
+  });
+  
+  filteredFlights.value = result;
+};
+
+// Reset all filters
+const resetFilters = () => {
+  filters.value = {
+    minPrice: null,
+    maxPrice: null,
+    departureTime: 'all',
+    airline: 'all',
+    flightType: 'all',
+    sortBy: 'departure_time',
+    hasAvailableSeats: false,
+    seatClass: 'all',
+  };
+  
+  dateFilter.value = {
+    selectedDate: currentSearchDate.value,
+    dateRange: 'exact',
+    availableDates: []
+  };
+  
+  goToCurrentWeek();
+  filteredFlights.value = [...flights.value];
+};
+
+// Reset date filter only
+const resetDateFilter = () => {
+  dateFilter.value.selectedDate = currentSearchDate.value;
+  dateFilter.value.dateRange = 'exact';
+  goToCurrentWeek();
+  applyFilters();
+};
+
+// Get unique airlines from flights
+const extractAirlines = (flightsList) => {
+  const airlinesSet = new Set();
+  flightsList.forEach(flight => {
+    if (flight.airline_code && flight.airline_name) {
+      airlinesSet.add({
+        code: flight.airline_code,
+        name: flight.airline_name
+      });
+    }
+  });
+  return Array.from(airlinesSet);
+};
+
+// Get price range for price slider
+const priceRange = computed(() => {
+  if (flights.value.length === 0) return { min: 0, max: 1000 };
+  
+  const prices = flights.value.map(f => f.price);
+  return {
+    min: Math.min(...prices),
+    max: Math.max(...prices)
+  };
+});
+
+// Get unique dates for date filter dropdown
+const uniqueDates = computed(() => {
+  if (!dateFilter.value.availableDates.length) return [];
+  
+  return dateFilter.value.availableDates.map(dateStr => {
+    const date = new Date(dateStr);
+    return {
+      value: dateStr,
+      label: format(date, 'EEEE, MMMM d, yyyy'),
+      shortLabel: format(date, 'MMM d, yyyy'),
+      date: date
+    };
+  });
+});
+
+// Handle flight selection
+const handleSelectFlight = (flight) => {
+  // Check session before proceeding
+  const sessionCheck = bookingStore.checkSession();
+  if (!sessionCheck.valid) {
+    showSessionExpiredModal();
+    return;
+  }
+
+  console.log('✈️ Flight clicked:', flight.flight_number, 'Phase:', selectionPhase.value);
+  
+  // Refresh session on user interaction
+  bookingStore.startSession();
+  
+  // Store the flight for seat class selection (use selectedFlightForSeats)
+  selectedFlightForSeats.value = flight;
+  
+  // Check if this flight is already selected (to show pre-selected seat class)
+  if (isRoundTrip.value) {
+    const selectedFlightInStore = selectionPhase.value === 'outbound' 
+      ? bookingStore.selectedOutbound
+      : bookingStore.selectedReturn;
+    
+    if (selectedFlightInStore && selectedFlightInStore.flight_number === flight.flight_number) {
+      console.log('🔄 Flight already selected, showing with existing seat class');
+      selectedFlight.value = selectedFlightInStore;
+      showConfirmation.value = true;
+      return;
+    }
+  } else if (bookingStore.selectedOutbound && bookingStore.selectedOutbound.flight_number === flight.flight_number) {
+    console.log('🔄 One-way flight already selected');
+    selectedFlight.value = bookingStore.selectedOutbound;
+    showConfirmation.value = true;
+    return;
+  }
+  
+  // First show seat classes modal
+  showSeatClasses(flight);
+};
+
+// Confirm selection
+const confirmSelection = () => {
+  if (!selectedFlight.value) return;
+  
+  // Refresh session
+  bookingStore.startSession();
+  
+  // Log complete booking details
+  logCompleteBookingDetails();
+  
+  if (isRoundTrip.value) {
+    if (selectionPhase.value === 'outbound') {
+      console.log('✅ CONFIRMING OUTBOUND FLIGHT FOR ROUND-TRIP');
+      console.log('Flight:', selectedFlight.value.flight_number);
+      console.log('Seat Class:', selectedFlight.value.selected_seat_class);
+      console.log('Price with seat class: ₱', Number(selectedFlight.value.price).toLocaleString());
+      
+      // Log flight selection
+      logFlightSelection(selectedFlight.value, 'outbound');
+      
+      // Move to return phase
+      selectionPhase.value = 'return';
+      fetchFlights();
+      window.scrollTo(0, 0);
+    } else {
+      console.log('✅ CONFIRMING COMPLETE ROUND-TRIP BOOKING');
+      
+      // Log both flights with seat class info
+      if (bookingStore.selectedOutbound) {
+        console.log('Outbound Seat Class:', bookingStore.selectedOutbound.seat_class);
+        console.log('Outbound Price with Seat Class: ₱', Number(bookingStore.selectedOutbound.price).toLocaleString());
+      }
+      
+      console.log('Return Seat Class:', selectedFlight.value.selected_seat_class);
+      console.log('Return Price with Seat Class: ₱', Number(selectedFlight.value.price).toLocaleString());
+      
+      logFlightSelection(selectedFlight.value, 'return');
+      logCompleteBooking();
+      
+      router.push({ name: 'PassengerDetails' });
+    }
+  } else {
+    console.log('✅ CONFIRMING ONE-WAY BOOKING');
+    console.log('Flight:', selectedFlight.value.flight_number);
+    console.log('Seat Class:', selectedFlight.value.selected_seat_class);
+    console.log('Price with seat class: ₱', Number(selectedFlight.value.price).toLocaleString());
+    
+    // Log flight selection
+    logFlightSelection(selectedFlight.value, 'outbound');
+    
+    router.push({ name: 'PassengerDetails' });
+  }
+  
+  showConfirmation.value = false;
+  selectedFlight.value = null;
+};
+
+// Cancel selection
+const cancelSelection = () => {
+  console.log('❌ Cancelled selection');
+  showConfirmation.value = false;
+  selectedFlight.value = null;
+};
+
+// Helper function to log flight selection
+const logFlightSelection = (flight, type) => {
+  console.log(`📝 ${type.toUpperCase()} FLIGHT SELECTED:`);
+  console.log(`  Flight: ${flight.flight_number}`);
+  console.log(`  Seat Class: ${flight.selected_seat_class || flight.seat_class || 'Not selected'}`);
+  console.log(`  Route: ${flight.origin} → ${flight.destination}`);
+  console.log(`  Departure: ${formatTime(flight.departure_time)} on ${formatDate(flight.departure_time)}`);
+  console.log(`  Price: ₱${Number(flight.price).toLocaleString()}`);
+  if (flight.original_price && flight.price !== flight.original_price) {
+    console.log(`  Base Price: ₱${Number(flight.original_price).toLocaleString()}`);
+    console.log(`  Seat Class Upcharge: ₱${Number(flight.price - flight.original_price).toLocaleString()}`);
+  }
+  console.log('');
+};
+
+// Helper function to log complete booking
+const logCompleteBooking = () => {
+  console.log('📊 COMPLETE BOOKING SUMMARY:');
+  console.log('============================');
+  console.log(`Trip Type: ${bookingStore.tripType || tripType.value}`);
+  
+  if (bookingStore.selectedOutbound) {
+    const outbound = bookingStore.selectedOutbound;
+    console.log('Outbound:');
+    console.log(`  ${outbound.flight_number}: ${outbound.origin} → ${outbound.destination}`);
+    console.log(`  Departure: ${formatTime(outbound.departure_time)}`);
+    console.log(`  Seat Class: ${outbound.selected_seat_class || outbound.seat_class || 'Not selected'}`);
+    console.log(`  Price: ₱${Number(outbound.price).toLocaleString()}`);
+  }
+  
+  if (bookingStore.selectedReturn) {
+    const returnFlight = bookingStore.selectedReturn;
+    console.log('Return:');
+    console.log(`  ${returnFlight.flight_number}: ${returnFlight.origin} → ${returnFlight.destination}`);
+    console.log(`  Departure: ${formatTime(returnFlight.departure_time)}`);
+    console.log(`  Seat Class: ${returnFlight.selected_seat_class || returnFlight.seat_class || 'Not selected'}`);
+    console.log(`  Price: ₱${Number(returnFlight.price).toLocaleString()}`);
+  }
+  
+  console.log('============================');
+};
+
+// Format seat classes for display
+const formatSeatClasses = (seatClasses) => {
+  if (!seatClasses || !Array.isArray(seatClasses)) return '';
+  
+  return seatClasses.map(sc => {
+    if (typeof sc === 'string') {
+      return sc;
+    } else if (sc && typeof sc === 'object') {
+      return sc.name || sc.class_name || sc.value || 'Unknown';
+    }
+    return 'Unknown';
+  }).join(', ');
+};
+
+const fetchFlights = async () => {
+  loading.value = true;
+  showNoResults.value = false;
+  timeoutCountdown.value = 5;
+  
+  // Clear any existing timeout and interval
+  if (fetchTimeout.value) {
+    clearTimeout(fetchTimeout.value);
+  }
+  if (countdownInterval.value) {
+    clearInterval(countdownInterval.value);
+  }
+  
+  // Start countdown timer
+  countdownInterval.value = setInterval(() => {
+    if (timeoutCountdown.value > 0) {
+      timeoutCountdown.value--;
+    } else {
+      clearInterval(countdownInterval.value);
+    }
+  }, 1000);
+  
+  // Set timeout to show no results after 5 seconds
+  fetchTimeout.value = setTimeout(() => {
+    if (loading.value) {
+      console.log('⏰ Timeout reached - showing no flights message');
+      showNoResults.value = true;
+      loading.value = false;
+      flights.value = [];
+      filteredFlights.value = [];
+      clearInterval(countdownInterval.value);
+    }
+  }, 5000);
+
+  try {
+    const isReturnPhase = selectionPhase.value === 'return';
+    
+    const params = {
+      origin: isReturnPhase ? route.query.destination : route.query.origin,
+      destination: isReturnPhase ? route.query.origin : route.query.destination,
+      departure: isReturnPhase ? route.query.returnDate : route.query.departure
+    };
+
+    console.log('📡 Fetching flights:', {
+      phase: selectionPhase.value,
+      tripType: bookingStore.tripType,
+      params: params
+    });
+
+    const response = await flightService.getSchedules(params);
+    
+    // Clear timeout and interval since we got a response
+    clearInterval(countdownInterval.value);
+    clearTimeout(fetchTimeout.value);
+    
+    flights.value = response.data || [];
+    filteredFlights.value = [...flights.value];
+    
+    // DEBUG: Log flight data structure
+    if (flights.value.length > 0) {
+      console.log('First flight structure:', flights.value[0]);
+      console.log('seat_classes type:', typeof flights.value[0].seat_classes);
+      console.log('seat_classes value:', flights.value[0].seat_classes);
+      if (flights.value[0].seat_classes && Array.isArray(flights.value[0].seat_classes)) {
+        console.log('First seat class item:', flights.value[0].seat_classes[0]);
+        console.log('First seat class type:', typeof flights.value[0].seat_classes[0]);
+      }
+    }
+    
+    // Check if response has data
+    if (!response.data || response.data.length === 0) {
+      showNoResults.value = true;
+    } else {
+      showNoResults.value = false;
+    }
+    
+    // Extract unique airlines for filter dropdown
+    const airlinesList = extractAirlines(flights.value);
+    filterOptions.value.airlines = [
+      { value: 'all', label: 'All Airlines' },
+      ...airlinesList.map(a => ({ value: a.code, label: a.name }))
+    ];
+    
+    // Extract unique dates for date filter
+    dateFilter.value.availableDates = extractAvailableDates(flights.value);
+    dateFilter.value.selectedDate = currentSearchDate.value;
+    
+    // Initialize date selector
+    initializeDateSelector();
+    
+    console.log(`📊 Received ${flights.value.length} ${selectionPhase.value} flights`);
+    console.log('Available dates:', dateFilter.value.availableDates);
+    console.log('Airlines found:', airlinesList);
+    
+    // Apply initial filters
+    applyFilters();
+    
+  } catch (error) {
+    console.error("❌ API Error:", error);
+    
+    // Clear timeout and interval on error
+    clearInterval(countdownInterval.value);
+    clearTimeout(fetchTimeout.value);
+    
+    showNoResults.value = true;
+    flights.value = [];
+    filteredFlights.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
+
+// Retry fetching flights
+const retryFetchFlights = () => {
+  showNoResults.value = false;
+  fetchFlights();
+};
+
+// Format time
+const formatTime = (dateTimeString) => {
+  if (!dateTimeString) return '';
+  const date = new Date(dateTimeString);
+  return date.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
+};
+
+// Format date
+const formatDate = (dateTimeString) => {
+  if (!dateTimeString) return '';
+  const date = new Date(dateTimeString);
+  return date.toLocaleDateString('en-PH', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+};
+
+// Format date short
+const formatDateShort = (dateTimeString) => {
+  if (!dateTimeString) return '';
+  const date = new Date(dateTimeString);
+  return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+};
+
+// Format date for display
+const formatDateDisplay = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return format(date, 'EEEE, MMMM d, yyyy');
+};
+
+// Format week range for display
+const formatWeekRange = computed(() => {
+  if (!dateSelector.value.currentWeekStart) return '';
+  const weekEnd = addDays(dateSelector.value.currentWeekStart, 6);
+  return `${format(dateSelector.value.currentWeekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
+});
+
+// Format duration
+const formatDuration = (minutes) => {
+  if (!minutes) return '';
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours}h ${mins}m`;
+};
+
+// Get selected flights summary for display
+const selectedFlightsSummary = computed(() => {
+  const summary = [];
+  
+  if (bookingStore.selectedOutbound) {
+    // For one-way trips, don't show "Outbound" label
+    const typeLabel = isRoundTrip.value ? 'Outbound' : 'Flight';
+    
+    summary.push({
+      type: typeLabel,
+      flight: bookingStore.selectedOutbound.flight_number,
+      route: `${bookingStore.selectedOutbound.origin} → ${bookingStore.selectedOutbound.destination}`,
+      time: formatTime(bookingStore.selectedOutbound.departure_time),
+      date: formatDate(bookingStore.selectedOutbound.departure_time),
+      price: Number(bookingStore.selectedOutbound.price).toLocaleString(),
+      selected_seat_class: bookingStore.selectedOutbound.selected_seat_class || bookingStore.selectedOutbound.seat_class,
+      seat_class_price: bookingStore.selectedOutbound.price,
+      base_price: bookingStore.selectedOutbound.original_price || bookingStore.selectedOutbound.base_price || bookingStore.selectedOutbound.price
+    });
+  }
+  
+  if (bookingStore.selectedReturn) {
+    summary.push({
+      type: 'Return',
+      flight: bookingStore.selectedReturn.flight_number,
+      route: `${bookingStore.selectedReturn.origin} → ${bookingStore.selectedReturn.destination}`,
+      time: formatTime(bookingStore.selectedReturn.departure_time),
+      date: formatDate(bookingStore.selectedReturn.departure_time),
+      price: Number(bookingStore.selectedReturn.price).toLocaleString(),
+      selected_seat_class: bookingStore.selectedReturn.selected_seat_class || bookingStore.selectedReturn.seat_class,
+      seat_class_price: bookingStore.selectedReturn.price,
+      base_price: bookingStore.selectedReturn.original_price || bookingStore.selectedReturn.base_price || bookingStore.selectedReturn.price
+    });
+  }
+  
+  return summary;
+});
+
+// Get total price
+const totalPrice = computed(() => {
+  let total = 0;
+  if (bookingStore.selectedOutbound) {
+    total += Number(bookingStore.selectedOutbound.price);
+  }
+  if (bookingStore.selectedReturn) {
+    total += Number(bookingStore.selectedReturn.price);
+  }
+  return total;
+});
+
+// Get modal title based on trip type and phase
+const modalTitle = computed(() => {
+  if (isRoundTrip.value) {
+    if (selectionPhase.value === 'outbound') {
+      return 'Confirm Outbound Flight';
+    } else {
+      return 'Confirm Return Flight';
+    }
+  }
+  return 'Confirm Flight Selection';
+});
+
+// Get confirm button text
+const confirmButtonText = computed(() => {
+  if (isRoundTrip.value) {
+    if (selectionPhase.value === 'outbound') {
+      return 'Confirm Outbound';
+    } else {
+      return 'Confirm Round-Trip';
+    }
+  }
+  return 'Confirm Flight';
+});
+
+// Get flight statistics
+const flightStats = computed(() => {
+  const total = flights.value.length;
+  const filtered = filteredFlights.value.length;
+  const lowestPrice = filteredFlights.value.length > 0 
+    ? Math.min(...filteredFlights.value.map(f => f.price))
+    : 0;
+  const highestPrice = filteredFlights.value.length > 0
+    ? Math.max(...filteredFlights.value.map(f => f.price))
+    : 0;
+  
+  return {
+    total,
+    filtered,
+    lowestPrice,
+    highestPrice,
+    priceRange: `${lowestPrice.toLocaleString()} - ${highestPrice.toLocaleString()}`
+  };
+});
+
+// Get current date filter display
+const dateFilterDisplay = computed(() => {
+  if (!dateFilter.value.selectedDate) return 'No date selected';
+  
+  const dateLabel = formatDateDisplay(dateFilter.value.selectedDate);
+  const rangeLabel = filterOptions.value.dateRanges.find(r => r.value === dateFilter.value.dateRange)?.label;
+  
+  return `${dateLabel} (${rangeLabel})`;
+});
+
+// Check if date filter is active
+const isDateFilterActive = computed(() => {
+  return dateFilter.value.selectedDate !== currentSearchDate.value || dateFilter.value.dateRange !== 'exact';
+});
+
+// Check if current week contains selected date
+const currentWeekContainsSelectedDate = computed(() => {
+  if (!dateFilter.value.selectedDate || !dateSelector.value.weekDays.length) return false;
+  
+  const selectedDateStr = dateFilter.value.selectedDate;
+  return dateSelector.value.weekDays.some(day => day.dateString === selectedDateStr);
+});
+
+// Get phase-specific route info
+const phaseRouteInfo = computed(() => {
+  if (selectionPhase.value === 'outbound') {
+    return {
+      origin: route.query.origin,
+      destination: route.query.destination,
+      date: route.query.departure
+    };
+  } else {
+    return {
+      origin: route.query.destination,
+      destination: route.query.origin,
+      date: route.query.returnDate
+    };
+  }
+});
+
+// Get phase-specific button text
+const selectButtonText = computed(() => {
+  if (isRoundTrip.value) {
+    return selectionPhase.value === 'outbound' ? 'Select Outbound' : 'Select Return';
+  }
+  return 'Select Flight';
+});
+
+// Go back to outbound phase (for round trip)
+const goBackToOutbound = () => {
+  console.log('⬅️ Going back to outbound phase');
+  selectionPhase.value = 'outbound';
+  fetchFlights();
+  window.scrollTo(0, 0);
+};
+
+// Get available seat class options from flights
+const availableSeatClassOptions = computed(() => {
+  // Start with "All Classes"
+  const options = [{ value: 'all', label: 'All Classes' }];
+  
+  // Get unique seat classes from flights
+  const uniqueClasses = new Set();
+  
+  flights.value.forEach(flight => {
+    if (flight.available_classes && Array.isArray(flight.available_classes)) {
+      flight.available_classes.forEach(className => {
+        const key = className.toLowerCase().replace(' ', '_');
+        uniqueClasses.add(key);
+      });
+    }
+    
+    if (flight.seat_classes && Array.isArray(flight.seat_classes)) {
+      flight.seat_classes.forEach(seatClass => {
+        if (typeof seatClass === 'string') {
+          const key = seatClass.toLowerCase().replace(' ', '_');
+          uniqueClasses.add(key);
+        } else if (typeof seatClass === 'object') {
+          const className = seatClass.name || seatClass.class_name || '';
+          if (className) {
+            const key = className.toLowerCase().replace(' ', '_');
+            uniqueClasses.add(key);
+          }
+        }
+      });
+    }
+  });
+  
+  // Convert to options
+  Array.from(uniqueClasses).forEach(className => {
+    const formattedName = className.split('_').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+    
+    options.push({
+      value: className,
+      label: formattedName
+    });
+  });
+  
+  return options;
+});
+</script>
+
+<style scoped>
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 2px;

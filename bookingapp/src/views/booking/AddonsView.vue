@@ -247,6 +247,7 @@
               </div>
             </div>
 
+            <!-- In your sidebar summary section -->
             <div class="price-line" v-if="totalSeats > 0">
               <span>Seat Selection Fee</span> 
               <span>₱{{ totalSeats.toLocaleString() }}</span>
@@ -807,11 +808,13 @@ const totalAssistance = computed(() => {
   return total;
 });
 
+// FIXED: Calculate seat total correctly using seat_price
 const totalSeats = computed(() => {
-  const selections = Object.values(selectedAddons.seats || {});
+  const seats = Object.values(selectedAddons.seats || {});
   
-  return selections.reduce((sum, seat) => {
-    const seatPrice = parseFloat(seat.final_price) || 0;
+  return seats.reduce((sum, seat) => {
+    // Use seat_price instead of final_price
+    const seatPrice = parseFloat(seat.seat_price) || 0;
     return sum + seatPrice;
   }, 0);
 });
@@ -828,7 +831,6 @@ const saveAndContinue = () => {
   // --- DEBUG LOG START ---
   console.group("🛒 ADD-ONS PURCHASE SUMMARY");
   console.log("Trip Type:", tripTypeInfo.value);
-  console.log("Active Segment:", activeSegment.value);
   
   // Show flight info
   console.log("✈️ FLIGHT DETAILS:");
@@ -836,18 +838,43 @@ const saveAndContinue = () => {
     console.log(`  ${flight.type}: ${flight.flight} (${flight.route}) - ₱${flight.price.toLocaleString()}`);
   });
   
-  console.log("Passenger Selections:", JSON.parse(JSON.stringify(selectedAddons)));
+  // Check seat data structure
+  console.log("💺 SEAT SELECTIONS:");
+  const seats = Object.entries(selectedAddons.seats || {});
+  if (seats.length > 0) {
+    seats.forEach(([passengerKey, seat]) => {
+      console.log(`  Passenger ${passengerKey}:`, {
+        seat_code: seat.seat_code,
+        seat_price: seat.seat_price,
+        seat_total_price: seat.seat_total_price,
+        final_price: seat.final_price,
+        seat_class: seat.seat_class?.name
+      });
+      
+      // Debug price calculation
+      const basePrice = parseFloat(bookingStore.selectedOutbound?.price || 0);
+      const seatTotalPrice = parseFloat(seat.seat_total_price) || 0;
+      const seatOnlyPrice = parseFloat(seat.seat_price) || 0;
+      
+      console.log(`    Base flight price: ₱${basePrice}`);
+      console.log(`    Seat total price: ₱${seatTotalPrice}`);
+      console.log(`    Seat only price: ₱${seatOnlyPrice}`);
+      console.log(`    Difference: ₱${seatTotalPrice - basePrice}`);
+    });
+  } else {
+    console.log("  No seats selected");
+  }
   
   // Calculate individual totals
   const baggageTotal = totalBaggage.value;
   const mealsTotal = totalMeals.value;
   const assistanceTotal = totalAssistance.value;
-  const seatExtrasTotal = totalSeats.value;
+  const seatExtrasTotal = totalSeats.value; // This uses the fixed calculation
   const baseFareTotal = baseFare.value;
   
   const receipt = {
     "Base Fare": `₱${baseFareTotal.toLocaleString()}`,
-    "Seat Extras": `₱${seatExtrasTotal.toLocaleString()}`,
+    "Seat Selection": `₱${seatExtrasTotal.toLocaleString()}`,
     "Baggage": `₱${baggageTotal.toLocaleString()}`,
     "Meals": `₱${mealsTotal.toLocaleString()}`,
     "Assistance": `₱${assistanceTotal.toLocaleString()}`
@@ -862,42 +889,9 @@ const saveAndContinue = () => {
   console.log("Store Grand Total:", `₱${bookingStore.grandTotal.toLocaleString()}`);
   console.log("Calculated Grand Total:", `₱${grandTotal.value.toLocaleString()}`);
   
-  // Show passenger count
-  const payingPassengers = bookingStore.passengerCount.adults + bookingStore.passengerCount.children;
-  console.log(`Passengers (adults+children): ${payingPassengers}`);
-  
-  // Show segment breakdown for round trips
-  if (bookingStore.isRoundTrip) {
-    console.log("🔄 SEGMENT BREAKDOWN:");
-    
-    // Depart segment
-    const departBaggage = Object.values(selectedAddons.baggage.depart || {}).filter(Boolean).length;
-    const departMeals = Object.values(selectedAddons.meals.depart || {}).filter(Boolean).length;
-    const departAssistance = Object.values(selectedAddons.wheelchair.depart || {}).filter(Boolean).length;
-    
-    console.log("Depart Flight Add-ons:");
-    console.log(`  Baggage: ${departBaggage} selections`);
-    console.log(`  Meals: ${departMeals} selections`);
-    console.log(`  Assistance: ${departAssistance} selections`);
-    
-    // Return segment
-    const returnBaggage = Object.values(selectedAddons.baggage.return || {}).filter(Boolean).length;
-    const returnMeals = Object.values(selectedAddons.meals.return || {}).filter(Boolean).length;
-    const returnAssistance = Object.values(selectedAddons.wheelchair.return || {}).filter(Boolean).length;
-    
-    console.log("Return Flight Add-ons:");
-    console.log(`  Baggage: ${returnBaggage} selections`);
-    console.log(`  Meals: ${returnMeals} selections`);
-    console.log(`  Assistance: ${returnAssistance} selections`);
-  }
-  
-  // Show what's stored in Pinia
-  console.group("📦 PINIA STORAGE CHECK");
-  console.log("Baggage in Pinia:", bookingStore.addons.baggage);
-  console.log("Meals in Pinia:", bookingStore.addons.meals);
-  console.log("Assistance in Pinia:", bookingStore.addons.wheelchair);
-  console.log("Seats in Pinia:", bookingStore.addons.seats);
-  console.groupEnd();
+  // Verify seat price calculation
+  console.log("🔍 SEAT PRICE VERIFICATION:");
+  console.log("totalSeats computed value:", totalSeats.value);
   
   console.groupEnd();
   // --- DEBUG LOG END ---

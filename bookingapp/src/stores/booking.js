@@ -110,10 +110,14 @@ export const useBookingStore = defineStore('booking', {
         });
       });
 
-      // 5. Add Seats (usually applies to all flights, so not segmented)
-      Object.values(state.addons.seats).forEach(seat => {
-        if (seat?.final_price) total += parseFloat(seat.final_price);
-      });
+      
+
+    Object.values(state.addons.seats).forEach(seat => {
+      if (seat?.seat_price) {
+        total += parseFloat(seat.seat_price);
+        console.log(`📊 Adding seat price to grand total: ₱${seat.seat_price} for seat ${seat.seat_code}`);
+      }
+    });
 
       return total;
     },
@@ -148,8 +152,11 @@ export const useBookingStore = defineStore('booking', {
       
       // Seats
       Object.values(state.addons.seats).forEach(seat => {
-        if (seat?.final_price) total += parseFloat(seat.final_price);
-      });
+          if (seat?.seat_price) {  // Changed from final_price to seat_price
+            total += parseFloat(seat.seat_price);
+            console.log(`📊 Adding seat price to totalAddonsPrice: ₱${seat.seat_price} for seat ${seat.seat_code}`);
+          }
+        });
       
       return total;
     }
@@ -221,13 +228,37 @@ export const useBookingStore = defineStore('booking', {
     },
 
     selectFlight(flight, type = 'outbound') {
+      // Extract seat class info
+      const seatClassInfo = {
+        seat_class: flight.seat_class || flight.selected_seat_class,
+        selected_seat_class: flight.selected_seat_class,
+        seat_class_price: flight.price,
+        original_base_price: flight.original_price || flight.base_price,
+        seat_class_features: flight.seat_class_features
+      };
+      
+      // Merge seat class info with flight
+      const flightWithSeatClass = {
+        ...flight,
+        ...seatClassInfo,
+        price: flight.price // This should be the price with seat class
+      };
+      
       if (type === 'outbound') {
-        this.selectedOutbound = flight;
-        console.log('✅ Outbound flight selected:', flight.flight_number);
+        this.selectedOutbound = flightWithSeatClass;
+        console.log('✅ Outbound flight selected with seat class:', {
+          flight: flight.flight_number,
+          seat_class: flight.selected_seat_class,
+          price: flight.price
+        });
       } else {
         if (this.tripType === 'round_trip') {
-          this.selectedReturn = flight;
-          console.log('✅ Return flight selected:', flight.flight_number);
+          this.selectedReturn = flightWithSeatClass;
+          console.log('✅ Return flight selected with seat class:', {
+            flight: flight.flight_number,
+            seat_class: flight.selected_seat_class,
+            price: flight.price
+          });
         } else {
           console.warn('Cannot select return flight for one-way trip');
         }
@@ -327,8 +358,9 @@ export const useBookingStore = defineStore('booking', {
         ...this.addons.seats,
         [passengerKey]: {
           id: seatData.id,
-          seat_code: seatData.seat_number || seatData.seat_code, 
-          final_price: parseFloat(seatData.final_price) || 0, 
+          seat_code: seatData.seat_code,
+          seat_price: parseFloat(seatData.seat_price) || 0,  // Store only seat price
+          seat_total_price: parseFloat(seatData.seat_total_price) || 0, // For reference
           seat_class: {
             name: seatData.seat_class_name || seatData.seat_class?.name
           }
@@ -344,7 +376,6 @@ export const useBookingStore = defineStore('booking', {
       }
     },
     
-    // NEW: Copy add-ons from depart to return (for round trips)
     copyAddonsToReturn() {
       if (!this.isRoundTrip) return;
       

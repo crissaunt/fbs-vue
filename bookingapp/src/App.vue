@@ -1,6 +1,6 @@
 <template>
   <div id="app" class="min-h-screen flex flex-col bg-gray-50">
-    <BookingTimer v-if="bookingStore.sessionExpiry" />
+    <!-- <BookingTimer v-if="bookingStore.sessionExpiry" /> -->
     
     <!-- Header -->
     <header class="navbar bg-white relative z-10 py-4 border-b-10 border-[#FF579A] shadow-md">
