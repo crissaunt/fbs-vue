@@ -133,16 +133,58 @@ class SeatClassSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'price_multiplier', 'description']
 
 class SeatSerializer(serializers.ModelSerializer):
-    # Include the calculated price and features from the model @properties
-    final_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
-    seat_class_name = serializers.CharField(source='seat_class.name', read_only=True)
+    seat_class = serializers.SerializerMethodField()
+    final_price = serializers.SerializerMethodField()
+    seat_code = serializers.SerializerMethodField()
+    features = serializers.SerializerMethodField()
+    
     class Meta:
         model = Seat
         fields = [
-            'id', 'seat_number', 'row', 'column', 'is_available', 
-            'price_adjustment', 'final_price', 'seat_class', 
-            'seat_class_name', 'is_window', 'is_aisle', 'has_extra_legroom'
+            'id', 'seat_code', 'seat_number', 'row', 'column',
+            'is_available', 'final_price', 'price_adjustment',
+            'has_extra_legroom', 'is_exit_row', 'is_bulkhead',
+            'is_window', 'is_aisle', 'seat_class', 'features'
         ]
+    
+    def get_seat_class(self, obj):
+        if obj.seat_class:
+            return {
+                'id': obj.seat_class.id,
+                'name': obj.seat_class.name,
+                'price_multiplier': float(obj.seat_class.price_multiplier)
+            }
+        return None
+    
+    def get_final_price(self, obj):
+        # Use the final_price property from your Seat model
+        try:
+            return float(obj.final_price)
+        except:
+            # Fallback calculation
+            base_price = obj.schedule.price if obj.schedule and obj.schedule.price else Decimal('0.00')
+            multiplier = obj.seat_class.price_multiplier if obj.seat_class else Decimal('1.00')
+            adjustment = obj.price_adjustment if obj.price_adjustment else Decimal('0.00')
+            return float((base_price * multiplier) + adjustment)
+    
+    def get_seat_code(self, obj):
+        return f"{obj.row}{obj.column}" if obj.row and obj.column else obj.seat_number
+    
+    def get_features(self, obj):
+        # Use the seat_features property from your Seat model
+        features = []
+        if obj.has_extra_legroom:
+            features.append("Extra Legroom")
+        if obj.is_exit_row:
+            features.append("Exit Row")
+        if obj.is_bulkhead:
+            features.append("Bulkhead")
+        if obj.is_window:
+            features.append("Window")
+        if obj.is_aisle:
+            features.append("Aisle")
+        return features
+
 
 
 class MealOptionSerializer(serializers.ModelSerializer):

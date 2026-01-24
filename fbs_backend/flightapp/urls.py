@@ -36,4 +36,10 @@ urlpatterns = [
     path('seat-class-features/', views.get_seat_class_features, name='seat_class_features'),
     path('api/seat-class-features/', views.get_seat_class_features, name='seat_class_features'),
 
+
+
+    path('api/schedules/<int:schedule_id>/seats-with-info/', views.get_seats_with_schedule_info, name='get_seats_with_schedule_info'),
+    path('api/test-seat-data/<int:schedule_id>/', views.test_seat_data, name='test_seat_data'),
+
 ]
+

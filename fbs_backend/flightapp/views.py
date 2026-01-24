@@ -1,4 +1,5 @@
 # flightapp/views.py
+from django.http import JsonResponse
 import requests
 from rest_framework import viewsets, generics, status, filters, permissions
 from rest_framework.decorators import action, api_view, permission_classes
@@ -90,6 +91,7 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
 
         return queryset
 
+# In views.py - Update the SeatViewSet class
 class SeatViewSet(viewsets.ReadOnlyModelViewSet):
     """
     API endpoint that allows seats to be viewed based on a schedule.
@@ -99,15 +101,55 @@ class SeatViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        queryset = Seat.objects.all().select_related('seat_class')
+        queryset = Seat.objects.all().select_related(
+            'seat_class', 
+            'schedule', 
+            'schedule__flight',
+            'schedule__flight__route'
+        )
         schedule_id = self.request.query_params.get('schedule')
         
         if schedule_id:
             queryset = queryset.filter(schedule_id=schedule_id)
         
-        # We order by seat_number to help the frontend 
-        # render rows correctly (e.g., 1A, 1B, 1C...)
-        return queryset.order_by('seat_number')
+        return queryset.order_by('row', 'column')
+
+    def list(self, request, *args, **kwargs):
+        # Override to add schedule price info
+        response = super().list(request, *args, **kwargs)
+        
+        schedule_id = request.query_params.get('schedule')
+        if schedule_id:
+            try:
+                schedule = Schedule.objects.get(id=schedule_id)
+                # Add schedule price to response
+                response.data = {
+                    'success': True,
+                    'schedule_id': int(schedule_id),
+                    'schedule_price': float(schedule.price) if schedule.price else 0.00,
+                    'seats': response.data,
+                    'total_seats': len(response.data),
+                    'available_seats': Seat.objects.filter(schedule_id=schedule_id, is_available=True).count()
+                }
+            except Schedule.DoesNotExist:
+                response.data = {
+                    'success': False,
+                    'error': 'Schedule not found',
+                    'seats': [],
+                    'schedule_price': 0.00,
+                    'total_seats': 0,
+                    'available_seats': 0
+                }
+        else:
+            response.data = {
+                'success': True,
+                'schedule_price': 0.00,
+                'seats': response.data,
+                'total_seats': len(response.data),
+                'available_seats': 0
+            }
+        
+        return response
 
 class MealOptionViewSet(AirlineFilterMixin, viewsets.ReadOnlyModelViewSet):
     queryset = MealOption.objects.all()
@@ -2313,3 +2355,200 @@ def get_seat_class_features(request):
             'success': True,
             'data': {}
         })
+    
+
+
+# Django views.py
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_booking_by_reference(request, reference):
+    """Get booking by reference number (BK00000071)"""
+    try:
+        # Extract ID from reference
+        booking_id = int(reference.replace('BK', ''))
+        booking = Booking.objects.get(id=booking_id)
+        serializer = BookingSerializer(booking)
+        return Response({
+            'success': True,
+            'booking': serializer.data
+        })
+    except (ValueError, Booking.DoesNotExist):
+        return Response({
+            'success': False,
+            'error': 'Booking not found'
+        }, status=404)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def cancel_booking(request, booking_id):
+    """Cancel a booking"""
+    try:
+        booking = Booking.objects.get(id=booking_id)
+        booking.status = 'cancelled'
+        booking.save()
+        return Response({
+            'success': True,
+            'message': 'Booking cancelled successfully'
+        })
+    except Booking.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Booking not found'
+        }, status=404)    
+    
+
+
+    # Add this function in views.py (anywhere after the imports)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_seats_with_schedule_info(request, schedule_id):
+    """
+    Get seats with schedule price information
+    """
+    try:
+        schedule = Schedule.objects.get(id=schedule_id)
+        seats = Seat.objects.filter(schedule=schedule).select_related(
+            'seat_class', 
+            'schedule', 
+            'schedule__flight',
+            'schedule__flight__route'
+        ).order_by('row', 'column')
+        
+        seat_data = []
+        for seat in seats:
+            # Calculate final price
+            try:
+                final_price = seat.final_price
+            except:
+                # Fallback calculation
+                base_price = schedule.price if schedule.price else Decimal('0.00')
+                multiplier = seat.seat_class.price_multiplier if seat.seat_class else Decimal('1.00')
+                adjustment = seat.price_adjustment if seat.price_adjustment else Decimal('0.00')
+                final_price = (base_price * multiplier) + adjustment
+            
+            seat_info = {
+                'id': seat.id,
+                'seat_code': f"{seat.row}{seat.column}" if seat.row and seat.column else seat.seat_number,
+                'seat_number': seat.seat_number,
+                'row': seat.row,
+                'column': seat.column,
+                'is_available': seat.is_available,
+                'final_price': float(final_price),
+                'price_adjustment': float(seat.price_adjustment) if seat.price_adjustment else 0.0,
+                'has_extra_legroom': seat.has_extra_legroom,
+                'is_exit_row': seat.is_exit_row,
+                'is_bulkhead': seat.is_bulkhead,
+                'is_window': seat.is_window,
+                'is_aisle': seat.is_aisle,
+                'features': [],
+            }
+            
+            # Add features
+            if seat.has_extra_legroom:
+                seat_info['features'].append("Extra Legroom")
+            if seat.is_exit_row:
+                seat_info['features'].append("Exit Row")
+            if seat.is_bulkhead:
+                seat_info['features'].append("Bulkhead")
+            if seat.is_window:
+                seat_info['features'].append("Window")
+            if seat.is_aisle:
+                seat_info['features'].append("Aisle")
+            
+            if seat.seat_class:
+                seat_info['seat_class'] = {
+                    'id': seat.seat_class.id,
+                    'name': seat.seat_class.name,
+                    'price_multiplier': float(seat.seat_class.price_multiplier)
+                }
+            
+            seat_data.append(seat_info)
+        
+        return JsonResponse({
+            'success': True,
+            'schedule_id': schedule_id,
+            'schedule_price': float(schedule.price) if schedule.price else 0.00,
+            'flight_number': schedule.flight.flight_number if schedule.flight else '',
+            'airline': schedule.flight.airline.code if schedule.flight and schedule.flight.airline else '',
+            'seats': seat_data,
+            'total_seats': len(seat_data),
+            'available_seats': seats.filter(is_available=True).count()
+        })
+        
+    except Schedule.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Schedule not found'
+        }, status=404)
+    except Exception as e:
+        print(f"Error in get_seats_with_schedule_info: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+    
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def test_seat_data(request, schedule_id):
+    """Test endpoint to see what seat data looks like"""
+    try:
+        schedule = Schedule.objects.get(id=schedule_id)
+        seats = Seat.objects.filter(schedule=schedule)[:3]
+        
+        data = {
+            'schedule': {
+                'id': schedule.id,
+                'price': float(schedule.price) if schedule.price else 0,
+                'flight_number': schedule.flight.flight_number if schedule.flight else None
+            },
+            'seat_count': Seat.objects.filter(schedule=schedule).count(),
+            'sample_seats': []
+        }
+        
+        for seat in seats:
+            seat_data = {
+                'id': seat.id,
+                'seat_code': f"{seat.row}{seat.column}" if seat.row and seat.column else seat.seat_number,
+                'row': seat.row,
+                'column': seat.column,
+                'seat_number': seat.seat_number,
+                'is_available': seat.is_available,
+                'price_adjustment': float(seat.price_adjustment) if seat.price_adjustment else 0,
+                'has_extra_legroom': seat.has_extra_legroom,
+                'is_exit_row': seat.is_exit_row,
+                'is_bulkhead': seat.is_bulkhead,
+                'is_window': seat.is_window,
+                'is_aisle': seat.is_aisle,
+            }
+            
+            if seat.seat_class:
+                seat_data['seat_class'] = {
+                    'id': seat.seat_class.id,
+                    'name': seat.seat_class.name,
+                    'price_multiplier': float(seat.seat_class.price_multiplier)
+                }
+            
+            # Calculate price
+            base_price = schedule.price if schedule.price else Decimal('0.00')
+            multiplier = seat.seat_class.price_multiplier if seat.seat_class else Decimal('1.00')
+            adjustment = seat.price_adjustment if seat.price_adjustment else Decimal('0.00')
+            calculated_price = (base_price * multiplier) + adjustment
+            
+            seat_data['calculated_price'] = float(calculated_price)
+            
+            # Try to get from property
+            try:
+                seat_data['final_price_property'] = float(seat.final_price)
+            except:
+                seat_data['final_price_property'] = 'Error accessing property'
+            
+            data['sample_seats'].append(seat_data)
+        
+        return JsonResponse(data)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)    
