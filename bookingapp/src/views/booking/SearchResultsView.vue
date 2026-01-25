@@ -352,7 +352,7 @@
                 </svg>
                 <div class="text-sm">
                   <p class="font-medium">Next Step:</p>
-                  <p class="mt-1">After confirming, you'll select your return flight for {{ route.query.returnDate }}.</p>
+                  <p class="mt-1">After confirming, you'll need to click "Continue to Return Flight" to select your return flight for {{ route.query.returnDate }}.</p>
                 </div>
               </div>
             </div>
@@ -502,8 +502,8 @@
               <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
             </svg>
             <div class="text-sm text-blue-700">
-              <p class="font-medium">Auto-switched to Return Selection</p>
-              <p class="mt-1">We've automatically switched you to the return flight selection since your outbound flight is already selected.</p>
+              <p class="font-medium">Now Select Your Return Flight</p>
+              <p class="mt-1">Your outbound flight is selected. Please choose your return flight below.</p>
             </div>
           </div>
         </div>
@@ -546,13 +546,13 @@
           </div>
           
           <!-- Continue Note for Round Trips -->
-          <div v-if="isRoundTrip && selectionPhase === 'return' && bookingStore.selectedOutbound && !bookingStore.selectedReturn" 
+          <div v-if="isRoundTrip && selectionPhase === 'outbound' && hasOutboundSelected && !hasReturnSelected" 
             class="mt-4 p-3 bg-green-50 border border-green-200 rounded-sm">
             <div class="flex items-center text-green-700">
               <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
               </svg>
-              <span class="font-medium">Outbound flight selected! Now choose your return flight.</span>
+              <span class="font-medium">Outbound flight selected! Ready to choose your return flight?</span>
             </div>
           </div>
           
@@ -566,9 +566,19 @@
               Back to Outbound Flight
             </button>
             
-            <button v-if="selectionPhase === 'outbound' && hasOutboundSelected" @click="selectionPhase = 'return'; fetchFlights();" 
+            <!-- Changed from auto to explicit button -->
+            <button v-if="selectionPhase === 'outbound' && hasOutboundSelected && !hasReturnSelected" @click="goToReturnPhase" 
               class="inline-flex items-center px-4 py-2 border border-pink-300 text-pink-500 rounded-sm hover:bg-pink-50 transition-colors text-sm">
               Continue to Return Flight
+              <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </button>
+            
+            <button v-if="selectionPhase === 'return' && hasOutboundSelected && hasReturnSelected" 
+              @click="router.push({ name: 'PassengerDetails' })"
+              class="inline-flex items-center px-4 py-2 bg-pink-500 text-white rounded-sm hover:bg-pink-600 transition-colors text-sm">
+              Proceed to Passenger Details
               <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>
@@ -1601,9 +1611,10 @@ onMounted(() => {
   console.log('Has Outbound Selected:', hasOutboundSelected.value);
   console.log('Has Return Selected:', hasReturnSelected.value);
   
-  // AUTO-SWITCH TO RETURN PHASE IF OUTBOUND IS ALREADY SELECTED
+  // AUTO-SWITCH TO RETURN PHASE IF OUTBOUND IS ALREADY SELECTED (only on page load)
+  // This handles when user comes back to page with outbound already selected
   if (isRoundTrip.value && hasOutboundSelected.value && !hasReturnSelected.value) {
-    console.log('🔄 Outbound already selected, switching to return phase');
+    console.log('🔄 Outbound already selected (from previous session), auto-switching to return phase');
     selectionPhase.value = 'return';
   }
   
@@ -1643,24 +1654,8 @@ watch([filters, dateFilter], () => {
   applyFilters();
 }, { deep: true });
 
-// Watch for outbound selection changes to auto-switch phase
-watch(hasOutboundSelected, (newValue) => {
-  if (isRoundTrip.value && newValue && !hasReturnSelected.value) {
-    console.log('🔄 Outbound selection detected, switching to return phase');
-    selectionPhase.value = 'return';
-    
-    // Clear any existing selected return flight
-    if (bookingStore.selectedReturn) {
-      console.log('🧹 Clearing previous return selection');
-      bookingStore.selectedReturn = null;
-    }
-    
-    // Fetch return flights
-    setTimeout(() => {
-      fetchFlights();
-    }, 100);
-  }
-});
+// IMPORTANT: REMOVED the auto-switch watcher that was causing the issue
+// The auto-switch only happens on page load (in onMounted) when outbound is already selected from previous session
 
 // Extract unique dates from flights
 const extractAvailableDates = (flightsList) => {
@@ -1999,10 +1994,13 @@ const confirmSelection = () => {
       // Log flight selection
       logFlightSelection(selectedFlight.value, 'outbound');
       
-      // Move to return phase
-      selectionPhase.value = 'return';
-      fetchFlights();
-      window.scrollTo(0, 0);
+      // Don't auto-switch! Let the user click "Continue to Return Flight"
+      showConfirmation.value = false;
+      selectedFlight.value = null;
+      
+      // Show a success message
+      console.log('ℹ️ Outbound confirmed. User must click "Continue to Return Flight"');
+      
     } else {
       console.log('✅ CONFIRMING COMPLETE ROUND-TRIP BOOKING');
       
@@ -2034,6 +2032,22 @@ const confirmSelection = () => {
   
   showConfirmation.value = false;
   selectedFlight.value = null;
+};
+
+// Go to return phase (explicit user action)
+const goToReturnPhase = () => {
+  console.log('➡️ User clicked to go to return phase');
+  
+  // Clear any previous return selection if needed
+  if (bookingStore.selectedReturn) {
+    console.log('🧹 Clearing previous return selection before proceeding');
+    bookingStore.selectedReturn = null;
+  }
+  
+  // Switch phase and fetch flights
+  selectionPhase.value = 'return';
+  fetchFlights();
+  window.scrollTo(0, 0);
 };
 
 // Cancel selection
@@ -2215,6 +2229,14 @@ const fetchFlights = async () => {
 const retryFetchFlights = () => {
   showNoResults.value = false;
   fetchFlights();
+};
+
+// Go back to outbound phase (for round trip)
+const goBackToOutbound = () => {
+  console.log('⬅️ Going back to outbound phase');
+  selectionPhase.value = 'outbound';
+  fetchFlights();
+  window.scrollTo(0, 0);
 };
 
 // Format time
@@ -2401,14 +2423,6 @@ const selectButtonText = computed(() => {
   }
   return 'Select Flight';
 });
-
-// Go back to outbound phase (for round trip)
-const goBackToOutbound = () => {
-  console.log('⬅️ Going back to outbound phase');
-  selectionPhase.value = 'outbound';
-  fetchFlights();
-  window.scrollTo(0, 0);
-};
 
 // Get available seat class options from flights
 const availableSeatClassOptions = computed(() => {
