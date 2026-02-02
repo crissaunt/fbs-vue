@@ -1,6 +1,6 @@
 <template>
   <div id="app" class="min-h-screen flex flex-col bg-gray-50">
-    <!-- <BookingTimer v-if="bookingStore.sessionExpiry" /> -->
+    <BookingTimer v-if="bookingStore.sessionExpiry" />
     
     <!-- Header -->
     <header class="navbar bg-white relative z-10 py-4 border-b-10 border-[#FF579A] shadow-md">
@@ -36,6 +36,14 @@
             >
               Flight Status
             </router-link>
+
+            <button
+                v-if="bookingStore.sessionExpiry"
+                class="btn-cancel"
+                @click="endSession"
+              >
+                End Session
+            </button>
           </nav>
         </div>
       </div>
@@ -77,10 +85,21 @@ const checkExpiry = () => {
 //   timerInterval = setInterval(checkExpiry, 1000);
 // });
 
+const endSession = () => {
+  const confirmed = confirm('Are you sure you want to end your booking session?');
+
+  if (!confirmed) return;
+
+  bookingStore.resetBooking();   // clears sessionExpiry + data
+  router.push('/');              // optional: go back home
+};
+
+
 onUnmounted (() => {
   if (timerInterval) clearInterval(timerInterval);
 });
 </script>
+
 
 <style>
 /* Global button styles that might be used by child components */

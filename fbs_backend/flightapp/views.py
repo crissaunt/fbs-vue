@@ -701,6 +701,178 @@ def create_booking(request):
             'error': str(e)
         }, status=status.HTTP_400_BAD_REQUEST)
 
+
+@api_view(['PATCH', 'PUT'])
+@permission_classes([AllowAny])
+def update_booking(request, booking_id):
+    """
+    API endpoint to update an existing booking
+    """
+    try:
+        print(f"🔍 DEBUG: Updating booking ID: {booking_id}")
+        print(f"DEBUG: Request data: {request.data}")
+        
+        # First, check if booking exists
+        try:
+            booking = Booking.objects.get(id=booking_id)
+            print(f"DEBUG: Found booking {booking_id}, current status: {booking.status}")
+        except Booking.DoesNotExist:
+            print(f"DEBUG: Booking {booking_id} not found")
+            return Response({
+                'success': False,
+                'error': f'Booking {booking_id} not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Don't update if booking is already confirmed/cancelled
+        if booking.status in ['Confirmed', 'Cancelled']:
+            print(f"DEBUG: Booking {booking_id} is already {booking.status}, cannot update")
+            return Response({
+                'success': False,
+                'error': f'Cannot update booking with status: {booking.status}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate the update data
+        serializer = CreateBookingSerializer(data=request.data, partial=True)
+        if not serializer.is_valid():
+            print(f"DEBUG: Serializer errors: {serializer.errors}")
+            return Response({
+                'success': False,
+                'error': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        data = serializer.validated_data
+        print(f"DEBUG: Validated data: {data}")
+        
+        # Start transaction for the update
+        with transaction.atomic():
+            # Update booking contact info if provided
+            if 'contact_info' in data:
+                contact_info = data['contact_info']
+                print(f"DEBUG: Updating contact info: {contact_info}")
+                
+                # Create or update booking contact
+                try:
+                    booking_contact = BookingContact.objects.get(booking=booking)
+                    booking_contact.first_name = contact_info.get('firstName', booking_contact.first_name)
+                    booking_contact.last_name = contact_info.get('lastName', booking_contact.last_name)
+                    booking_contact.email = contact_info.get('email', booking_contact.email)
+                    booking_contact.phone = contact_info.get('phone', booking_contact.phone)
+                    booking_contact.title = contact_info.get('title', booking_contact.title)
+                    booking_contact.middle_name = contact_info.get('middleName', booking_contact.middle_name)
+                    booking_contact.save()
+                    print(f"DEBUG: Updated booking contact")
+                except BookingContact.DoesNotExist:
+                    # Create new contact
+                    booking_contact = BookingContact.objects.create(
+                        booking=booking,
+                        first_name=contact_info.get('firstName', ''),
+                        last_name=contact_info.get('lastName', ''),
+                        email=contact_info.get('email', ''),
+                        phone=contact_info.get('phone', ''),
+                        title=contact_info.get('title', 'MR'),
+                        middle_name=contact_info.get('middleName', '')
+                    )
+                    print(f"DEBUG: Created new booking contact")
+            
+            # Update passengers if provided
+            if 'passengers' in data:
+                passengers_data = data['passengers']
+                print(f"DEBUG: Updating {len(passengers_data)} passengers")
+                
+                # For simplicity, we'll delete existing passengers and create new ones
+                # First, delete existing booking details
+                deleted_details_count, _ = BookingDetail.objects.filter(booking=booking).delete()
+                print(f"DEBUG: Deleted {deleted_details_count} old booking details")
+                
+                # Delete existing passengers linked to this booking
+                passenger_ids = BookingDetail.objects.filter(booking=booking).values_list('passenger_id', flat=True)
+                PassengerInfo.objects.filter(id__in=passenger_ids).delete()
+                print(f"DEBUG: Deleted old passengers")
+                
+                # Create new passengers
+                new_passengers = _create_passengers(passengers_data)
+                print(f"DEBUG: Created {len(new_passengers)} new passengers")
+                
+                # Create new booking details
+                booking_details = []
+                
+                for i, passenger in enumerate(new_passengers):
+                    print(f"DEBUG: Creating booking details for passenger {i+1}")
+                    
+                    # Get passenger data
+                    passenger_data = passengers_data[i] if i < len(passengers_data) else {}
+                    
+                    # Create DEPART flight booking detail
+                    depart_detail = _create_booking_detail(
+                        booking, passenger, data, passenger_data, is_return=False
+                    )
+                    if depart_detail:
+                        booking_details.append(depart_detail)
+                        print(f"DEBUG: Created depart booking detail: {depart_detail.id}")
+                    
+                    # Create RETURN flight booking detail for round trips
+                    if booking.trip_type == 'round_trip':
+                        return_detail = _create_booking_detail(
+                            booking, passenger, data, passenger_data, is_return=True
+                        )
+                        if return_detail:
+                            booking_details.append(return_detail)
+                            print(f"DEBUG: Created return booking detail: {return_detail.id}")
+                
+                print(f"DEBUG: Created {len(booking_details)} new booking details")
+            
+            # Update flight selections if provided
+            if 'selectedOutbound' in data:
+                # Update would require more complex logic to change schedules
+                # For now, we'll log it but not change the actual schedule
+                print(f"DEBUG: Update requested for outbound flight: {data['selectedOutbound']}")
+                print(f"NOTE: Flight schedule changes not implemented in update")
+            
+            if 'selectedReturn' in data and booking.trip_type == 'round_trip':
+                print(f"DEBUG: Update requested for return flight: {data['selectedReturn']}")
+                print(f"NOTE: Flight schedule changes not implemented in update")
+            
+            # Update add-ons if provided
+            if 'addons' in data or 'return_addons' in data:
+                print(f"DEBUG: Update requested for add-ons")
+                print(f"NOTE: Add-on updates would require more complex logic")
+            
+            # Update total amount if provided
+            if 'total_amount' in data:
+                new_total = data['total_amount']
+                booking.total_amount = new_total
+                print(f"DEBUG: Updated total amount to: {new_total}")
+            
+            # Save booking
+            booking.save()
+            
+            # Recalculate taxes
+            if booking_details:
+                print(f"DEBUG: Recalculating taxes for {len(booking_details)} booking details")
+                _apply_taxes(booking, booking_details)
+                _update_booking_totals(booking)
+            
+            print(f"DEBUG: Booking update successful!")
+            
+            return Response({
+                'success': True,
+                'booking_id': booking.id,
+                'booking_reference': f"BK{booking.id:08d}",
+                'status': booking.status,
+                'total_amount': float(booking.total_amount),
+                'message': 'Booking updated successfully'
+            }, status=status.HTTP_200_OK)
+            
+    except Exception as e:
+        import traceback
+        print("=== ERROR TRACEBACK ===")
+        traceback.print_exc()
+        print("======================")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
 def _create_booking_contact(booking, contact_info):
     """Create contact record for booking"""    
     try:
@@ -2551,4 +2723,108 @@ def test_seat_data(request, schedule_id):
         return JsonResponse(data)
         
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)    
+        return JsonResponse({'error': str(e)}, status=500)  
+
+
+
+# In views.py - Update get_seats_with_schedule_info function
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_seats_with_schedule_info(request, schedule_id):
+    """
+    Get seats with schedule and aircraft information
+    """
+    try:
+        schedule = Schedule.objects.select_related(
+            'flight__aircraft',
+            'flight__airline'
+        ).get(id=schedule_id)
+        
+        seats = Seat.objects.filter(schedule=schedule).select_related(
+            'seat_class', 
+            'schedule', 
+            'schedule__flight',
+            'schedule__flight__route'
+        ).order_by('row', 'column')
+        
+        # Get aircraft model
+        aircraft_model = schedule.flight.aircraft.model if schedule.flight.aircraft else "Airbus A321"
+        
+        seat_data = []
+        for seat in seats:
+            # Calculate final price
+            try:
+                final_price = seat.final_price
+            except:
+                # Fallback calculation
+                base_price = schedule.price if schedule.price else Decimal('0.00')
+                multiplier = seat.seat_class.price_multiplier if seat.seat_class else Decimal('1.00')
+                adjustment = seat.price_adjustment if seat.price_adjustment else Decimal('0.00')
+                final_price = (base_price * multiplier) + adjustment
+            
+            seat_info = {
+                'id': seat.id,
+                'seat_code': f"{seat.row}{seat.column}" if seat.row and seat.column else seat.seat_number,
+                'seat_number': seat.seat_number,
+                'row': seat.row,
+                'column': seat.column,
+                'is_available': seat.is_available,
+                'final_price': float(final_price),
+                'price_adjustment': float(seat.price_adjustment) if seat.price_adjustment else 0.0,
+                'has_extra_legroom': seat.has_extra_legroom,
+                'is_exit_row': seat.is_exit_row,
+                'is_bulkhead': seat.is_bulkhead,
+                'is_window': seat.is_window,
+                'is_aisle': seat.is_aisle,
+                'features': [],
+            }
+            
+            # Add features
+            if seat.has_extra_legroom:
+                seat_info['features'].append("Extra Legroom")
+            if seat.is_exit_row:
+                seat_info['features'].append("Exit Row")
+            if seat.is_bulkhead:
+                seat_info['features'].append("Bulkhead")
+            if seat.is_window:
+                seat_info['features'].append("Window")
+            if seat.is_aisle:
+                seat_info['features'].append("Aisle")
+            
+            if seat.seat_class:
+                seat_info['seat_class'] = {
+                    'id': seat.seat_class.id,
+                    'name': seat.seat_class.name,
+                    'price_multiplier': float(seat.seat_class.price_multiplier)
+                }
+            
+            seat_data.append(seat_info)
+        
+        return JsonResponse({
+            'success': True,
+            'schedule_id': schedule_id,
+            'schedule_price': float(schedule.price) if schedule.price else 0.00,
+            'aircraft_model': aircraft_model,  # Add aircraft model
+            'aircraft_capacity': schedule.flight.aircraft.capacity if schedule.flight.aircraft else 220,
+            'flight_number': schedule.flight.flight_number if schedule.flight else '',
+            'airline': schedule.flight.airline.code if schedule.flight and schedule.flight.airline else '',
+            'airline_name': schedule.flight.airline.name if schedule.flight and schedule.flight.airline else '',
+            'seats': seat_data,
+            'total_seats': len(seat_data),
+            'available_seats': seats.filter(is_available=True).count()
+        })
+        
+    except Schedule.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Schedule not found'
+        }, status=404)
+    except Exception as e:
+        print(f"Error in get_seats_with_schedule_info: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

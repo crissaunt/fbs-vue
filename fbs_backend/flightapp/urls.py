@@ -23,6 +23,7 @@ urlpatterns = [
     path('attach-payment-method/', views.attach_payment_method, name='attach_payment_method'),
     # Booking endpoints
     path('create-booking/', views.create_booking, name='create_booking'),
+    path('update-booking/<int:booking_id>/', views.update_booking, name='update_booking'),
     path('process-payment/', views.process_payment, name='process_payment'),
     path('process-payment-callback/', views.process_payment_callback, name='process_payment_callback'),
     path('check-payment-status/<int:booking_id>/', views.check_payment_status, name='check_payment_status'),

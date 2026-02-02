@@ -10,11 +10,28 @@ export const bookingService = {
       return response.data
     } catch (error) {
       console.error('❌ Error creating booking:', error.response?.data || error.message)
-      // Return the error in the expected format
       return {
         success: false,
         error: error.response?.data?.error || error.message || 'Failed to create booking'
       }
+    }
+  },
+
+  async updateBooking(bookingId, bookingData) {
+    try {
+      console.log(`🔄 Updating existing booking ID: ${bookingId}`)
+      console.log('📤 Update data:', JSON.stringify(bookingData, null, 2))
+      
+      // Use PATCH to update the booking
+      const response = await api.patch(`update-booking/${bookingId}/`, bookingData)
+      console.log('✅ Update API Response:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('❌ Error updating booking:', error.response?.data || error.message)
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Failed to update booking'
+      };
     }
   },
 
@@ -78,10 +95,10 @@ export const bookingService = {
     
     // Format addons with new depart/return structure
     const formattedAddons = {
-      baggage: {},  // Will be { passengerKey: baggageId } for depart flight
-      meals: {},    // Will be { passengerKey: mealId } for depart flight
-      wheelchair: {}, // Will be { passengerKey: serviceId } for depart flight
-      seats: {}     // { passengerKey: seatId } (seats are not segmented)
+      baggage: {},
+      meals: {},
+      wheelchair: {},
+      seats: {}
     };
     
     // Extract baggage addons for depart flight
@@ -123,8 +140,6 @@ export const bookingService = {
     console.log('Formatted addons (depart flight only):', formattedAddons);
     
     // If round trip, need to handle return flight add-ons separately
-    // Since your backend currently expects flat structure, we might need to modify
-    // the CreateBookingSerializer or create a separate field for return add-ons
     let returnAddons = null;
     if (bookingStore.isRoundTrip) {
       returnAddons = {
@@ -191,7 +206,7 @@ export const bookingService = {
         departure_time: bookingStore.selectedReturn.departure_time
       } : null,
       addons: formattedAddons, // Depart flight add-ons only
-      return_addons: returnAddons, // NEW: Return flight add-ons
+      return_addons: returnAddons, // Return flight add-ons
       passengerCount: {
         adult: parseInt(bookingStore.passengerCount?.adults) || 1,
         children: parseInt(bookingStore.passengerCount?.children) || 0,

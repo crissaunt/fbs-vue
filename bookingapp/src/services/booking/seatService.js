@@ -1,25 +1,3 @@
-// import api from './api';
-
-// export const seatService = {
-//   /**
-//    * Fetches all seats for a specific flight schedule
-//    * @param {Number|String} scheduleId 
-//    */
-//   async getSeatsBySchedule(scheduleId) {
-//     try {
-//       // Using the 'api' instance already configured in your project
-//       const response = await api.get('api/seats/', {
-//         params: { schedule: scheduleId }
-//       });
-//       return response.data;
-//     } catch (error) {
-//       console.error(`Error fetching seats for schedule ${scheduleId}:`, error);
-//       throw error;
-//     }
-//   }
-// };
-
-
 // services/booking/seatService.js
 import api from './api';
 
@@ -39,6 +17,7 @@ export const seatService = {
         console.log('✅ Seat data loaded with new endpoint:', {
           scheduleId: response.data.schedule_id,
           schedulePrice: response.data.schedule_price,
+          aircraftModel: response.data.aircraft_model,
           totalSeats: response.data.total_seats,
           availableSeats: response.data.available_seats,
           sampleSeat: response.data.seats[0] ? {
@@ -243,6 +222,19 @@ export const seatService = {
     } catch (error) {
       console.error('Debug error:', error);
       return { success: false, error: error.message };
+    }
+  },
+
+  /**
+   * Get test seat data (for debugging)
+   */
+  async testSeatData(scheduleId) {
+    try {
+      const response = await api.get(`api/test-seat-data/${scheduleId}/`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting test data:', error);
+      return { error: error.message };
     }
   }
 };

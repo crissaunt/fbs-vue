@@ -2,7 +2,7 @@
   <div class="flex flex-col lg:flex-row items-start justify-center bg-gray-100 min-h-screen py-10 px-4 lg:px-10 gap-8">
     
     <!-- Seat Legend (Left Side on Desktop) -->
-    <div class="w-full lg:w-80 order-2 lg:order-1">
+    <div class="w-full lg:w-70 order-2 lg:order-1">
       <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 sticky top-10">
         <div class="text-center mb-6">
           <h2 class="font-bold text-gray-700 text-lg mb-1">Seat Legend</h2>
@@ -84,27 +84,27 @@
           <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">Position Types</h3>
           <div class="grid grid-cols-2 gap-2">
             <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-blue-500"></div>
+              <div class="w-2 h-2 rounded-full bg-blue-500"></div>
               <span class="text-xs text-gray-700">Window</span>
             </div>
             <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-green-500"></div>
+              <div class="w-2 h-2 rounded-full bg-green-500"></div>
               <span class="text-xs text-gray-700">Aisle</span>
             </div>
             <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+              <div class="w-2 h-2 rounded-full bg-yellow-500"></div>
               <span class="text-xs text-gray-700">Middle</span>
             </div>
             <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-purple-500"></div>
+              <div class="w-2 h-2 rounded-full bg-purple-500"></div>
               <span class="text-xs text-gray-700">Bulkhead</span>
             </div>
             <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-red-500"></div>
+              <div class="w-2 h-2 rounded-full bg-red-500"></div>
               <span class="text-xs text-gray-700">Exit Row</span>
             </div>
             <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+              <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
               <span class="text-xs text-gray-700">Extra Legroom</span>
             </div>
           </div>
@@ -116,21 +116,21 @@
           <div class="space-y-3">
             <div class="flex justify-between items-center">
               <div class="flex items-center gap-2">
-                <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                <div class="w-2 h-2 rounded-full bg-amber-500"></div>
                 <span class="text-xs text-gray-700">Business Class</span>
               </div>
               <span class="text-xs font-medium">{{ businessClassSeatsCount }}</span>
             </div>
             <div class="flex justify-between items-center">
               <div class="flex items-center gap-2">
-                <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
                 <span class="text-xs text-gray-700">Comfort Class</span>
               </div>
               <span class="text-xs font-medium">{{ comfortClassSeatsCount }}</span>
             </div>
             <div class="flex justify-between items-center">
               <div class="flex items-center gap-2">
-                <div class="w-3 h-3 rounded-full bg-blue-500"></div>
+                <div class="w-2 h-2 rounded-full bg-blue-500"></div>
                 <span class="text-xs text-gray-700">Economy Class</span>
               </div>
               <span class="text-xs font-medium">{{ economyClassSeatsCount }}</span>
@@ -159,15 +159,15 @@
           <p class="text-xs text-gray-500 mt-1">FLIGHT MAP - Seat Selection</p>
           <div class="mt-4 flex justify-center gap-4">
             <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+              <div class="w-2 h-2 rounded-full bg-amber-500"></div>
               <span class="text-xs text-gray-600">Business</span>
             </div>
             <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+              <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
               <span class="text-xs text-gray-600">Comfort</span>
             </div>
             <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-blue-500"></div>
+              <div class="w-2 h-2 rounded-full bg-blue-500"></div>
               <span class="text-xs text-gray-600">Economy</span>
             </div>
           </div>
@@ -179,18 +179,18 @@
         <div class="space-y-8">
           
           <!-- Business Class -->
-          <section>
+          <section >
             <div class="text-center mb-3">
               <span class="text-xs font-bold text-amber-600 bg-amber-50 px-4 py-2 rounded-full border border-amber-200">BUSINESS CLASS</span>
             </div>
-            <div class="grid grid-cols-5 gap-3 items-center px-8">
+            <div class="grid grid-cols-5 gap-5 items-center px-4 mx-auto">
               <template v-for="row in 4" :key="'biz-'+row">
                 <button 
                   v-for="col in ['A', 'C']" 
                   :key="col" 
                   @click="toggleSeat(row, col, 'business')"
                   :class="getSeatClass(row, col, 'business')"
-                  class="h-12 w-12 rounded-lg border-2 flex items-center justify-center font-bold transition-all group relative"
+                  class="h-12 w-12 rounded-sm border-2 flex items-center justify-center font-bold transition-all group relative"
                   :disabled="isSeatOccupied(row, col)"
                 >
                   {{ col }}
@@ -208,7 +208,7 @@
                   :key="col" 
                   @click="toggleSeat(row, col, 'business')"
                   :class="getSeatClass(row, col, 'business')"
-                  class="h-12 w-12 rounded-lg border-2 flex items-center justify-center font-bold transition-all group relative"
+                  class="h-12 w-12 rounded-sm border-2 flex items-center justify-center font-bold transition-all group relative"
                   :disabled="isSeatOccupied(row, col)"
                 >
                   {{ col }}
@@ -232,20 +232,20 @@
             <div class="text-center mb-3">
               <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-200">COMFORT CLASS</span>
             </div>
-            <div class="grid grid-cols-7 gap-2 items-center px-4">
+            <div class="grid grid-cols-7 gap-4 items-center px-2">
               <template v-for="row in 5" :key="'comfort-'+row">
                 <button 
                   v-for="col in ['A', 'B', 'C']" 
                   :key="col" 
                   @click="toggleSeat(row + 4, col, 'comfort')"
                   :class="getSeatClass(row + 4, col, 'comfort')"
-                  class="h-10 w-10 rounded-lg border flex items-center justify-center text-sm transition-all group relative"
+                  class="h-10 w-10 rounded-sm border flex items-center justify-center text-sm transition-all group relative"
                   :disabled="isSeatOccupied(row + 4, col)"
                 >
                   {{ col }}
                   <div v-if="getSeatAttributes(row + 4, col).tags.length > 0" 
                     :class="getAttributeBadgeColor(row + 4, col)"
-                    class="absolute -top-1 -right-1 w-3 h-3 rounded-full text-[8px] text-white flex items-center justify-center">
+                    class="absolute -top-1 -right-1 w-2 h-2 rounded-full text-[8px] text-white flex items-center justify-center">
                     <span v-html="getAttributeIcon(row + 4, col)"></span>
                   </div>
                 </button>
@@ -257,13 +257,13 @@
                   :key="col" 
                   @click="toggleSeat(row + 4, col, 'comfort')"
                   :class="getSeatClass(row + 4, col, 'comfort')"
-                  class="h-10 w-10 rounded-lg border flex items-center justify-center text-sm transition-all group relative"
+                  class="h-10 w-10 rounded-sm border flex items-center justify-center text-sm transition-all group relative"
                   :disabled="isSeatOccupied(row + 4, col)"
                 >
                   {{ col }}
                   <div v-if="getSeatAttributes(row + 4, col).tags.length > 0" 
                     :class="getAttributeBadgeColor(row + 4, col)"
-                    class="absolute -top-1 -right-1 w-3 h-3 rounded-full text-[8px] text-white flex items-center justify-center">
+                    class="absolute -top-1 -right-1 w-2 h-2 rounded-full text-[8px] text-white flex items-center justify-center">
                     <span v-html="getAttributeIcon(row + 4, col)"></span>
                   </div>
                 </button>
@@ -281,20 +281,20 @@
             <div class="text-center mb-3">
               <span class="text-xs font-bold text-blue-600 bg-blue-50 px-4 py-2 rounded-full border border-blue-200">ECONOMY CLASS</span>
             </div>
-            <div class="grid grid-cols-7 gap-2 items-center">
+            <div class="grid grid-cols-7 gap-3 items-center">
               <template v-for="row in 28" :key="'econ-'+row">
                 <button 
                   v-for="col in ['A', 'B', 'C']" 
                   :key="col" 
                   @click="toggleSeat(row + 9, col, 'economy')"
                   :class="getSeatClass(row + 9, col, 'economy')"
-                  class="h-9 w-9 rounded-md border flex items-center justify-center text-xs transition-all group relative"
+                  class="h-9 w-9 rounded-sm border flex items-center justify-center text-xs transition-all group relative"
                   :disabled="isSeatOccupied(row + 9, col)"
                 >
                   {{ col }}
                   <div v-if="getSeatAttributes(row + 9, col).tags.length > 0" 
                     :class="getAttributeBadgeColor(row + 9, col)"
-                    class="absolute -top-1 -right-1 w-3 h-3 rounded-full text-[8px] text-white flex items-center justify-center">
+                    class="absolute -top-1 -right-1 w-2 h-2 rounded-full text-[8px] text-white flex items-center justify-center">
                     <span v-html="getAttributeIcon(row + 9, col)"></span>
                   </div>
                 </button>
@@ -306,13 +306,13 @@
                   :key="col" 
                   @click="toggleSeat(row + 9, col, 'economy')"
                   :class="getSeatClass(row + 9, col, 'economy')"
-                  class="h-9 w-9 rounded-md border flex items-center justify-center text-xs transition-all group relative"
+                  class="h-9 w-9 rounded-sm border flex items-center justify-center text-xs transition-all group relative"
                   :disabled="isSeatOccupied(row + 9, col)"
                 >
                   {{ col }}
                   <div v-if="getSeatAttributes(row + 9, col).tags.length > 0" 
                     :class="getAttributeBadgeColor(row + 9, col)"
-                    class="absolute -top-1 -right-1 w-3 h-3 rounded-full text-[8px] text-white flex items-center justify-center">
+                    class="absolute -top-1 -right-1 w-2 h-2 rounded-full text-[8px] text-white flex items-center justify-center">
                     <span v-html="getAttributeIcon(row + 9, col)"></span>
                   </div>
                 </button>

@@ -344,15 +344,15 @@
             </div>
             
             <!-- Next Step Info -->
-            <div v-if="isRoundTrip && selectionPhase === 'outbound'" 
-              class="bg-blue-50 border border-blue-200 rounded-sm p-4">
+            <div v-if="modalActionDescription" 
+              class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-sm">
               <div class="flex items-center text-blue-700">
                 <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
                 </svg>
                 <div class="text-sm">
-                  <p class="font-medium">Next Step:</p>
-                  <p class="mt-1">After confirming, you'll need to click "Continue to Return Flight" to select your return flight for {{ route.query.returnDate }}.</p>
+                  <p class="font-medium">Next Steps:</p>
+                  <p class="mt-1">{{ modalActionDescription }}</p>
                 </div>
               </div>
             </div>
@@ -545,14 +545,24 @@
             </div>
           </div>
           
-          <!-- Continue Note for Round Trips -->
-          <div v-if="isRoundTrip && selectionPhase === 'outbound' && hasOutboundSelected && !hasReturnSelected" 
-            class="mt-4 p-3 bg-green-50 border border-green-200 rounded-sm">
-            <div class="flex items-center text-green-700">
-              <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-              </svg>
-              <span class="font-medium">Outbound flight selected! Ready to choose your return flight?</span>
+          <!-- Progress Indicators for Round Trips -->
+          <div v-if="isRoundTrip" class="mt-4">
+            <div v-if="!hasOutboundSelected" class="p-3 bg-yellow-50 border border-yellow-200 rounded-sm">
+              <div class="flex items-center text-yellow-700">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+                <span class="font-medium">Select your outbound flight to continue</span>
+              </div>
+            </div>
+            
+            <div v-else-if="!hasReturnSelected && selectionPhase === 'outbound'" class="p-3 bg-blue-50 border border-blue-200 rounded-sm">
+              <div class="flex items-center text-blue-700">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                <span class="font-medium">Outbound flight selected! Click "Continue to Return Flight" above</span>
+              </div>
             </div>
           </div>
           
@@ -566,21 +576,23 @@
               Back to Outbound Flight
             </button>
             
-            <!-- Changed from auto to explicit button -->
-            <button v-if="selectionPhase === 'outbound' && hasOutboundSelected && !hasReturnSelected" @click="goToReturnPhase" 
-              class="inline-flex items-center px-4 py-2 border border-pink-300 text-pink-500 rounded-sm hover:bg-pink-50 transition-colors text-sm">
+            <!-- Show "Continue to Return Flight" only when outbound is selected AND we're in outbound phase -->
+            <button v-if="selectionPhase === 'outbound' && hasOutboundSelected && !hasReturnSelected" 
+              @click="goToReturnPhase" 
+              class="inline-flex items-center px-4 py-2 bg-pink-500 text-white rounded-sm hover:bg-pink-600 transition-colors text-sm">
               Continue to Return Flight
               <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>
             </button>
             
-            <button v-if="selectionPhase === 'return' && hasOutboundSelected && hasReturnSelected" 
-              @click="router.push({ name: 'PassengerDetails' })"
-              class="inline-flex items-center px-4 py-2 bg-pink-500 text-white rounded-sm hover:bg-pink-600 transition-colors text-sm">
+            <!-- Show "Proceed to Passenger Details" when both flights are selected -->
+            <button v-if="hasOutboundSelected && hasReturnSelected" 
+              @click="proceedToPassengerDetails"
+              class="inline-flex items-center px-4 py-2 bg-green-500 text-white rounded-sm hover:bg-green-600 transition-colors text-sm">
               Proceed to Passenger Details
               <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
             </button>
           </div>
@@ -801,7 +813,7 @@
                   <button @click="prevWeek" 
                     class="p-1 border border-gray-300 rounded-sm hover:bg-gray-50 transition-colors">
                     <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
                   </button>
                   <div class="text-sm font-medium text-gray-700">{{ formatWeekRange }}</div>
@@ -1021,11 +1033,41 @@
                     </div>
                     
                     <div class="flex space-x-2">
-                      <!-- Select Flight Button -->
-                      <button @click="handleSelectFlight(f)" 
-                        class="px-6 py-3 bg-pink-500 text-white rounded-sm hover:bg-pink-300 cursor-pointer transition-colors font-medium whitespace-nowrap">
-                        {{ selectButtonText }}
-                      </button>
+                      <!-- Check if this flight is already selected -->
+                      <template v-if="isRoundTrip && selectionPhase === 'outbound' && bookingStore.selectedOutbound?.flight_number === f.flight_number">
+                        <button class="px-6 py-3 bg-green-500 text-white rounded-sm font-medium whitespace-nowrap">
+                          ✓ Outbound Selected
+                        </button>
+                        <button @click="handleSelectFlight(f)" 
+                          class="px-6 py-3 border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 transition-colors font-medium whitespace-nowrap">
+                          Change Selection
+                        </button>
+                      </template>
+                      <template v-else-if="isRoundTrip && selectionPhase === 'return' && bookingStore.selectedReturn?.flight_number === f.flight_number">
+                        <button class="px-6 py-3 bg-green-500 text-white rounded-sm font-medium whitespace-nowrap">
+                          ✓ Return Selected
+                        </button>
+                        <button @click="handleSelectFlight(f)" 
+                          class="px-6 py-3 border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 transition-colors font-medium whitespace-nowrap">
+                          Change Selection
+                        </button>
+                      </template>
+                      <template v-else-if="!isRoundTrip && bookingStore.selectedOutbound?.flight_number === f.flight_number">
+                        <button class="px-6 py-3 bg-green-500 text-white rounded-sm font-medium whitespace-nowrap">
+                          ✓ Flight Selected
+                        </button>
+                        <button @click="handleSelectFlight(f)" 
+                          class="px-6 py-3 border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 transition-colors font-medium whitespace-nowrap">
+                          Change Selection
+                        </button>
+                      </template>
+                      <template v-else>
+                        <!-- Select Flight Button -->
+                        <button @click="handleSelectFlight(f)" 
+                          class="px-6 py-3 bg-pink-500 text-white rounded-sm hover:bg-pink-600 transition-colors font-medium whitespace-nowrap">
+                          {{ selectButtonText }}
+                        </button>
+                      </template>
                     </div>
                   </div>
                 </div>
@@ -1490,8 +1532,8 @@ const handleSeatClassSelection = (seatClass) => {
   const flightWithSeatClass = {
     ...flightToStore,
     price: seatClass.price,
-    original_price: flightToStore.price, // Store original price
-    base_price: flightToStore.price, // Also store as base_price
+    original_price: flightToStore.original_price || flightToStore.price, // Keep original if exists
+    base_price: flightToStore.base_price || flightToStore.price, // Also store as base_price
     seat_class: seatClass.name,
     selected_seat_class: seatClass.name,
     seat_class_details: seatClass,
@@ -1539,6 +1581,11 @@ const handleSeatClassSelection = (seatClass) => {
   // Show confirmation modal - pass the flight with seat class
   selectedFlight.value = flightWithSeatClass;
   showConfirmation.value = true;
+  
+  // Force UI update
+  setTimeout(() => {
+    // This will trigger reactive updates
+  }, 100);
 };
 
 // Cancel seat class selection
@@ -1653,9 +1700,6 @@ onUnmounted(() => {
 watch([filters, dateFilter], () => {
   applyFilters();
 }, { deep: true });
-
-// IMPORTANT: REMOVED the auto-switch watcher that was causing the issue
-// The auto-switch only happens on page load (in onMounted) when outbound is already selected from previous session
 
 // Extract unique dates from flights
 const extractAvailableDates = (flightsList) => {
@@ -1934,6 +1978,31 @@ const uniqueDates = computed(() => {
   });
 });
 
+// Proceed to passenger details
+const proceedToPassengerDetails = () => {
+  console.log('🎟️ Proceeding to passenger details...');
+  
+  // Check session first
+  const sessionCheck = bookingStore.checkSession();
+  if (!sessionCheck.valid) {
+    showSessionExpiredModal();
+    return;
+  }
+  
+  // Log complete booking details
+  logCompleteBookingDetails();
+  
+  // Validate both flights are selected
+  if (!hasOutboundSelected.value || (isRoundTrip.value && !hasReturnSelected.value)) {
+    console.error('❌ Cannot proceed: Missing flight selections');
+    alert('Please select both outbound and return flights before proceeding.');
+    return;
+  }
+  
+  // Navigate to passenger details
+  router.push({ name: 'PassengerDetails' });
+};
+
 // Handle flight selection
 const handleSelectFlight = (flight) => {
   // Check session before proceeding
@@ -1948,30 +2017,32 @@ const handleSelectFlight = (flight) => {
   // Refresh session on user interaction
   bookingStore.startSession();
   
-  // Store the flight for seat class selection (use selectedFlightForSeats)
+  // Store the flight for seat class selection
   selectedFlightForSeats.value = flight;
   
-  // Check if this flight is already selected (to show pre-selected seat class)
+  // Check if this flight is already selected
+  let alreadySelected = false;
+  let selectedFlightInStore = null;
+  
   if (isRoundTrip.value) {
-    const selectedFlightInStore = selectionPhase.value === 'outbound' 
+    selectedFlightInStore = selectionPhase.value === 'outbound' 
       ? bookingStore.selectedOutbound
       : bookingStore.selectedReturn;
-    
-    if (selectedFlightInStore && selectedFlightInStore.flight_number === flight.flight_number) {
-      console.log('🔄 Flight already selected, showing with existing seat class');
-      selectedFlight.value = selectedFlightInStore;
-      showConfirmation.value = true;
-      return;
-    }
-  } else if (bookingStore.selectedOutbound && bookingStore.selectedOutbound.flight_number === flight.flight_number) {
-    console.log('🔄 One-way flight already selected');
-    selectedFlight.value = bookingStore.selectedOutbound;
-    showConfirmation.value = true;
-    return;
+  } else {
+    selectedFlightInStore = bookingStore.selectedOutbound;
   }
   
-  // First show seat classes modal
-  showSeatClasses(flight);
+  alreadySelected = selectedFlightInStore && selectedFlightInStore.flight_number === flight.flight_number;
+  
+  if (alreadySelected) {
+    console.log('🔄 Flight already selected, showing seat classes for modification');
+    // Show seat classes modal even for already selected flights
+    // This allows users to change their seat class
+    showSeatClasses(flight);
+  } else {
+    // First show seat classes modal for new selection
+    showSeatClasses(flight);
+  }
 };
 
 // Confirm selection
@@ -1987,49 +2058,47 @@ const confirmSelection = () => {
   if (isRoundTrip.value) {
     if (selectionPhase.value === 'outbound') {
       console.log('✅ CONFIRMING OUTBOUND FLIGHT FOR ROUND-TRIP');
-      console.log('Flight:', selectedFlight.value.flight_number);
-      console.log('Seat Class:', selectedFlight.value.selected_seat_class);
-      console.log('Price with seat class: ₱', Number(selectedFlight.value.price).toLocaleString());
       
       // Log flight selection
       logFlightSelection(selectedFlight.value, 'outbound');
       
-      // Don't auto-switch! Let the user click "Continue to Return Flight"
+      // AUTO-SWITCH TO RETURN PHASE
+      console.log('🔄 Auto-switching to return phase...');
+      selectionPhase.value = 'return';
+      
+      // Close confirmation modal
       showConfirmation.value = false;
       selectedFlight.value = null;
       
-      // Show a success message
-      console.log('ℹ️ Outbound confirmed. User must click "Continue to Return Flight"');
+      // Fetch return flights
+      fetchFlights();
+      window.scrollTo(0, 0);
       
     } else {
       console.log('✅ CONFIRMING COMPLETE ROUND-TRIP BOOKING');
       
-      // Log both flights with seat class info
-      if (bookingStore.selectedOutbound) {
-        console.log('Outbound Seat Class:', bookingStore.selectedOutbound.seat_class);
-        console.log('Outbound Price with Seat Class: ₱', Number(bookingStore.selectedOutbound.price).toLocaleString());
-      }
-      
-      console.log('Return Seat Class:', selectedFlight.value.selected_seat_class);
-      console.log('Return Price with Seat Class: ₱', Number(selectedFlight.value.price).toLocaleString());
-      
+      // Log return flight selection
       logFlightSelection(selectedFlight.value, 'return');
+      
+      // Log complete booking
       logCompleteBooking();
       
+      // Navigate to passenger details
       router.push({ name: 'PassengerDetails' });
     }
   } else {
     console.log('✅ CONFIRMING ONE-WAY BOOKING');
-    console.log('Flight:', selectedFlight.value.flight_number);
-    console.log('Seat Class:', selectedFlight.value.selected_seat_class);
-    console.log('Price with seat class: ₱', Number(selectedFlight.value.price).toLocaleString());
-    
-    // Log flight selection
     logFlightSelection(selectedFlight.value, 'outbound');
-    
     router.push({ name: 'PassengerDetails' });
   }
   
+  showConfirmation.value = false;
+  selectedFlight.value = null;
+};
+
+// Cancel selection
+const cancelSelection = () => {
+  console.log('❌ Cancelled selection');
   showConfirmation.value = false;
   selectedFlight.value = null;
 };
@@ -2050,11 +2119,12 @@ const goToReturnPhase = () => {
   window.scrollTo(0, 0);
 };
 
-// Cancel selection
-const cancelSelection = () => {
-  console.log('❌ Cancelled selection');
-  showConfirmation.value = false;
-  selectedFlight.value = null;
+// Go back to outbound phase (for round trip)
+const goBackToOutbound = () => {
+  console.log('⬅️ Going back to outbound phase');
+  selectionPhase.value = 'outbound';
+  fetchFlights();
+  window.scrollTo(0, 0);
 };
 
 // Helper function to log flight selection
@@ -2097,20 +2167,6 @@ const logCompleteBooking = () => {
   }
   
   console.log('============================');
-};
-
-// Format seat classes for display
-const formatSeatClasses = (seatClasses) => {
-  if (!seatClasses || !Array.isArray(seatClasses)) return '';
-  
-  return seatClasses.map(sc => {
-    if (typeof sc === 'string') {
-      return sc;
-    } else if (sc && typeof sc === 'object') {
-      return sc.name || sc.class_name || sc.value || 'Unknown';
-    }
-    return 'Unknown';
-  }).join(', ');
 };
 
 const fetchFlights = async () => {
@@ -2231,12 +2287,18 @@ const retryFetchFlights = () => {
   fetchFlights();
 };
 
-// Go back to outbound phase (for round trip)
-const goBackToOutbound = () => {
-  console.log('⬅️ Going back to outbound phase');
-  selectionPhase.value = 'outbound';
-  fetchFlights();
-  window.scrollTo(0, 0);
+// Format seat classes for display
+const formatSeatClasses = (seatClasses) => {
+  if (!seatClasses || !Array.isArray(seatClasses)) return '';
+  
+  return seatClasses.map(sc => {
+    if (typeof sc === 'string') {
+      return sc;
+    } else if (sc && typeof sc === 'object') {
+      return sc.name || sc.class_name || sc.value || 'Unknown';
+    }
+    return 'Unknown';
+  }).join(', ');
 };
 
 // Format time
@@ -2350,10 +2412,20 @@ const confirmButtonText = computed(() => {
     if (selectionPhase.value === 'outbound') {
       return 'Confirm Outbound';
     } else {
-      return 'Confirm Round-Trip';
+      return 'Confirm Return';
     }
   }
   return 'Confirm Flight';
+});
+
+// Get modal action description
+const modalActionDescription = computed(() => {
+  if (isRoundTrip.value && selectionPhase.value === 'outbound') {
+    return 'After confirming, click "Continue to Return Flight" to select your return flight.';
+  } else if (isRoundTrip.value && selectionPhase.value === 'return') {
+    return 'After confirming, click "Proceed to Passenger Details" to continue.';
+  }
+  return '';
 });
 
 // Get flight statistics

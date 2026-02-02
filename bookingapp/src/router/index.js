@@ -11,9 +11,8 @@ import { useBookingStore } from '@/stores/booking';
 import AirbusA321Layout from '@/components/seatmaps/AirbusA321Layout.vue';
 
 const routes = [
- 
   {
-    path: '/airbus-321', // The URL you will type
+    path: '/airbus-321',
     name: 'Airbus321',
     component: AirbusA321Layout
   },
@@ -26,7 +25,6 @@ const routes = [
   {
     path: '/check-in',
     name: 'check-in',
-    // Route level code-splitting (Lazy loading)
     component: () => import('../views/booking/CheckInView.vue')
   },
   {
@@ -71,11 +69,21 @@ const routes = [
     props: true
   },
   {
-  path: '/payment-callback',
-  name: 'PaymentCallback',
-  component: () => import('../views/booking/PaymentCallbackView.vue'),
-  meta: { requiresAuth: false }
-}
+    path: '/payment-callback',
+    name: 'PaymentCallback',
+    component: () => import('../views/booking/PaymentCallbackView.vue'),
+    meta: { requiresAuth: false }
+  },
+  // ADD THIS NEW ROUTE:
+  {
+    path: '/booking-success',
+    name: 'BookingSuccess',
+    component: () => import('@/views/booking/BookingSuccessView.vue'),
+    meta: { 
+      title: 'Booking Confirmed | Philippine Airlines',
+      requiresAuth: false 
+    }
+  }
 ];
 
 const router = createRouter({
@@ -83,12 +91,13 @@ const router = createRouter({
   routes,
 });
 
-// Optional: Change page title dynamically
+// Add page title dynamically
 router.beforeEach((to, from, next) => {
   document.title = to.meta.title || 'Philippine Airlines';
   next();
 });
-// In router/index.js, add this before export:
+
+// Check for booking session expiration
 const bookingRoutes = [
   'PassengerDetails',
   'Addons',
@@ -114,4 +123,5 @@ router.beforeEach((to, from, next) => {
   document.title = to.meta.title || 'Philippine Airlines';
   next();
 });
+
 export default router;

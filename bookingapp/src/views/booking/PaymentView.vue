@@ -1,105 +1,275 @@
 <template>
-  <div class="pal-bg">
-    <div class="container payment-wrapper">
-      <div class="payment-card">
-        <!-- Loading State -->
-        <div v-if="loading" class="loading-overlay">
-          <div class="spinner"></div>
-          <p>{{ loadingMessage }}</p>
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 p-4 md:p-8 relative overflow-hidden">
+    <!-- Background Elements -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute top-0 right-0 w-1/3 h-1/3 bg-gradient-to-br from-[#FF579A]/5 to-transparent rounded-full blur-3xl"></div>
+      <div class="absolute bottom-0 left-0 w-1/3 h-1/3 bg-gradient-to-tr from-gray-400/5 to-transparent rounded-full blur-3xl"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="relative max-w-6xl mx-auto">
+      <!-- Header -->
+      
+
+      <!-- Loading State -->
+      <div v-if="loading" class="bg-white rounded-sm  border border-gray-300 p-12 text-center">
+        <div class="relative inline-flex mb-6">
+          <div class="w-20 h-20 border-4 border-pink-100 rounded-full"></div>
+          <div class="absolute inset-0 w-20 h-20 border-4 border-[#FF579A] border-t-transparent rounded-full animate-spin"></div>
         </div>
+        <h3 class="text-xl font-semibold text-gray-900 mb-2">{{ loadingMessage }}</h3>
+        <p class="text-gray-600">Please wait while we process your request</p>
+      </div>
 
-        <!-- Session Expired -->
-        <div v-else-if="!isSessionValid" class="session-expired">
-          <div class="expired-icon">⏰</div>
-          <h3>Session Expired</h3>
-          <p>Your booking session has expired. Please restart your booking.</p>
-          <button @click="restartBooking" class="btn-restart">
-            Start New Booking
-          </button>
+      <!-- Session Expired -->
+      <div v-else-if="!isSessionValid" class="bg-white rounded-sm  border border-gray-300 p-12 text-center">
+        <div class="w-20 h-20 bg-gradient-to-br from-amber-50 to-amber-100 rounded-sm flex items-center justify-center mx-auto mb-6">
+          <span class="text-3xl text-amber-500">⏰</span>
         </div>
+        <h3 class="text-2xl font-bold text-gray-900 mb-3">Session Expired</h3>
+        <p class="text-gray-600 mb-8 max-w-md mx-auto">
+          Your booking session has expired. Please restart your booking process to continue.
+        </p>
+        <button @click="restartBooking" 
+                class="bg-gradient-to-r from-gray-900 to-gray-800 hover:from-black hover:to-gray-900 text-white px-8 py-3 rounded-sm font-semibold transition-all duration-300  hover:shadow-xl">
+          Start New Booking
+        </button>
+      </div>
 
-        <!-- Payment Form -->
-        <div v-else>
-          <h2 class="title">Secure Payment</h2>
-          
-          <!-- Price Banner -->
-          <div class="price-banner">
-            <span class="label">Amount to Pay:</span>
-            <span class="amount">₱ {{ totalAmount.toLocaleString() }}</span>
-          </div>
-
-          <!-- Booking Summary -->
-          <div class="booking-summary">
-            <p><strong>Booking Reference:</strong> {{ bookingReference || 'N/A' }}</p>
-            <p><strong>Passenger:</strong> {{ contactName }}</p>
-            <p><strong>Status:</strong> <span class="status-badge">{{ bookingStatus }}</span></p>
-            <p><strong>Trip Type:</strong> {{ tripTypeLabel }}</p>
-          </div>
-
-          <!-- Flight Summary -->
-          <div class="flight-summary" v-if="hasFlightInfo">
-            <h4>Flight Details</h4>
-            <div v-if="bookingStore.selectedOutbound" class="flight-item">
-              <span class="flight-label">Depart:</span>
-              <span>{{ bookingStore.selectedOutbound.origin }} → {{ bookingStore.selectedOutbound.destination }}</span>
-              <span class="flight-number">{{ bookingStore.selectedOutbound.flight_number }}</span>
+      <!-- Main Content -->
+      <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Left Column - Booking Summary -->
+        <div class="lg:col-span-2 space-y-8">
+          <!-- Amount Card -->
+          <div class="bg-white rounded-sm  border border-gray-300 p-8">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-2xl font-bold text-gray-900">Payment Summary</h2>
+              <span class="px-4 py-1.5 bg-green-50 text-green-700 rounded-full text-sm font-semibold border border-green-100">
+                Active Session
+              </span>
             </div>
-            <div v-if="bookingStore.selectedReturn" class="flight-item">
-              <span class="flight-label">Return:</span>
-              <span>{{ bookingStore.selectedReturn.origin }} → {{ bookingStore.selectedReturn.destination }}</span>
-              <span class="flight-number">{{ bookingStore.selectedReturn.flight_number }}</span>
+
+            <div class="bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-sm p-8 mb-8">
+              <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Amount</p>
+              <p class="text-5xl font-bold text-gray-900">₱ {{ totalAmount.toLocaleString() }}</p>
+              <p class="text-gray-500 text-sm mt-2">Inclusive of all taxes and fees</p>
+            </div>
+
+            <!-- Booking Details -->
+            <div class="space-y-6">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-gray-50 rounded-sm p-5">
+                  <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Booking Reference</p>
+                  <p class="text-xl font-bold text-gray-900 font-mono">{{ bookingReference || 'N/A' }}</p>
+                </div>
+                <div class="bg-gray-50 rounded-sm p-5">
+                  <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Status</p>
+                  <div class="inline-flex items-center space-x-2 px-4 py-2 bg-amber-50 text-amber-700 rounded-sm">
+                    <div class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                    <span class="font-semibold">{{ bookingStatus }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-gray-50 rounded-sm p-5">
+                  <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Passenger</p>
+                  <p class="text-lg font-semibold text-gray-900">{{ contactName }}</p>
+                </div>
+                <div class="bg-gray-50 rounded-sm p-5">
+                  <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Trip Type</p>
+                  <div class="inline-flex items-center space-x-2">
+                    <span class="px-4 py-1.5 bg-blue-50 text-blue-700 rounded-sm font-semibold">
+                      {{ tripTypeLabel }}
+                    </span>
+                    <span v-if="bookingStore.isRoundTrip" class="text-blue-500">🔄</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Payment Method Selection (Optional - can skip this if going directly to PayMongo) -->
-          <div v-if="showPaymentMethods" class="payment-methods">
-            <h3>Select Payment Method</h3>
-            <p class="method-description">You'll be redirected to our secure payment partner to complete the transaction.</p>
+          <!-- Flight Details -->
+          <div v-if="hasFlightInfo" class="bg-white rounded-sm  border border-gray-300 p-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Flight Details</h2>
             
-            <div class="methods-grid">
-              <div class="method-card" @click="handlePayMongoCheckout">
-                <div class="method-icon">💳</div>
-                <div class="method-info">
-                  <h4>Pay with Multiple Options</h4>
-                  <p>GCash, Maya, Credit/Debit Cards, and more</p>
+            <div class="space-y-6">
+              <!-- Outbound Flight -->
+              <div v-if="bookingStore.selectedOutbound" class="bg-gradient-to-r from-blue-50 to-white border border-blue-100 rounded-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-12 h-12 bg-blue-100 rounded-sm flex items-center justify-center">
+                      <span class="text-xl text-blue-600">✈️</span>
+                    </div>
+                    <div>
+                      <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Departure</p>
+                      <p class="text-lg font-bold text-gray-900">{{ bookingStore.selectedOutbound.origin }} → {{ bookingStore.selectedOutbound.destination }}</p>
+                    </div>
+                  </div>
+                  <span class="px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+                    {{ bookingStore.selectedOutbound.flight_number }}
+                  </span>
                 </div>
-                <div class="method-arrow">→</div>
               </div>
-              
-              <div v-if="paymentService.isPayMongoConfigured()" class="method-card" @click="handleDirectGCash">
-                <div class="method-icon">📱</div>
-                <div class="method-info">
-                  <h4>GCash Direct</h4>
-                  <p>Pay directly using your GCash wallet</p>
+
+              <!-- Return Flight -->
+              <div v-if="bookingStore.selectedReturn" class="bg-gradient-to-r from-emerald-50 to-white border border-emerald-100 rounded-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-12 h-12 bg-emerald-100 rounded-sm flex items-center justify-center">
+                      <span class="text-xl text-emerald-600">🔄</span>
+                    </div>
+                    <div>
+                      <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Return</p>
+                      <p class="text-lg font-bold text-gray-900">{{ bookingStore.selectedReturn.origin }} → {{ bookingStore.selectedReturn.destination }}</p>
+                    </div>
+                  </div>
+                  <span class="px-4 py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-sm font-semibold">
+                    {{ bookingStore.selectedReturn.flight_number }}
+                  </span>
                 </div>
-                <div class="method-arrow">→</div>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- Payment Notice -->
-          <p class="notice" v-if="!showPaymentMethods">
-            You'll be redirected to a secure payment page to complete your transaction.
-            We support <strong>GCash, Maya, QRPH, and Credit/Debit Cards</strong>.
-          </p>
+        <!-- Right Column - Payment -->
+        <div class="space-y-8">
+          <!-- Payment Methods -->
+          <div class="bg-white rounded-sm  border border-gray-300 p-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Payment Methods</h2>
+            <p class="text-gray-600 mb-8 text-[11px]">
+              You'll be redirected to our secure payment partner to complete your transaction. All major payment methods are accepted.
+            </p>
+
+            <div class="space-y-4">
+              <!-- PayMongo Multi-method -->
+              <button @click="handlePayMongoCheckout" 
+                      class="w-full group flex items-center justify-between p-5 bg-gradient-to-r from-pink-50 to-white hover:from-[#FF579A] hover:to-pink-500 border border-pink-100 hover:border-transparent rounded-sm transition-all duration-300">
+                <div class="flex items-center space-x-4">
+                  <div class="w-12 h-12 bg-white group-hover:bg-white/20 rounded-sm flex items-center justify-center">
+                    <span class="text-2xl text-[#FF579A] group-hover:text-white">💳</span>
+                  </div>
+                  <div class="text-left">
+                    <p class="font-semibold text-gray-900 group-hover:text-white">All Payment Methods</p>
+                    <p class="text-sm text-gray-600 group-hover:text-white/80">GCash, Maya, Credit/Debit Cards</p>
+                  </div>
+                </div>
+                <span class="text-xl text-gray-400 group-hover:text-white group-hover:translate-x-2 transition-transform">→</span>
+              </button>
+
+              <!-- GCash Direct -->
+              <button v-if="paymentService.isPayMongoConfigured()" 
+                      @click="handleDirectGCash"
+                      class="w-full group flex items-center justify-between p-5 bg-gradient-to-r from-emerald-50 to-white hover:from-emerald-600 hover:to-emerald-500 border border-emerald-100 hover:border-transparent rounded-sm transition-all duration-300">
+                <div class="flex items-center space-x-4">
+                  <div class="w-12 h-12 bg-white group-hover:bg-white/20 rounded-sm flex items-center justify-center">
+                    <span class="text-2xl text-emerald-600 group-hover:text-white">📱</span>
+                  </div>
+                  <div class="text-left">
+                    <p class="font-semibold text-gray-900 group-hover:text-white">GCash Direct</p>
+                    <p class="text-sm text-gray-600 group-hover:text-white/80">Pay directly via GCash wallet</p>
+                  </div>
+                </div>
+                <span class="text-xl text-gray-400 group-hover:text-white group-hover:translate-x-2 transition-transform">→</span>
+              </button>
+            </div>
+
+            <!-- Payment Providers -->
+            <!-- <div class="mt-8 pt-8 border-t border-gray-200">
+              <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Secure Payment Partners</p>
+              <div class="grid grid-cols-4 gap-4">
+                <div class="h-12 bg-gray-100 rounded-sm flex items-center justify-center">
+                  <span class="text-gray-600 font-bold">GCash</span>
+                </div>
+                <div class="h-12 bg-gray-100 rounded-sm flex items-center justify-center">
+                  <span class="text-gray-600 font-bold">Maya</span>
+                </div>
+                <div class="h-12 bg-gray-100 rounded-sm flex items-center justify-center">
+                  <span class="text-gray-600 font-bold">Visa</span>
+                </div>
+                <div class="h-12 bg-gray-100 rounded-sm flex items-center justify-center">
+                  <span class="text-gray-600 font-bold">Master</span>
+                </div>
+              </div>
+            </div> -->
+          </div>
 
           <!-- Action Buttons -->
-          <div class="actions" v-if="!showPaymentMethods">
-            <button @click="goBack" class="btn-secondary" :disabled="loading">
-              Back to Review
-            </button>
-            <button @click="handlePayMongoCheckout" class="btn-pay" :disabled="loading || !bookingId">
+          <div class="space-y-4">
+             <button @click="handlePayMongoCheckout" 
+                    :disabled="loading || !bookingId"
+                    class="w-full py-3.5 bg-gradient-to-r from-[#FF579A] to-pink-500 hover:from-pink-600 hover:to-pink-400 text-white rounded-sm font-semibold transition-all duration-300  hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed">
               Proceed to Secure Payment
             </button>
+            <button @click="goBack" 
+                    class="w-full py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-sm font-semibold transition-colors duration-200 border border-gray-200">
+              Back to Review
+            </button>
+            
+           
           </div>
 
-          <!-- Debug Info -->
-          <div v-if="showDebugInfo" class="debug-info">
-            <small>Debug: Booking ID: {{ bookingId }} | Session Valid: {{ isSessionValid }} | Total: ₱{{ totalAmount.toLocaleString() }}</small>
+          <!-- Help Section -->
+          <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-sm p-6 text-white">
+            <h4 class="font-semibold mb-4">Need Help?</h4>
+            <div class="space-y-3">
+              <a href="tel:+63288558888" 
+                 class="flex items-center space-x-3 text-gray-300 hover:text-white transition-colors">
+                <span class="text-lg">📞</span>
+                <span>(02) 8855-8888</span>
+              </a>
+              <a href="mailto:support@philippineairlines.com" 
+                 class="flex items-center space-x-3 text-gray-300 hover:text-white transition-colors">
+                <span class="text-lg">✉️</span>
+                <span>Payment Support</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- Debug Info (Development Only) -->
+      <!-- <div v-if="showDebugInfo" class="mt-8 p-6 bg-gray-900 rounded-sm">
+        <p class="text-sm font-mono text-gray-300 mb-2">Debug Information:</p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <p class="text-xs text-gray-500">Booking ID</p>
+            <p class="text-sm text-white">{{ bookingId || 'None' }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500">Session Valid</p>
+            <p :class="isSessionValid ? 'text-green-400' : 'text-red-400'" class="text-sm">{{ isSessionValid }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500">Total Amount</p>
+            <p class="text-sm text-white">₱{{ totalAmount.toLocaleString() }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500">Trip Type</p>
+            <p class="text-sm text-white">{{ tripTypeLabel }}</p>
+          </div>
+        </div>
+      </div> -->
     </div>
+
+    <!-- Toast Notification -->
+    <transition
+      enter-active-class="transition-all duration-300 ease-out"
+      leave-active-class="transition-all duration-200 ease-in"
+      enter-from-class="opacity-0 translate-y-2"
+      leave-to-class="opacity-0 translate-y-2"
+    >
+      <div v-if="showToast" 
+           class="fixed bottom-6 right-6 bg-gradient-to-r from-[#FF579A] to-pink-500 text-white px-6 py-4 rounded-sm shadow-xl flex items-center space-x-3 max-w-sm z-50">
+        <div class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <span class="font-medium">{{ toastMessage }}</span>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -116,7 +286,8 @@ const router = useRouter();
 const loading = ref(false);
 const loadingMessage = ref("");
 const showDebugInfo = ref(process.env.NODE_ENV === 'development');
-const showPaymentMethods = ref(false); // Set to true to show method selection
+const showToast = ref(false);
+const toastMessage = ref("");
 
 // Computed properties
 const bookingId = computed(() => bookingStore.booking_id);
@@ -139,11 +310,21 @@ const hasFlightInfo = computed(() => {
   return bookingStore.selectedOutbound || bookingStore.selectedReturn;
 });
 
-// Session validation
 const isSessionValid = computed(() => {
   if (!bookingStore.sessionExpiry) return false;
   return Date.now() < bookingStore.sessionExpiry;
 });
+
+/**
+ * Show toast message
+ */
+const showToastMessage = (message, duration = 3000) => {
+  toastMessage.value = message;
+  showToast.value = true;
+  setTimeout(() => {
+    showToast.value = false;
+  }, duration);
+};
 
 /**
  * Restores booking data from localStorage if store is empty
@@ -156,12 +337,10 @@ const restoreBookingData = () => {
     if (savedBooking) {
       const bookingData = JSON.parse(savedBooking);
       
-      // Check if this booking is still valid
       const bookingAge = Date.now() - new Date(bookingData.created_at).getTime();
       const thirtyMinutes = 30 * 60 * 1000;
       
       if (bookingAge < thirtyMinutes) {
-        // Restore to store
         bookingStore.saveBookingConfirmation({
           booking_id: bookingData.id,
           booking_reference: bookingData.reference,
@@ -169,11 +348,8 @@ const restoreBookingData = () => {
           total_amount: bookingData.total
         });
         
-        // Extend session
         bookingStore.sessionExpiry = Date.now() + (15 * 60 * 1000);
-        console.log('Booking restored from localStorage');
       } else {
-        console.log('Booking data expired, clearing...');
         localStorage.removeItem('current_booking');
       }
     }
@@ -199,25 +375,22 @@ const restartBooking = () => {
 };
 
 /**
- * Handle PayMongo Checkout (Multiple Payment Methods)
- * This will redirect to PayMongo's hosted checkout page
+ * Handle PayMongo Checkout
  */
 const handlePayMongoCheckout = async () => {
-  // Validate session
   if (!isSessionValid.value) {
-    alert("Booking session expired. Please restart your booking.");
+    showToastMessage("Booking session expired. Please restart your booking.");
     restartBooking();
     return;
   }
 
-  // Validate booking ID exists
   if (!bookingStore.booking_id) {
     try {
-      alert("No booking ID found. Please complete your booking details first.");
+      showToastMessage("No booking ID found. Please complete your booking details first.");
       goBack();
       return;
     } catch (error) {
-      alert('Failed to create booking: ' + error.message);
+      showToastMessage(`Failed to create booking: ${error.message}`);
       return;
     }
   }
@@ -226,14 +399,6 @@ const handlePayMongoCheckout = async () => {
   loadingMessage.value = "Creating secure payment session...";
 
   try {
-    console.log('🚀 Initiating PayMongo checkout:', {
-      bookingId: bookingStore.booking_id,
-      amount: totalAmount.value,
-      reference: bookingStore.booking_reference,
-      tripType: tripTypeLabel.value
-    });
-
-    // Prepare payment data - use the EXACT format that worked in Postman
     const paymentData = {
       amount: totalAmount.value,
       booking_id: bookingStore.booking_id,
@@ -242,16 +407,9 @@ const handlePayMongoCheckout = async () => {
       customer_phone: bookingStore.contactInfo.phone || '09171234567'
     };
 
-    console.log('📤 Sending payment data:', paymentData);
-
-    // Call backend to create checkout session
     const response = await api.post('create-checkout-session/', paymentData);
 
-    console.log('📥 Checkout session response:', response.data);
-
-    // FIX: Check for success AND checkout_url
     if (response.data && response.data.success === true && response.data.checkout_url) {
-      // Store payment session info
       localStorage.setItem('payment_session', JSON.stringify({
         checkout_url: response.data.checkout_url,
         booking_id: bookingStore.booking_id,
@@ -260,20 +418,14 @@ const handlePayMongoCheckout = async () => {
         timestamp: Date.now()
       }));
 
-      console.log('🔗 Redirecting to PayMongo checkout:', response.data.checkout_url);
-      
-      // Clear loading state
       loading.value = false;
       loadingMessage.value = "";
       
-      // Add a small delay to show the success state
       setTimeout(() => {
-        // Redirect to PayMongo's hosted checkout page
         window.location.href = response.data.checkout_url;
       }, 500);
       
     } else {
-      // Handle different error response formats
       let errorMsg = 'Failed to create checkout session';
       
       if (response.data && response.data.error) {
@@ -286,20 +438,16 @@ const handlePayMongoCheckout = async () => {
         errorMsg = response.data.message;
       }
       
-      console.error('❌ PayMongo checkout failed:', errorMsg);
-      alert(`❌ Payment setup failed: ${errorMsg}`);
+      showToastMessage(`Payment setup failed: ${errorMsg}`);
       loading.value = false;
     }
 
   } catch (error) {
-    console.error("❌ PayMongo Checkout Error:", error);
+    console.error("PayMongo Checkout Error:", error);
     
     let errorMsg = "Payment initialization failed.";
     
     if (error.response) {
-      console.error('📊 Error response status:', error.response.status);
-      console.error('📊 Error response data:', error.response.data);
-      
       if (error.response.status === 400) {
         if (error.response.data?.error) {
           if (typeof error.response.data.error === 'string') {
@@ -314,59 +462,13 @@ const handlePayMongoCheckout = async () => {
         errorMsg = error.response.data.message;
       }
     } else if (error.request) {
-      console.error('🌐 Network error details:', error.request);
       errorMsg = "Network error. Please check your internet connection.";
     } else {
       errorMsg = error.message;
     }
     
-    alert(`❌ Payment Error: ${errorMsg}`);
+    showToastMessage(`Payment Error: ${errorMsg}`);
     loading.value = false;
-  }
-};
-
-/**
- * Direct PayMongo Checkout (Fallback method)
- * Creates checkout session directly with PayMongo API
- */
-const handleDirectPayMongoCheckout = async () => {
-  if (!paymentService.isPayMongoConfigured()) {
-    throw new Error('PayMongo is not configured');
-  }
-
-  try {
-    loadingMessage.value = "Creating payment session...";
-    
-    // Create checkout session directly with PayMongo
-    const response = await paymentService.createCheckoutSession({
-      amount: totalAmount.value,
-      booking_id: bookingStore.booking_id,
-      booking_reference: bookingStore.booking_reference,
-      customer_email: bookingStore.contactInfo.email,
-      customer_name: `${bookingStore.contactInfo.firstName} ${bookingStore.contactInfo.lastName}`
-    });
-
-    if (response.success && response.checkout_url) {
-      console.log('Direct PayMongo checkout URL:', response.checkout_url);
-      
-      // Store session info
-      localStorage.setItem('payment_session', JSON.stringify({
-        checkout_url: response.checkout_url,
-        booking_id: bookingStore.booking_id,
-        booking_reference: bookingStore.booking_reference,
-        amount: totalAmount.value,
-        timestamp: Date.now()
-      }));
-
-      // Redirect to PayMongo
-      window.location.href = response.checkout_url;
-    } else {
-      throw new Error(response.error || 'Failed to create checkout session');
-    }
-
-  } catch (error) {
-    console.error('Direct PayMongo checkout error:', error);
-    throw error;
   }
 };
 
@@ -375,7 +477,7 @@ const handleDirectPayMongoCheckout = async () => {
  */
 const handleDirectGCash = async () => {
   if (!paymentService.isPayMongoConfigured()) {
-    alert("GCash payment is not available at the moment.");
+    showToastMessage("GCash payment is not available at the moment.");
     return;
   }
 
@@ -395,7 +497,6 @@ const handleDirectGCash = async () => {
     });
 
     if (result.success && result.next_action?.redirect?.url) {
-      console.log('GCash redirect URL:', result.next_action.redirect.url);
       window.location.href = result.next_action.redirect.url;
     } else {
       throw new Error(result.error || 'GCash payment failed');
@@ -403,28 +504,14 @@ const handleDirectGCash = async () => {
 
   } catch (error) {
     console.error('GCash payment error:', error);
-    alert(`GCash Error: ${error.message}`);
+    showToastMessage(`GCash Error: ${error.message}`);
     loading.value = false;
   }
 };
 
 // Lifecycle hooks
 onMounted(() => {
-  console.log('PaymentView mounted');
-  console.log('Current booking store:', {
-    booking_id: bookingStore.booking_id,
-    booking_reference: bookingStore.booking_reference,
-    sessionExpiry: bookingStore.sessionExpiry ? new Date(bookingStore.sessionExpiry).toLocaleString() : 'None',
-    isSessionValid: isSessionValid.value,
-    grandTotal: bookingStore.grandTotal,
-    tripType: bookingStore.tripType,
-    isRoundTrip: bookingStore.isRoundTrip
-  });
-  
-  // Restore booking data if needed
   restoreBookingData();
-  
-  // Check for payment callback parameters
   checkPaymentCallback();
 });
 
@@ -439,374 +526,84 @@ const checkPaymentCallback = () => {
   const bookingId = urlParams.get('booking_id');
   
   if (success === 'true' && bookingId) {
-    alert('Payment successful! Your booking has been confirmed.');
-    // Clear URL parameters
+    showToastMessage('Payment successful! Your booking has been confirmed.');
     window.history.replaceState({}, document.title, window.location.pathname);
   } else if (error) {
-    alert(`Payment failed: ${decodeURIComponent(error)}`);
+    showToastMessage(`Payment failed: ${decodeURIComponent(error)}`);
     window.history.replaceState({}, document.title, window.location.pathname);
   }
 };
 
 onUnmounted(() => {
-  // Clean up if needed
+  // Clean up
 });
 </script>
 
-
-
 <style scoped>
-.payment-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 80vh;
-  padding: 20px;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
 }
 
-.payment-card {
-  background: white;
-  padding: 2.5rem;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-  width: 100%;
-  max-width: 500px;
-  text-align: center;
+::-webkit-scrollbar-track {
+  background: #f8fafc;
 }
 
-.title {
-  color: #003870;
-  margin-bottom: 1.5rem;
-  font-weight: 700;
-}
-
-.price-banner {
-  background: #f0f7ff;
-  padding: 1.5rem;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
-  border: 1px solid #d0e4ff;
-}
-
-.label {
-  display: block;
-  font-size: 0.9rem;
-  color: #666;
-  margin-bottom: 0.5rem;
-}
-
-.amount {
-  font-size: 2rem;
-  font-weight: 800;
-  color: #003870;
-}
-
-.booking-summary {
-  text-align: left;
-  margin-bottom: 1.5rem;
-  font-size: 0.95rem;
-  color: #444;
-  background: #f9f9f9;
-  padding: 1rem;
-  border-radius: 8px;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  background: #ffc107;
-  color: #856404;
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #FF579A, #FF85B3);
   border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
 }
 
-/* Payment Methods Section */
-.payment-methods {
-  margin: 2rem 0;
-  text-align: left;
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #FF85B3, #FFAEC8);
 }
 
-.payment-methods h3 {
-  color: #003870;
-  margin-bottom: 0.5rem;
-  font-size: 1.2rem;
+/* Smooth transitions */
+* {
+  scroll-behavior: smooth;
 }
 
-.method-description {
-  color: #666;
-  font-size: 0.9rem;
-  margin-bottom: 1.5rem;
+/* Gradient text animation */
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
-.methods-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.text-gradient-animate {
+  background: linear-gradient(45deg, #FF579A, #FF85B3, #FFAEC8, #FF579A);
+  background-size: 400% 400%;
+  animation: gradientShift 3s ease infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.method-card {
-  display: flex;
-  align-items: center;
-  padding: 1.25rem;
-  border: 2px solid #e9ecef;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: white;
+/* Pulse animation for status */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
-.method-card:hover {
-  border-color: #007bff;
-  box-shadow: 0 5px 15px rgba(0, 123, 255, 0.1);
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Button hover effects */
+button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Card hover effects */
+.hover-lift:hover {
   transform: translateY(-2px);
-}
-
-.method-icon {
-  font-size: 2rem;
-  margin-right: 1rem;
-  flex-shrink: 0;
-}
-
-.method-info {
-  flex: 1;
-  text-align: left;
-}
-
-.method-info h4 {
-  margin: 0 0 0.25rem;
-  color: #003870;
-  font-size: 1rem;
-}
-
-.method-info p {
-  margin: 0;
-  font-size: 0.875rem;
-  color: #666;
-}
-
-.method-arrow {
-  font-size: 1.5rem;
-  color: #007bff;
-  font-weight: bold;
-}
-
-.notice {
-  font-size: 0.85rem;
-  color: #666;
-  line-height: 1.5;
-  margin-bottom: 2rem;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-
-/* Actions */
-.actions {
-  display: flex;
-  gap: 1rem;
-}
-
-.btn-pay {
-  flex: 2;
-  background: #007bff;
-  color: white;
-  border: none;
-  padding: 1rem;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  font-size: 1rem;
-}
-
-.btn-pay:hover:not(:disabled) {
-  background: #0056b3;
-}
-
-.btn-pay:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  flex: 1;
-  background: #e9ecef;
-  border: none;
-  padding: 1rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background 0.2s;
-  font-size: 1rem;
-}
-
-.btn-secondary:hover {
-  background: #dde1e6;
-}
-
-/* Loading State */
-.loading-overlay {
-  padding: 3rem 0;
-}
-
-.spinner {
-  border: 4px solid rgba(0, 0, 0, 0.1);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border-left-color: #007bff;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 1rem;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Session Expired */
-.session-expired {
-  padding: 3rem 0;
-  text-align: center;
-}
-
-.expired-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-}
-
-.session-expired h3 {
-  color: #dc3545;
-  margin-bottom: 1rem;
-}
-
-.session-expired p {
-  color: #666;
-  margin-bottom: 2rem;
-  line-height: 1.5;
-}
-
-.btn-restart {
-  background: #003870;
-  color: white;
-  border: none;
-  padding: 1rem 2rem;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.btn-restart:hover {
-  background: #002b58;
-}
-
-/* Debug Info */
-.debug-info {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px dashed #ddd;
-  color: #888;
-  font-size: 0.75rem;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .payment-card {
-    padding: 1.5rem;
-  }
-  
-  .actions {
-    flex-direction: column;
-  }
-  
-  .btn-pay, .btn-secondary {
-    width: 100%;
-  }
-  
-  .amount {
-    font-size: 1.5rem;
-  }
-  
-  .method-card {
-    padding: 1rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .payment-wrapper {
-    padding: 10px;
-  }
-  
-  .payment-card {
-    padding: 1rem;
-  }
-}
-
-
-.trip-type-label {
-  display: inline-block;
-  padding: 2px 8px;
-  background: #e3f2fd;
-  color: #1565c0;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  margin-left: 10px;
-}
-
-.flight-summary {
-  text-align: left;
-  margin: 1.5rem 0;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border-left: 4px solid #003870;
-}
-
-.flight-summary h4 {
-  margin: 0 0 0.75rem 0;
-  color: #003870;
-  font-size: 1rem;
-}
-
-.flight-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 0;
-  border-bottom: 1px dashed #ddd;
-}
-
-.flight-item:last-child {
-  border-bottom: none;
-}
-
-.flight-label {
-  font-weight: 600;
-  color: #003870;
-  min-width: 60px;
-}
-
-.flight-number {
-  background: #003870;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: bold;
-}
-
-@media (max-width: 768px) {
-  .flight-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
-  }
-  
-  .flight-number {
-    align-self: flex-start;
-  }
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
 }
 </style>

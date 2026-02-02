@@ -44,9 +44,9 @@ const handleTimeout = () => {
 
 onMounted(() => {
   // If no session exists, start one (usually triggered on flight selection)
-  // if (!bookingStore.sessionExpiry) {
-  //   bookingStore.startSession();
-  // }
+  if (!bookingStore.sessionExpiry) {
+    bookingStore.startSession();
+  }
   updateTimer();
   interval = setInterval(updateTimer, 1000);
 });

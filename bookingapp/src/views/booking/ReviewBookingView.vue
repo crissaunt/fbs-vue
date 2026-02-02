@@ -222,6 +222,16 @@ const assistanceOptions = ref([]);
 
 onMounted(async () => {
   try {
+
+    bookingStore.loadBookingFromStorage();
+    
+    // Debug: Log current store state
+    console.log('📊 ========== PINIA STORE STATE ==========');
+    console.log('🎫 Trip Type:', bookingStore.tripType, '(Round Trip:', bookingStore.isRoundTrip + ')');
+    console.log('📋 Booking ID:', bookingStore.booking_id);
+    console.log('📋 Booking Reference:', bookingStore.booking_reference);
+    console.log('📋 Booking Status:', bookingStore.booking_status);
+    console.log('💰 Booking Total:', bookingStore.booking_total);
     // Debug: Log current store state
     console.log('📊 ========== PINIA STORE STATE ==========');
     console.log('🎫 Trip Type:', bookingStore.tripType, '(Round Trip:', bookingStore.isRoundTrip + ')');
@@ -551,113 +561,96 @@ const preparePassengersForSubmission = () => {
   return preparedPassengers;
 };
 
+
 const confirmBooking = async () => {
   isProcessing.value = true;
   
   try {
-    // Validate data before proceeding
-    const errors = validateBooking();
-    if (errors.length > 0) {
-      alert(errors.join('\n'));
-      isProcessing.value = false;
-      return;
-    }
-    
-    const preparedPassengers = preparePassengersForSubmission();
-    
-    // DEBUG: Check all data
-    console.log('🔍 DEBUG - Booking Store State for Review:');
-    console.log('Trip Type:', bookingStore.tripType);
-    console.log('Is Round Trip:', bookingStore.isRoundTrip);
-    console.log('Passengers:', JSON.stringify(bookingStore.passengers, null, 2));
-    console.log('Addons Structure:', JSON.stringify(bookingStore.addons, null, 2));
-    console.log('Depart Base Fare:', departBaseFare.value);
-    console.log('Return Base Fare:', returnBaseFare.value);
-    console.log('Total Add-ons:', {
-      seats: totalSeatsPrice.value,
-      baggage: totalBaggagePrice.value,
-      meals: totalMealsPrice.value,
-      assistance: totalAssistancePrice.value
-    });
-    console.log('Calculated Total:', grandTotal.value);
-    console.log('Store Grand Total:', bookingStore.grandTotal);
-    
-    // Format booking data for API
+    // 1. Prepare data using your existing formatBookingData
     const bookingData = bookingService.formatBookingData(bookingStore);
     
-    console.log('📞 Calling createBooking API...');
-    const response = await bookingService.createBooking(bookingData);
+    // 2. Check for an existing ID (from store or local storage)
+    const existingBookingId = bookingStore.booking_id || 
+                             JSON.parse(localStorage.getItem('current_booking'))?.id;
+
+    let response;
     
-    console.log('✅ Booking response:', response);
+    if (existingBookingId) {
+      // SCENARIO: User went back from Add-ons/Review to change details
+      console.log('🔄 Updating existing booking:', existingBookingId);
+      response = await bookingService.updateBooking(existingBookingId, bookingData);
+    } else {
+      // SCENARIO: First time clicking "Confirm"
+      console.log('🆕 Creating new booking...');
+      response = await bookingService.createBooking(bookingData);
+    }
+    
+    console.log('📊 FULL BOOKING RESPONSE:', response);
     
     if (response.success) {
-      bookingStore.saveBookingConfirmation(response);
+      // 3. Save ALL booking data to the store using saveBookingConfirmation
+      bookingStore.saveBookingConfirmation({
+        booking_id: response.booking_id,
+        booking_reference: response.booking_reference || `BK${String(response.booking_id).padStart(8, '0')}`,
+        status: response.status || 'pending',
+        total_amount: response.total_amount || bookingStore.grandTotal
+      });
+      
+      // 4. Also set individual fields (for backward compatibility)
+      bookingStore.setBookingId(response.booking_id);
+      bookingStore.booking_reference = response.booking_reference || `BK${String(response.booking_id).padStart(8, '0')}`;
+      bookingStore.booking_status = response.status || 'pending';
+      
+      // 5. Persist to LocalStorage so a page refresh doesn't lose the ID
       localStorage.setItem('current_booking', JSON.stringify({
         id: response.booking_id,
-        reference: response.booking_reference,
-        total: response.total_amount,
-        status: response.status,
-        created_at: new Date().toISOString()
+        reference: response.booking_reference || `BK${String(response.booking_id).padStart(8, '0')}`,
+        total: response.total_amount || bookingStore.grandTotal,
+        status: response.status || 'pending'
       }));
       
-      router.push({
-        name: 'Payment',
+      console.log('✅ Booking saved to store:', {
+        id: bookingStore.booking_id,
+        reference: bookingStore.booking_reference,
+        status: bookingStore.booking_status,
+        total: bookingStore.booking_total
+      });
+      
+      // 6. Move to Payment
+      router.push({ 
+        name: 'Payment', 
         query: { 
           bookingId: response.booking_id,
-          amount: response.total_amount 
-        }
+          bookingReference: response.booking_reference || `BK${String(response.booking_id).padStart(8, '0')}`
+        } 
       });
     } else {
-      console.error('❌ Booking creation failed:', response.error);
-      let errorMsg = response.error;
-      
-      if (typeof response.error === 'object') {
-        errorMsg = 'Validation errors:\n';
-        Object.entries(response.error).forEach(([field, errors]) => {
-          errorMsg += `• ${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}\n`;
-        });
-      }
-      
-      alert('Failed to create booking: ' + errorMsg);
-      isProcessing.value = false;
+      alert(`Booking Error: ${response.error}`);
     }
-    
   } catch (error) {
-    console.error('❌ Booking creation error:', error);
-    
-    let errorMessage = 'Failed to create booking. Please try again.';
-    
-    if (error.response) {
-      console.error('Error response data:', error.response.data);
-      console.error('Error status:', error.response.status);
-      
-      if (error.response.data) {
-        if (error.response.data.errors) {
-          errorMessage = 'Validation errors:\n';
-          Object.entries(error.response.data.errors).forEach(([field, errors]) => {
-            errorMessage += `• ${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}\n`;
-          });
-        } else if (error.response.data.error) {
-          if (typeof error.response.data.error === 'object') {
-            errorMessage = 'Validation errors:\n';
-            Object.entries(error.response.data.error).forEach(([field, errors]) => {
-              errorMessage += `• ${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}\n`;
-            });
-          } else {
-            errorMessage = error.response.data.error;
-          }
-        }
-      }
-    } else if (error.request) {
-      console.error('Error request:', error.request);
-      errorMessage = 'Network error. Please check your connection.';
-    } else {
-      errorMessage = error.message;
-    }
-    
-    alert(`Booking Error: ${errorMessage}`);
+    console.error("Booking critical failure:", error);
+    alert("An unexpected error occurred. Please try again.");
+  } finally {
     isProcessing.value = false;
   }
+};
+
+/**
+ * Extracted error handler to keep confirmBooking clean
+ */
+const handleBookingError = (error) => {
+  let errorMessage = 'Failed to process booking. Please try again.';
+  
+  if (error?.response?.data?.errors) {
+    errorMessage = 'Validation errors:\n' + 
+      Object.entries(error.response.data.errors)
+        .map(([field, errs]) => `• ${field}: ${Array.isArray(errs) ? errs.join(', ') : errs}`)
+        .join('\n');
+  } else if (typeof error === 'string') {
+    errorMessage = error;
+  }
+  
+  alert(errorMessage);
 };
 </script>
 

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useBookingStore } from '@/stores/booking';
 import { paymentPollingService } from '@/services/booking/paymentPollingService';
@@ -10,11 +10,7 @@ const router = useRouter();
 const bookingStore = useBookingStore();
 
 const loading = ref(true);
-const success = ref(false);
 const errorMessage = ref('');
-const paymentId = ref('');
-const bookingReference = ref('');
-const amountPaid = ref(0);
 const pollingCount = ref(0);
 const maxPollingAttempts = 15;
 const pollingInterval = ref(null);
@@ -46,9 +42,7 @@ const getLoadingMessage = () => {
   return messages[pollingCount.value % messages.length];
 };
 
-// In PaymentCallbackView.vue
-
-// Update the pollPaymentStatus function:
+// Poll payment status - REDIRECTS TO SUCCESS PAGE WHEN PAID
 const pollPaymentStatus = async (bookingId) => {
   if (pollingCount.value >= maxPollingAttempts) {
     clearInterval(pollingInterval.value);
@@ -69,23 +63,35 @@ const pollPaymentStatus = async (bookingId) => {
     console.log('Polling result:', result);
 
     if (result.paid === true) {
-      // Payment confirmed!
+      // Payment confirmed! Navigate to success page
       clearInterval(pollingInterval.value);
-      success.value = true;
-      paymentId.value = result.data.payment_id;
-      bookingReference.value = result.data.booking_reference || `BK${bookingId.toString().padStart(8, '0')}`;
-      amountPaid.value = bookingStore.booking_total || bookingStore.grandTotal;
-      processingStatus.value = 'Payment confirmed!';
+      
+      // Prepare data for success page
+      const bookingReference = result.data.booking_reference || `BK${bookingId.toString().padStart(8, '0')}`;
+      const paymentId = result.data.payment_id;
+      const amount = bookingStore.booking_total || bookingStore.grandTotal;
+      
+      console.log('Payment successful! Navigating to success page with:', {
+        ref: bookingReference,
+        payment_id: paymentId,
+        amount: amount
+      });
       
       // Clear the booking store
       bookingStore.resetBooking();
       localStorage.removeItem('current_booking');
       localStorage.removeItem('payment_session');
       
-      loading.value = false;
+      // Navigate to success page
+      router.push({
+        name: 'BookingSuccess',
+        query: {
+          ref: bookingReference,
+          payment_id: paymentId,
+          amount: amount
+        }
+      });
       
-      // Update URL to remove parameters
-      window.history.replaceState({}, document.title, window.location.pathname);
     } else if (result.success === false) {
       // Error from backend
       clearInterval(pollingInterval.value);
@@ -123,7 +129,6 @@ const verifyPaymentWithSession = async () => {
   try {
     console.log(`Verifying payment with session: ${sessionIdFromUrl}`);
     
-    // FIXED: Use the correct endpoint
     const response = await api.post('verify-session-payment/', {
       booking_id: bookingId,
       session_id: sessionIdFromUrl
@@ -172,18 +177,28 @@ onMounted(async () => {
         console.log('Direct verification response:', verifyResponse.data);
         
         if (verifyResponse.data.success) {
-          // Payment processed successfully!
-          success.value = true;
-          paymentId.value = verifyResponse.data.payment_id;
-          bookingReference.value = verifyResponse.data.booking_reference || `BK${bookingId.toString().padStart(8, '0')}`;
-          amountPaid.value = bookingStore.booking_total || bookingStore.grandTotal;
+          // Payment processed successfully! Navigate to success page
+          const bookingReference = verifyResponse.data.booking_reference || `BK${bookingId.toString().padStart(8, '0')}`;
+          const paymentId = verifyResponse.data.payment_id;
+          const amount = bookingStore.booking_total || bookingStore.grandTotal;
+          
+          console.log('Direct verification successful! Navigating to success page');
           
           // Clear the booking store
           bookingStore.resetBooking();
           localStorage.removeItem('current_booking');
           localStorage.removeItem('payment_session');
           
-          loading.value = false;
+          // Navigate to success page
+          router.push({
+            name: 'BookingSuccess',
+            query: {
+              ref: bookingReference,
+              payment_id: paymentId,
+              amount: amount
+            }
+          });
+          
           return;
         } else {
           console.log('Direct verification failed, session status:', verifyResponse.data.session_status);
@@ -215,24 +230,10 @@ onUnmounted(() => {
 });
 
 const goHome = () => {
-  // 1. Clear Pinia Store
   bookingStore.resetBooking();
-
-  // 2. Clear LocalStorage keys
   localStorage.removeItem('current_booking');
   localStorage.removeItem('payment_session');
-  // Add any other keys you use, e.g., 'pending_booking_id'
-  
-  // 3. Navigate to Home
-  router.push({ name: 'Home' }); // Match the name 'home' in your routes
-};
-
-const viewBooking = () => {
-  if (bookingReference.value) {
-    router.push({ name: 'BookingDetails', params: { reference: bookingReference.value } });
-  } else {
-    goHome();
-  }
+  router.push({ name: 'Home' });
 };
 
 const retryPayment = () => {
@@ -265,316 +266,131 @@ const cancelBooking = async () => {
 </script>
 
 <template>
-  <div class="callback-page">
-    <!-- Loading State -->
-    <div v-if="loading" class="status-card">
-      <div class="spinner"></div>
-      <p class="processing-status">{{ processingStatus }}</p>
-      <p v-if="pollingCount < maxPollingAttempts">
+  <div class="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 flex justify-center items-center p-5">
+    
+    <!-- Loading State - SHOWS WHILE POLLING -->
+    <div v-if="loading" class="bg-white border border-gray-300 rounded-sm p-8 md:p-10 text-center max-w-lg w-full">
+      <div class="w-12 h-12 border-4 border-gray-200 border-t-pink-500 rounded-full animate-spin mx-auto mb-6"
+           style="border-color: #e5e7eb; border-top-color: #FF5794;"></div>
+      
+      <p class="text-lg font-semibold text-gray-800 mb-2">{{ processingStatus }}</p>
+      
+      <p v-if="pollingCount < maxPollingAttempts" class="text-gray-600 mb-4">
         {{ getLoadingMessage() }}
       </p>
-      <p v-else>
+      <p v-else class="text-gray-600 mb-4">
         Taking longer than expected... Still verifying your payment.
       </p>
-      <div v-if="pollingCount > 0" class="polling-info">
-        <small>Attempt {{ pollingCount }} of {{ maxPollingAttempts }}</small>
+      
+      <div v-if="pollingCount > 0" class="mt-4">
+        <small class="text-gray-500 text-sm">Attempt {{ pollingCount }} of {{ maxPollingAttempts }}</small>
+      </div>
+
+      <div class="mt-6 pt-6 border-t border-gray-200">
+        <p class="text-sm text-gray-500">
+          Please do not close this window while we process your payment.
+        </p>
       </div>
     </div>
 
     <!-- Incomplete Payment State -->
-    <div v-else-if="showIncompleteState" class="status-card incomplete">
-      <div class="icon">🔄</div>
-      <h1>Payment Not Completed</h1>
-      <p class="message">It looks like you didn't complete the payment on PayMongo's checkout page.</p>
+    <div v-else-if="showIncompleteState" class="bg-white border border-gray-300 rounded-sm p-8 md:p-10 text-center max-w-2xl w-full">
+      <div class="text-6xl mb-4">🔄</div>
       
-      <div class="instructions">
-        <p><strong>What happened:</strong></p>
-        <ul>
-          <li>You were redirected to PayMongo's secure payment page</li>
-          <li>The payment was not completed</li>
-          <li>You returned to this page without finishing the transaction</li>
+      <h1 class="text-3xl font-bold text-gray-800 mb-3">Payment Not Completed</h1>
+      
+      <p class="text-lg text-gray-600 mb-6">
+        It looks like you didn't complete the payment on PayMongo's checkout page.
+      </p>
+      
+      <div class="bg-gray-50 border border-gray-300 rounded-sm p-5 text-left mb-6">
+        <p class="font-semibold text-gray-800 mb-3">What happened:</p>
+        <ul class="space-y-2 text-gray-600 ml-5">
+          <li class="list-disc">You were redirected to PayMongo's secure payment page</li>
+          <li class="list-disc">The payment was not completed</li>
+          <li class="list-disc">You returned to this page without finishing the transaction</li>
         </ul>
       </div>
       
-      <div class="booking-info">
-        <p><strong>Booking Reference:</strong> {{ bookingStore.booking_reference || `BK${bookingId?.toString().padStart(8, '0')}` }}</p>
-        <p><strong>Amount:</strong> ₱{{ bookingStore.booking_total?.toLocaleString() || bookingStore.grandTotal?.toLocaleString() }}</p>
-        <p><strong>Status:</strong> <span class="badge pending-badge">Payment Pending</span></p>
+      <div class="bg-amber-50 border border-amber-300 rounded-sm p-5 text-left mb-6">
+        <div class="space-y-2">
+          <p class="text-gray-700">
+            <strong class="font-semibold">Booking Reference:</strong> 
+            {{ bookingStore.booking_reference || `BK${bookingId?.toString().padStart(8, '0')}` }}
+          </p>
+          <p class="text-gray-700">
+            <strong class="font-semibold">Amount:</strong> 
+            ₱{{ bookingStore.booking_total?.toLocaleString() || bookingStore.grandTotal?.toLocaleString() }}
+          </p>
+          <p class="text-gray-700">
+            <strong class="font-semibold">Status:</strong> 
+            <span class="inline-block bg-yellow-100 border border-yellow-400 text-yellow-800 px-3 py-1 rounded-sm text-sm font-semibold ml-2">
+              Payment Pending
+            </span>
+          </p>
+        </div>
       </div>
       
-      <div class="actions">
-        <button @click="retryPayment" class="btn-retry">
+      <div class="flex flex-col md:flex-row gap-3 mb-6">
+        <button @click="retryPayment" 
+                class="flex-1 border border-gray-300 rounded-sm px-6 py-3 font-semibold text-white transition-colors"
+                style="background-color: #FF5794;">
           Complete Payment Now
         </button>
-        <button @click="cancelBooking" class="btn-cancel">
+        <button @click="cancelBooking" 
+                class="flex-1 bg-white border border-gray-300 rounded-sm px-6 py-3 font-semibold text-red-600 hover:bg-red-50 transition-colors">
           Cancel Booking
         </button>
       </div>
       
-      <p class="note">
+      <p class="text-sm text-gray-500 border-t border-gray-200 pt-4">
         Your booking will be held for 24 hours. Complete payment to confirm your seats.
       </p>
     </div>
 
-    <!-- Success State -->
-    <div v-else-if="success" class="status-card success">
-      <div class="icon">✈️</div>
-      <h1>Booking Confirmed!</h1>
-      <p class="success-message">Your flight booking has been successfully confirmed.</p>
+    <!-- Error State - NO SUCCESS STATE HERE -->
+    <div v-else class="bg-white border border-gray-300 rounded-sm p-8 md:p-10 text-center max-w-lg w-full">
+      <div class="text-6xl mb-4">❌</div>
       
-      <div class="booking-details">
-        <div class="detail-row">
-          <span class="label">Booking Reference:</span>
-          <span class="value">{{ bookingReference }}</span>
-        </div>
-        <div class="detail-row" v-if="paymentId">
-          <span class="label">Payment ID:</span>
-          <span class="value">{{ paymentId }}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">Amount Paid:</span>
-          <span class="value">₱ {{ amountPaid.toLocaleString() }}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">Status:</span>
-          <span class="status-badge confirmed">Confirmed</span>
-        </div>
-      </div>
-
-      <p class="instructions">
-        Your booking details and e-ticket have been sent to your email.
-        Please check your inbox (and spam folder).
+      <h1 class="text-3xl font-bold text-gray-800 mb-3">Payment Unsuccessful</h1>
+      
+      <p class="text-lg text-red-600 mb-6">
+        {{ errorMessage || 'We couldn\'t confirm your payment.' }}
       </p>
-
-      <div class="actions">
-        <button @click="goHome" class="btn-home">Return to Home</button>
-        <button @click="viewBooking" class="btn-view">View My Booking</button>
+      
+      <div class="flex flex-col md:flex-row gap-3 mb-6">
+        <button @click="retryPayment" 
+                class="flex-1 border border-gray-300 rounded-sm px-6 py-3 font-semibold text-white transition-colors"
+                style="background-color: #FF5794;">
+          Try Payment Again
+        </button>
+        <button @click="goHome" 
+                class="flex-1 bg-white border border-gray-300 rounded-sm px-6 py-3 font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+          Return to Home
+        </button>
+      </div>
+      
+      <div class="border-t border-gray-200 pt-6">
+        <p class="text-sm text-gray-600">
+          If this issue persists, please contact our support team at 
+          <a href="mailto:support@airlines.com" class="font-medium underline" style="color: #FF5794;">
+            support@airlines.com
+          </a>
+        </p>
       </div>
     </div>
 
-    <!-- Error State -->
-    <div v-else class="status-card error">
-      <div class="icon">❌</div>
-      <h1>Payment Unsuccessful</h1>
-      <p class="error-message">{{ errorMessage || 'We couldn\'t confirm your payment.' }}</p>
-      
-      <div class="actions">
-        <button @click="retryPayment" class="btn-retry">Try Payment Again</button>
-        <button @click="goHome" class="btn-home-secondary">Return to Home</button>
-      </div>
-      
-      <p class="support-note">
-        If this issue persists, please contact our support team at 
-        <a href="mailto:support@airlines.com">support@airlines.com</a>
-      </p>
-    </div>
   </div>
 </template>
 
-
-
 <style scoped>
-/* Add polling info style */
-.polling-info {
-  margin-top: 1rem;
-  color: #6c757d;
-  font-size: 0.85rem;
-}
-
-/* Rest of your styles remain the same */
-.callback-page {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  padding: 20px;
-}
-
-.status-card {
-  background: white;
-  padding: 2.5rem;
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  text-align: center;
-  max-width: 500px;
-  width: 100%;
-}
-
-.success .icon {
-  font-size: 4rem;
-  margin-bottom: 1rem;
-}
-
-.error .icon {
-  font-size: 4rem;
-  color: #dc3545;
-  margin-bottom: 1rem;
-}
-
-h1 {
-  color: #003870;
-  margin-bottom: 1rem;
-  font-weight: 700;
-}
-
-.success-message {
-  color: #28a745;
-  font-size: 1.1rem;
-  margin-bottom: 1.5rem;
-}
-
-.error-message {
-  color: #dc3545;
-  font-size: 1.1rem;
-  margin-bottom: 1.5rem;
-}
-
-.booking-details {
-  background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 10px;
-  margin: 1.5rem 0;
-  text-align: left;
-}
-
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.detail-row:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-}
-
-.label {
-  font-weight: 600;
-  color: #495057;
-}
-
-.value {
-  color: #003870;
-  font-weight: 500;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.status-badge.confirmed {
-  background: #d4edda;
-  color: #155724;
-}
-
-.instructions {
-  color: #6c757d;
-  font-size: 0.9rem;
-  margin: 1.5rem 0;
-  line-height: 1.5;
-}
-
-.actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 2rem;
-}
-
-.btn-home, .btn-view, .btn-retry, .btn-home-secondary {
-  flex: 1;
-  padding: 12px 24px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-  font-size: 1rem;
-}
-
-.btn-home {
-  background: #003870;
-  color: white;
-}
-
-.btn-home:hover {
-  background: #002b58;
-}
-
-.btn-view {
-  background: #28a745;
-  color: white;
-}
-
-.btn-view:hover {
-  background: #218838;
-}
-
-.btn-retry {
-  background: #007bff;
-  color: white;
-}
-
-.btn-retry:hover {
-  background: #0056b3;
-}
-
-.btn-home-secondary {
-  background: #6c757d;
-  color: white;
-}
-
-.btn-home-secondary:hover {
-  background: #545b62;
-}
-
-.support-note {
-  margin-top: 1.5rem;
-  font-size: 0.85rem;
-  color: #6c757d;
-}
-
-.support-note a {
-  color: #007bff;
-  text-decoration: none;
-}
-
-.support-note a:hover {
-  text-decoration: underline;
-}
-
-.spinner {
-  border: 4px solid rgba(0, 0, 0, 0.1);
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border-left-color: #007bff;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 1.5rem;
-}
-
+/* Custom animations */
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 
-@media (max-width: 768px) {
-  .status-card {
-    padding: 1.5rem;
-  }
-  
-  .actions {
-    flex-direction: column;
-  }
-  
-  .btn-home, .btn-view, .btn-retry, .btn-home-secondary {
-    width: 100%;
-  }
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 </style>
