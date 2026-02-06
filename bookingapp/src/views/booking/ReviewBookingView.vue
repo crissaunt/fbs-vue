@@ -591,20 +591,20 @@ const confirmBooking = async () => {
       // 3. Save ALL booking data to the store using saveBookingConfirmation
       bookingStore.saveBookingConfirmation({
         booking_id: response.booking_id,
-        booking_reference: response.booking_reference || `BK${String(response.booking_id).padStart(8, '0')}`,
+        booking_reference: response.booking_reference || `CSUCC${String(response.booking_id).padStart(8, '0')}`,
         status: response.status || 'pending',
         total_amount: response.total_amount || bookingStore.grandTotal
       });
       
       // 4. Also set individual fields (for backward compatibility)
       bookingStore.setBookingId(response.booking_id);
-      bookingStore.booking_reference = response.booking_reference || `BK${String(response.booking_id).padStart(8, '0')}`;
+      bookingStore.booking_reference = response.booking_reference || `CSUCC${String(response.booking_id).padStart(8, '0')}`;
       bookingStore.booking_status = response.status || 'pending';
       
       // 5. Persist to LocalStorage so a page refresh doesn't lose the ID
       localStorage.setItem('current_booking', JSON.stringify({
         id: response.booking_id,
-        reference: response.booking_reference || `BK${String(response.booking_id).padStart(8, '0')}`,
+        reference: response.booking_reference || `CSUCC${String(response.booking_id).padStart(8, '0')}`,
         total: response.total_amount || bookingStore.grandTotal,
         status: response.status || 'pending'
       }));
@@ -621,7 +621,7 @@ const confirmBooking = async () => {
         name: 'Payment', 
         query: { 
           bookingId: response.booking_id,
-          bookingReference: response.booking_reference || `BK${String(response.booking_id).padStart(8, '0')}`
+          bookingReference: response.booking_reference || `CSUCC${String(response.booking_id).padStart(8, '0')}`
         } 
       });
     } else {

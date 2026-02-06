@@ -246,7 +246,7 @@ export const useBookingStore = defineStore('booking', {
         const savedBooking = JSON.parse(localStorage.getItem('current_booking'));
         if (savedBooking) {
           this.booking_id = savedBooking.id;
-          this.booking_reference = savedBooking.reference || `BK${String(savedBooking.id).padStart(8, '0')}`;
+          this.booking_reference = savedBooking.reference || `CSUCC${String(savedBooking.id).padStart(8, '0')}`;
           this.booking_status = savedBooking.status || 'pending';
           this.booking_total = savedBooking.total || 0;
           console.log('📥 Loaded booking from storage:', {
@@ -649,7 +649,7 @@ export const useBookingStore = defineStore('booking', {
       console.log('💾 Saving booking confirmation to store:', bookingData);
 
       this.booking_id = bookingData.booking_id;
-      this.booking_reference = bookingData.booking_reference || `BK${String(bookingData.booking_id).padStart(8, '0')}`;
+      this.booking_reference = bookingData.booking_reference || `CSUCC${String(bookingData.booking_id).padStart(8, '0')}`;
       this.booking_status = bookingData.status || 'pending';
       this.booking_total = this.grandTotal || parseFloat(bookingData.total_amount) || 0;
       this.sessionExpiry = Date.now() + (30 * 60 * 1000);
@@ -667,7 +667,7 @@ export const useBookingStore = defineStore('booking', {
 
     setBookingId(id) {
       this.booking_id = id;
-      this.booking_reference = `BK${String(id).padStart(8, '0')}`;
+      this.booking_reference = `CSUCC${String(id).padStart(8, '0')}`;
       localStorage.setItem('current_booking_id', id);
       console.log('✅ Booking ID and reference set:', id, this.booking_reference);
     },

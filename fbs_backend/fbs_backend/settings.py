@@ -137,7 +137,7 @@ ROOT_URLCONF = 'fbs_backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS':  [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -214,3 +214,24 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+
+
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # Or your SMTP server
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'solayaoflorence@gmail.com'  # Your email
+EMAIL_HOST_PASSWORD = 'ivrj sehi txqz zvwp'  # App-specific password
+DEFAULT_FROM_EMAIL = 'CTHM Flight Booking System <cthmfbs@gmail.com>'
+SERVER_EMAIL = 'cthmfbs@gmail.com'
+
+# Support Contact Info (used in emails)
+SUPPORT_EMAIL = 'support@philippineairlines.com'
+SUPPORT_PHONE = '(02) 8855-8888'
+WEBSITE_URL = 'http://localhost:5173/'
+# WEBSITE_URL = 'https://www.philippineairlines.com'
+
+# For development (prints emails to console instead of sending)
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

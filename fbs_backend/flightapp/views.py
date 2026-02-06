@@ -12,6 +12,9 @@ from django.core.cache import cache
 from django.db import transaction
 from decimal import Decimal
 from django.contrib.auth.models import User
+from .services.email_service import EmailService
+from .services.pdf_service import BoardingPassPDFService
+from django.http import HttpResponse
 
 from app.models import (
     Airport, Route, Flight, Schedule, Seat, Country,
@@ -191,7 +194,7 @@ def create_payment_intent(request):
                 booking = Booking.objects.get(id=booking_id)
                 metadata = {
                     "booking_id": str(booking.id),  # Flat string
-                    "booking_ref": f"BK{booking.id:08d}", # Flat string
+                    "booking_ref": f"CSUCC{booking.id:08d}", # Flat string
                     "trip_type": str(booking.trip_type) # Flat string
                 }
             except Booking.DoesNotExist:
@@ -311,7 +314,7 @@ def verify_and_process_payment(request):
             return Response({
                 'success': True,
                 'payment_id': existing_payment.id,
-                'booking_reference': f"BK{booking.id:08d}",
+                'booking_reference': f"CSUCC{booking.id:08d}",
                 'booking_status': booking.status,
                 'message': 'Payment already processed'
             })
@@ -432,6 +435,15 @@ def process_payment_from_paymongo(payment_id, payment_attrs, booking):
                     seat_count += 1
             print(f"✅ Marked {seat_count} seats as unavailable")
             
+            # 🎉 SEND BOOKING CONFIRMATION EMAIL
+            print(f"📧 Sending booking confirmation email...")
+            email_sent = EmailService.send_booking_confirmation(booking, payment)
+            
+            if email_sent:
+                print(f"✅ Booking confirmation email sent successfully!")
+            else:
+                print(f"⚠️ Failed to send booking confirmation email")
+            
             print(f"🎉 Payment processing COMPLETED!")
             
             return Response({
@@ -439,10 +451,11 @@ def process_payment_from_paymongo(payment_id, payment_attrs, booking):
                 'message': 'Payment processed successfully',
                 'payment_id': payment.id,
                 'booking_id': booking.id,
-                'booking_reference': f"BK{booking.id:08d}",
+                'booking_reference': f"CSUCC{booking.id:08d}",
                 'booking_status': 'confirmed',
                 'amount': float(amount),
-                'method': payment_method
+                'method': payment_method,
+                'email_sent': email_sent
             })
             
     except Exception as e:
@@ -679,7 +692,7 @@ def create_booking(request):
             return Response({
                 'success': True,
                 'booking_id': booking.id,
-                'booking_reference': f"BK{booking.id:08d}",
+                'booking_reference': f"CSUCC{booking.id:08d}",
                 'status': 'pending',
                 'total_amount': float(total_amount),  # Use the total amount from frontend
                 'payment_info': {
@@ -857,7 +870,7 @@ def update_booking(request, booking_id):
             return Response({
                 'success': True,
                 'booking_id': booking.id,
-                'booking_reference': f"BK{booking.id:08d}",
+                'booking_reference': f"CSUCC{booking.id:08d}",
                 'status': booking.status,
                 'total_amount': float(booking.total_amount),
                 'message': 'Booking updated successfully'
@@ -1473,7 +1486,7 @@ def process_payment(request):
                     'success': True,
                     'payment_id': payment.id,
                     'booking_status': 'confirmed',
-                    'booking_reference': f"BK{booking.id:08d}",
+                    'booking_reference': f"CSUCC{booking.id:08d}",
                     'message': 'Payment processed successfully'
                 }, status=status.HTTP_200_OK)
             
@@ -1868,7 +1881,7 @@ def process_payment_webhook(payment_id, payment_attrs, booking_id):
                 "payment_id": payment.id,
                 "booking_id": booking_id,
                 "booking_status": "confirmed",
-                "booking_reference": f"BK{booking.id:08d}",
+                "booking_reference": f"CSUCC{booking.id:08d}",
                 "amount": float(amount),
                 "method": payment_method
             })
@@ -1888,7 +1901,7 @@ def send_booking_confirmation_email(booking):
     # For now, just log it
     print(f"\n📧 Would send confirmation email for booking {booking.id}")
     print(f"   To: {booking.user.email if booking.user else 'No user email'}")
-    print(f"   Reference: BK{booking.id:08d}")
+    print(f"   Reference: CSUCC{booking.id:08d}")
     print(f"   Amount: {booking.total_amount}")
 
 def process_payment_with_id(payment_id, booking_id):
@@ -1958,7 +1971,7 @@ def process_payment_with_id(payment_id, booking_id):
                         'success': True,
                         'payment_id': payment.id,
                         'booking_status': 'confirmed',
-                        'booking_reference': f"BK{booking.id:08d}",
+                        'booking_reference': f"CSUCC{booking.id:08d}",
                         'message': 'Payment processed successfully'
                     })
         
@@ -2067,7 +2080,7 @@ def check_payment_status(request, booking_id):
                 'paid': True,
                 'payment_id': payment.id if payment else None,
                 'booking_id': booking_id,
-                'booking_reference': f"BK{booking.id:08d}",
+                'booking_reference': f"CSUCC{booking.id:08d}",
                 'booking_status': booking.status,
                 'amount': float(payment.amount) if payment else 0,
                 'method': payment.method if payment else None,
@@ -2083,7 +2096,7 @@ def check_payment_status(request, booking_id):
                 'paid': True,
                 'payment_id': payment.id,
                 'booking_id': booking_id,
-                'booking_reference': f"BK{booking.id:08d}",
+                'booking_reference': f"CSUCC{booking.id:08d}",
                 'booking_status': booking.status,
                 'amount': float(payment.amount),
                 'method': payment.method,
@@ -2220,7 +2233,7 @@ def process_payment_immediately(payment_id, payment_attrs, booking):
                     'success': True,
                     'paid': True,
                     'payment_id': existing_payment.id,
-                    'booking_reference': f"BK{booking.id:08d}",
+                    'booking_reference': f"CSUCC{booking.id:08d}",
                     'booking_status': booking.status,
                     'message': 'Payment already processed'
                 })
@@ -2254,7 +2267,7 @@ def process_payment_immediately(payment_id, payment_attrs, booking):
                 'paid': True,
                 'payment_id': payment.id,
                 'booking_id': booking.id,
-                'booking_reference': f"BK{booking.id:08d}",
+                'booking_reference': f"CSUCC{booking.id:08d}",
                 'booking_status': 'confirmed',
                 'amount': float(amount),
                 'method': payment_method,
@@ -2358,7 +2371,7 @@ def check_booking_payment(request, booking_id):
                 'paid': True,
                 'booking_status': 'confirmed',
                 'booking_id': booking_id,
-                'booking_reference': f"BK{booking.id:08d}",
+                'booking_reference': f"CSUCC{booking.id:08d}",
                 'payment_id': payment.id if payment else None,
                 'message': 'Booking is already confirmed'
             })
@@ -2471,7 +2484,7 @@ def check_booking_status(request, booking_id):
         return Response({
             'success': True,
             'booking_id': booking_id,
-            'booking_reference': f"BK{booking.id:08d}",
+            'booking_reference': f"CSUCC{booking.id:08d}",
             'booking_status': booking.status,
             'has_payment': payment is not None,
             'payment_id': payment.id if payment else None,
@@ -2534,10 +2547,10 @@ def get_seat_class_features(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_booking_by_reference(request, reference):
-    """Get booking by reference number (BK00000071)"""
+    """Get booking by reference number (CSUCC00000071)"""
     try:
         # Extract ID from reference
-        booking_id = int(reference.replace('BK', ''))
+        booking_id = int(reference.replace('CSUCC', ''))
         booking = Booking.objects.get(id=booking_id)
         serializer = BookingSerializer(booking)
         return Response({
@@ -2726,8 +2739,128 @@ def test_seat_data(request, schedule_id):
         return JsonResponse({'error': str(e)}, status=500)  
 
 
-
-# In views.py - Update get_seats_with_schedule_info function
+def process_payment_webhook(payment_id, payment_attrs, booking_id):
+    """
+    Process payment from webhook and save to database + send confirmation email
+    """
+    from django.db import transaction
+    from app.models import Booking, Payment, BookingDetail, Seat
+    from decimal import Decimal
+    
+    try:
+        print(f"\n💾 Processing payment for booking {booking_id}")
+        print(f"Payment ID: {payment_id}")
+        print(f"Payment Status: {payment_attrs.get('status')}")
+        
+        with transaction.atomic():
+            # Get booking (with lock to prevent race conditions)
+            try:
+                booking = Booking.objects.select_for_update().get(id=booking_id)
+                print(f"Found booking: {booking.id}, Status: {booking.status}")
+            except Booking.DoesNotExist:
+                print(f"❌ Booking {booking_id} not found")
+                return Response({"error": "Booking not found"}, status=404)
+            
+            # Check if payment already exists
+            existing_payment = Payment.objects.filter(
+                transaction_id=payment_id
+            ).first()
+            
+            if existing_payment:
+                print(f"✅ Payment already exists: {existing_payment.id}")
+                
+                # Still send email if booking is confirmed but email wasn't sent
+                if booking.status == 'Confirmed':
+                    EmailService.send_booking_confirmation(booking, existing_payment)
+                
+                return Response({
+                    "success": True,
+                    "message": "Payment already processed",
+                    "payment_id": existing_payment.id,
+                    "booking_status": booking.status
+                })
+            
+            # Convert amount from centavos to PHP
+            amount = Decimal(str(payment_attrs['amount'] / 100))
+            print(f"Amount: {amount} PHP")
+            
+            # Get payment method
+            payment_method = "Unknown"
+            source = payment_attrs.get('source', {})
+            source_type = source.get('type', '')
+            
+            if source_type == 'gcash':
+                payment_method = 'GCash'
+            elif source_type == 'card':
+                payment_method = 'Credit Card'
+            elif source_type == 'grab_pay':
+                payment_method = 'Grab Pay'
+            elif source_type == 'paymaya':
+                payment_method = 'PayMaya'
+            else:
+                payment_method = source_type.capitalize() if source_type else 'Unknown'
+            
+            print(f"Payment Method: {payment_method}")
+            
+            # Create payment record
+            payment = Payment.objects.create(
+                booking=booking,
+                amount=amount,
+                method=payment_method,
+                transaction_id=payment_id,
+                status='Completed',
+                payment_date=timezone.now()
+            )
+            
+            print(f"✅ Payment saved to database: {payment.id}")
+            
+            # Update booking status
+            booking.status = 'Confirmed'
+            booking.save()
+            print(f"✅ Booking status updated to: {booking.status}")
+            
+            # Update all booking details status
+            updated_details = booking.details.all().update(status='confirmed')
+            print(f"✅ Updated {updated_details} booking details")
+            
+            # Mark seats as unavailable
+            seat_count = 0
+            for detail in booking.details.all():
+                if detail.seat:
+                    detail.seat.is_available = False
+                    detail.seat.save()
+                    seat_count += 1
+            print(f"✅ Marked {seat_count} seats as unavailable")
+            
+            # 🎉 SEND BOOKING CONFIRMATION EMAIL
+            print(f"📧 Sending booking confirmation email...")
+            email_sent = EmailService.send_booking_confirmation(booking, payment)
+            
+            if email_sent:
+                print(f"✅ Booking confirmation email sent successfully!")
+            else:
+                print(f"⚠️ Failed to send booking confirmation email - will retry via admin")
+                # Optionally: Queue for retry or notify admin
+            
+            print(f"🎉 Payment processing COMPLETED for booking {booking_id}")
+            
+            return Response({
+                "success": True,
+                "message": "Payment processed successfully",
+                "payment_id": payment.id,
+                "booking_id": booking_id,
+                "booking_status": "confirmed",
+                "booking_reference": f"CSUCC{booking.id:08d}",
+                "amount": float(amount),
+                "method": payment_method,
+                "email_sent": email_sent
+            })
+            
+    except Exception as e:
+        print(f"❌ Error in payment processing: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=400)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -2825,6 +2958,50 @@ def get_seats_with_schedule_info(request, schedule_id):
         import traceback
         traceback.print_exc()
         return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+    
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def download_boarding_pass(request, booking_detail_id):
+    """
+    Download boarding pass PDF for a specific booking detail
+    """
+    try:
+        response = BoardingPassPDFService.download_boarding_pass(booking_detail_id)
+        if response:
+            return response
+        else:
+            return Response({
+                'success': False,
+                'error': 'Booking detail not found'
+            }, status=404)
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def download_itinerary(request, booking_id):
+    """
+    Download full itinerary PDF for a booking
+    """
+    try:
+        response = BoardingPassPDFService.download_itinerary(booking_id)
+        if response:
+            return response
+        else:
+            return Response({
+                'success': False,
+                'error': 'Booking not found'
+            }, status=404)
+    except Exception as e:
+        return Response({
             'success': False,
             'error': str(e)
         }, status=500)

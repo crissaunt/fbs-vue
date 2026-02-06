@@ -67,7 +67,7 @@ const pollPaymentStatus = async (bookingId) => {
       clearInterval(pollingInterval.value);
       
       // Prepare data for success page
-      const bookingReference = result.data.booking_reference || `BK${bookingId.toString().padStart(8, '0')}`;
+      const bookingReference = result.data.booking_reference || `CSUCC${bookingId.toString().padStart(8, '0')}`;
       const paymentId = result.data.payment_id;
       const amount = bookingStore.booking_total || bookingStore.grandTotal;
       
@@ -178,7 +178,7 @@ onMounted(async () => {
         
         if (verifyResponse.data.success) {
           // Payment processed successfully! Navigate to success page
-          const bookingReference = verifyResponse.data.booking_reference || `BK${bookingId.toString().padStart(8, '0')}`;
+          const bookingReference = verifyResponse.data.booking_reference || `CSUCC${bookingId.toString().padStart(8, '0')}`;
           const paymentId = verifyResponse.data.payment_id;
           const amount = bookingStore.booking_total || bookingStore.grandTotal;
           
@@ -316,7 +316,7 @@ const cancelBooking = async () => {
         <div class="space-y-2">
           <p class="text-gray-700">
             <strong class="font-semibold">Booking Reference:</strong> 
-            {{ bookingStore.booking_reference || `BK${bookingId?.toString().padStart(8, '0')}` }}
+            {{ bookingStore.booking_reference || `CSUCC${bookingId?.toString().padStart(8, '0')}` }}
           </p>
           <p class="text-gray-700">
             <strong class="font-semibold">Amount:</strong> 

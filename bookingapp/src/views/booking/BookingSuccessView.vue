@@ -443,7 +443,7 @@ const addToCalendar = () => {
 
 const goHome = () => {
   showToastMessage('Returning to homepage...');
-  // router.push({ name: 'Home' });
+  router.push({ name: 'Home' });
 };
 </script>
 
