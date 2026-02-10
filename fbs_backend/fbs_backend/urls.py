@@ -21,11 +21,10 @@ from rest_framework.authtoken.views import obtain_auth_token
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('app.urls')),
-    path('flightapp/', include('flightapp.urls')),
+    path('flightapp /', include('flightapp.urls')),
     #djoser
     path('api/auth/', include('djoser.urls')),
     path('api/auth/', include('djoser.urls.authtoken')),
-
     path('api/token-auth/', obtain_auth_token),
 ]
 

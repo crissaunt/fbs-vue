@@ -35,20 +35,19 @@ class Airline(models.Model):
 
 class SeatClass(models.Model):
     name = models.CharField(max_length=50)
-    price_multiplier = models.DecimalField(
-        max_digits=5, 
-        decimal_places=2,
-        default=1.00
-    )
+    price_multiplier = models.DecimalField(max_digits=5, decimal_places=2, default=1.00)
     airline = models.ForeignKey(Airline, on_delete=models.CASCADE, related_name="seat_classes", null=True, blank=True)
     description = models.TextField(blank=True, null=True)
-    is_active = models.BooleanField(default=True)  # Add this line
+    is_active = models.BooleanField(default=True)
+    color = models.CharField(max_length=20, blank=True, null=True)  # Add this line
+    
 
     class Meta:
         unique_together = ("airline", "name")
 
     def __str__(self):
         return f"{self.name} (x{self.price_multiplier}) - {self.airline.code if self.airline else ''}"
+
 
 
 class Aircraft(models.Model):
@@ -58,6 +57,70 @@ class Aircraft(models.Model):
 
     def __str__(self):
         return f"{self.model} ({self.airline.code})"
+    
+    layout_config = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='{"seat_classes": [{"class_id": 1, "rows": 10, "columns": 6}, ...]}'
+    )
+
+    def __str__(self):
+        return f"{self.model} ({self.airline.code})"
+    
+    def save_layout(self, config_data):
+        """Save seat layout configuration"""
+        self.layout_config = {
+            'seat_classes': config_data.get('seat_classes', []),
+            'total_seats': config_data.get('total_seats', 0),
+            'updated_at': timezone.now().isoformat()
+        }
+        self.save()
+    
+    def get_layout_config(self):
+        """Get layout config or generate default"""
+        if self.layout_config and self.layout_config.get('seat_classes'):
+            return self.layout_config
+        
+        # Auto-generate default layout based on capacity
+        return self._generate_default_layout()
+    
+    def _generate_default_layout(self):
+        """Generate a default layout"""
+        seat_classes = SeatClass.objects.filter(
+            models.Q(airline=self.airline) | models.Q(airline__isnull=True)
+        ).order_by('-price_multiplier')
+        
+        if not seat_classes.exists():
+            return {'seat_classes': [], 'total_seats': 0}
+        
+        classes = list(seat_classes)
+        num_classes = len(classes)
+        base_seats = self.capacity // num_classes
+        remainder = self.capacity % num_classes
+        
+        seat_classes_config = []
+        current_row = 1
+        
+        for i, sc in enumerate(classes):
+            class_capacity = base_seats + (1 if i < remainder else 0)
+            columns = 4 if i == 0 and num_classes > 1 else 6
+            rows = (class_capacity + columns - 1) // columns
+            
+            seat_classes_config.append({
+                'class_id': sc.id,
+                'name': sc.name,
+                'rows': rows,
+                'columns': columns,
+                'start_row': current_row,
+                'color': sc.color or '#3B82F6',
+                'price_multiplier': float(sc.price_multiplier)
+            })
+            current_row += rows
+        
+        return {
+            'seat_classes': seat_classes_config,
+            'total_seats': sum(c['rows'] * c['columns'] for c in seat_classes_config)
+        }
 
 
 # ============================================================
@@ -153,6 +216,11 @@ class Flight(models.Model):
 
 # In your models.py, update the duration method in the Schedule model:
 
+from django.db import models
+from django.utils import timezone
+from django.core.exceptions import ValidationError
+from datetime import timedelta
+
 class Schedule(models.Model):
     STATUS_CHOICES = [
         ('Open', 'Open for Booking'),
@@ -161,7 +229,7 @@ class Schedule(models.Model):
         ('Arrived', 'Arrived'),
     ]
 
-    flight = models.ForeignKey(Flight, on_delete=models.CASCADE, related_name="schedules")
+    flight = models.ForeignKey('Flight', on_delete=models.CASCADE, related_name="schedules")
     departure_time = models.DateTimeField()
     arrival_time = models.DateTimeField()
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -174,10 +242,35 @@ class Schedule(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.flight.flight_number} {self.departure_time}"
+        return f"{self.flight.flight_number} | {self.departure_time.strftime('%Y-%m-%d %H:%M')}"
+
+    # --- AUTOMATIC LOGIC ---
+
+    @property
+    def automatic_status(self):
+        """Calculates status in real-time based on the clock."""
+        now = timezone.now()
+        
+        if now >= self.arrival_time:
+            return "Arrived"
+        elif self.departure_time <= now < self.arrival_time:
+            return "On Flight"
+        elif (self.departure_time - timedelta(minutes=30)) <= now < self.departure_time:
+            return "Closed"
+        else:
+            return "Open"
+
+    def update_status_in_db(self):
+        """Updates the database field to match the automatic logic."""
+        new_status = self.automatic_status
+        if self.status != new_status:
+            self.status = new_status
+            self.save(update_fields=['status'])
+
+    # --- HELPER METHODS ---
 
     def duration(self):
-        """Calculate flight duration safely handling None values"""
+        """Calculate flight duration safely."""
         if not self.departure_time or not self.arrival_time:
             return "N/A"
         
@@ -190,43 +283,97 @@ class Schedule(models.Model):
             return f"{hours}h {minutes}m (+{days}d)"
         return f"{hours}h {minutes}m"
 
-    def clean(self):
-        """Validate schedule times"""
-        if self.arrival_time <= self.departure_time:
-            raise ValidationError("Arrival time must be after departure time")
-        
-        # Don't allow schedules in the past
-        if self.departure_time < timezone.now():
-            raise ValidationError("Cannot create schedule in the past")
-
     @property
     def is_open(self):
-        return self.status == "Open"
+        return self.automatic_status == "Open"
+
+    # --- VALIDATION ---
+
+    def clean(self):
+        """Enforces time rules and prevents airport conflicts."""
+        if self.arrival_time <= self.departure_time:
+            raise ValidationError("Arrival time must be after departure time.")
+        
+        if not self.pk and self.departure_time < timezone.now():
+            raise ValidationError("Cannot create a schedule in the past.")
+
+        # 15-minute conflict allowance
+        allowance = timedelta(minutes=15)
+        
+        # Check for departure conflicts at the same origin airport
+        origin_conflicts = Schedule.objects.filter(
+            flight__route__origin_airport=self.flight.route.origin_airport,
+            departure_time__range=(self.departure_time - allowance, self.departure_time + allowance)
+        )
+
+        # Check for arrival conflicts at the same destination airport
+        dest_conflicts = Schedule.objects.filter(
+            flight__route__destination_airport=self.flight.route.destination_airport,
+            arrival_time__range=(self.arrival_time - allowance, self.arrival_time + allowance)
+        )
+
+        if self.pk:
+            origin_conflicts = origin_conflicts.exclude(pk=self.pk)
+            dest_conflicts = dest_conflicts.exclude(pk=self.pk)
+
+        if origin_conflicts.exists():
+            raise ValidationError("Runway Conflict: Another flight is departing from this airport within 15 minutes.")
+        
+        if dest_conflicts.exists():
+            raise ValidationError("Runway Conflict: Another flight is arriving at the destination within 15 minutes.")
+
+    def save(self, *args, **kwargs):
+        self.status = self.automatic_status  # Ensure status is correct before saving
+        super().save(*args, **kwargs)
 
 
 # Add this to your existing Seat model or update it
+# Add this to your existing Seat model in models.py
+# In your models.py, replace the entire Seat model with this:
+
+from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from decimal import Decimal
+
+
 class Seat(models.Model):
-    schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE, related_name="seats" , null=True)
-    seat_class = models.ForeignKey(SeatClass, on_delete=models.CASCADE, related_name="seats" , null=True)
+    schedule = models.ForeignKey('Schedule', on_delete=models.CASCADE, related_name="seats", null=True)
+    seat_class = models.ForeignKey('SeatClass', on_delete=models.CASCADE, related_name="seats", null=True)
     seat_number = models.CharField(max_length=10)
     is_available = models.BooleanField(default=True)
     
-    # Add row and column for easier mapping
+    # Row and column for mapping
     row = models.PositiveIntegerField(null=True)
-    column = models.CharField(max_length=1, null=True)  # A, B, C, D, E, F
+    column = models.CharField(max_length=1, null=True)
     
-    # Add seat features
+    # Seat features
     has_extra_legroom = models.BooleanField(default=False)
     is_exit_row = models.BooleanField(default=False)
     is_bulkhead = models.BooleanField(default=False)
     is_window = models.BooleanField(default=False)
     is_aisle = models.BooleanField(default=False)
     
-    price_adjustment = models.DecimalField(
+    # Special requirements with PRICES
+    is_wheelchair_accessible = models.BooleanField(default=False)
+    has_bassinet = models.BooleanField(default=False)
+    has_nut_allergy = models.BooleanField(default=False)
+    is_unaccompanied_minor = models.BooleanField(default=False)
+    
+    # Price adjustments
+    price_adjustment_auto = models.DecimalField(
         max_digits=10, 
         decimal_places=2, 
         default=0.00,
-        help_text="Additional price for premium seats"
+        help_text="Automatic price adjustment based on seat features"
+    )
+    price_adjustment_manual = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0.00,
+        help_text="Manual price adjustment by admin"
     )
 
     class Meta:
@@ -247,35 +394,268 @@ class Seat(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.seat_number} - {self.seat_class.name}"
+        special_features = []
+        if self.is_exit_row:
+            special_features.append("Exit")
+        if self.is_wheelchair_accessible:
+            special_features.append("Wheelchair")
+        if self.has_bassinet:
+            special_features.append("Bassinet")
+        if self.has_nut_allergy:
+            special_features.append("Nut Allergy")
+        if self.is_unaccompanied_minor:
+            special_features.append("Minor")
+        
+        features_str = f" ({', '.join(special_features)})" if special_features else ""
+        return f"{self.seat_number} - {self.seat_class.name}{features_str}"
+
+    # PRICE ADJUSTMENT CONSTANTS
+    @classmethod
+    def get_price_adjustments(cls):
+        """Return dictionary of price adjustments for special features"""
+        return {
+            # Special Requirements with PRICES
+            'is_exit_row': 150.00,           # Exit Row: ₱150 (added responsibility)
+            'is_wheelchair_accessible': 0.00,  # Wheelchair: FREE (accessibility requirement)
+            'has_bassinet': 200.00,          # Bassinet: ₱200 (premium service)
+            'has_nut_allergy': 0.00,         # Nut Allergy: FREE (safety requirement)
+            'is_unaccompanied_minor': 300.00, # Unaccompanied Minor: ₱300 (special service)
+            
+            # Comfort Features
+            'has_extra_legroom': 500.00,     # Extra Legroom: ₱500
+            'is_bulkhead': 400.00,           # Bulkhead: ₱400
+            'is_window': 100.00,             # Window: ₱100
+            'is_aisle': 120.00,              # Aisle: ₱120
+        }
 
     @property
     def seat_code(self):
         """Return seat code like '1A'"""
         return f"{self.row}{self.column}"
 
+    def calculate_auto_adjustment(self):
+        """Calculate automatic price adjustment based on seat features"""
+        adjustments = self.get_price_adjustments()
+        adjustment = Decimal('0.00')
+        
+        # Check each feature and add its price adjustment
+        if self.has_extra_legroom:
+            adjustment += Decimal(str(adjustments['has_extra_legroom']))
+        if self.is_exit_row:
+            adjustment += Decimal(str(adjustments['is_exit_row']))
+        if self.is_wheelchair_accessible:
+            adjustment += Decimal(str(adjustments['is_wheelchair_accessible']))
+        if self.has_bassinet:
+            adjustment += Decimal(str(adjustments['has_bassinet']))
+        if self.has_nut_allergy:
+            adjustment += Decimal(str(adjustments['has_nut_allergy']))
+        if self.is_unaccompanied_minor:
+            adjustment += Decimal(str(adjustments['is_unaccompanied_minor']))
+        if self.is_bulkhead:
+            adjustment += Decimal(str(adjustments['is_bulkhead']))
+        if self.is_window:
+            adjustment += Decimal(str(adjustments['is_window']))
+        if self.is_aisle:
+            adjustment += Decimal(str(adjustments['is_aisle']))
+        
+        return adjustment
+
+    @property
+    def total_price_adjustment(self):
+        """Total of automatic + manual adjustments"""
+        return self.price_adjustment_auto + self.price_adjustment_manual
+
     @property
     def final_price(self):
-        """Calculate final price including adjustments"""
-        base_price = self.schedule.price if self.schedule else 0
-        multiplier = self.seat_class.price_multiplier if self.seat_class else 1
-        return (base_price * multiplier) + self.price_adjustment
+        """Calculate final price including all adjustments"""
+        base_price = self.schedule.price if self.schedule else Decimal('0.00')
+        multiplier = self.seat_class.price_multiplier if self.seat_class else Decimal('1.00')
+        
+        # Base price calculation
+        calculated_price = base_price * multiplier
+        
+        # Add all adjustments
+        return calculated_price + self.total_price_adjustment
+
+    @property
+    def price_breakdown(self):
+        """Get detailed price breakdown"""
+        base_price = self.schedule.price if self.schedule else Decimal('0.00')
+        multiplier = self.seat_class.price_multiplier if self.seat_class else Decimal('1.00')
+        calculated_base = base_price * multiplier
+        
+        auto_adjustment = self.calculate_auto_adjustment()
+        total_adjustment = auto_adjustment + self.price_adjustment_manual
+        
+        return {
+            'base_price': float(base_price),
+            'seat_class_multiplier': float(multiplier),
+            'calculated_base': float(calculated_base),
+            'auto_adjustment': {
+                'amount': float(auto_adjustment),
+                'details': self.get_adjustment_details()
+            },
+            'manual_adjustment': float(self.price_adjustment_manual),
+            'total_adjustment': float(total_adjustment),
+            'final_price': float(self.final_price)
+        }
+
+    def get_adjustment_details(self):
+        """Get details of what features contribute to price adjustment"""
+        adjustments = self.get_price_adjustments()
+        details = []
+        
+        if self.has_extra_legroom:
+            details.append({
+                'feature': 'Extra Legroom',
+                'adjustment': float(adjustments['has_extra_legroom']),
+                'type': 'premium'
+            })
+        if self.is_exit_row:
+            details.append({
+                'feature': 'Exit Row Seat',
+                'adjustment': float(adjustments['is_exit_row']),
+                'type': 'responsibility'
+            })
+        if self.is_unaccompanied_minor:
+            details.append({
+                'feature': 'Unaccompanied Minor Service',
+                'adjustment': float(adjustments['is_unaccompanied_minor']),
+                'type': 'service'
+            })
+        if self.is_bulkhead:
+            details.append({
+                'feature': 'Bulkhead Seat',
+                'adjustment': float(adjustments['is_bulkhead']),
+                'type': 'premium'
+            })
+        if self.is_window:
+            details.append({
+                'feature': 'Window Seat',
+                'adjustment': float(adjustments['is_window']),
+                'type': 'preference'
+            })
+        if self.is_aisle:
+            details.append({
+                'feature': 'Aisle Seat',
+                'adjustment': float(adjustments['is_aisle']),
+                'type': 'preference'
+            })
+        if self.has_bassinet:
+            details.append({
+                'feature': 'Bassinet Position',
+                'adjustment': float(adjustments['has_bassinet']),
+                'type': 'service'
+            })
+        
+        return details
 
     @property
     def seat_features(self):
-        """Return list of seat features"""
+        """Return list of seat features with pricing info"""
+        adjustments = self.get_price_adjustments()
         features = []
+        
         if self.has_extra_legroom:
-            features.append("Extra Legroom")
+            features.append({
+                'name': "Extra Legroom",
+                'price': float(adjustments['has_extra_legroom']),
+                'type': 'premium',
+                'icon': 'ph-ruler',
+                'description': 'Additional legroom for comfort'
+            })
         if self.is_exit_row:
-            features.append("Exit Row")
+            features.append({
+                'name': "Exit Row Seat",
+                'price': float(adjustments['is_exit_row']),
+                'type': 'responsibility',
+                'icon': 'ph-exit',
+                'description': 'Emergency exit row - passenger must be capable'
+            })
+        if self.is_wheelchair_accessible:
+            features.append({
+                'name': "Wheelchair Accessible",
+                'price': float(adjustments['is_wheelchair_accessible']),
+                'type': 'service',
+                'icon': 'ph-wheelchair',
+                'description': 'Priority for passengers with reduced mobility'
+            })
+        if self.has_bassinet:
+            features.append({
+                'name': "Bassinet Position",
+                'price': float(adjustments['has_bassinet']),
+                'type': 'service',
+                'icon': 'ph-baby',
+                'description': 'For passengers with infants'
+            })
+        if self.has_nut_allergy:
+            features.append({
+                'name': "Nut Allergy Zone",
+                'price': float(adjustments['has_nut_allergy']),
+                'type': 'safety',
+                'icon': 'ph-nut',
+                'description': 'No nuts to be served in this area'
+            })
+        if self.is_unaccompanied_minor:
+            features.append({
+                'name': "Unaccompanied Minor",
+                'price': float(adjustments['is_unaccompanied_minor']),
+                'type': 'service',
+                'icon': 'ph-user-focus',
+                'description': 'Special supervision required'
+            })
         if self.is_bulkhead:
-            features.append("Bulkhead")
+            features.append({
+                'name': "Bulkhead",
+                'price': float(adjustments['is_bulkhead']),
+                'type': 'premium',
+                'icon': 'ph-wall',
+                'description': 'Front row with extra legroom'
+            })
         if self.is_window:
-            features.append("Window")
+            features.append({
+                'name': "Window",
+                'price': float(adjustments['is_window']),
+                'type': 'preference',
+                'icon': 'ph-airplane-takeoff',
+                'description': 'Window view seat'
+            })
         if self.is_aisle:
-            features.append("Aisle")
+            features.append({
+                'name': "Aisle",
+                'price': float(adjustments['is_aisle']),
+                'type': 'preference',
+                'icon': 'ph-walk',
+                'description': 'Easy access aisle seat'
+            })
+        
         return features
+
+    @property
+    def special_requirements(self):
+        """Get special passenger requirements"""
+        return {
+            'is_exit_row': self.is_exit_row,
+            'is_wheelchair_accessible': self.is_wheelchair_accessible,
+            'has_bassinet': self.has_bassinet,
+            'has_nut_allergy': self.has_nut_allergy,
+            'is_unaccompanied_minor': self.is_unaccompanied_minor,
+            'price_impact': {
+                'is_exit_row': float(self.get_price_adjustments()['is_exit_row']),
+                'is_wheelchair_accessible': float(self.get_price_adjustments()['is_wheelchair_accessible']),
+                'has_bassinet': float(self.get_price_adjustments()['has_bassinet']),
+                'has_nut_allergy': float(self.get_price_adjustments()['has_nut_allergy']),
+                'is_unaccompanied_minor': float(self.get_price_adjustments()['is_unaccompanied_minor']),
+            }
+        }
+
+    def save(self, *args, **kwargs):
+        """Override save to auto-calculate price adjustments"""
+        # Calculate automatic adjustment before saving
+        self.price_adjustment_auto = self.calculate_auto_adjustment()
+        
+        # Call the parent save method
+        super().save(*args, **kwargs)
 
 
 class SeatClassFeature(models.Model):
@@ -292,6 +672,7 @@ class SeatClassFeature(models.Model):
     
     def __str__(self):
         return f"{self.seat_class.name} - {self.feature}"
+    
 
 # ============================================================
 # TRAVEL INSURANCE SYSTEM
@@ -1207,55 +1588,56 @@ def create_insurance_record_if_needed(sender, instance, created, **kwargs):
 # ============================================================
 # SIGNAL — AUTO-GENERATE SEATS WHEN A NEW SCHEDULE IS CREATED
 # ============================================================
+# models.py - Update the signal
+
 @receiver(post_save, sender=Schedule)
 def create_seats_for_schedule(sender, instance, created, **kwargs):
-    """
-    Auto-generate seats when a new schedule is created.
-    """
-    if created:
-        from django.db import transaction
+    """Auto-generate seats when schedule is created using aircraft's layout"""
+    if not created:
+        return
+    
+    if not instance.flight or not instance.flight.aircraft:
+        print(f"No aircraft for schedule {instance.id}, skipping seat generation")
+        return
+    
+    aircraft = instance.flight.aircraft
+    layout = aircraft.get_layout_config()
+    seat_classes_config = layout.get('seat_classes', [])
+    
+    if not seat_classes_config:
+        print(f"No layout config for aircraft {aircraft.id}, skipping")
+        return
+    
+    from django.db import transaction
+    
+    with transaction.atomic():
+        seats_to_create = []
         
-        # Import the models directly instead of using apps.get_model
-        from .models import SeatClass, Seat
-        
-        aircraft = instance.flight.aircraft
-        
-        with transaction.atomic():
-            # Get airline's seat classes or default classes
-            seat_classes = SeatClass.objects.filter(
-                airline=instance.flight.airline
-            ).order_by('price_multiplier')
+        for sc_config in seat_classes_config:
+            class_id = sc_config['class_id']
+            rows = sc_config['rows']
+            columns = sc_config['columns']
+            start_row = sc_config.get('start_row', 1)
             
-            if not seat_classes.exists():
-                # Fallback to default seat classes
-                seat_classes = SeatClass.objects.filter(airline__isnull=True)
-            
-            if seat_classes.exists():
-                # Distribute seats across classes
-                total_capacity = aircraft.capacity
-                seats_per_class = total_capacity // seat_classes.count()
-                remaining_seats = total_capacity % seat_classes.count()
-                
-                seat_number = 1
-                seats_to_create = []
-                
-                for i, seat_class in enumerate(seat_classes):
-                    # Add extra seats to first class if uneven distribution
-                    class_capacity = seats_per_class + (1 if i < remaining_seats else 0)
+            for row_idx in range(rows):
+                for col_idx in range(columns):
+                    global_row = start_row + row_idx
+                    col_letter = chr(65 + col_idx)  # 0->A, 1->B, etc.
                     
-                    for j in range(class_capacity):
-                        seats_to_create.append(Seat(
-                            schedule=instance,
-                            seat_class=seat_class,
-                            seat_number=f"{seat_number:03d}",
-                            row=None,  # Add required fields
-                            column=None,
-                            is_available=True
-                        ))
-                        seat_number += 1
-                
-                Seat.objects.bulk_create(seats_to_create)
-
+                    seats_to_create.append(Seat(
+                        schedule=instance,
+                        seat_class_id=class_id,
+                        seat_number=f"{global_row}{col_letter}",
+                        row=global_row,
+                        column=col_letter,
+                        is_available=True,
+                        is_window=(col_idx == 0 or col_idx == columns - 1),
+                        is_aisle=(col_idx == columns // 2 - 1 or col_idx == columns // 2) if columns > 2 else False,
+                    ))
+        
+        if seats_to_create:
+            Seat.objects.bulk_create(seats_to_create)
+            print(f"Created {len(seats_to_create)} seats for schedule {instance.id} from aircraft template")
 
 # ============================================================
 # TAX SYSTEM FOR FLIGHT BOOKINGS (Models only, no calculation)
@@ -1394,11 +1776,11 @@ class PassengerTypeTaxRate(models.Model):
         return f"{self.tax_type.code} - {self.passenger_type}: ₱{self.amount}"
 
 
-class BookingTax(models.Model):
-    """
-    Snapshot of applied taxes at time of booking.
-    """
+from django.utils import timezone
 
+class BookingTax(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)  # Use default, not auto_now_add
+    
     booking = models.ForeignKey(
         'Booking',
         on_delete=models.CASCADE,
@@ -1408,7 +1790,6 @@ class BookingTax(models.Model):
         TaxType,
         on_delete=models.PROTECT
     )
-
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     passenger_type = models.CharField(
         max_length=10,
@@ -1416,9 +1797,11 @@ class BookingTax(models.Model):
         null=True
     )
 
+    class Meta:
+        ordering = ['-created_at']
+
     def __str__(self):
         return f"{self.booking.id} - {self.tax_type.code}: ₱{self.amount}"
-
 
 # ============================================================
 # PAYMENT

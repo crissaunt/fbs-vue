@@ -1,4 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { useBookingStore } from '@/stores/booking';
+
+// 1. Import your new admin routes file
+import adminRoutes from './admin';
+
+// 2. Booking Views (Keep these or move them to a booking.js later)
 import HomeView from '@/views/booking/HomeView.vue';
 import SearchResults from '@/views/booking/SearchResultsView.vue';
 import PassengerDetails from '@/views/booking/PassengerDetailsView.vue';
@@ -6,16 +12,13 @@ import AddonsView from '@/views/booking/AddonsView.vue';
 import SeatSelection from '@/views/booking/SeatSelectionView.vue';
 import ReviewBooking from '@/views/booking/ReviewBookingView.vue';
 import Payment from '@/views/booking/PaymentView.vue';
-import { useBookingStore } from '@/stores/booking';
 import AirbusA321Layout from '@/components/seatmaps/AirbusA321Layout.vue';
 
 const routes = [
- 
-  {
-    path: '/airbus-321', // The URL you will type
-    name: 'Airbus321',
-    component: AirbusA321Layout
-  },
+  // 3. Use the Spread Operator (...) to include all admin routes
+  ...adminRoutes,
+
+  // --- Booking Routes (The main site) ---
   {
     path: '/',
     name: 'Home',
@@ -23,9 +26,13 @@ const routes = [
     meta: { title: 'Book a Flight | Philippine Airlines' }
   },
   {
+    path: '/airbus-321',
+    name: 'Airbus321',
+    component: AirbusA321Layout
+  },
+  {
     path: '/check-in',
     name: 'check-in',
-    // Route level code-splitting (Lazy loading)
     component: () => import('../views/booking/CheckInView.vue')
   },
   {
@@ -39,7 +46,7 @@ const routes = [
     component: SearchResults
   },
   {
-    path:'/booking/passengers',
+    path: '/booking/passengers',
     name: 'PassengerDetails',
     component: PassengerDetails
   },
@@ -64,11 +71,11 @@ const routes = [
     component: Payment
   },
   {
-  path: '/payment-callback',
-  name: 'PaymentCallback',
-  component: () => import('../views/booking/PaymentCallbackView.vue'),
-  meta: { requiresAuth: false }
-}
+    path: '/payment-callback',
+    name: 'PaymentCallback',
+    component: () => import('../views/booking/PaymentCallbackView.vue'),
+    meta: { requiresAuth: false }
+  }
 ];
 
 const router = createRouter({
@@ -76,35 +83,28 @@ const router = createRouter({
   routes,
 });
 
-// Optional: Change page title dynamically
-router.beforeEach((to, from, next) => {
-  document.title = to.meta.title || 'Philippine Airlines';
-  next();
-});
-// In router/index.js, add this before export:
-const bookingRoutes = [
-  'PassengerDetails',
-  'Addons',
-  'SeatSelection',
-  'ReviewBooking',
-  'Payment'
-];
-
+// Keep your router.beforeEach logic here...
 router.beforeEach((to, from, next) => {
   const bookingStore = useBookingStore();
-  
-  // Check if route requires active booking session
+  document.title = to.meta.title || 'Philippine Airlines';
+
+  const bookingRoutes = ['PassengerDetails', 'Addons', 'SeatSelection', 'ReviewBooking', 'Payment'];
   if (bookingRoutes.includes(to.name)) {
     if (!bookingStore.sessionExpiry || Date.now() > bookingStore.sessionExpiry) {
-      // Session expired or doesn't exist
-      alert("Your booking session has expired or hasn't started. Please start a new search.");
+      alert("Your booking session has expired. Please start a new search.");
       bookingStore.resetBooking();
-      next('/');
-      return;
+      return next('/');
     }
   }
-  
-  document.title = to.meta.title || 'Philippine Airlines';
+
+  if (to.meta.requiresAuth && to.meta.role === 'admin') {
+    const isAdminLoggedIn = !!localStorage.getItem('adminLoggedIn');
+    if (!isAdminLoggedIn) {
+      return next('/admin/login'); // Matches the login path in admin.js
+    }
+  }
+
   next();
 });
+
 export default router;
