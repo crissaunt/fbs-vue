@@ -9,6 +9,7 @@ distlib==0.4.0
 Django==5.2.5
 django-cors-headers==4.9.0
 djangorestframework==3.16.1
+django-filter==23.2  # Added for DjangoFilterBackend
 dominate==2.9.1
 filelock==3.18.0
 Flask==3.1.1
