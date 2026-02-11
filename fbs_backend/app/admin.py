@@ -565,38 +565,28 @@ class BookingAdmin(admin.ModelAdmin):
 
 @admin.register(BookingDetail)
 class BookingDetailAdmin(admin.ModelAdmin):
-    list_display = ('id', 'booking_link', 'passenger', 'schedule', 'seat', 
-                    'price', 'tax_amount', 'get_insurance_cost', 'get_total_amount', 'get_has_insurance', 'status')
-    list_filter = ('seat_class', 'schedule__flight__airline', 'booking__status', 'status')
-    search_fields = ('booking__id', 'passenger__first_name', 'passenger__last_name',
-                     'seat__seat_number', 'schedule__flight__flight_number')
-    raw_id_fields = ('booking', 'passenger', 'schedule', 'seat', 'seat_class')
-    filter_horizontal = ('addons',)
-    readonly_fields = ('get_total_amount', 'get_has_insurance', 'get_insurance_policy_number', 
-                       'booking_date', 'get_insurance_cost', 'passenger_type')
+    list_display = ['id', 'schedule', 'price', 'get_pricing_factors', 'is_fiesta_period']
     
-    fieldsets = (
-        ('Booking Information', {
-            'fields': ('booking', 'passenger', 'passenger_type', 'booking_date', 'status')
-        }),
-        ('Flight Details', {
-            'fields': ('schedule', 'seat', 'seat_class')
-        }),
-        ('Financials', {
-            'fields': ('price', 'tax_amount', 'get_insurance_cost', 'get_total_amount')
-        }),
-        ('Add-ons', {
-            'fields': ('addons',)
-        }),
-        ('Insurance', {
-            'fields': ('get_has_insurance', 'get_insurance_policy_number')
-        }),
-    )
+    def get_pricing_factors(self, obj):
+        from flightapp.pricing.ph_holiday_calendar import PhilippineCalendar
+        impact = PhilippineCalendar.get_holiday_impact(obj.schedule.departure_time.date())
+        
+        badges = []
+        if impact['is_fiesta']:
+            badges.append("🎉 Fiesta")
+        if impact['is_long_weekend']:
+            badges.append("🏖️ Long Weekend")
+        if impact['is_payday']:
+            badges.append("💰 Payday")
+        
+        return " | ".join(badges) if badges else "Standard"
+    get_pricing_factors.short_description = "PH Factors"
     
-    def booking_link(self, obj):
-        url = reverse('admin:app_booking_change', args=[obj.booking.id])
-        return format_html('<a href="{}">Booking #{}</a>', url, obj.booking.id)
-    booking_link.short_description = 'Booking'
+    def is_fiesta_period(self, obj):
+        from flightapp.pricing.ph_holiday_calendar import PhilippineCalendar
+        impact = PhilippineCalendar.get_holiday_impact(obj.schedule.departure_time.date())
+        return impact['is_fiesta']
+    is_fiesta_period.boolean = True
 
 
 # ============================================================
@@ -1040,3 +1030,7 @@ class AddOnAdmin(admin.ModelAdmin):
             'fields': ('insurance_plan', 'meal_option', 'baggage_option', 'assistance_service')
         }),
     )
+
+
+
+

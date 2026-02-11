@@ -1,0 +1,1013 @@
+Airline,Date_of_Journey,Source,Destination,Route,Dep_Time,Arrival_Time,Duration,Total_Stops,Additional_Info
+Philippine Airlines,2023-01-01,Manila (MNL),Cebu (CEB),MNL-CEB,8:15,9:45,1h 30m,0,New Year
+Cebu Pacific,2023-01-01,Manila (MNL),Davao (DVO),MNL-DVO,6:30,8:45,2h 15m,0,New Year
+AirAsia Philippines,2023-01-01,Manila (MNL),Iloilo (ILO),MNL-ILO,14:45,16:00,1h 15m,0,New Year
+Philippine Airlines,2023-01-02,Bacolod (BCD),Zamboanga (ZAM),BCD-CEB-ZAM,9:00,12:55,3h 55m,1,Layover in CEB
+Cebu Pacific,2023-01-02,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,10:10,11:40,1h 30m,0,No info
+AirAsia Philippines,2023-01-02,Manila (MNL),Kalibo (KLO),MNL-KLO,7:45,9:00,1h 15m,0,No info
+Philippine Airlines,2023-01-03,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,7:30,11:45,4h 15m,1,Layover in MNL
+Cebu Pacific,2023-01-03,Zamboanga (ZAM),Iloilo (ILO),ZAM-CEB-ILO,11:15,14:30,3h 15m,1,Layover in CEB
+AirAsia Philippines,2023-01-03,Cagayan de Oro (CGY),Puerto Princesa (PPS),CGY-MNL-PPS,14:30,19:45,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-01-04,Manila (MNL),Legazpi (LGP),MNL-LGP,13:20,14:20,1h 00m,0,No info
+Cebu Pacific,2023-01-04,Manila (MNL),Tacloban (TAC),MNL-TAC,16:45,18:05,1h 20m,0,No info
+AirAsia Philippines,2023-01-04,Manila (MNL),Caticlan (MPH),MNL-MPH,6:30,7:40,1h 10m,0,No info
+Philippine Airlines,2023-01-05,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,8:45,12:35,3h 50m,1,Layover in CEB
+Cebu Pacific,2023-01-05,Tacloban (TAC),Davao (DVO),TAC-CEB-DVO,9:15,13:00,3h 45m,1,Layover in CEB
+AirAsia Philippines,2023-01-05,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,12:15,13:45,1h 30m,0,No info
+Philippine Airlines,2023-01-06,Manila (MNL),Cebu (CEB),MNL-CEB,19:15,20:45,1h 30m,0,In-flight meal
+Cebu Pacific,2023-01-06,Davao (DVO),Cebu (CEB),DVO-CEB,7:45,9:00,1h 15m,0,No info
+AirAsia Philippines,2023-01-06,Kalibo (KLO),Zamboanga (ZAM),KLO-MNL-ZAM,16:00,22:15,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-01-07,Manila (MNL),Davao (DVO),MNL-DVO,6:15,8:30,2h 15m,0,No info
+Cebu Pacific,2023-01-07,Manila (MNL),Iloilo (ILO),MNL-ILO,14:15,15:30,1h 15m,0,No info
+AirAsia Philippines,2023-01-07,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,11:45,13:15,1h 30m,0,No info
+Philippine Airlines,2023-01-08,Iloilo (ILO),Legazpi (LGP),ILO-MNL-LGP,9:45,13:40,3h 55m,1,Layover in MNL
+Cebu Pacific,2023-01-08,General Santos (GES),Bacolod (BCD),GES-CEB-BCD,14:30,19:05,4h 35m,1,Layover in CEB
+AirAsia Philippines,2023-01-08,Manila (MNL),Kalibo (KLO),MNL-KLO,18:45,20:00,1h 15m,0,No info
+Philippine Airlines,2023-01-09,Manila (MNL),Cebu (CEB),MNL-CEB,11:45,13:15,1h 30m,0,No info
+Cebu Pacific,2023-01-09,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,10:00,14:15,4h 15m,1,Layover in CEB
+AirAsia Philippines,2023-01-09,Manila (MNL),Legazpi (LGP),MNL-LGP,9:15,10:15,1h 00m,0,No info
+Philippine Airlines,2023-01-10,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,8:15,14:30,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-01-10,Cebu (CEB),Iloilo (ILO),CEB-ILO,14:45,15:30,0h 45m,0,No info
+AirAsia Philippines,2023-01-10,Manila (MNL),Tacloban (TAC),MNL-TAC,12:15,13:35,1h 20m,0,No info
+Philippine Airlines,2023-01-11,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,13:45,14:30,0h 45m,0,No info
+Cebu Pacific,2023-01-11,Manila (MNL),General Santos (GES),MNL-GES,11:15,13:05,1h 50m,0,No info
+AirAsia Philippines,2023-01-11,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,21:15,1:30,4h 15m,1,Red-eye flight
+Philippine Airlines,2023-01-12,Cebu (CEB),Davao (DVO),CEB-DVO,7:00,8:15,1h 15m,0,In-flight meal
+Cebu Pacific,2023-01-12,Manila (MNL),Iloilo (ILO),MNL-ILO,8:45,10:00,1h 15m,0,No info
+AirAsia Philippines,2023-01-12,Manila (MNL),Caticlan (MPH),MNL-MPH,8:15,9:25,1h 10m,0,No info
+Philippine Airlines,2023-01-13,Davao (DVO),Manila (MNL),DVO-MNL,19:45,22:00,2h 15m,0,No info
+Cebu Pacific,2023-01-13,Manila (MNL),Bacolod (BCD),MNL-BCD,16:45,18:00,1h 15m,0,No info
+AirAsia Philippines,2023-01-13,Bacolod (BCD),Puerto Princesa (PPS),BCD-MNL-PPS,18:45,23:00,4h 15m,1,Layover in MNL
+Philippine Airlines,2023-01-14,Manila (MNL),Cebu (CEB),MNL-CEB,14:00,15:30,1h 30m,0,In-flight meal
+Cebu Pacific,2023-01-14,Tacloban (TAC),Kalibo (KLO),TAC-MNL-KLO,12:15,17:00,4h 45m,1,Layover in MNL
+AirAsia Philippines,2023-01-14,Cebu (CEB),Iloilo (ILO),CEB-ILO,17:45,18:30,0h 45m,0,No info
+Philippine Airlines,2023-01-15,Caticlan (MPH),General Santos (GES),MPH-CEB-GES,5:45,10:35,4h 50m,1,Layover in CEB
+Cebu Pacific,2023-01-15,Manila (MNL),Legazpi (LGP),MNL-LGP,10:45,11:45,1h 00m,0,No info
+AirAsia Philippines,2023-01-15,Manila (MNL),General Santos (GES),MNL-GES,15:15,17:05,1h 50m,0,No info
+Philippine Airlines,2023-01-16,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,13:15,14:45,1h 30m,0,No info
+Cebu Pacific,2023-01-16,Iloilo (ILO),Zamboanga (ZAM),ILO-CEB-ZAM,9:45,13:50,4h 05m,1,Layover in CEB
+AirAsia Philippines,2023-01-16,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,12:00,13:30,1h 30m,0,No info
+Philippine Airlines,2023-01-17,Davao (DVO),Cebu (CEB),DVO-CEB,15:30,16:45,1h 15m,0,No info
+Cebu Pacific,2023-01-17,Manila (MNL),Iloilo (ILO),MNL-ILO,20:45,22:00,1h 15m,0,No info
+AirAsia Philippines,2023-01-17,Kalibo (KLO),Davao (DVO),KLO-MNL-DVO,13:45,19:00,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-01-18,Manila (MNL),Cebu (CEB),MNL-CEB,7:15,8:45,1h 30m,0,No info
+Cebu Pacific,2023-01-18,Davao (DVO),Manila (MNL),DVO-MNL,17:45,20:00,2h 15m,0,No info
+AirAsia Philippines,2023-01-18,Manila (MNL),Bacolod (BCD),MNL-BCD,8:00,9:15,1h 15m,0,No info
+Philippine Airlines,2023-01-19,Manila (MNL),Kalibo (KLO),MNL-KLO,9:15,10:30,1h 15m,0,No info
+Cebu Pacific,2023-01-19,Puerto Princesa (PPS),Cagayan de Oro (CGY),PPS-MNL-CGY,15:00,20:45,5h 45m,1,Layover in MNL
+AirAsia Philippines,2023-01-19,Cebu (CEB),Davao (DVO),CEB-DVO,10:15,11:30,1h 15m,0,No info
+Philippine Airlines,2023-01-20,Zamboanga (ZAM),Legazpi (LGP),ZAM-MNL-LGP,7:00,13:15,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-01-20,Manila (MNL),Iloilo (ILO),MNL-ILO,8:15,9:30,1h 15m,0,No info
+AirAsia Philippines,2023-01-20,Manila (MNL),Legazpi (LGP),MNL-LGP,13:15,14:15,1h 00m,0,No info
+Philippine Airlines,2023-01-21,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,12:45,13:30,0h 45m,0,No info
+Cebu Pacific,2023-01-21,Manila (MNL),General Santos (GES),MNL-GES,11:00,12:50,1h 50m,0,No info
+AirAsia Philippines,2023-01-21,Manila (MNL),Cebu (CEB),MNL-CEB,15:30,17:00,1h 30m,0,In-flight meal
+Philippine Airlines,2023-01-22,Cebu (CEB),Iloilo (ILO),CEB-ILO,15:15,16:00,0h 45m,0,No info
+Cebu Pacific,2023-01-22,Tacloban (TAC),Bacolod (BCD),TAC-CEB-BCD,17:15,20:55,3h 40m,1,Layover in CEB
+AirAsia Philippines,2023-01-22,Manila (MNL),Caticlan (MPH),MNL-MPH,12:00,13:10,1h 10m,0,No info
+Philippine Airlines,2023-01-23,General Santos (GES),Kalibo (KLO),GES-CEB-KLO,19:45,1:00,5h 15m,1,Red-eye flight
+Cebu Pacific,2023-01-23,Davao (DVO),Manila (MNL),DVO-MNL,21:15,23:30,2h 15m,0,No info
+AirAsia Philippines,2023-01-23,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,12:15,13:45,1h 30m,0,No info
+Philippine Airlines,2023-01-24,Manila (MNL),Cebu (CEB),MNL-CEB,10:45,12:15,1h 30m,0,No info
+Cebu Pacific,2023-01-24,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,18:45,0:00,5h 15m,1,Red-eye flight
+AirAsia Philippines,2023-01-24,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,10:45,12:15,1h 30m,0,No info
+Philippine Airlines,2023-01-25,Davao (DVO),Cebu (CEB),DVO-CEB,17:00,18:15,1h 15m,0,In-flight meal
+Cebu Pacific,2023-01-25,Cagayan de Oro (CGY),Iloilo (ILO),CGY-CEB-ILO,14:15,17:50,3h 35m,1,Layover in CEB
+AirAsia Philippines,2023-01-25,Manila (MNL),Davao (DVO),MNL-DVO,15:15,17:30,2h 15m,0,No info
+Philippine Airlines,2023-01-26,Manila (MNL),Legazpi (LGP),MNL-LGP,9:15,10:15,1h 00m,0,No info
+Cebu Pacific,2023-01-26,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,11:30,16:20,4h 50m,1,Layover in CEB
+AirAsia Philippines,2023-01-26,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,12:00,13:30,1h 30m,0,No info
+Philippine Airlines,2023-01-27,Manila (MNL),Cebu (CEB),MNL-CEB,19:30,21:00,1h 30m,0,In-flight meal
+Cebu Pacific,2023-01-27,Manila (MNL),Tacloban (TAC),MNL-TAC,9:45,11:05,1h 20m,0,No info
+AirAsia Philippines,2023-01-27,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,13:45,20:00,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-01-28,Davao (DVO),Manila (MNL),DVO-MNL,20:00,22:15,2h 15m,0,No info
+Cebu Pacific,2023-01-28,Manila (MNL),Bacolod (BCD),MNL-BCD,17:00,18:15,1h 15m,0,No info
+AirAsia Philippines,2023-01-28,Cebu (CEB),Iloilo (ILO),CEB-ILO,18:00,18:45,0h 45m,0,No info
+Philippine Airlines,2023-01-29,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,9:45,14:00,4h 15m,1,Layover in CEB
+Cebu Pacific,2023-01-29,Manila (MNL),Kalibo (KLO),MNL-KLO,7:45,9:00,1h 15m,0,No info
+AirAsia Philippines,2023-01-29,Manila (MNL),Davao (DVO),MNL-DVO,6:15,8:30,2h 15m,0,No info
+Philippine Airlines,2023-01-30,Cebu (CEB),Davao (DVO),CEB-DVO,13:45,15:00,1h 15m,0,No info
+Cebu Pacific,2023-01-30,Manila (MNL),Iloilo (ILO),MNL-ILO,15:15,16:30,1h 15m,0,No info
+AirAsia Philippines,2023-01-30,Manila (MNL),Legazpi (LGP),MNL-LGP,12:45,13:45,1h 00m,0,No info
+Philippine Airlines,2023-01-31,Manila (MNL),Cebu (CEB),MNL-CEB,8:45,10:15,1h 30m,0,No info
+Cebu Pacific,2023-01-31,Manila (MNL),General Santos (GES),MNL-GES,11:15,13:05,1h 50m,0,No info
+AirAsia Philippines,2023-01-31,Manila (MNL),Tacloban (TAC),MNL-TAC,16:45,18:05,1h 20m,0,No info
+Airline,Date_of_Journey,Source,Destination,Route,Dep_Time,Arrival_Time,Duration,Total_Stops,Additional_Info
+Philippine Airlines,2023-02-01,Manila (MNL),Cebu (CEB),MNL-CEB,7:45,9:15,1h 30m,0,No info
+Cebu Pacific,2023-02-01,Manila (MNL),Davao (DVO),MNL-DVO,6:00,8:15,2h 15m,0,No info
+AirAsia Philippines,2023-02-01,Manila (MNL),Iloilo (ILO),MNL-ILO,16:00,17:15,1h 15m,0,No info
+Philippine Airlines,2023-02-02,Bacolod (BCD),Zamboanga (ZAM),BCD-CEB-ZAM,8:30,12:25,3h 55m,1,Layover in CEB
+Cebu Pacific,2023-02-02,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,10:45,12:15,1h 30m,0,No info
+AirAsia Philippines,2023-02-02,Manila (MNL),Kalibo (KLO),MNL-KLO,7:30,8:45,1h 15m,0,No info
+Philippine Airlines,2023-02-03,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,8:00,12:15,4h 15m,1,Layover in MNL
+Cebu Pacific,2023-02-03,Zamboanga (ZAM),Iloilo (ILO),ZAM-CEB-ILO,11:45,15:00,3h 15m,1,Layover in CEB
+AirAsia Philippines,2023-02-03,Cagayan de Oro (CGY),Puerto Princesa (PPS),CGY-MNL-PPS,15:15,20:30,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-02-04,Manila (MNL),Legazpi (LGP),MNL-LGP,14:15,15:15,1h 00m,0,No info
+Cebu Pacific,2023-02-04,Manila (MNL),Tacloban (TAC),MNL-TAC,17:45,19:05,1h 20m,0,No info
+AirAsia Philippines,2023-02-04,Manila (MNL),Caticlan (MPH),MNL-MPH,8:00,9:10,1h 10m,0,No info
+Philippine Airlines,2023-02-05,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,9:45,13:35,3h 50m,1,Layover in CEB
+Cebu Pacific,2023-02-05,Tacloban (TAC),Davao (DVO),TAC-CEB-DVO,9:30,13:15,3h 45m,1,Layover in CEB
+AirAsia Philippines,2023-02-05,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,13:00,14:30,1h 30m,0,No info
+Philippine Airlines,2023-02-06,Manila (MNL),Cebu (CEB),MNL-CEB,20:45,22:15,1h 30m,0,In-flight meal
+Cebu Pacific,2023-02-06,Davao (DVO),Cebu (CEB),DVO-CEB,8:45,10:00,1h 15m,0,No info
+AirAsia Philippines,2023-02-06,Kalibo (KLO),Zamboanga (ZAM),KLO-MNL-ZAM,17:15,23:30,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-02-07,Manila (MNL),Davao (DVO),MNL-DVO,7:00,9:15,2h 15m,0,No info
+Cebu Pacific,2023-02-07,Manila (MNL),Iloilo (ILO),MNL-ILO,14:45,16:00,1h 15m,0,No info
+AirAsia Philippines,2023-02-07,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,12:30,14:00,1h 30m,0,No info
+Philippine Airlines,2023-02-08,Iloilo (ILO),Legazpi (LGP),ILO-MNL-LGP,10:30,14:25,3h 55m,1,Layover in MNL
+Cebu Pacific,2023-02-08,General Santos (GES),Bacolod (BCD),GES-CEB-BCD,15:45,20:20,4h 35m,1,Layover in CEB
+AirAsia Philippines,2023-02-08,Manila (MNL),Kalibo (KLO),MNL-KLO,19:45,21:00,1h 15m,0,No info
+Philippine Airlines,2023-02-09,Manila (MNL),Cebu (CEB),MNL-CEB,12:30,14:00,1h 30m,0,No info
+Cebu Pacific,2023-02-09,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,10:45,15:00,4h 15m,1,Layover in CEB
+AirAsia Philippines,2023-02-09,Manila (MNL),Legazpi (LGP),MNL-LGP,9:30,10:30,1h 00m,0,No info
+Philippine Airlines,2023-02-10,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,9:00,15:15,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-02-10,Cebu (CEB),Iloilo (ILO),CEB-ILO,16:00,16:45,0h 45m,0,No info
+AirAsia Philippines,2023-02-10,Manila (MNL),Tacloban (TAC),MNL-TAC,13:00,14:20,1h 20m,0,No info
+Philippine Airlines,2023-02-11,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,15:15,16:00,0h 45m,0,No info
+Cebu Pacific,2023-02-11,Manila (MNL),General Santos (GES),MNL-GES,11:45,13:35,1h 50m,0,No info
+AirAsia Philippines,2023-02-11,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,21:45,2:00,4h 15m,1,Red-eye flight
+Philippine Airlines,2023-02-12,Cebu (CEB),Davao (DVO),CEB-DVO,7:45,9:00,1h 15m,0,In-flight meal
+Cebu Pacific,2023-02-12,Manila (MNL),Iloilo (ILO),MNL-ILO,9:15,10:30,1h 15m,0,No info
+AirAsia Philippines,2023-02-12,Manila (MNL),Caticlan (MPH),MNL-MPH,8:45,9:55,1h 10m,0,No info
+Philippine Airlines,2023-02-13,Davao (DVO),Manila (MNL),DVO-MNL,20:30,22:45,2h 15m,0,No info
+Cebu Pacific,2023-02-13,Manila (MNL),Bacolod (BCD),MNL-BCD,18:15,19:30,1h 15m,0,No info
+AirAsia Philippines,2023-02-13,Bacolod (BCD),Puerto Princesa (PPS),BCD-MNL-PPS,19:45,0:00,4h 15m,1,Layover in MNL
+Philippine Airlines,2023-02-14,Manila (MNL),Cebu (CEB),MNL-CEB,14:45,16:15,1h 30m,0,In-flight meal
+Cebu Pacific,2023-02-14,Tacloban (TAC),Kalibo (KLO),TAC-MNL-KLO,12:45,17:30,4h 45m,1,Layover in MNL
+AirAsia Philippines,2023-02-14,Cebu (CEB),Iloilo (ILO),CEB-ILO,18:30,19:15,0h 45m,0,No info
+Philippine Airlines,2023-02-15,Caticlan (MPH),General Santos (GES),MPH-CEB-GES,6:45,11:35,4h 50m,1,Layover in CEB
+Cebu Pacific,2023-02-15,Manila (MNL),Legazpi (LGP),MNL-LGP,11:15,12:15,1h 00m,0,No info
+AirAsia Philippines,2023-02-15,Manila (MNL),General Santos (GES),MNL-GES,15:45,17:35,1h 50m,0,No info
+Philippine Airlines,2023-02-16,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,13:45,15:15,1h 30m,0,No info
+Cebu Pacific,2023-02-16,Iloilo (ILO),Zamboanga (ZAM),ILO-CEB-ZAM,10:45,14:50,4h 05m,1,Layover in CEB
+AirAsia Philippines,2023-02-16,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,13:15,14:45,1h 30m,0,No info
+Philippine Airlines,2023-02-17,Davao (DVO),Cebu (CEB),DVO-CEB,16:45,18:00,1h 15m,0,No info
+Cebu Pacific,2023-02-17,Manila (MNL),Iloilo (ILO),MNL-ILO,21:30,22:45,1h 15m,0,No info
+AirAsia Philippines,2023-02-17,Kalibo (KLO),Davao (DVO),KLO-MNL-DVO,14:45,20:00,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-02-18,Manila (MNL),Cebu (CEB),MNL-CEB,7:45,9:15,1h 30m,0,No info
+Cebu Pacific,2023-02-18,Davao (DVO),Manila (MNL),DVO-MNL,18:45,21:00,2h 15m,0,No info
+AirAsia Philippines,2023-02-18,Manila (MNL),Bacolod (BCD),MNL-BCD,8:30,9:45,1h 15m,0,No info
+Philippine Airlines,2023-02-19,Manila (MNL),Kalibo (KLO),MNL-KLO,9:45,11:00,1h 15m,0,No info
+Cebu Pacific,2023-02-19,Puerto Princesa (PPS),Cagayan de Oro (CGY),PPS-MNL-CGY,16:00,21:45,5h 45m,1,Layover in MNL
+AirAsia Philippines,2023-02-19,Cebu (CEB),Davao (DVO),CEB-DVO,10:45,12:00,1h 15m,0,No info
+Philippine Airlines,2023-02-20,Zamboanga (ZAM),Legazpi (LGP),ZAM-MNL-LGP,8:15,14:30,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-02-20,Manila (MNL),Iloilo (ILO),MNL-ILO,8:45,10:00,1h 15m,0,No info
+AirAsia Philippines,2023-02-20,Manila (MNL),Legazpi (LGP),MNL-LGP,13:45,14:45,1h 00m,0,No info
+Philippine Airlines,2023-02-21,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,13:30,14:15,0h 45m,0,No info
+Cebu Pacific,2023-02-21,Manila (MNL),General Santos (GES),MNL-GES,12:00,13:50,1h 50m,0,No info
+AirAsia Philippines,2023-02-21,Manila (MNL),Cebu (CEB),MNL-CEB,16:30,18:00,1h 30m,0,In-flight meal
+Philippine Airlines,2023-02-22,Cebu (CEB),Iloilo (ILO),CEB-ILO,15:45,16:30,0h 45m,0,No info
+Cebu Pacific,2023-02-22,Tacloban (TAC),Bacolod (BCD),TAC-CEB-BCD,17:45,21:25,3h 40m,1,Layover in CEB
+AirAsia Philippines,2023-02-22,Manila (MNL),Caticlan (MPH),MNL-MPH,12:30,13:40,1h 10m,0,No info
+Philippine Airlines,2023-02-23,General Santos (GES),Kalibo (KLO),GES-CEB-KLO,20:45,2:00,5h 15m,1,Red-eye flight
+Cebu Pacific,2023-02-23,Davao (DVO),Manila (MNL),DVO-MNL,21:45,0:00,2h 15m,0,No info
+AirAsia Philippines,2023-02-23,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,12:45,14:15,1h 30m,0,No info
+Philippine Airlines,2023-02-24,Manila (MNL),Cebu (CEB),MNL-CEB,11:45,13:15,1h 30m,0,No info
+Cebu Pacific,2023-02-24,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,19:45,1:00,5h 15m,1,Red-eye flight
+AirAsia Philippines,2023-02-24,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,11:30,13:00,1h 30m,0,No info
+Philippine Airlines,2023-02-25,Davao (DVO),Cebu (CEB),DVO-CEB,17:30,18:45,1h 15m,0,In-flight meal
+Cebu Pacific,2023-02-25,Cagayan de Oro (CGY),Iloilo (ILO),CGY-CEB-ILO,14:45,18:20,3h 35m,1,Layover in CEB
+AirAsia Philippines,2023-02-25,Manila (MNL),Davao (DVO),MNL-DVO,15:45,18:00,2h 15m,0,EDSA Anniversary
+Philippine Airlines,2023-02-26,Manila (MNL),Legazpi (LGP),MNL-LGP,9:45,10:45,1h 00m,0,No info
+Cebu Pacific,2023-02-26,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,12:30,17:20,4h 50m,1,Layover in CEB
+AirAsia Philippines,2023-02-26,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:15,15:45,1h 30m,0,No info
+Philippine Airlines,2023-02-27,Manila (MNL),Cebu (CEB),MNL-CEB,20:15,21:45,1h 30m,0,In-flight meal
+Cebu Pacific,2023-02-27,Manila (MNL),Tacloban (TAC),MNL-TAC,10:15,11:35,1h 20m,0,No info
+AirAsia Philippines,2023-02-27,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,14:45,21:00,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-02-28,Davao (DVO),Manila (MNL),DVO-MNL,20:15,22:30,2h 15m,0,No info
+Cebu Pacific,2023-02-28,Manila (MNL),Bacolod (BCD),MNL-BCD,17:15,18:30,1h 15m,0,No info
+AirAsia Philippines,2023-02-28,Cebu (CEB),Iloilo (ILO),CEB-ILO,19:00,19:45,0h 45m,0,No info
+Airline,Date_of_Journey,Source,Destination,Route,Dep_Time,Arrival_Time,Duration,Total_Stops,Additional_Info
+Philippine Airlines,2023-03-01,Manila (MNL),Cebu (CEB),MNL-CEB,7:00,8:30,1h 30m,0,No info
+Cebu Pacific,2023-03-01,Manila (MNL),Davao (DVO),MNL-DVO,5:45,8:00,2h 15m,0,No info
+AirAsia Philippines,2023-03-01,Manila (MNL),Iloilo (ILO),MNL-ILO,16:30,17:45,1h 15m,0,No info
+Philippine Airlines,2023-03-02,Bacolod (BCD),Zamboanga (ZAM),BCD-CEB-ZAM,8:15,12:10,3h 55m,1,Layover in CEB
+Cebu Pacific,2023-03-02,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,11:45,13:15,1h 30m,0,No info
+AirAsia Philippines,2023-03-02,Manila (MNL),Kalibo (KLO),MNL-KLO,7:45,9:00,1h 15m,0,No info
+Philippine Airlines,2023-03-03,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,8:45,13:00,4h 15m,1,Layover in MNL
+Cebu Pacific,2023-03-03,Zamboanga (ZAM),Iloilo (ILO),ZAM-CEB-ILO,11:15,14:30,3h 15m,1,Layover in CEB
+AirAsia Philippines,2023-03-03,Cagayan de Oro (CGY),Puerto Princesa (PPS),CGY-MNL-PPS,15:45,21:00,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-03-04,Manila (MNL),Legazpi (LGP),MNL-LGP,14:45,15:45,1h 00m,0,No info
+Cebu Pacific,2023-03-04,Manila (MNL),Tacloban (TAC),MNL-TAC,18:15,19:35,1h 20m,0,No info
+AirAsia Philippines,2023-03-04,Manila (MNL),Caticlan (MPH),MNL-MPH,8:30,9:40,1h 10m,0,No info
+Philippine Airlines,2023-03-05,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,10:30,14:20,3h 50m,1,Layover in CEB
+Cebu Pacific,2023-03-05,Tacloban (TAC),Davao (DVO),TAC-CEB-DVO,9:00,12:45,3h 45m,1,Layover in CEB
+AirAsia Philippines,2023-03-05,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,13:15,14:45,1h 30m,0,No info
+Philippine Airlines,2023-03-06,Manila (MNL),Cebu (CEB),MNL-CEB,21:15,22:45,1h 30m,0,In-flight meal
+Cebu Pacific,2023-03-06,Davao (DVO),Cebu (CEB),DVO-CEB,9:30,10:45,1h 15m,0,No info
+AirAsia Philippines,2023-03-06,Kalibo (KLO),Zamboanga (ZAM),KLO-MNL-ZAM,17:45,0:00,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-03-07,Manila (MNL),Davao (DVO),MNL-DVO,7:30,9:45,2h 15m,0,No info
+Cebu Pacific,2023-03-07,Manila (MNL),Iloilo (ILO),MNL-ILO,15:30,16:45,1h 15m,0,No info
+AirAsia Philippines,2023-03-07,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,13:30,15:00,1h 30m,0,No info
+Philippine Airlines,2023-03-08,Iloilo (ILO),Legazpi (LGP),ILO-MNL-LGP,11:30,15:25,3h 55m,1,Layover in MNL
+Cebu Pacific,2023-03-08,General Santos (GES),Bacolod (BCD),GES-CEB-BCD,16:30,21:05,4h 35m,1,Layover in CEB
+AirAsia Philippines,2023-03-08,Manila (MNL),Kalibo (KLO),MNL-KLO,20:30,21:45,1h 15m,0,No info
+Philippine Airlines,2023-03-09,Manila (MNL),Cebu (CEB),MNL-CEB,13:30,15:00,1h 30m,0,No info
+Cebu Pacific,2023-03-09,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,11:45,16:00,4h 15m,1,Layover in CEB
+AirAsia Philippines,2023-03-09,Manila (MNL),Legazpi (LGP),MNL-LGP,10:15,11:15,1h 00m,0,No info
+Philippine Airlines,2023-03-10,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,9:30,15:45,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-03-10,Cebu (CEB),Iloilo (ILO),CEB-ILO,16:45,17:30,0h 45m,0,No info
+AirAsia Philippines,2023-03-10,Manila (MNL),Tacloban (TAC),MNL-TAC,13:30,14:50,1h 20m,0,No info
+Philippine Airlines,2023-03-11,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,15:45,16:30,0h 45m,0,No info
+Cebu Pacific,2023-03-11,Manila (MNL),General Santos (GES),MNL-GES,12:30,14:20,1h 50m,0,No info
+AirAsia Philippines,2023-03-11,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,22:30,2:45,4h 15m,1,Red-eye flight
+Philippine Airlines,2023-03-12,Cebu (CEB),Davao (DVO),CEB-DVO,8:15,9:30,1h 15m,0,In-flight meal
+Cebu Pacific,2023-03-12,Manila (MNL),Iloilo (ILO),MNL-ILO,10:00,11:15,1h 15m,0,No info
+AirAsia Philippines,2023-03-12,Manila (MNL),Caticlan (MPH),MNL-MPH,9:30,10:40,1h 10m,0,No info
+Philippine Airlines,2023-03-13,Davao (DVO),Manila (MNL),DVO-MNL,21:15,23:30,2h 15m,0,No info
+Cebu Pacific,2023-03-13,Manila (MNL),Bacolod (BCD),MNL-BCD,18:45,20:00,1h 15m,0,No info
+AirAsia Philippines,2023-03-13,Bacolod (BCD),Puerto Princesa (PPS),BCD-MNL-PPS,20:30,0:45,4h 15m,1,Layover in MNL
+Philippine Airlines,2023-03-14,Manila (MNL),Cebu (CEB),MNL-CEB,15:30,17:00,1h 30m,0,In-flight meal
+Cebu Pacific,2023-03-14,Tacloban (TAC),Kalibo (KLO),TAC-MNL-KLO,13:30,18:15,4h 45m,1,Layover in MNL
+AirAsia Philippines,2023-03-14,Cebu (CEB),Iloilo (ILO),CEB-ILO,19:15,20:00,0h 45m,0,No info
+Philippine Airlines,2023-03-15,Caticlan (MPH),General Santos (GES),MPH-CEB-GES,7:30,12:20,4h 50m,1,Layover in CEB
+Cebu Pacific,2023-03-15,Manila (MNL),Legazpi (LGP),MNL-LGP,12:00,13:00,1h 00m,0,No info
+AirAsia Philippines,2023-03-15,Manila (MNL),General Santos (GES),MNL-GES,16:30,18:20,1h 50m,0,No info
+Philippine Airlines,2023-03-16,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,14:30,16:00,1h 30m,0,No info
+Cebu Pacific,2023-03-16,Iloilo (ILO),Zamboanga (ZAM),ILO-CEB-ZAM,11:30,15:35,4h 05m,1,Layover in CEB
+AirAsia Philippines,2023-03-16,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,13:45,15:15,1h 30m,0,No info
+Philippine Airlines,2023-03-17,Davao (DVO),Cebu (CEB),DVO-CEB,17:45,19:00,1h 15m,0,No info
+Cebu Pacific,2023-03-17,Manila (MNL),Iloilo (ILO),MNL-ILO,22:15,23:30,1h 15m,0,No info
+AirAsia Philippines,2023-03-17,Kalibo (KLO),Davao (DVO),KLO-MNL-DVO,15:30,20:45,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-03-18,Manila (MNL),Cebu (CEB),MNL-CEB,8:30,10:00,1h 30m,0,No info
+Cebu Pacific,2023-03-18,Davao (DVO),Manila (MNL),DVO-MNL,19:30,21:45,2h 15m,0,No info
+AirAsia Philippines,2023-03-18,Manila (MNL),Bacolod (BCD),MNL-BCD,9:15,10:30,1h 15m,0,No info
+Philippine Airlines,2023-03-19,Manila (MNL),Kalibo (KLO),MNL-KLO,10:30,11:45,1h 15m,0,No info
+Cebu Pacific,2023-03-19,Puerto Princesa (PPS),Cagayan de Oro (CGY),PPS-MNL-CGY,16:45,22:30,5h 45m,1,Layover in MNL
+AirAsia Philippines,2023-03-19,Cebu (CEB),Davao (DVO),CEB-DVO,11:30,12:45,1h 15m,0,No info
+Philippine Airlines,2023-03-20,Zamboanga (ZAM),Legazpi (LGP),ZAM-MNL-LGP,8:45,15:00,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-03-20,Manila (MNL),Iloilo (ILO),MNL-ILO,9:30,10:45,1h 15m,0,No info
+AirAsia Philippines,2023-03-20,Manila (MNL),Legazpi (LGP),MNL-LGP,14:30,15:30,1h 00m,0,No info
+Philippine Airlines,2023-03-21,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,14:15,15:00,0h 45m,0,No info
+Cebu Pacific,2023-03-21,Manila (MNL),General Santos (GES),MNL-GES,12:45,14:35,1h 50m,0,No info
+AirAsia Philippines,2023-03-21,Manila (MNL),Cebu (CEB),MNL-CEB,17:30,19:00,1h 30m,0,In-flight meal
+Philippine Airlines,2023-03-22,Cebu (CEB),Iloilo (ILO),CEB-ILO,16:30,17:15,0h 45m,0,No info
+Cebu Pacific,2023-03-22,Tacloban (TAC),Bacolod (BCD),TAC-CEB-BCD,18:30,22:10,3h 40m,1,Layover in CEB
+AirAsia Philippines,2023-03-22,Manila (MNL),Caticlan (MPH),MNL-MPH,13:15,14:25,1h 10m,0,No info
+Philippine Airlines,2023-03-23,General Santos (GES),Kalibo (KLO),GES-CEB-KLO,21:30,2:45,5h 15m,1,Red-eye flight
+Cebu Pacific,2023-03-23,Davao (DVO),Manila (MNL),DVO-MNL,22:30,0:45,2h 15m,0,No info
+AirAsia Philippines,2023-03-23,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,13:30,15:00,1h 30m,0,No info
+Philippine Airlines,2023-03-24,Manila (MNL),Cebu (CEB),MNL-CEB,12:30,14:00,1h 30m,0,No info
+Cebu Pacific,2023-03-24,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,20:30,1:45,5h 15m,1,Red-eye flight
+AirAsia Philippines,2023-03-24,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,12:15,13:45,1h 30m,0,No info
+Philippine Airlines,2023-03-25,Davao (DVO),Cebu (CEB),DVO-CEB,18:15,19:30,1h 15m,0,In-flight meal
+Cebu Pacific,2023-03-25,Cagayan de Oro (CGY),Iloilo (ILO),CGY-CEB-ILO,15:30,19:05,3h 35m,1,Layover in CEB
+AirAsia Philippines,2023-03-25,Manila (MNL),Davao (DVO),MNL-DVO,16:30,18:45,2h 15m,0,No info
+Philippine Airlines,2023-03-26,Manila (MNL),Legazpi (LGP),MNL-LGP,10:30,11:30,1h 00m,0,No info
+Cebu Pacific,2023-03-26,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,13:15,18:05,4h 50m,1,Layover in CEB
+AirAsia Philippines,2023-03-26,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:45,16:15,1h 30m,0,No info
+Philippine Airlines,2023-03-27,Manila (MNL),Cebu (CEB),MNL-CEB,21:30,23:00,1h 30m,0,In-flight meal
+Cebu Pacific,2023-03-27,Manila (MNL),Tacloban (TAC),MNL-TAC,11:30,12:50,1h 20m,0,No info
+AirAsia Philippines,2023-03-27,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,15:30,21:45,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-03-28,Davao (DVO),Manila (MNL),DVO-MNL,20:45,23:00,2h 15m,0,No info
+Cebu Pacific,2023-03-28,Manila (MNL),Bacolod (BCD),MNL-BCD,17:45,19:00,1h 15m,0,No info
+AirAsia Philippines,2023-03-28,Cebu (CEB),Iloilo (ILO),CEB-ILO,19:45,20:30,0h 45m,0,No info
+Philippine Airlines,2023-03-29,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,11:00,15:15,4h 15m,1,Layover in CEB
+Cebu Pacific,2023-03-29,Manila (MNL),Kalibo (KLO),MNL-KLO,9:00,10:15,1h 15m,0,No info
+AirAsia Philippines,2023-03-29,Manila (MNL),Davao (DVO),MNL-DVO,7:00,9:15,2h 15m,0,No info
+Philippine Airlines,2023-03-30,Manila (MNL),Cebu (CEB),MNL-CEB,15:30,17:00,1h 30m,0,No info
+Cebu Pacific,2023-03-30,Manila (MNL),General Santos (GES),MNL-GES,13:45,15:35,1h 50m,0,No info
+AirAsia Philippines,2023-03-30,Manila (MNL),Tacloban (TAC),MNL-TAC,18:15,19:35,1h 20m,0,No info
+Philippine Airlines,2023-03-31,Manila (MNL),Cebu (CEB),MNL-CEB,14:15,15:45,1h 30m,0,In-flight meal
+Cebu Pacific,2023-03-31,Davao (DVO),Cebu (CEB),DVO-CEB,10:45,12:00,1h 15m,0,No info
+AirAsia Philippines,2023-03-31,Manila (MNL),Clark (CRK),MNL-CRK,16:30,17:15,0h 45m,0,No info
+Airline,Date_of_Journey,Source,Destination,Route,Dep_Time,Arrival_Time,Duration,Total_Stops,Additional_Info
+Philippine Airlines,2023-04-01,Manila (MNL),Cebu (CEB),MNL-CEB,7:15,8:45,1h 30m,0,No info
+Cebu Pacific,2023-04-01,Manila (MNL),Davao (DVO),MNL-DVO,5:45,8:00,2h 15m,0,No info
+AirAsia Philippines,2023-04-01,Manila (MNL),Iloilo (ILO),MNL-ILO,16:45,18:00,1h 15m,0,No info
+Philippine Airlines,2023-04-02,Bacolod (BCD),Zamboanga (ZAM),BCD-CEB-ZAM,8:45,12:40,3h 55m,1,Layover in CEB
+Cebu Pacific,2023-04-02,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,12:30,14:00,1h 30m,0,No info
+AirAsia Philippines,2023-04-02,Manila (MNL),Kalibo (KLO),MNL-KLO,8:15,9:30,1h 15m,0,No info
+Philippine Airlines,2023-04-03,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,9:30,13:45,4h 15m,1,Layover in MNL
+Cebu Pacific,2023-04-03,Zamboanga (ZAM),Iloilo (ILO),ZAM-CEB-ILO,11:45,15:00,3h 15m,1,Layover in CEB
+AirAsia Philippines,2023-04-03,Cagayan de Oro (CGY),Puerto Princesa (PPS),CGY-MNL-PPS,16:15,21:30,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-04-04,Manila (MNL),Legazpi (LGP),MNL-LGP,15:30,16:30,1h 00m,0,No info
+Cebu Pacific,2023-04-04,Manila (MNL),Tacloban (TAC),MNL-TAC,18:45,20:05,1h 20m,0,No info
+AirAsia Philippines,2023-04-04,Manila (MNL),Caticlan (MPH),MNL-MPH,9:15,10:25,1h 10m,0,No info
+Philippine Airlines,2023-04-05,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,11:15,15:05,3h 50m,1,Layover in CEB
+Cebu Pacific,2023-04-05,Tacloban (TAC),Davao (DVO),TAC-CEB-DVO,9:45,13:30,3h 45m,1,Layover in CEB
+AirAsia Philippines,2023-04-05,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,13:45,15:15,1h 30m,0,No info
+Philippine Airlines,2023-04-06,Manila (MNL),Cebu (CEB),MNL-CEB,21:45,23:15,1h 30m,0,In-flight meal
+Cebu Pacific,2023-04-06,Davao (DVO),Cebu (CEB),DVO-CEB,9:45,11:00,1h 15m,0,Maundy Thursday
+AirAsia Philippines,2023-04-06,Kalibo (KLO),Zamboanga (ZAM),KLO-MNL-ZAM,18:15,0:30,6h 15m,1,Maundy Thursday
+Philippine Airlines,2023-04-07,Manila (MNL),Davao (DVO),MNL-DVO,8:00,10:15,2h 15m,0,Good Friday
+Cebu Pacific,2023-04-07,Manila (MNL),Iloilo (ILO),MNL-ILO,15:45,17:00,1h 15m,0,Good Friday
+AirAsia Philippines,2023-04-07,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,14:15,15:45,1h 30m,0,Good Friday
+Philippine Airlines,2023-04-08,Iloilo (ILO),Legazpi (LGP),ILO-MNL-LGP,12:00,15:55,3h 55m,1,Layover in MNL
+Cebu Pacific,2023-04-08,General Santos (GES),Bacolod (BCD),GES-CEB-BCD,17:15,21:50,4h 35m,1,Layover in CEB
+AirAsia Philippines,2023-04-08,Manila (MNL),Kalibo (KLO),MNL-KLO,20:45,22:00,1h 15m,0,No info
+Philippine Airlines,2023-04-09,Manila (MNL),Cebu (CEB),MNL-CEB,14:15,15:45,1h 30m,0,No info
+Cebu Pacific,2023-04-09,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,12:30,16:45,4h 15m,1,Layover in CEB
+AirAsia Philippines,2023-04-09,Manila (MNL),Legazpi (LGP),MNL-LGP,11:00,12:00,1h 00m,0,No info
+Philippine Airlines,2023-04-10,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,10:00,16:15,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-04-10,Cebu (CEB),Iloilo (ILO),CEB-ILO,17:30,18:15,0h 45m,0,No info
+AirAsia Philippines,2023-04-10,Manila (MNL),Tacloban (TAC),MNL-TAC,14:15,15:35,1h 20m,0,No info
+Philippine Airlines,2023-04-11,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,16:30,17:15,0h 45m,0,No info
+Cebu Pacific,2023-04-11,Manila (MNL),General Santos (GES),MNL-GES,13:00,14:50,1h 50m,0,No info
+AirAsia Philippines,2023-04-11,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,22:45,3:00,4h 15m,1,Red-eye flight
+Philippine Airlines,2023-04-12,Cebu (CEB),Davao (DVO),CEB-DVO,9:00,10:15,1h 15m,0,In-flight meal
+Cebu Pacific,2023-04-12,Manila (MNL),Iloilo (ILO),MNL-ILO,10:45,12:00,1h 15m,0,No info
+AirAsia Philippines,2023-04-12,Manila (MNL),Caticlan (MPH),MNL-MPH,10:00,11:10,1h 10m,0,No info
+Philippine Airlines,2023-04-13,Davao (DVO),Manila (MNL),DVO-MNL,21:45,0:00,2h 15m,0,No info
+Cebu Pacific,2023-04-13,Manila (MNL),Bacolod (BCD),MNL-BCD,19:30,20:45,1h 15m,0,No info
+AirAsia Philippines,2023-04-13,Bacolod (BCD),Puerto Princesa (PPS),BCD-MNL-PPS,20:45,1:00,4h 15m,1,Layover in MNL
+Philippine Airlines,2023-04-14,Manila (MNL),Cebu (CEB),MNL-CEB,15:45,17:15,1h 30m,0,In-flight meal
+Cebu Pacific,2023-04-14,Tacloban (TAC),Kalibo (KLO),TAC-MNL-KLO,13:45,18:30,4h 45m,1,Layover in MNL
+AirAsia Philippines,2023-04-14,Cebu (CEB),Iloilo (ILO),CEB-ILO,19:45,20:30,0h 45m,0,No info
+Philippine Airlines,2023-04-15,Caticlan (MPH),General Santos (GES),MPH-CEB-GES,8:00,12:50,4h 50m,1,Layover in CEB
+Cebu Pacific,2023-04-15,Manila (MNL),Legazpi (LGP),MNL-LGP,12:45,13:45,1h 00m,0,No info
+AirAsia Philippines,2023-04-15,Manila (MNL),General Santos (GES),MNL-GES,16:45,18:35,1h 50m,0,No info
+Philippine Airlines,2023-04-16,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,15:00,16:30,1h 30m,0,No info
+Cebu Pacific,2023-04-16,Iloilo (ILO),Zamboanga (ZAM),ILO-CEB-ZAM,11:45,15:50,4h 05m,1,Layover in CEB
+AirAsia Philippines,2023-04-16,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:30,16:00,1h 30m,0,No info
+Philippine Airlines,2023-04-17,Davao (DVO),Cebu (CEB),DVO-CEB,18:00,19:15,1h 15m,0,No info
+Cebu Pacific,2023-04-17,Manila (MNL),Iloilo (ILO),MNL-ILO,22:45,0:00,1h 15m,0,No info
+AirAsia Philippines,2023-04-17,Kalibo (KLO),Davao (DVO),KLO-MNL-DVO,15:45,21:00,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-04-18,Manila (MNL),Cebu (CEB),MNL-CEB,8:45,10:15,1h 30m,0,No info
+Cebu Pacific,2023-04-18,Davao (DVO),Manila (MNL),DVO-MNL,19:45,22:00,2h 15m,0,No info
+AirAsia Philippines,2023-04-18,Manila (MNL),Bacolod (BCD),MNL-BCD,9:30,10:45,1h 15m,0,No info
+Philippine Airlines,2023-04-19,Manila (MNL),Kalibo (KLO),MNL-KLO,11:00,12:15,1h 15m,0,No info
+Cebu Pacific,2023-04-19,Puerto Princesa (PPS),Cagayan de Oro (CGY),PPS-MNL-CGY,17:30,23:15,5h 45m,1,Layover in MNL
+AirAsia Philippines,2023-04-19,Cebu (CEB),Davao (DVO),CEB-DVO,12:00,13:15,1h 15m,0,No info
+Philippine Airlines,2023-04-20,Zamboanga (ZAM),Legazpi (LGP),ZAM-MNL-LGP,9:30,15:45,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-04-20,Manila (MNL),Iloilo (ILO),MNL-ILO,10:00,11:15,1h 15m,0,No info
+AirAsia Philippines,2023-04-20,Manila (MNL),Legazpi (LGP),MNL-LGP,14:45,15:45,1h 00m,0,No info
+Philippine Airlines,2023-04-21,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,15:00,15:45,0h 45m,0,No info
+Cebu Pacific,2023-04-21,Manila (MNL),General Santos (GES),MNL-GES,13:30,15:20,1h 50m,0,No info
+AirAsia Philippines,2023-04-21,Manila (MNL),Cebu (CEB),MNL-CEB,17:45,19:15,1h 30m,0,In-flight meal
+Philippine Airlines,2023-04-22,Cebu (CEB),Iloilo (ILO),CEB-ILO,17:00,17:45,0h 45m,0,Eid al-Fitr
+Cebu Pacific,2023-04-22,Tacloban (TAC),Bacolod (BCD),TAC-CEB-BCD,19:00,22:40,3h 40m,1,Eid al-Fitr
+AirAsia Philippines,2023-04-22,Manila (MNL),Caticlan (MPH),MNL-MPH,13:45,14:55,1h 10m,0,Eid al-Fitr
+Philippine Airlines,2023-04-23,General Santos (GES),Kalibo (KLO),GES-CEB-KLO,22:00,3:15,5h 15m,1,Red-eye flight
+Cebu Pacific,2023-04-23,Davao (DVO),Manila (MNL),DVO-MNL,23:00,1:15,2h 15m,0,No info
+AirAsia Philippines,2023-04-23,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,14:00,15:30,1h 30m,0,No info
+Philippine Airlines,2023-04-24,Manila (MNL),Cebu (CEB),MNL-CEB,13:00,14:30,1h 30m,0,No info
+Cebu Pacific,2023-04-24,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,20:45,2:00,5h 15m,1,Red-eye flight
+AirAsia Philippines,2023-04-24,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,12:45,14:15,1h 30m,0,No info
+Philippine Airlines,2023-04-25,Davao (DVO),Cebu (CEB),DVO-CEB,18:30,19:45,1h 15m,0,In-flight meal
+Cebu Pacific,2023-04-25,Cagayan de Oro (CGY),Iloilo (ILO),CGY-CEB-ILO,15:45,19:20,3h 35m,1,Layover in CEB
+AirAsia Philippines,2023-04-25,Manila (MNL),Davao (DVO),MNL-DVO,16:45,19:00,2h 15m,0,No info
+Philippine Airlines,2023-04-26,Manila (MNL),Legazpi (LGP),MNL-LGP,11:00,12:00,1h 00m,0,No info
+Cebu Pacific,2023-04-26,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,13:45,18:35,4h 50m,1,Layover in CEB
+AirAsia Philippines,2023-04-26,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:30,16:00,1h 30m,0,No info
+Philippine Airlines,2023-04-27,Manila (MNL),Cebu (CEB),MNL-CEB,21:45,23:15,1h 30m,0,In-flight meal
+Cebu Pacific,2023-04-27,Manila (MNL),Tacloban (TAC),MNL-TAC,12:00,13:20,1h 20m,0,No info
+AirAsia Philippines,2023-04-27,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,15:45,22:00,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-04-28,Davao (DVO),Manila (MNL),DVO-MNL,21:30,23:45,2h 15m,0,No info
+Cebu Pacific,2023-04-28,Manila (MNL),Bacolod (BCD),MNL-BCD,18:30,19:45,1h 15m,0,No info
+AirAsia Philippines,2023-04-28,Cebu (CEB),Iloilo (ILO),CEB-ILO,20:15,21:00,0h 45m,0,No info
+Philippine Airlines,2023-04-29,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,11:30,15:45,4h 15m,1,Layover in CEB
+Cebu Pacific,2023-04-29,Manila (MNL),Kalibo (KLO),MNL-KLO,9:45,11:00,1h 15m,0,No info
+AirAsia Philippines,2023-04-29,Manila (MNL),Davao (DVO),MNL-DVO,7:30,9:45,2h 15m,0,No info
+Philippine Airlines,2023-04-30,Manila (MNL),Cebu (CEB),MNL-CEB,15:15,16:45,1h 30m,0,No info
+Cebu Pacific,2023-04-30,Manila (MNL),General Santos (GES),MNL-GES,13:15,15:05,1h 50m,0,No info
+AirAsia Philippines,2023-04-30,Manila (MNL),Tacloban (TAC),MNL-TAC,17:30,18:50,1h 20m,0,No info
+Airline,Date_of_Journey,Source,Destination,Route,Dep_Time,Arrival_Time,Duration,Total_Stops,Additional_Info
+Philippine Airlines,2023-05-01,Manila (MNL),Cebu (CEB),MNL-CEB,7:45,9:15,1h 30m,0,Labor Day
+Cebu Pacific,2023-05-01,Manila (MNL),Davao (DVO),MNL-DVO,6:15,8:30,2h 15m,0,Labor Day
+AirAsia Philippines,2023-05-01,Manila (MNL),Iloilo (ILO),MNL-ILO,17:15,18:30,1h 15m,0,Labor Day
+Philippine Airlines,2023-05-02,Bacolod (BCD),Zamboanga (ZAM),BCD-CEB-ZAM,9:30,13:25,3h 55m,1,Layover in CEB
+Cebu Pacific,2023-05-02,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,13:15,14:45,1h 30m,0,No info
+AirAsia Philippines,2023-05-02,Manila (MNL),Kalibo (KLO),MNL-KLO,8:45,10:00,1h 15m,0,No info
+Philippine Airlines,2023-05-03,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,10:00,14:15,4h 15m,1,Layover in MNL
+Cebu Pacific,2023-05-03,Zamboanga (ZAM),Iloilo (ILO),ZAM-CEB-ILO,12:30,15:45,3h 15m,1,Layover in CEB
+AirAsia Philippines,2023-05-03,Cagayan de Oro (CGY),Puerto Princesa (PPS),CGY-MNL-PPS,17:15,22:30,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-05-04,Manila (MNL),Legazpi (LGP),MNL-LGP,15:45,16:45,1h 00m,0,No info
+Cebu Pacific,2023-05-04,Manila (MNL),Tacloban (TAC),MNL-TAC,19:15,20:35,1h 20m,0,No info
+AirAsia Philippines,2023-05-04,Manila (MNL),Caticlan (MPH),MNL-MPH,9:45,10:55,1h 10m,0,No info
+Philippine Airlines,2023-05-05,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,11:45,15:35,3h 50m,1,Layover in CEB
+Cebu Pacific,2023-05-05,Tacloban (TAC),Davao (DVO),TAC-CEB-DVO,10:15,14:00,3h 45m,1,Layover in CEB
+AirAsia Philippines,2023-05-05,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:30,16:00,1h 30m,0,No info
+Philippine Airlines,2023-05-06,Manila (MNL),Cebu (CEB),MNL-CEB,21:45,23:15,1h 30m,0,In-flight meal
+Cebu Pacific,2023-05-06,Davao (DVO),Cebu (CEB),DVO-CEB,10:15,11:30,1h 15m,0,No info
+AirAsia Philippines,2023-05-06,Kalibo (KLO),Zamboanga (ZAM),KLO-MNL-ZAM,18:45,1:00,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-05-07,Manila (MNL),Davao (DVO),MNL-DVO,8:30,10:45,2h 15m,0,No info
+Cebu Pacific,2023-05-07,Manila (MNL),Iloilo (ILO),MNL-ILO,16:30,17:45,1h 15m,0,No info
+AirAsia Philippines,2023-05-07,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,14:45,16:15,1h 30m,0,No info
+Philippine Airlines,2023-05-08,Iloilo (ILO),Legazpi (LGP),ILO-MNL-LGP,12:15,16:10,3h 55m,1,Layover in MNL
+Cebu Pacific,2023-05-08,General Santos (GES),Bacolod (BCD),GES-CEB-BCD,17:45,22:20,4h 35m,1,Layover in CEB
+AirAsia Philippines,2023-05-08,Manila (MNL),Kalibo (KLO),MNL-KLO,21:15,22:30,1h 15m,0,No info
+Philippine Airlines,2023-05-09,Manila (MNL),Cebu (CEB),MNL-CEB,14:30,16:00,1h 30m,0,No info
+Cebu Pacific,2023-05-09,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,13:15,17:30,4h 15m,1,Layover in CEB
+AirAsia Philippines,2023-05-09,Manila (MNL),Legazpi (LGP),MNL-LGP,11:30,12:30,1h 00m,0,No info
+Philippine Airlines,2023-05-10,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,10:30,16:45,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-05-10,Cebu (CEB),Iloilo (ILO),CEB-ILO,17:45,18:30,0h 45m,0,No info
+AirAsia Philippines,2023-05-10,Manila (MNL),Tacloban (TAC),MNL-TAC,14:45,16:05,1h 20m,0,No info
+Philippine Airlines,2023-05-11,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,16:45,17:30,0h 45m,0,No info
+Cebu Pacific,2023-05-11,Manila (MNL),General Santos (GES),MNL-GES,13:15,15:05,1h 50m,0,No info
+AirAsia Philippines,2023-05-11,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,23:15,3:30,4h 15m,1,Red-eye flight
+Philippine Airlines,2023-05-12,Cebu (CEB),Davao (DVO),CEB-DVO,9:15,10:30,1h 15m,0,In-flight meal
+Cebu Pacific,2023-05-12,Manila (MNL),Iloilo (ILO),MNL-ILO,11:15,12:30,1h 15m,0,No info
+AirAsia Philippines,2023-05-12,Manila (MNL),Caticlan (MPH),MNL-MPH,10:15,11:25,1h 10m,0,No info
+Philippine Airlines,2023-05-13,Davao (DVO),Manila (MNL),DVO-MNL,22:15,0:30,2h 15m,0,No info
+Cebu Pacific,2023-05-13,Manila (MNL),Bacolod (BCD),MNL-BCD,19:45,21:00,1h 15m,0,No info
+AirAsia Philippines,2023-05-13,Bacolod (BCD),Puerto Princesa (PPS),BCD-MNL-PPS,21:15,1:30,4h 15m,1,Layover in MNL
+Philippine Airlines,2023-05-14,Manila (MNL),Cebu (CEB),MNL-CEB,16:30,18:00,1h 30m,0,In-flight meal
+Cebu Pacific,2023-05-14,Tacloban (TAC),Kalibo (KLO),TAC-MNL-KLO,14:15,19:00,4h 45m,1,Layover in MNL
+AirAsia Philippines,2023-05-14,Cebu (CEB),Iloilo (ILO),CEB-ILO,20:15,21:00,0h 45m,0,No info
+Philippine Airlines,2023-05-15,Caticlan (MPH),General Santos (GES),MPH-CEB-GES,8:15,13:05,4h 50m,1,Layover in CEB
+Cebu Pacific,2023-05-15,Manila (MNL),Legazpi (LGP),MNL-LGP,13:15,14:15,1h 00m,0,No info
+AirAsia Philippines,2023-05-15,Manila (MNL),General Santos (GES),MNL-GES,17:15,19:05,1h 50m,0,No info
+Philippine Airlines,2023-05-16,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,15:30,17:00,1h 30m,0,No info
+Cebu Pacific,2023-05-16,Iloilo (ILO),Zamboanga (ZAM),ILO-CEB-ZAM,12:15,16:20,4h 05m,1,Layover in CEB
+AirAsia Philippines,2023-05-16,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:45,16:15,1h 30m,0,No info
+Philippine Airlines,2023-05-17,Davao (DVO),Cebu (CEB),DVO-CEB,18:15,19:30,1h 15m,0,No info
+Cebu Pacific,2023-05-17,Manila (MNL),Iloilo (ILO),MNL-ILO,23:15,0:30,1h 15m,0,No info
+AirAsia Philippines,2023-05-17,Kalibo (KLO),Davao (DVO),KLO-MNL-DVO,16:15,21:30,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-05-18,Manila (MNL),Cebu (CEB),MNL-CEB,9:15,10:45,1h 30m,0,No info
+Cebu Pacific,2023-05-18,Davao (DVO),Manila (MNL),DVO-MNL,20:15,22:30,2h 15m,0,No info
+AirAsia Philippines,2023-05-18,Manila (MNL),Bacolod (BCD),MNL-BCD,10:00,11:15,1h 15m,0,No info
+Philippine Airlines,2023-05-19,Manila (MNL),Kalibo (KLO),MNL-KLO,11:30,12:45,1h 15m,0,No info
+Cebu Pacific,2023-05-19,Puerto Princesa (PPS),Cagayan de Oro (CGY),PPS-MNL-CGY,18:00,23:45,5h 45m,1,Layover in MNL
+AirAsia Philippines,2023-05-19,Cebu (CEB),Davao (DVO),CEB-DVO,12:15,13:30,1h 15m,0,No info
+Philippine Airlines,2023-05-20,Zamboanga (ZAM),Legazpi (LGP),ZAM-MNL-LGP,9:45,16:00,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-05-20,Manila (MNL),Iloilo (ILO),MNL-ILO,10:30,11:45,1h 15m,0,No info
+AirAsia Philippines,2023-05-20,Manila (MNL),Legazpi (LGP),MNL-LGP,15:15,16:15,1h 00m,0,No info
+Philippine Airlines,2023-05-21,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,15:15,16:00,0h 45m,0,No info
+Cebu Pacific,2023-05-21,Manila (MNL),General Santos (GES),MNL-GES,13:45,15:35,1h 50m,0,No info
+AirAsia Philippines,2023-05-21,Manila (MNL),Cebu (CEB),MNL-CEB,18:15,19:45,1h 30m,0,In-flight meal
+Philippine Airlines,2023-05-22,Cebu (CEB),Iloilo (ILO),CEB-ILO,17:15,18:00,0h 45m,0,No info
+Cebu Pacific,2023-05-22,Tacloban (TAC),Bacolod (BCD),TAC-CEB-BCD,19:15,22:55,3h 40m,1,Layover in CEB
+AirAsia Philippines,2023-05-22,Manila (MNL),Caticlan (MPH),MNL-MPH,14:00,15:10,1h 10m,0,No info
+Philippine Airlines,2023-05-23,General Santos (GES),Kalibo (KLO),GES-CEB-KLO,22:15,3:30,5h 15m,1,Red-eye flight
+Cebu Pacific,2023-05-23,Davao (DVO),Manila (MNL),DVO-MNL,23:15,1:30,2h 15m,0,No info
+AirAsia Philippines,2023-05-23,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,14:30,16:00,1h 30m,0,No info
+Philippine Airlines,2023-05-24,Manila (MNL),Cebu (CEB),MNL-CEB,13:15,14:45,1h 30m,0,No info
+Cebu Pacific,2023-05-24,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,21:15,2:30,5h 15m,1,Red-eye flight
+AirAsia Philippines,2023-05-24,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,13:00,14:30,1h 30m,0,No info
+Philippine Airlines,2023-05-25,Davao (DVO),Cebu (CEB),DVO-CEB,19:00,20:15,1h 15m,0,In-flight meal
+Cebu Pacific,2023-05-25,Cagayan de Oro (CGY),Iloilo (ILO),CGY-CEB-ILO,16:15,19:50,3h 35m,1,Layover in CEB
+AirAsia Philippines,2023-05-25,Manila (MNL),Davao (DVO),MNL-DVO,17:15,19:30,2h 15m,0,No info
+Philippine Airlines,2023-05-26,Manila (MNL),Legazpi (LGP),MNL-LGP,11:30,12:30,1h 00m,0,No info
+Cebu Pacific,2023-05-26,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,14:00,18:50,4h 50m,1,Layover in CEB
+AirAsia Philippines,2023-05-26,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,15:00,16:30,1h 30m,0,No info
+Philippine Airlines,2023-05-27,Manila (MNL),Cebu (CEB),MNL-CEB,22:15,23:45,1h 30m,0,In-flight meal
+Cebu Pacific,2023-05-27,Manila (MNL),Tacloban (TAC),MNL-TAC,12:30,13:50,1h 20m,0,No info
+AirAsia Philippines,2023-05-27,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,16:15,22:30,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-05-28,Davao (DVO),Manila (MNL),DVO-MNL,22:00,0:15,2h 15m,0,No info
+Cebu Pacific,2023-05-28,Manila (MNL),Bacolod (BCD),MNL-BCD,19:00,20:15,1h 15m,0,No info
+AirAsia Philippines,2023-05-28,Cebu (CEB),Iloilo (ILO),CEB-ILO,20:45,21:30,0h 45m,0,No info
+Philippine Airlines,2023-05-29,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,11:45,16:00,4h 15m,1,Layover in CEB
+Cebu Pacific,2023-05-29,Manila (MNL),Kalibo (KLO),MNL-KLO,10:15,11:30,1h 15m,0,No info
+AirAsia Philippines,2023-05-29,Manila (MNL),Davao (DVO),MNL-DVO,7:45,10:00,2h 15m,0,No info
+Philippine Airlines,2023-05-30,Manila (MNL),Cebu (CEB),MNL-CEB,15:30,17:00,1h 30m,0,No info
+Cebu Pacific,2023-05-30,Manila (MNL),General Santos (GES),MNL-GES,13:45,15:35,1h 50m,0,No info
+AirAsia Philippines,2023-05-30,Manila (MNL),Tacloban (TAC),MNL-TAC,18:00,19:20,1h 20m,0,No info
+Philippine Airlines,2023-05-31,Manila (MNL),Cebu (CEB),MNL-CEB,20:45,22:15,1h 30m,0,No info
+Cebu Pacific,2023-05-31,Davao (DVO),Cebu (CEB),DVO-CEB,11:45,13:00,1h 15m,0,No info
+AirAsia Philippines,2023-05-31,Manila (MNL),Clark (CRK),MNL-CRK,17:00,17:45,0h 45m,0,No info
+Airline,Date_of_Journey,Source,Destination,Route,Dep_Time,Arrival_Time,Duration,Total_Stops,Additional_Info
+Philippine Airlines,2023-06-01,Manila (MNL),Cebu (CEB),MNL-CEB,8:30,10:00,1h 30m,0,Summer peak
+Cebu Pacific,2023-06-01,Manila (MNL),Davao (DVO),MNL-DVO,6:45,9:00,2h 15m,0,Summer peak
+AirAsia Philippines,2023-06-01,Manila (MNL),Iloilo (ILO),MNL-ILO,17:30,18:45,1h 15m,0,Summer peak
+Philippine Airlines,2023-06-02,Bacolod (BCD),Zamboanga (ZAM),BCD-CEB-ZAM,9:45,13:40,3h 55m,1,Layover in CEB
+Cebu Pacific,2023-06-02,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,13:15,14:45,1h 30m,0,No info
+AirAsia Philippines,2023-06-02,Manila (MNL),Kalibo (KLO),MNL-KLO,9:00,10:15,1h 15m,0,No info
+Philippine Airlines,2023-06-03,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,10:00,14:15,4h 15m,1,Layover in MNL
+Cebu Pacific,2023-06-03,Zamboanga (ZAM),Iloilo (ILO),ZAM-CEB-ILO,12:30,15:45,3h 15m,1,Layover in CEB
+AirAsia Philippines,2023-06-03,Cagayan de Oro (CGY),Puerto Princesa (PPS),CGY-MNL-PPS,17:15,22:30,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-06-04,Manila (MNL),Legazpi (LGP),MNL-LGP,16:15,17:15,1h 00m,0,No info
+Cebu Pacific,2023-06-04,Manila (MNL),Tacloban (TAC),MNL-TAC,19:30,20:50,1h 20m,0,No info
+AirAsia Philippines,2023-06-04,Manila (MNL),Caticlan (MPH),MNL-MPH,10:15,11:25,1h 10m,0,No info
+Philippine Airlines,2023-06-05,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,11:45,15:35,3h 50m,1,Layover in CEB
+Cebu Pacific,2023-06-05,Tacloban (TAC),Davao (DVO),TAC-CEB-DVO,10:15,14:00,3h 45m,1,Layover in CEB
+AirAsia Philippines,2023-06-05,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:45,16:15,1h 30m,0,No info
+Philippine Airlines,2023-06-06,Manila (MNL),Cebu (CEB),MNL-CEB,22:30,0:00,1h 30m,0,In-flight meal
+Cebu Pacific,2023-06-06,Davao (DVO),Cebu (CEB),DVO-CEB,10:30,11:45,1h 15m,0,No info
+AirAsia Philippines,2023-06-06,Kalibo (KLO),Zamboanga (ZAM),KLO-MNL-ZAM,19:00,1:15,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-06-07,Manila (MNL),Davao (DVO),MNL-DVO,8:45,11:00,2h 15m,0,No info
+Cebu Pacific,2023-06-07,Manila (MNL),Iloilo (ILO),MNL-ILO,16:45,18:00,1h 15m,0,No info
+AirAsia Philippines,2023-06-07,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,14:45,16:15,1h 30m,0,No info
+Philippine Airlines,2023-06-08,Iloilo (ILO),Legazpi (LGP),ILO-MNL-LGP,12:30,16:25,3h 55m,1,Layover in MNL
+Cebu Pacific,2023-06-08,General Santos (GES),Bacolod (BCD),GES-CEB-BCD,17:45,22:20,4h 35m,1,Layover in CEB
+AirAsia Philippines,2023-06-08,Manila (MNL),Kalibo (KLO),MNL-KLO,21:30,22:45,1h 15m,0,No info
+Philippine Airlines,2023-06-09,Manila (MNL),Cebu (CEB),MNL-CEB,14:45,16:15,1h 30m,0,No info
+Cebu Pacific,2023-06-09,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,13:15,17:30,4h 15m,1,Layover in CEB
+AirAsia Philippines,2023-06-09,Manila (MNL),Legazpi (LGP),MNL-LGP,12:15,13:15,1h 00m,0,No info
+Philippine Airlines,2023-06-10,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,10:45,17:00,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-06-10,Cebu (CEB),Iloilo (ILO),CEB-ILO,17:45,18:30,0h 45m,0,No info
+AirAsia Philippines,2023-06-10,Manila (MNL),Tacloban (TAC),MNL-TAC,14:45,16:05,1h 20m,0,No info
+Philippine Airlines,2023-06-11,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,16:45,17:30,0h 45m,0,No info
+Cebu Pacific,2023-06-11,Manila (MNL),General Santos (GES),MNL-GES,13:30,15:20,1h 50m,0,No info
+AirAsia Philippines,2023-06-11,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,23:30,3:45,4h 15m,1,Red-eye flight
+Philippine Airlines,2023-06-12,Cebu (CEB),Davao (DVO),CEB-DVO,9:30,10:45,1h 15m,0,In-flight meal
+Cebu Pacific,2023-06-12,Manila (MNL),Iloilo (ILO),MNL-ILO,11:15,12:30,1h 15m,0,Independence Day
+AirAsia Philippines,2023-06-12,Manila (MNL),Caticlan (MPH),MNL-MPH,10:30,11:40,1h 10m,0,Independence Day
+Philippine Airlines,2023-06-13,Davao (DVO),Manila (MNL),DVO-MNL,22:15,0:30,2h 15m,0,No info
+Cebu Pacific,2023-06-13,Manila (MNL),Bacolod (BCD),MNL-BCD,19:45,21:00,1h 15m,0,No info
+AirAsia Philippines,2023-06-13,Bacolod (BCD),Puerto Princesa (PPS),BCD-MNL-PPS,21:15,1:30,4h 15m,1,Layover in MNL
+Philippine Airlines,2023-06-14,Manila (MNL),Cebu (CEB),MNL-CEB,16:30,18:00,1h 30m,0,In-flight meal
+Cebu Pacific,2023-06-14,Tacloban (TAC),Kalibo (KLO),TAC-MNL-KLO,14:15,19:00,4h 45m,1,Layover in MNL
+AirAsia Philippines,2023-06-14,Cebu (CEB),Iloilo (ILO),CEB-ILO,20:15,21:00,0h 45m,0,No info
+Philippine Airlines,2023-06-15,Caticlan (MPH),General Santos (GES),MPH-CEB-GES,8:30,13:20,4h 50m,1,Layover in CEB
+Cebu Pacific,2023-06-15,Manila (MNL),Legazpi (LGP),MNL-LGP,13:15,14:15,1h 00m,0,No info
+AirAsia Philippines,2023-06-15,Manila (MNL),General Santos (GES),MNL-GES,17:15,19:05,1h 50m,0,No info
+Philippine Airlines,2023-06-16,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,15:30,17:00,1h 30m,0,No info
+Cebu Pacific,2023-06-16,Iloilo (ILO),Zamboanga (ZAM),ILO-CEB-ZAM,12:30,16:35,4h 05m,1,Layover in CEB
+AirAsia Philippines,2023-06-16,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,15:15,16:45,1h 30m,0,No info
+Philippine Airlines,2023-06-17,Davao (DVO),Cebu (CEB),DVO-CEB,18:30,19:45,1h 15m,0,No info
+Cebu Pacific,2023-06-17,Manila (MNL),Iloilo (ILO),MNL-ILO,23:15,0:30,1h 15m,0,No info
+AirAsia Philippines,2023-06-17,Kalibo (KLO),Davao (DVO),KLO-MNL-DVO,16:30,21:45,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-06-18,Manila (MNL),Cebu (CEB),MNL-CEB,9:30,11:00,1h 30m,0,No info
+Cebu Pacific,2023-06-18,Davao (DVO),Manila (MNL),DVO-MNL,20:15,22:30,2h 15m,0,No info
+AirAsia Philippines,2023-06-18,Manila (MNL),Bacolod (BCD),MNL-BCD,10:15,11:30,1h 15m,0,No info
+Philippine Airlines,2023-06-19,Manila (MNL),Kalibo (KLO),MNL-KLO,11:45,13:00,1h 15m,0,No info
+Cebu Pacific,2023-06-19,Puerto Princesa (PPS),Cagayan de Oro (CGY),PPS-MNL-CGY,18:00,23:45,5h 45m,1,Layover in MNL
+AirAsia Philippines,2023-06-19,Cebu (CEB),Davao (DVO),CEB-DVO,12:15,13:30,1h 15m,0,No info
+Philippine Airlines,2023-06-20,Zamboanga (ZAM),Legazpi (LGP),ZAM-MNL-LGP,9:45,16:00,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-06-20,Manila (MNL),Iloilo (ILO),MNL-ILO,10:45,12:00,1h 15m,0,No info
+AirAsia Philippines,2023-06-20,Manila (MNL),Legazpi (LGP),MNL-LGP,15:15,16:15,1h 00m,0,No info
+Philippine Airlines,2023-06-21,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,15:30,16:15,0h 45m,0,No info
+Cebu Pacific,2023-06-21,Manila (MNL),General Santos (GES),MNL-GES,14:00,15:50,1h 50m,0,No info
+AirAsia Philippines,2023-06-21,Manila (MNL),Cebu (CEB),MNL-CEB,18:30,20:00,1h 30m,0,In-flight meal
+Philippine Airlines,2023-06-22,Cebu (CEB),Iloilo (ILO),CEB-ILO,17:30,18:15,0h 45m,0,No info
+Cebu Pacific,2023-06-22,Tacloban (TAC),Bacolod (BCD),TAC-CEB-BCD,19:30,23:10,3h 40m,1,Layover in CEB
+AirAsia Philippines,2023-06-22,Manila (MNL),Caticlan (MPH),MNL-MPH,14:15,15:25,1h 10m,0,No info
+Philippine Airlines,2023-06-23,General Santos (GES),Kalibo (KLO),GES-CEB-KLO,22:30,3:45,5h 15m,1,Red-eye flight
+Cebu Pacific,2023-06-23,Davao (DVO),Manila (MNL),DVO-MNL,23:30,1:45,2h 15m,0,No info
+AirAsia Philippines,2023-06-23,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,14:45,16:15,1h 30m,0,No info
+Philippine Airlines,2023-06-24,Manila (MNL),Cebu (CEB),MNL-CEB,13:30,15:00,1h 30m,0,No info
+Cebu Pacific,2023-06-24,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,21:30,2:45,5h 15m,1,Red-eye flight
+AirAsia Philippines,2023-06-24,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,13:15,14:45,1h 30m,0,No info
+Philippine Airlines,2023-06-25,Davao (DVO),Cebu (CEB),DVO-CEB,19:15,20:30,1h 15m,0,In-flight meal
+Cebu Pacific,2023-06-25,Cagayan de Oro (CGY),Iloilo (ILO),CGY-CEB-ILO,16:30,20:05,3h 35m,1,Layover in CEB
+AirAsia Philippines,2023-06-25,Manila (MNL),Davao (DVO),MNL-DVO,17:30,19:45,2h 15m,0,No info
+Philippine Airlines,2023-06-26,Manila (MNL),Legazpi (LGP),MNL-LGP,11:45,12:45,1h 00m,0,No info
+Cebu Pacific,2023-06-26,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,14:15,19:05,4h 50m,1,Layover in CEB
+AirAsia Philippines,2023-06-26,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,15:30,17:00,1h 30m,0,No info
+Philippine Airlines,2023-06-27,Manila (MNL),Cebu (CEB),MNL-CEB,22:45,0:15,1h 30m,0,In-flight meal
+Cebu Pacific,2023-06-27,Manila (MNL),Tacloban (TAC),MNL-TAC,12:45,14:05,1h 20m,0,No info
+AirAsia Philippines,2023-06-27,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,16:30,22:45,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-06-28,Davao (DVO),Manila (MNL),DVO-MNL,22:15,0:30,2h 15m,0,No info
+Cebu Pacific,2023-06-28,Manila (MNL),Bacolod (BCD),MNL-BCD,19:15,20:30,1h 15m,0,No info
+AirAsia Philippines,2023-06-28,Cebu (CEB),Iloilo (ILO),CEB-ILO,21:00,21:45,0h 45m,0,No info
+Philippine Airlines,2023-06-29,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,12:00,16:15,4h 15m,1,Layover in CEB
+Cebu Pacific,2023-06-29,Manila (MNL),Kalibo (KLO),MNL-KLO,10:30,11:45,1h 15m,0,Eid al-Adha
+AirAsia Philippines,2023-06-29,Manila (MNL),Davao (DVO),MNL-DVO,8:00,10:15,2h 15m,0,Eid al-Adha
+Philippine Airlines,2023-06-30,Manila (MNL),Cebu (CEB),MNL-CEB,15:45,17:15,1h 30m,0,No info
+Cebu Pacific,2023-06-30,Manila (MNL),General Santos (GES),MNL-GES,14:00,15:50,1h 50m,0,No info
+AirAsia Philippines,2023-06-30,Manila (MNL),Tacloban (TAC),MNL-TAC,18:15,19:35,1h 20m,0,No info
+Airline,Date_of_Journey,Source,Destination,Route,Dep_Time,Arrival_Time,Duration,Total_Stops,Additional_Info
+Philippine Airlines,2023-07-01,Manila (MNL),Cebu (CEB),MNL-CEB,7:45,9:15,1h 30m,0,Rainy season
+Cebu Pacific,2023-07-01,Manila (MNL),Davao (DVO),MNL-DVO,6:00,8:15,2h 15m,0,Rainy season
+AirAsia Philippines,2023-07-01,Manila (MNL),Iloilo (ILO),MNL-ILO,16:45,18:00,1h 15m,0,Rainy season
+Philippine Airlines,2023-07-02,Bacolod (BCD),Zamboanga (ZAM),BCD-CEB-ZAM,9:00,12:55,3h 55m,1,Layover in CEB
+Cebu Pacific,2023-07-02,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,13:00,14:30,1h 30m,0,No info
+AirAsia Philippines,2023-07-02,Manila (MNL),Kalibo (KLO),MNL-KLO,8:30,9:45,1h 15m,0,No info
+Philippine Airlines,2023-07-03,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,9:30,13:45,4h 15m,1,Layover in MNL
+Cebu Pacific,2023-07-03,Zamboanga (ZAM),Iloilo (ILO),ZAM-CEB-ILO,12:00,15:15,3h 15m,1,Layover in CEB
+AirAsia Philippines,2023-07-03,Cagayan de Oro (CGY),Puerto Princesa (PPS),CGY-MNL-PPS,16:45,22:00,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-07-04,Manila (MNL),Legazpi (LGP),MNL-LGP,15:15,16:15,1h 00m,0,No info
+Cebu Pacific,2023-07-04,Manila (MNL),Tacloban (TAC),MNL-TAC,18:45,20:05,1h 20m,0,No info
+AirAsia Philippines,2023-07-04,Manila (MNL),Caticlan (MPH),MNL-MPH,9:30,10:40,1h 10m,0,No info
+Philippine Airlines,2023-07-05,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,11:30,15:20,3h 50m,1,Layover in CEB
+Cebu Pacific,2023-07-05,Tacloban (TAC),Davao (DVO),TAC-CEB-DVO,10:00,13:45,3h 45m,1,Layover in CEB
+AirAsia Philippines,2023-07-05,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:15,15:45,1h 30m,0,No info
+Philippine Airlines,2023-07-06,Manila (MNL),Cebu (CEB),MNL-CEB,21:30,23:00,1h 30m,0,In-flight meal
+Cebu Pacific,2023-07-06,Davao (DVO),Cebu (CEB),DVO-CEB,10:00,11:15,1h 15m,0,No info
+AirAsia Philippines,2023-07-06,Kalibo (KLO),Zamboanga (ZAM),KLO-MNL-ZAM,18:00,0:15,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-07-07,Manila (MNL),Davao (DVO),MNL-DVO,8:00,10:15,2h 15m,0,No info
+Cebu Pacific,2023-07-07,Manila (MNL),Iloilo (ILO),MNL-ILO,16:15,17:30,1h 15m,0,No info
+AirAsia Philippines,2023-07-07,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,14:30,16:00,1h 30m,0,No info
+Philippine Airlines,2023-07-08,Iloilo (ILO),Legazpi (LGP),ILO-MNL-LGP,12:00,15:55,3h 55m,1,Layover in MNL
+Cebu Pacific,2023-07-08,General Santos (GES),Bacolod (BCD),GES-CEB-BCD,17:30,22:05,4h 35m,1,Layover in CEB
+AirAsia Philippines,2023-07-08,Manila (MNL),Kalibo (KLO),MNL-KLO,21:00,22:15,1h 15m,0,No info
+Philippine Airlines,2023-07-09,Manila (MNL),Cebu (CEB),MNL-CEB,14:15,15:45,1h 30m,0,No info
+Cebu Pacific,2023-07-09,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,13:00,17:15,4h 15m,1,Layover in CEB
+AirAsia Philippines,2023-07-09,Manila (MNL),Legazpi (LGP),MNL-LGP,11:15,12:15,1h 00m,0,No info
+Philippine Airlines,2023-07-10,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,10:15,16:30,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-07-10,Cebu (CEB),Iloilo (ILO),CEB-ILO,17:30,18:15,0h 45m,0,No info
+AirAsia Philippines,2023-07-10,Manila (MNL),Tacloban (TAC),MNL-TAC,14:30,15:50,1h 20m,0,No info
+Philippine Airlines,2023-07-11,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,16:30,17:15,0h 45m,0,No info
+Cebu Pacific,2023-07-11,Manila (MNL),General Santos (GES),MNL-GES,13:00,14:50,1h 50m,0,No info
+AirAsia Philippines,2023-07-11,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,23:00,3:15,4h 15m,1,Red-eye flight
+Philippine Airlines,2023-07-12,Cebu (CEB),Davao (DVO),CEB-DVO,9:00,10:15,1h 15m,0,In-flight meal
+Cebu Pacific,2023-07-12,Manila (MNL),Iloilo (ILO),MNL-ILO,11:00,12:15,1h 15m,0,No info
+AirAsia Philippines,2023-07-12,Manila (MNL),Caticlan (MPH),MNL-MPH,10:00,11:10,1h 10m,0,No info
+Philippine Airlines,2023-07-13,Davao (DVO),Manila (MNL),DVO-MNL,22:00,0:15,2h 15m,0,No info
+Cebu Pacific,2023-07-13,Manila (MNL),Bacolod (BCD),MNL-BCD,19:30,20:45,1h 15m,0,No info
+AirAsia Philippines,2023-07-13,Bacolod (BCD),Puerto Princesa (PPS),BCD-MNL-PPS,21:00,1:15,4h 15m,1,Layover in MNL
+Philippine Airlines,2023-07-14,Manila (MNL),Cebu (CEB),MNL-CEB,16:15,17:45,1h 30m,0,In-flight meal
+Cebu Pacific,2023-07-14,Tacloban (TAC),Kalibo (KLO),TAC-MNL-KLO,14:00,18:45,4h 45m,1,Layover in MNL
+AirAsia Philippines,2023-07-14,Cebu (CEB),Iloilo (ILO),CEB-ILO,20:00,20:45,0h 45m,0,No info
+Philippine Airlines,2023-07-15,Caticlan (MPH),General Santos (GES),MPH-CEB-GES,8:00,12:50,4h 50m,1,Layover in CEB
+Cebu Pacific,2023-07-15,Manila (MNL),Legazpi (LGP),MNL-LGP,13:00,14:00,1h 00m,0,No info
+AirAsia Philippines,2023-07-15,Manila (MNL),General Santos (GES),MNL-GES,17:00,18:50,1h 50m,0,No info
+Philippine Airlines,2023-07-16,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,15:15,16:45,1h 30m,0,No info
+Cebu Pacific,2023-07-16,Iloilo (ILO),Zamboanga (ZAM),ILO-CEB-ZAM,12:00,16:05,4h 05m,1,Layover in CEB
+AirAsia Philippines,2023-07-16,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:30,16:00,1h 30m,0,No info
+Philippine Airlines,2023-07-17,Davao (DVO),Cebu (CEB),DVO-CEB,18:00,19:15,1h 15m,0,No info
+Cebu Pacific,2023-07-17,Manila (MNL),Iloilo (ILO),MNL-ILO,23:00,0:15,1h 15m,0,No info
+AirAsia Philippines,2023-07-17,Kalibo (KLO),Davao (DVO),KLO-MNL-DVO,16:00,21:15,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-07-18,Manila (MNL),Cebu (CEB),MNL-CEB,9:00,10:30,1h 30m,0,No info
+Cebu Pacific,2023-07-18,Davao (DVO),Manila (MNL),DVO-MNL,20:00,22:15,2h 15m,0,No info
+AirAsia Philippines,2023-07-18,Manila (MNL),Bacolod (BCD),MNL-BCD,9:45,11:00,1h 15m,0,No info
+Philippine Airlines,2023-07-19,Manila (MNL),Kalibo (KLO),MNL-KLO,11:15,12:30,1h 15m,0,No info
+Cebu Pacific,2023-07-19,Puerto Princesa (PPS),Cagayan de Oro (CGY),PPS-MNL-CGY,18:00,23:45,5h 45m,1,Layover in MNL
+AirAsia Philippines,2023-07-19,Cebu (CEB),Davao (DVO),CEB-DVO,12:00,13:15,1h 15m,0,No info
+Philippine Airlines,2023-07-20,Zamboanga (ZAM),Legazpi (LGP),ZAM-MNL-LGP,9:30,15:45,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-07-20,Manila (MNL),Iloilo (ILO),MNL-ILO,10:15,11:30,1h 15m,0,No info
+AirAsia Philippines,2023-07-20,Manila (MNL),Legazpi (LGP),MNL-LGP,15:00,16:00,1h 00m,0,No info
+Philippine Airlines,2023-07-21,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,15:00,15:45,0h 45m,0,No info
+Cebu Pacific,2023-07-21,Manila (MNL),General Santos (GES),MNL-GES,13:30,15:20,1h 50m,0,No info
+AirAsia Philippines,2023-07-21,Manila (MNL),Cebu (CEB),MNL-CEB,18:00,19:30,1h 30m,0,In-flight meal
+Philippine Airlines,2023-07-22,Cebu (CEB),Iloilo (ILO),CEB-ILO,17:00,17:45,0h 45m,0,No info
+Cebu Pacific,2023-07-22,Tacloban (TAC),Bacolod (BCD),TAC-CEB-BCD,19:00,22:40,3h 40m,1,Layover in CEB
+AirAsia Philippines,2023-07-22,Manila (MNL),Caticlan (MPH),MNL-MPH,14:00,15:10,1h 10m,0,No info
+Philippine Airlines,2023-07-23,General Santos (GES),Kalibo (KLO),GES-CEB-KLO,22:00,3:15,5h 15m,1,Red-eye flight
+Cebu Pacific,2023-07-23,Davao (DVO),Manila (MNL),DVO-MNL,23:00,1:15,2h 15m,0,No info
+AirAsia Philippines,2023-07-23,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,14:15,15:45,1h 30m,0,No info
+Philippine Airlines,2023-07-24,Manila (MNL),Cebu (CEB),MNL-CEB,13:00,14:30,1h 30m,0,No info
+Cebu Pacific,2023-07-24,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,21:00,2:15,5h 15m,1,Red-eye flight
+AirAsia Philippines,2023-07-24,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,12:45,14:15,1h 30m,0,No info
+Philippine Airlines,2023-07-25,Davao (DVO),Cebu (CEB),DVO-CEB,18:45,20:00,1h 15m,0,In-flight meal
+Cebu Pacific,2023-07-25,Cagayan de Oro (CGY),Iloilo (ILO),CGY-CEB-ILO,16:00,19:35,3h 35m,1,Layover in CEB
+AirAsia Philippines,2023-07-25,Manila (MNL),Davao (DVO),MNL-DVO,17:00,19:15,2h 15m,0,No info
+Philippine Airlines,2023-07-26,Manila (MNL),Legazpi (LGP),MNL-LGP,11:15,12:15,1h 00m,0,No info
+Cebu Pacific,2023-07-26,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,13:45,18:35,4h 50m,1,Layover in CEB
+AirAsia Philippines,2023-07-26,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:45,16:15,1h 30m,0,No info
+Philippine Airlines,2023-07-27,Manila (MNL),Cebu (CEB),MNL-CEB,22:00,23:30,1h 30m,0,In-flight meal
+Cebu Pacific,2023-07-27,Manila (MNL),Tacloban (TAC),MNL-TAC,12:15,13:35,1h 20m,0,No info
+AirAsia Philippines,2023-07-27,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,16:00,22:15,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-07-28,Davao (DVO),Manila (MNL),DVO-MNL,21:45,0:00,2h 15m,0,No info
+Cebu Pacific,2023-07-28,Manila (MNL),Bacolod (BCD),MNL-BCD,18:45,20:00,1h 15m,0,No info
+AirAsia Philippines,2023-07-28,Cebu (CEB),Iloilo (ILO),CEB-ILO,20:30,21:15,0h 45m,0,No info
+Philippine Airlines,2023-07-29,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,11:30,15:45,4h 15m,1,Layover in CEB
+Cebu Pacific,2023-07-29,Manila (MNL),Kalibo (KLO),MNL-KLO,10:00,11:15,1h 15m,0,No info
+AirAsia Philippines,2023-07-29,Manila (MNL),Davao (DVO),MNL-DVO,7:30,9:45,2h 15m,0,No info
+Philippine Airlines,2023-07-30,Manila (MNL),Cebu (CEB),MNL-CEB,15:15,16:45,1h 30m,0,No info
+Cebu Pacific,2023-07-30,Manila (MNL),General Santos (GES),MNL-GES,13:30,15:20,1h 50m,0,No info
+AirAsia Philippines,2023-07-30,Manila (MNL),Tacloban (TAC),MNL-TAC,17:45,19:05,1h 20m,0,No info
+Philippine Airlines,2023-07-31,Manila (MNL),Cebu (CEB),MNL-CEB,20:30,22:00,1h 30m,0,No info
+Cebu Pacific,2023-07-31,Davao (DVO),Cebu (CEB),DVO-CEB,11:30,12:45,1h 15m,0,No info
+AirAsia Philippines,2023-07-31,Manila (MNL),Clark (CRK),MNL-CRK,16:45,17:30,0h 45m,0,No info
+Airline,Date_of_Journey,Source,Destination,Route,Dep_Time,Arrival_Time,Duration,Total_Stops,Additional_Info
+Philippine Airlines,2023-08-01,Manila (MNL),Cebu (CEB),MNL-CEB,7:30,9:00,1h 30m,0,Rainy season
+Cebu Pacific,2023-08-01,Manila (MNL),Davao (DVO),MNL-DVO,5:45,8:00,2h 15m,0,Rainy season
+AirAsia Philippines,2023-08-01,Manila (MNL),Iloilo (ILO),MNL-ILO,16:15,17:30,1h 15m,0,Rainy season
+Philippine Airlines,2023-08-02,Bacolod (BCD),Zamboanga (ZAM),BCD-CEB-ZAM,8:45,12:40,3h 55m,1,Layover in CEB
+Cebu Pacific,2023-08-02,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,12:45,14:15,1h 30m,0,No info
+AirAsia Philippines,2023-08-02,Manila (MNL),Kalibo (KLO),MNL-KLO,8:15,9:30,1h 15m,0,No info
+Philippine Airlines,2023-08-03,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,9:30,13:45,4h 15m,1,Layover in MNL
+Cebu Pacific,2023-08-03,Zamboanga (ZAM),Iloilo (ILO),ZAM-CEB-ILO,11:45,15:00,3h 15m,1,Layover in CEB
+AirAsia Philippines,2023-08-03,Cagayan de Oro (CGY),Puerto Princesa (PPS),CGY-MNL-PPS,16:45,22:00,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-08-04,Manila (MNL),Legazpi (LGP),MNL-LGP,15:15,16:15,1h 00m,0,No info
+Cebu Pacific,2023-08-04,Manila (MNL),Tacloban (TAC),MNL-TAC,18:45,20:05,1h 20m,0,No info
+AirAsia Philippines,2023-08-04,Manila (MNL),Caticlan (MPH),MNL-MPH,9:15,10:25,1h 10m,0,No info
+Philippine Airlines,2023-08-05,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,11:15,15:05,3h 50m,1,Layover in CEB
+Cebu Pacific,2023-08-05,Tacloban (TAC),Davao (DVO),TAC-CEB-DVO,9:45,13:30,3h 45m,1,Layover in CEB
+AirAsia Philippines,2023-08-05,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:00,15:30,1h 30m,0,No info
+Philippine Airlines,2023-08-06,Manila (MNL),Cebu (CEB),MNL-CEB,21:15,22:45,1h 30m,0,In-flight meal
+Cebu Pacific,2023-08-06,Davao (DVO),Cebu (CEB),DVO-CEB,9:45,11:00,1h 15m,0,No info
+AirAsia Philippines,2023-08-06,Kalibo (KLO),Zamboanga (ZAM),KLO-MNL-ZAM,17:45,0:00,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-08-07,Manila (MNL),Davao (DVO),MNL-DVO,8:00,10:15,2h 15m,0,No info
+Cebu Pacific,2023-08-07,Manila (MNL),Iloilo (ILO),MNL-ILO,15:45,17:00,1h 15m,0,No info
+AirAsia Philippines,2023-08-07,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,14:15,15:45,1h 30m,0,No info
+Philippine Airlines,2023-08-08,Iloilo (ILO),Legazpi (LGP),ILO-MNL-LGP,11:45,15:40,3h 55m,1,Layover in MNL
+Cebu Pacific,2023-08-08,General Santos (GES),Bacolod (BCD),GES-CEB-BCD,17:15,21:50,4h 35m,1,Layover in CEB
+AirAsia Philippines,2023-08-08,Manila (MNL),Kalibo (KLO),MNL-KLO,20:45,22:00,1h 15m,0,No info
+Philippine Airlines,2023-08-09,Manila (MNL),Cebu (CEB),MNL-CEB,14:00,15:30,1h 30m,0,No info
+Cebu Pacific,2023-08-09,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,12:45,17:00,4h 15m,1,Layover in CEB
+AirAsia Philippines,2023-08-09,Manila (MNL),Legazpi (LGP),MNL-LGP,11:00,12:00,1h 00m,0,No info
+Philippine Airlines,2023-08-10,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,10:15,16:30,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-08-10,Cebu (CEB),Iloilo (ILO),CEB-ILO,17:15,18:00,0h 45m,0,No info
+AirAsia Philippines,2023-08-10,Manila (MNL),Tacloban (TAC),MNL-TAC,14:15,15:35,1h 20m,0,No info
+Philippine Airlines,2023-08-11,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,16:15,17:00,0h 45m,0,No info
+Cebu Pacific,2023-08-11,Manila (MNL),General Santos (GES),MNL-GES,12:45,14:35,1h 50m,0,No info
+AirAsia Philippines,2023-08-11,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,22:45,3:00,4h 15m,1,Red-eye flight
+Philippine Airlines,2023-08-12,Cebu (CEB),Davao (DVO),CEB-DVO,8:45,10:00,1h 15m,0,In-flight meal
+Cebu Pacific,2023-08-12,Manila (MNL),Iloilo (ILO),MNL-ILO,10:45,12:00,1h 15m,0,No info
+AirAsia Philippines,2023-08-12,Manila (MNL),Caticlan (MPH),MNL-MPH,9:45,10:55,1h 10m,0,No info
+Philippine Airlines,2023-08-13,Davao (DVO),Manila (MNL),DVO-MNL,21:45,0:00,2h 15m,0,No info
+Cebu Pacific,2023-08-13,Manila (MNL),Bacolod (BCD),MNL-BCD,19:15,20:30,1h 15m,0,No info
+AirAsia Philippines,2023-08-13,Bacolod (BCD),Puerto Princesa (PPS),BCD-MNL-PPS,20:45,1:00,4h 15m,1,Layover in MNL
+Philippine Airlines,2023-08-14,Manila (MNL),Cebu (CEB),MNL-CEB,16:00,17:30,1h 30m,0,In-flight meal
+Cebu Pacific,2023-08-14,Tacloban (TAC),Kalibo (KLO),TAC-MNL-KLO,13:45,18:30,4h 45m,1,Layover in MNL
+AirAsia Philippines,2023-08-14,Cebu (CEB),Iloilo (ILO),CEB-ILO,19:45,20:30,0h 45m,0,No info
+Philippine Airlines,2023-08-15,Caticlan (MPH),General Santos (GES),MPH-CEB-GES,7:45,12:35,4h 50m,1,Layover in CEB
+Cebu Pacific,2023-08-15,Manila (MNL),Legazpi (LGP),MNL-LGP,12:45,13:45,1h 00m,0,No info
+AirAsia Philippines,2023-08-15,Manila (MNL),General Santos (GES),MNL-GES,16:45,18:35,1h 50m,0,No info
+Philippine Airlines,2023-08-16,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,15:00,16:30,1h 30m,0,No info
+Cebu Pacific,2023-08-16,Iloilo (ILO),Zamboanga (ZAM),ILO-CEB-ZAM,11:45,15:50,4h 05m,1,Layover in CEB
+AirAsia Philippines,2023-08-16,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:15,15:45,1h 30m,0,No info
+Philippine Airlines,2023-08-17,Davao (DVO),Cebu (CEB),DVO-CEB,17:45,19:00,1h 15m,0,No info
+Cebu Pacific,2023-08-17,Manila (MNL),Iloilo (ILO),MNL-ILO,22:45,0:00,1h 15m,0,No info
+AirAsia Philippines,2023-08-17,Kalibo (KLO),Davao (DVO),KLO-MNL-DVO,15:45,21:00,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-08-18,Manila (MNL),Cebu (CEB),MNL-CEB,8:45,10:15,1h 30m,0,No info
+Cebu Pacific,2023-08-18,Davao (DVO),Manila (MNL),DVO-MNL,19:45,22:00,2h 15m,0,No info
+AirAsia Philippines,2023-08-18,Manila (MNL),Bacolod (BCD),MNL-BCD,9:30,10:45,1h 15m,0,No info
+Philippine Airlines,2023-08-19,Manila (MNL),Kalibo (KLO),MNL-KLO,11:00,12:15,1h 15m,0,No info
+Cebu Pacific,2023-08-19,Puerto Princesa (PPS),Cagayan de Oro (CGY),PPS-MNL-CGY,17:45,23:30,5h 45m,1,Layover in MNL
+AirAsia Philippines,2023-08-19,Cebu (CEB),Davao (DVO),CEB-DVO,11:45,13:00,1h 15m,0,No info
+Philippine Airlines,2023-08-20,Zamboanga (ZAM),Legazpi (LGP),ZAM-MNL-LGP,9:15,15:30,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-08-20,Manila (MNL),Iloilo (ILO),MNL-ILO,10:00,11:15,1h 15m,0,No info
+AirAsia Philippines,2023-08-20,Manila (MNL),Legazpi (LGP),MNL-LGP,14:45,15:45,1h 00m,0,No info
+Philippine Airlines,2023-08-21,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,14:45,15:30,0h 45m,0,Ninoy Aquino Day
+Cebu Pacific,2023-08-21,Manila (MNL),General Santos (GES),MNL-GES,13:15,15:05,1h 50m,0,Ninoy Aquino Day
+AirAsia Philippines,2023-08-21,Manila (MNL),Cebu (CEB),MNL-CEB,17:45,19:15,1h 30m,0,Ninoy Aquino Day
+Philippine Airlines,2023-08-22,Cebu (CEB),Iloilo (ILO),CEB-ILO,16:45,17:30,0h 45m,0,No info
+Cebu Pacific,2023-08-22,Tacloban (TAC),Bacolod (BCD),TAC-CEB-BCD,18:45,22:25,3h 40m,1,Layover in CEB
+AirAsia Philippines,2023-08-22,Manila (MNL),Caticlan (MPH),MNL-MPH,13:30,14:40,1h 10m,0,No info
+Philippine Airlines,2023-08-23,General Santos (GES),Kalibo (KLO),GES-CEB-KLO,21:45,3:00,5h 15m,1,Red-eye flight
+Cebu Pacific,2023-08-23,Davao (DVO),Manila (MNL),DVO-MNL,22:45,1:00,2h 15m,0,No info
+AirAsia Philippines,2023-08-23,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,14:15,15:45,1h 30m,0,No info
+Philippine Airlines,2023-08-24,Manila (MNL),Cebu (CEB),MNL-CEB,12:45,14:15,1h 30m,0,No info
+Cebu Pacific,2023-08-24,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,20:45,2:00,5h 15m,1,Red-eye flight
+AirAsia Philippines,2023-08-24,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,12:30,14:00,1h 30m,0,No info
+Philippine Airlines,2023-08-25,Davao (DVO),Cebu (CEB),DVO-CEB,18:30,19:45,1h 15m,0,In-flight meal
+Cebu Pacific,2023-08-25,Cagayan de Oro (CGY),Iloilo (ILO),CGY-CEB-ILO,15:45,19:20,3h 35m,1,Layover in CEB
+AirAsia Philippines,2023-08-25,Manila (MNL),Davao (DVO),MNL-DVO,16:45,19:00,2h 15m,0,No info
+Philippine Airlines,2023-08-26,Manila (MNL),Legazpi (LGP),MNL-LGP,10:45,11:45,1h 00m,0,National Heroes Day
+Cebu Pacific,2023-08-26,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,13:30,18:20,4h 50m,1,Layover in CEB
+AirAsia Philippines,2023-08-26,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:45,16:15,1h 30m,0,National Heroes Day
+Philippine Airlines,2023-08-27,Manila (MNL),Cebu (CEB),MNL-CEB,21:45,23:15,1h 30m,0,In-flight meal
+Cebu Pacific,2023-08-27,Manila (MNL),Tacloban (TAC),MNL-TAC,11:45,13:05,1h 20m,0,No info
+AirAsia Philippines,2023-08-27,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,15:45,22:00,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-08-28,Davao (DVO),Manila (MNL),DVO-MNL,21:30,23:45,2h 15m,0,No info
+Cebu Pacific,2023-08-28,Manila (MNL),Bacolod (BCD),MNL-BCD,18:30,19:45,1h 15m,0,No info
+AirAsia Philippines,2023-08-28,Cebu (CEB),Iloilo (ILO),CEB-ILO,20:15,21:00,0h 45m,0,No info
+Philippine Airlines,2023-08-29,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,11:15,15:30,4h 15m,1,Layover in CEB
+Cebu Pacific,2023-08-29,Manila (MNL),Kalibo (KLO),MNL-KLO,9:45,11:00,1h 15m,0,No info
+AirAsia Philippines,2023-08-29,Manila (MNL),Davao (DVO),MNL-DVO,7:15,9:30,2h 15m,0,No info
+Philippine Airlines,2023-08-30,Manila (MNL),Cebu (CEB),MNL-CEB,15:15,16:45,1h 30m,0,No info
+Cebu Pacific,2023-08-30,Manila (MNL),General Santos (GES),MNL-GES,13:30,15:20,1h 50m,0,No info
+AirAsia Philippines,2023-08-30,Manila (MNL),Tacloban (TAC),MNL-TAC,17:45,19:05,1h 20m,0,No info
+Philippine Airlines,2023-08-31,Manila (MNL),Cebu (CEB),MNL-CEB,20:30,22:00,1h 30m,0,No info
+Cebu Pacific,2023-08-31,Davao (DVO),Cebu (CEB),DVO-CEB,11:30,12:45,1h 15m,0,No info
+AirAsia Philippines,2023-08-31,Manila (MNL),Clark (CRK),MNL-CRK,16:45,17:30,0h 45m,0,No info
+Airline,Date_of_Journey,Source,Destination,Route,Dep_Time,Arrival_Time,Duration,Total_Stops,Additional_Info
+Philippine Airlines,2023-09-01,Manila (MNL),Cebu (CEB),MNL-CEB,7:15,8:45,1h 30m,0,Typhoon season
+Cebu Pacific,2023-09-01,Manila (MNL),Davao (DVO),MNL-DVO,5:45,8:00,2h 15m,0,Typhoon season
+AirAsia Philippines,2023-09-01,Manila (MNL),Iloilo (ILO),MNL-ILO,16:15,17:30,1h 15m,0,Typhoon season
+Philippine Airlines,2023-09-02,Bacolod (BCD),Zamboanga (ZAM),BCD-CEB-ZAM,8:45,12:40,3h 55m,1,Layover in CEB
+Cebu Pacific,2023-09-02,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,12:30,14:00,1h 30m,0,No info
+AirAsia Philippines,2023-09-02,Manila (MNL),Kalibo (KLO),MNL-KLO,8:15,9:30,1h 15m,0,No info
+Philippine Airlines,2023-09-03,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,9:15,13:30,4h 15m,1,Layover in MNL
+Cebu Pacific,2023-09-03,Zamboanga (ZAM),Iloilo (ILO),ZAM-CEB-ILO,11:30,14:45,3h 15m,1,Layover in CEB
+AirAsia Philippines,2023-09-03,Cagayan de Oro (CGY),Puerto Princesa (PPS),CGY-MNL-PPS,16:30,21:45,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-09-04,Manila (MNL),Legazpi (LGP),MNL-LGP,15:00,16:00,1h 00m,0,No info
+Cebu Pacific,2023-09-04,Manila (MNL),Tacloban (TAC),MNL-TAC,18:30,19:50,1h 20m,0,No info
+AirAsia Philippines,2023-09-04,Manila (MNL),Caticlan (MPH),MNL-MPH,9:00,10:10,1h 10m,0,No info
+Philippine Airlines,2023-09-05,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,11:00,14:50,3h 50m,1,Layover in CEB
+Cebu Pacific,2023-09-05,Tacloban (TAC),Davao (DVO),TAC-CEB-DVO,9:30,13:15,3h 45m,1,Layover in CEB
+AirAsia Philippines,2023-09-05,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,13:45,15:15,1h 30m,0,No info
+Philippine Airlines,2023-09-06,Manila (MNL),Cebu (CEB),MNL-CEB,21:00,22:30,1h 30m,0,In-flight meal
+Cebu Pacific,2023-09-06,Davao (DVO),Cebu (CEB),DVO-CEB,9:30,10:45,1h 15m,0,No info
+AirAsia Philippines,2023-09-06,Kalibo (KLO),Zamboanga (ZAM),KLO-MNL-ZAM,17:30,23:45,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-09-07,Manila (MNL),Davao (DVO),MNL-DVO,7:45,10:00,2h 15m,0,No info
+Cebu Pacific,2023-09-07,Manila (MNL),Iloilo (ILO),MNL-ILO,15:30,16:45,1h 15m,0,No info
+AirAsia Philippines,2023-09-07,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,13:45,15:15,1h 30m,0,No info
+Philippine Airlines,2023-09-08,Iloilo (ILO),Legazpi (LGP),ILO-MNL-LGP,11:30,15:25,3h 55m,1,Layover in MNL
+Cebu Pacific,2023-09-08,General Santos (GES),Bacolod (BCD),GES-CEB-BCD,17:00,21:35,4h 35m,1,Layover in CEB
+AirAsia Philippines,2023-09-08,Manila (MNL),Kalibo (KLO),MNL-KLO,20:30,21:45,1h 15m,0,No info
+Philippine Airlines,2023-09-09,Manila (MNL),Cebu (CEB),MNL-CEB,13:45,15:15,1h 30m,0,No info
+Cebu Pacific,2023-09-09,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,12:15,16:30,4h 15m,1,Layover in CEB
+AirAsia Philippines,2023-09-09,Manila (MNL),Legazpi (LGP),MNL-LGP,10:45,11:45,1h 00m,0,No info
+Philippine Airlines,2023-09-10,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,9:45,16:00,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-09-10,Cebu (CEB),Iloilo (ILO),CEB-ILO,16:45,17:30,0h 45m,0,No info
+AirAsia Philippines,2023-09-10,Manila (MNL),Tacloban (TAC),MNL-TAC,13:45,15:05,1h 20m,0,No info
+Philippine Airlines,2023-09-11,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,15:45,16:30,0h 45m,0,No info
+Cebu Pacific,2023-09-11,Manila (MNL),General Santos (GES),MNL-GES,12:15,14:05,1h 50m,0,No info
+AirAsia Philippines,2023-09-11,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,22:15,2:30,4h 15m,1,Red-eye flight
+Philippine Airlines,2023-09-12,Cebu (CEB),Davao (DVO),CEB-DVO,8:15,9:30,1h 15m,0,In-flight meal
+Cebu Pacific,2023-09-12,Manila (MNL),Iloilo (ILO),MNL-ILO,10:30,11:45,1h 15m,0,No info
+AirAsia Philippines,2023-09-12,Manila (MNL),Caticlan (MPH),MNL-MPH,9:30,10:40,1h 10m,0,No info
+Philippine Airlines,2023-09-13,Davao (DVO),Manila (MNL),DVO-MNL,21:00,23:15,2h 15m,0,No info
+Cebu Pacific,2023-09-13,Manila (MNL),Bacolod (BCD),MNL-BCD,18:45,20:00,1h 15m,0,No info
+AirAsia Philippines,2023-09-13,Bacolod (BCD),Puerto Princesa (PPS),BCD-MNL-PPS,20:15,0:30,4h 15m,1,Layover in MNL
+Philippine Airlines,2023-09-14,Manila (MNL),Cebu (CEB),MNL-CEB,15:45,17:15,1h 30m,0,In-flight meal
+Cebu Pacific,2023-09-14,Tacloban (TAC),Kalibo (KLO),TAC-MNL-KLO,13:15,18:00,4h 45m,1,Layover in MNL
+AirAsia Philippines,2023-09-14,Cebu (CEB),Iloilo (ILO),CEB-ILO,19:15,20:00,0h 45m,0,No info
+Philippine Airlines,2023-09-15,Caticlan (MPH),General Santos (GES),MPH-CEB-GES,7:15,12:05,4h 50m,1,Layover in CEB
+Cebu Pacific,2023-09-15,Manila (MNL),Legazpi (LGP),MNL-LGP,12:30,13:30,1h 00m,0,No info
+AirAsia Philippines,2023-09-15,Manila (MNL),General Santos (GES),MNL-GES,16:15,18:05,1h 50m,0,No info
+Philippine Airlines,2023-09-16,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,14:30,16:00,1h 30m,0,No info
+Cebu Pacific,2023-09-16,Iloilo (ILO),Zamboanga (ZAM),ILO-CEB-ZAM,11:15,15:20,4h 05m,1,Layover in CEB
+AirAsia Philippines,2023-09-16,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:00,15:30,1h 30m,0,No info
+Philippine Airlines,2023-09-17,Davao (DVO),Cebu (CEB),DVO-CEB,17:15,18:30,1h 15m,0,No info
+Cebu Pacific,2023-09-17,Manila (MNL),Iloilo (ILO),MNL-ILO,22:15,23:30,1h 15m,0,No info
+AirAsia Philippines,2023-09-17,Kalibo (KLO),Davao (DVO),KLO-MNL-DVO,15:15,20:30,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-09-18,Manila (MNL),Cebu (CEB),MNL-CEB,8:30,10:00,1h 30m,0,No info
+Cebu Pacific,2023-09-18,Davao (DVO),Manila (MNL),DVO-MNL,19:15,21:30,2h 15m,0,No info
+AirAsia Philippines,2023-09-18,Manila (MNL),Bacolod (BCD),MNL-BCD,9:00,10:15,1h 15m,0,No info
+Philippine Airlines,2023-09-19,Manila (MNL),Kalibo (KLO),MNL-KLO,10:45,12:00,1h 15m,0,No info
+Cebu Pacific,2023-09-19,Puerto Princesa (PPS),Cagayan de Oro (CGY),PPS-MNL-CGY,17:00,22:45,5h 45m,1,Layover in MNL
+AirAsia Philippines,2023-09-19,Cebu (CEB),Davao (DVO),CEB-DVO,11:15,12:30,1h 15m,0,No info
+Philippine Airlines,2023-09-20,Zamboanga (ZAM),Legazpi (LGP),ZAM-MNL-LGP,8:45,15:00,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-09-20,Manila (MNL),Iloilo (ILO),MNL-ILO,9:45,11:00,1h 15m,0,No info
+AirAsia Philippines,2023-09-20,Manila (MNL),Legazpi (LGP),MNL-LGP,14:15,15:15,1h 00m,0,No info
+Philippine Airlines,2023-09-21,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,14:30,15:15,0h 45m,0,No info
+Cebu Pacific,2023-09-21,Manila (MNL),General Santos (GES),MNL-GES,12:45,14:35,1h 50m,0,No info
+AirAsia Philippines,2023-09-21,Manila (MNL),Cebu (CEB),MNL-CEB,17:15,18:45,1h 30m,0,In-flight meal
+Philippine Airlines,2023-09-22,Cebu (CEB),Iloilo (ILO),CEB-ILO,16:30,17:15,0h 45m,0,No info
+Cebu Pacific,2023-09-22,Tacloban (TAC),Bacolod (BCD),TAC-CEB-BCD,18:30,22:10,3h 40m,1,Layover in CEB
+AirAsia Philippines,2023-09-22,Manila (MNL),Caticlan (MPH),MNL-MPH,13:00,14:10,1h 10m,0,No info
+Philippine Airlines,2023-09-23,General Santos (GES),Kalibo (KLO),GES-CEB-KLO,21:15,2:30,5h 15m,1,Red-eye flight
+Cebu Pacific,2023-09-23,Davao (DVO),Manila (MNL),DVO-MNL,22:15,0:30,2h 15m,0,No info
+AirAsia Philippines,2023-09-23,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,13:30,15:00,1h 30m,0,No info
+Philippine Airlines,2023-09-24,Manila (MNL),Cebu (CEB),MNL-CEB,12:15,13:45,1h 30m,0,No info
+Cebu Pacific,2023-09-24,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,20:15,1:30,5h 15m,1,Red-eye flight
+AirAsia Philippines,2023-09-24,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,12:00,13:30,1h 30m,0,No info
+Philippine Airlines,2023-09-25,Davao (DVO),Cebu (CEB),DVO-CEB,18:00,19:15,1h 15m,0,In-flight meal
+Cebu Pacific,2023-09-25,Cagayan de Oro (CGY),Iloilo (ILO),CGY-CEB-ILO,15:15,18:50,3h 35m,1,Layover in CEB
+AirAsia Philippines,2023-09-25,Manila (MNL),Davao (DVO),MNL-DVO,16:15,18:30,2h 15m,0,No info
+Philippine Airlines,2023-09-26,Manila (MNL),Legazpi (LGP),MNL-LGP,10:30,11:30,1h 00m,0,No info
+Cebu Pacific,2023-09-26,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,13:00,17:50,4h 50m,1,Layover in CEB
+AirAsia Philippines,2023-09-26,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:30,16:00,1h 30m,0,No info
+Philippine Airlines,2023-09-27,Manila (MNL),Cebu (CEB),MNL-CEB,21:15,22:45,1h 30m,0,In-flight meal
+Cebu Pacific,2023-09-27,Manila (MNL),Tacloban (TAC),MNL-TAC,11:15,12:35,1h 20m,0,No info
+AirAsia Philippines,2023-09-27,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,15:15,21:30,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-09-28,Davao (DVO),Manila (MNL),DVO-MNL,20:45,23:00,2h 15m,0,No info
+Cebu Pacific,2023-09-28,Manila (MNL),Bacolod (BCD),MNL-BCD,17:45,19:00,1h 15m,0,No info
+AirAsia Philippines,2023-09-28,Cebu (CEB),Iloilo (ILO),CEB-ILO,19:30,20:15,0h 45m,0,No info
+Philippine Airlines,2023-09-29,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,10:45,15:00,4h 15m,1,Layover in CEB
+Cebu Pacific,2023-09-29,Manila (MNL),Kalibo (KLO),MNL-KLO,9:15,10:30,1h 15m,0,No info
+AirAsia Philippines,2023-09-29,Manila (MNL),Davao (DVO),MNL-DVO,6:45,9:00,2h 15m,0,No info
+Philippine Airlines,2023-09-30,Manila (MNL),Cebu (CEB),MNL-CEB,14:45,16:15,1h 30m,0,No info
+Cebu Pacific,2023-09-30,Manila (MNL),General Santos (GES),MNL-GES,13:00,14:50,1h 50m,0,No info
+AirAsia Philippines,2023-09-30,Manila (MNL),Tacloban (TAC),MNL-TAC,16:45,18:05,1h 20m,0,No info
+Airline,Date_of_Journey,Source,Destination,Route,Dep_Time,Arrival_Time,Duration,Total_Stops,Additional_Info
+Philippine Airlines,2023-10-01,Manila (MNL),Cebu (CEB),MNL-CEB,7:30,9:00,1h 30m,0,Post-typhoon season
+Cebu Pacific,2023-10-01,Manila (MNL),Davao (DVO),MNL-DVO,6:00,8:15,2h 15m,0,Post-typhoon season
+AirAsia Philippines,2023-10-01,Manila (MNL),Iloilo (ILO),MNL-ILO,16:45,18:00,1h 15m,0,Post-typhoon season
+Philippine Airlines,2023-10-02,Bacolod (BCD),Zamboanga (ZAM),BCD-CEB-ZAM,9:00,12:55,3h 55m,1,Layover in CEB
+Cebu Pacific,2023-10-02,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,13:00,14:30,1h 30m,0,No info
+AirAsia Philippines,2023-10-02,Manila (MNL),Kalibo (KLO),MNL-KLO,8:30,9:45,1h 15m,0,No info
+Philippine Airlines,2023-10-03,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,9:30,13:45,4h 15m,1,Layover in MNL
+Cebu Pacific,2023-10-03,Zamboanga (ZAM),Iloilo (ILO),ZAM-CEB-ILO,12:00,15:15,3h 15m,1,Layover in CEB
+AirAsia Philippines,2023-10-03,Cagayan de Oro (CGY),Puerto Princesa (PPS),CGY-MNL-PPS,16:45,22:00,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-10-04,Manila (MNL),Legazpi (LGP),MNL-LGP,15:15,16:15,1h 00m,0,No info
+Cebu Pacific,2023-10-04,Manila (MNL),Tacloban (TAC),MNL-TAC,18:45,20:05,1h 20m,0,No info
+AirAsia Philippines,2023-10-04,Manila (MNL),Caticlan (MPH),MNL-MPH,9:30,10:40,1h 10m,0,No info
+Philippine Airlines,2023-10-05,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,11:30,15:20,3h 50m,1,Layover in CEB
+Cebu Pacific,2023-10-05,Tacloban (TAC),Davao (DVO),TAC-CEB-DVO,10:00,13:45,3h 45m,1,Layover in CEB
+AirAsia Philippines,2023-10-05,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:15,15:45,1h 30m,0,No info
+Philippine Airlines,2023-10-06,Manila (MNL),Cebu (CEB),MNL-CEB,21:30,23:00,1h 30m,0,In-flight meal
+Cebu Pacific,2023-10-06,Davao (DVO),Cebu (CEB),DVO-CEB,10:00,11:15,1h 15m,0,No info
+AirAsia Philippines,2023-10-06,Kalibo (KLO),Zamboanga (ZAM),KLO-MNL-ZAM,18:00,0:15,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-10-07,Manila (MNL),Davao (DVO),MNL-DVO,8:00,10:15,2h 15m,0,No info
+Cebu Pacific,2023-10-07,Manila (MNL),Iloilo (ILO),MNL-ILO,16:15,17:30,1h 15m,0,No info
+AirAsia Philippines,2023-10-07,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,14:30,16:00,1h 30m,0,No info
+Philippine Airlines,2023-10-08,Iloilo (ILO),Legazpi (LGP),ILO-MNL-LGP,12:00,15:55,3h 55m,1,Layover in MNL
+Cebu Pacific,2023-10-08,General Santos (GES),Bacolod (BCD),GES-CEB-BCD,17:30,22:05,4h 35m,1,Layover in CEB
+AirAsia Philippines,2023-10-08,Manila (MNL),Kalibo (KLO),MNL-KLO,21:00,22:15,1h 15m,0,No info
+Philippine Airlines,2023-10-09,Manila (MNL),Cebu (CEB),MNL-CEB,14:15,15:45,1h 30m,0,No info
+Cebu Pacific,2023-10-09,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,13:00,17:15,4h 15m,1,Layover in CEB
+AirAsia Philippines,2023-10-09,Manila (MNL),Legazpi (LGP),MNL-LGP,11:15,12:15,1h 00m,0,No info
+Philippine Airlines,2023-10-10,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,10:15,16:30,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-10-10,Cebu (CEB),Iloilo (ILO),CEB-ILO,17:30,18:15,0h 45m,0,No info
+AirAsia Philippines,2023-10-10,Manila (MNL),Tacloban (TAC),MNL-TAC,14:30,15:50,1h 20m,0,No info
+Philippine Airlines,2023-10-11,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,16:30,17:15,0h 45m,0,No info
+Cebu Pacific,2023-10-11,Manila (MNL),General Santos (GES),MNL-GES,13:00,14:50,1h 50m,0,No info
+AirAsia Philippines,2023-10-11,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,23:00,3:15,4h 15m,1,Red-eye flight
+Philippine Airlines,2023-10-12,Cebu (CEB),Davao (DVO),CEB-DVO,9:00,10:15,1h 15m,0,In-flight meal
+Cebu Pacific,2023-10-12,Manila (MNL),Iloilo (ILO),MNL-ILO,11:00,12:15,1h 15m,0,No info
+AirAsia Philippines,2023-10-12,Manila (MNL),Caticlan (MPH),MNL-MPH,10:00,11:10,1h 10m,0,No info
+Philippine Airlines,2023-10-13,Davao (DVO),Manila (MNL),DVO-MNL,22:00,0:15,2h 15m,0,No info
+Cebu Pacific,2023-10-13,Manila (MNL),Bacolod (BCD),MNL-BCD,19:30,20:45,1h 15m,0,No info
+AirAsia Philippines,2023-10-13,Bacolod (BCD),Puerto Princesa (PPS),BCD-MNL-PPS,21:00,1:15,4h 15m,1,Layover in MNL
+Philippine Airlines,2023-10-14,Manila (MNL),Cebu (CEB),MNL-CEB,16:15,17:45,1h 30m,0,In-flight meal
+Cebu Pacific,2023-10-14,Tacloban (TAC),Kalibo (KLO),TAC-MNL-KLO,14:00,18:45,4h 45m,1,Layover in MNL
+AirAsia Philippines,2023-10-14,Cebu (CEB),Iloilo (ILO),CEB-ILO,20:00,20:45,0h 45m,0,No info
+Philippine Airlines,2023-10-15,Caticlan (MPH),General Santos (GES),MPH-CEB-GES,8:00,12:50,4h 50m,1,Layover in CEB
+Cebu Pacific,2023-10-15,Manila (MNL),Legazpi (LGP),MNL-LGP,13:00,14:00,1h 00m,0,No info
+AirAsia Philippines,2023-10-15,Manila (MNL),General Santos (GES),MNL-GES,17:00,18:50,1h 50m,0,No info
+Philippine Airlines,2023-10-16,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,15:15,16:45,1h 30m,0,No info
+Cebu Pacific,2023-10-16,Iloilo (ILO),Zamboanga (ZAM),ILO-CEB-ZAM,12:00,16:05,4h 05m,1,Layover in CEB
+AirAsia Philippines,2023-10-16,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:30,16:00,1h 30m,0,No info
+Philippine Airlines,2023-10-17,Davao (DVO),Cebu (CEB),DVO-CEB,18:00,19:15,1h 15m,0,No info
+Cebu Pacific,2023-10-17,Manila (MNL),Iloilo (ILO),MNL-ILO,23:00,0:15,1h 15m,0,No info
+AirAsia Philippines,2023-10-17,Kalibo (KLO),Davao (DVO),KLO-MNL-DVO,16:00,21:15,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-10-18,Manila (MNL),Cebu (CEB),MNL-CEB,9:00,10:30,1h 30m,0,No info
+Cebu Pacific,2023-10-18,Davao (DVO),Manila (MNL),DVO-MNL,20:00,22:15,2h 15m,0,No info
+AirAsia Philippines,2023-10-18,Manila (MNL),Bacolod (BCD),MNL-BCD,9:45,11:00,1h 15m,0,No info
+Philippine Airlines,2023-10-19,Manila (MNL),Kalibo (KLO),MNL-KLO,11:15,12:30,1h 15m,0,No info
+Cebu Pacific,2023-10-19,Puerto Princesa (PPS),Cagayan de Oro (CGY),PPS-MNL-CGY,18:00,23:45,5h 45m,1,Layover in MNL
+AirAsia Philippines,2023-10-19,Cebu (CEB),Davao (DVO),CEB-DVO,12:00,13:15,1h 15m,0,No info
+Philippine Airlines,2023-10-20,Zamboanga (ZAM),Legazpi (LGP),ZAM-MNL-LGP,9:30,15:45,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-10-20,Manila (MNL),Iloilo (ILO),MNL-ILO,10:15,11:30,1h 15m,0,No info
+AirAsia Philippines,2023-10-20,Manila (MNL),Legazpi (LGP),MNL-LGP,15:00,16:00,1h 00m,0,No info
+Philippine Airlines,2023-10-21,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,15:00,15:45,0h 45m,0,No info
+Cebu Pacific,2023-10-21,Manila (MNL),General Santos (GES),MNL-GES,13:30,15:20,1h 50m,0,No info
+AirAsia Philippines,2023-10-21,Manila (MNL),Cebu (CEB),MNL-CEB,18:00,19:30,1h 30m,0,In-flight meal
+Philippine Airlines,2023-10-22,Cebu (CEB),Iloilo (ILO),CEB-ILO,17:00,17:45,0h 45m,0,No info
+Cebu Pacific,2023-10-22,Tacloban (TAC),Bacolod (BCD),TAC-CEB-BCD,19:00,22:40,3h 40m,1,Layover in CEB
+AirAsia Philippines,2023-10-22,Manila (MNL),Caticlan (MPH),MNL-MPH,14:00,15:10,1h 10m,0,No info
+Philippine Airlines,2023-10-23,General Santos (GES),Kalibo (KLO),GES-CEB-KLO,22:00,3:15,5h 15m,1,Red-eye flight
+Cebu Pacific,2023-10-23,Davao (DVO),Manila (MNL),DVO-MNL,23:00,1:15,2h 15m,0,No info
+AirAsia Philippines,2023-10-23,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,14:15,15:45,1h 30m,0,No info
+Philippine Airlines,2023-10-24,Manila (MNL),Cebu (CEB),MNL-CEB,13:00,14:30,1h 30m,0,No info
+Cebu Pacific,2023-10-24,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,21:00,2:15,5h 15m,1,Red-eye flight
+AirAsia Philippines,2023-10-24,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,12:45,14:15,1h 30m,0,No info
+Philippine Airlines,2023-10-25,Davao (DVO),Cebu (CEB),DVO-CEB,18:45,20:00,1h 15m,0,In-flight meal
+Cebu Pacific,2023-10-25,Cagayan de Oro (CGY),Iloilo (ILO),CGY-CEB-ILO,16:00,19:35,3h 35m,1,Layover in CEB
+AirAsia Philippines,2023-10-25,Manila (MNL),Davao (DVO),MNL-DVO,17:00,19:15,2h 15m,0,No info
+Philippine Airlines,2023-10-26,Manila (MNL),Legazpi (LGP),MNL-LGP,11:15,12:15,1h 00m,0,No info
+Cebu Pacific,2023-10-26,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,13:45,18:35,4h 50m,1,Layover in CEB
+AirAsia Philippines,2023-10-26,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:45,16:15,1h 30m,0,No info
+Philippine Airlines,2023-10-27,Manila (MNL),Cebu (CEB),MNL-CEB,22:00,23:30,1h 30m,0,In-flight meal
+Cebu Pacific,2023-10-27,Manila (MNL),Tacloban (TAC),MNL-TAC,12:15,13:35,1h 20m,0,No info
+AirAsia Philippines,2023-10-27,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,16:00,22:15,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-10-28,Davao (DVO),Manila (MNL),DVO-MNL,21:45,0:00,2h 15m,0,No info
+Cebu Pacific,2023-10-28,Manila (MNL),Bacolod (BCD),MNL-BCD,18:45,20:00,1h 15m,0,No info
+AirAsia Philippines,2023-10-28,Cebu (CEB),Iloilo (ILO),CEB-ILO,20:30,21:15,0h 45m,0,No info
+Philippine Airlines,2023-10-29,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,11:30,15:45,4h 15m,1,Layover in CEB
+Cebu Pacific,2023-10-29,Manila (MNL),Kalibo (KLO),MNL-KLO,10:00,11:15,1h 15m,0,No info
+AirAsia Philippines,2023-10-29,Manila (MNL),Davao (DVO),MNL-DVO,7:30,9:45,2h 15m,0,No info
+Philippine Airlines,2023-10-30,Manila (MNL),Cebu (CEB),MNL-CEB,15:15,16:45,1h 30m,0,No info
+Cebu Pacific,2023-10-30,Manila (MNL),General Santos (GES),MNL-GES,13:30,15:20,1h 50m,0,No info
+AirAsia Philippines,2023-10-30,Manila (MNL),Tacloban (TAC),MNL-TAC,17:45,19:05,1h 20m,0,No info
+Philippine Airlines,2023-10-31,Manila (MNL),Cebu (CEB),MNL-CEB,20:30,22:00,1h 30m,0,Halloween
+Cebu Pacific,2023-10-31,Davao (DVO),Cebu (CEB),DVO-CEB,11:30,12:45,1h 15m,0,Halloween
+AirAsia Philippines,2023-10-31,Manila (MNL),Clark (CRK),MNL-CRK,16:45,17:30,0h 45m,0,Halloween
+Airline,Date_of_Journey,Source,Destination,Route,Dep_Time,Arrival_Time,Duration,Total_Stops,Additional_Info
+Philippine Airlines,2023-11-01,Manila (MNL),Cebu (CEB),MNL-CEB,7:45,9:15,1h 30m,0,All Saints Day
+Cebu Pacific,2023-11-01,Manila (MNL),Davao (DVO),MNL-DVO,6:15,8:30,2h 15m,0,All Saints Day
+AirAsia Philippines,2023-11-01,Manila (MNL),Iloilo (ILO),MNL-ILO,17:15,18:30,1h 15m,0,All Saints Day
+Philippine Airlines,2023-11-02,Bacolod (BCD),Zamboanga (ZAM),BCD-CEB-ZAM,9:30,13:25,3h 55m,1,Layover in CEB
+Cebu Pacific,2023-11-02,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,13:45,15:15,1h 30m,0,No info
+AirAsia Philippines,2023-11-02,Manila (MNL),Kalibo (KLO),MNL-KLO,9:15,10:30,1h 15m,0,No info
+Philippine Airlines,2023-11-03,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,10:15,14:30,4h 15m,1,Layover in MNL
+Cebu Pacific,2023-11-03,Zamboanga (ZAM),Iloilo (ILO),ZAM-CEB-ILO,12:45,16:00,3h 15m,1,Layover in CEB
+AirAsia Philippines,2023-11-03,Cagayan de Oro (CGY),Puerto Princesa (PPS),CGY-MNL-PPS,17:30,22:45,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-11-04,Manila (MNL),Legazpi (LGP),MNL-LGP,16:00,17:00,1h 00m,0,No info
+Cebu Pacific,2023-11-04,Manila (MNL),Tacloban (TAC),MNL-TAC,19:30,20:50,1h 20m,0,No info
+AirAsia Philippines,2023-11-04,Manila (MNL),Caticlan (MPH),MNL-MPH,10:15,11:25,1h 10m,0,No info
+Philippine Airlines,2023-11-05,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,11:45,15:35,3h 50m,1,Layover in CEB
+Cebu Pacific,2023-11-05,Tacloban (TAC),Davao (DVO),TAC-CEB-DVO,10:30,14:15,3h 45m,1,Layover in CEB
+AirAsia Philippines,2023-11-05,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,14:45,16:15,1h 30m,0,No info
+Philippine Airlines,2023-11-06,Manila (MNL),Cebu (CEB),MNL-CEB,22:15,23:45,1h 30m,0,In-flight meal
+Cebu Pacific,2023-11-06,Davao (DVO),Cebu (CEB),DVO-CEB,10:30,11:45,1h 15m,0,No info
+AirAsia Philippines,2023-11-06,Kalibo (KLO),Zamboanga (ZAM),KLO-MNL-ZAM,19:00,1:15,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-11-07,Manila (MNL),Davao (DVO),MNL-DVO,8:45,11:00,2h 15m,0,No info
+Cebu Pacific,2023-11-07,Manila (MNL),Iloilo (ILO),MNL-ILO,16:45,18:00,1h 15m,0,No info
+AirAsia Philippines,2023-11-07,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,15:00,16:30,1h 30m,0,No info
+Philippine Airlines,2023-11-08,Iloilo (ILO),Legazpi (LGP),ILO-MNL-LGP,12:30,16:25,3h 55m,1,Layover in MNL
+Cebu Pacific,2023-11-08,General Santos (GES),Bacolod (BCD),GES-CEB-BCD,18:00,22:35,4h 35m,1,Layover in CEB
+AirAsia Philippines,2023-11-08,Manila (MNL),Kalibo (KLO),MNL-KLO,21:30,22:45,1h 15m,0,No info
+Philippine Airlines,2023-11-09,Manila (MNL),Cebu (CEB),MNL-CEB,14:45,16:15,1h 30m,0,No info
+Cebu Pacific,2023-11-09,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,13:30,17:45,4h 15m,1,Layover in CEB
+AirAsia Philippines,2023-11-09,Manila (MNL),Legazpi (LGP),MNL-LGP,11:45,12:45,1h 00m,0,No info
+Philippine Airlines,2023-11-10,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,10:45,17:00,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-11-10,Cebu (CEB),Iloilo (ILO),CEB-ILO,18:00,18:45,0h 45m,0,No info
+AirAsia Philippines,2023-11-10,Manila (MNL),Tacloban (TAC),MNL-TAC,15:00,16:20,1h 20m,0,No info
+Philippine Airlines,2023-11-11,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,17:00,17:45,0h 45m,0,No info
+Cebu Pacific,2023-11-11,Manila (MNL),General Santos (GES),MNL-GES,13:30,15:20,1h 50m,0,No info
+AirAsia Philippines,2023-11-11,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,23:30,3:45,4h 15m,1,Red-eye flight
+Philippine Airlines,2023-11-12,Cebu (CEB),Davao (DVO),CEB-DVO,9:30,10:45,1h 15m,0,In-flight meal
+Cebu Pacific,2023-11-12,Manila (MNL),Iloilo (ILO),MNL-ILO,11:30,12:45,1h 15m,0,No info
+AirAsia Philippines,2023-11-12,Manila (MNL),Caticlan (MPH),MNL-MPH,10:30,11:40,1h 10m,0,No info
+Philippine Airlines,2023-11-13,Davao (DVO),Manila (MNL),DVO-MNL,22:30,0:45,2h 15m,0,No info
+Cebu Pacific,2023-11-13,Manila (MNL),Bacolod (BCD),MNL-BCD,20:00,21:15,1h 15m,0,No info
+AirAsia Philippines,2023-11-13,Bacolod (BCD),Puerto Princesa (PPS),BCD-MNL-PPS,21:30,1:45,4h 15m,1,Layover in MNL
+Philippine Airlines,2023-11-14,Manila (MNL),Cebu (CEB),MNL-CEB,16:45,18:15,1h 30m,0,In-flight meal
+Cebu Pacific,2023-11-14,Tacloban (TAC),Kalibo (KLO),TAC-MNL-KLO,14:30,19:15,4h 45m,1,Layover in MNL
+AirAsia Philippines,2023-11-14,Cebu (CEB),Iloilo (ILO),CEB-ILO,20:30,21:15,0h 45m,0,No info
+Philippine Airlines,2023-11-15,Caticlan (MPH),General Santos (GES),MPH-CEB-GES,8:30,13:20,4h 50m,1,Layover in CEB
+Cebu Pacific,2023-11-15,Manila (MNL),Legazpi (LGP),MNL-LGP,13:30,14:30,1h 00m,0,No info
+AirAsia Philippines,2023-11-15,Manila (MNL),General Santos (GES),MNL-GES,17:30,19:20,1h 50m,0,No info
+Philippine Airlines,2023-11-16,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,15:45,17:15,1h 30m,0,No info
+Cebu Pacific,2023-11-16,Iloilo (ILO),Zamboanga (ZAM),ILO-CEB-ZAM,12:30,16:35,4h 05m,1,Layover in CEB
+AirAsia Philippines,2023-11-16,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,15:00,16:30,1h 30m,0,No info
+Philippine Airlines,2023-11-17,Davao (DVO),Cebu (CEB),DVO-CEB,18:30,19:45,1h 15m,0,No info
+Cebu Pacific,2023-11-17,Manila (MNL),Iloilo (ILO),MNL-ILO,23:30,0:45,1h 15m,0,No info
+AirAsia Philippines,2023-11-17,Kalibo (KLO),Davao (DVO),KLO-MNL-DVO,16:30,21:45,5h 15m,1,Layover in MNL
+Philippine Airlines,2023-11-18,Manila (MNL),Cebu (CEB),MNL-CEB,9:30,11:00,1h 30m,0,No info
+Cebu Pacific,2023-11-18,Davao (DVO),Manila (MNL),DVO-MNL,20:30,22:45,2h 15m,0,No info
+AirAsia Philippines,2023-11-18,Manila (MNL),Bacolod (BCD),MNL-BCD,10:15,11:30,1h 15m,0,No info
+Philippine Airlines,2023-11-19,Manila (MNL),Kalibo (KLO),MNL-KLO,11:45,13:00,1h 15m,0,No info
+Cebu Pacific,2023-11-19,Puerto Princesa (PPS),Cagayan de Oro (CGY),PPS-MNL-CGY,18:15,0:00,5h 45m,1,Layover in MNL
+AirAsia Philippines,2023-11-19,Cebu (CEB),Davao (DVO),CEB-DVO,12:30,13:45,1h 15m,0,No info
+Philippine Airlines,2023-11-20,Zamboanga (ZAM),Legazpi (LGP),ZAM-MNL-LGP,9:45,16:00,6h 15m,1,Layover in MNL
+Cebu Pacific,2023-11-20,Manila (MNL),Iloilo (ILO),MNL-ILO,10:45,12:00,1h 15m,0,No info
+AirAsia Philippines,2023-11-20,Manila (MNL),Legazpi (LGP),MNL-LGP,15:15,16:15,1h 00m,0,No info
+Philippine Airlines,2023-11-21,Davao (DVO),Cagayan de Oro (CGY),DVO-CGY,15:30,16:15,0h 45m,0,No info
+Cebu Pacific,2023-11-21,Manila (MNL),General Santos (GES),MNL-GES,14:00,15:50,1h 50m,0,No info
+AirAsia Philippines,2023-11-21,Manila (MNL),Cebu (CEB),MNL-CEB,18:30,20:00,1h 30m,0,In-flight meal
+Philippine Airlines,2023-11-22,Cebu (CEB),Iloilo (ILO),CEB-ILO,17:30,18:15,0h 45m,0,No info
+Cebu Pacific,2023-11-22,Tacloban (TAC),Bacolod (BCD),TAC-CEB-BCD,19:30,23:10,3h 40m,1,Layover in CEB
+AirAsia Philippines,2023-11-22,Manila (MNL),Caticlan (MPH),MNL-MPH,14:15,15:25,1h 10m,0,No info
+Philippine Airlines,2023-11-23,General Santos (GES),Kalibo (KLO),GES-CEB-KLO,22:30,3:45,5h 15m,1,Red-eye flight
+Cebu Pacific,2023-11-23,Davao (DVO),Manila (MNL),DVO-MNL,23:30,1:45,2h 15m,0,No info
+AirAsia Philippines,2023-11-23,Manila (MNL),Puerto Princesa (PPS),MNL-PPS,14:45,16:15,1h 30m,0,No info
+Philippine Airlines,2023-11-24,Manila (MNL),Cebu (CEB),MNL-CEB,13:30,15:00,1h 30m,0,No info
+Cebu Pacific,2023-11-24,Legazpi (LGP),Davao (DVO),LGP-MNL-DVO,21:30,2:45,5h 15m,1,Red-eye flight
+AirAsia Philippines,2023-11-24,Cebu (CEB),Puerto Princesa (PPS),CEB-PPS,13:15,14:45,1h 30m,0,No info
+Philippine Airlines,2023-11-25,Davao (DVO),Cebu (CEB),DVO-CEB,19:15,20:30,1h 15m,0,In-flight meal
+Cebu Pacific,2023-11-25,Cagayan de Oro (CGY),Iloilo (ILO),CGY-CEB-ILO,16:30,20:05,3h 35m,1,Layover in CEB
+AirAsia Philippines,2023-11-25,Manila (MNL),Davao (DVO),MNL-DVO,17:30,19:45,2h 15m,0,No info
+Philippine Airlines,2023-11-26,Manila (MNL),Legazpi (LGP),MNL-LGP,11:45,12:45,1h 00m,0,No info
+Cebu Pacific,2023-11-26,Bacolod (BCD),General Santos (GES),BCD-CEB-GES,14:15,19:05,4h 50m,1,Layover in CEB
+AirAsia Philippines,2023-11-26,Manila (MNL),Cagayan de Oro (CGY),MNL-CGY,15:15,16:30,1h 30m,0,No info
+Philippine Airlines,2023-11-27,Manila (MNL),Cebu (CEB),MNL-CEB,22:30,0:00,1h 30m,0,In-flight meal
+Cebu Pacific,2023-11-27,Manila (MNL),Tacloban (TAC),MNL-TAC,12:45,14:05,1h 20m,0,No info
+AirAsia Philippines,2023-11-27,Zamboanga (ZAM),Caticlan (MPH),ZAM-MNL-MPH,16:30,22:45,6h 15m,1,Layover in MNL
+Philippine Airlines,2023-11-28,Davao (DVO),Manila (MNL),DVO-MNL,22:15,0:30,2h 15m,0,No info
+Cebu Pacific,2023-11-28,Manila (MNL),Bacolod (BCD),MNL-BCD,19:15,20:30,1h 15m,0,No info
+AirAsia Philippines,2023-11-28,Cebu (CEB),Iloilo (ILO),CEB-ILO,21:00,21:45,0h 45m,0,No info
+Philippine Airlines,2023-11-29,Puerto Princesa (PPS),Tacloban (TAC),PPS-CEB-TAC,12:00,16:15,4h 15m,1,Layover in CEB
+Cebu Pacific,2023-11-29,Manila (MNL),Kalibo (KLO),MNL-KLO,10:30,11:45,1h 15m,0,No info
+AirAsia Philippines,2023-11-29,Manila (MNL),Davao (DVO),MNL-DVO,8:00,10:15,2h 15m,0,No info
+Philippine Airlines,2023-11-30,Manila (MNL),Cebu (CEB),MNL-CEB,15:45,17:15,1h 30m,0,Bonifacio Day
+Cebu Pacific,2023-11-30,Manila (MNL),General Santos (GES),MNL-GES,14:00,15:50,1h 50m,0,Bonifacio Day
+AirAsia Philippines,2023-11-30,Manila (MNL),Tacloban (TAC),MNL-TAC,18:15,19:35,1h 20m,0,Bonifacio Day

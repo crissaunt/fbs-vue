@@ -15,6 +15,7 @@ from django.contrib.auth.models import User
 from .services.email_service import EmailService
 from .services.pdf_service import BoardingPassPDFService
 from django.http import HttpResponse
+from django.shortcuts import render, get_object_or_404
 
 from app.models import (
     Airport, Route, Flight, Schedule, Seat, Country,
@@ -3005,3 +3006,4 @@ def download_itinerary(request, booking_id):
             'success': False,
             'error': str(e)
         }, status=500)
+    
