@@ -1,89 +1,53 @@
 <template>
-  <div id="app" class="min-h-screen flex flex-col bg-gray-50">
-    <BookingTimer v-if="bookingStore.sessionExpiry" />
-    
-    <!-- Header -->
-    <header class="navbar bg-white relative z-10 py-4 border-b-10 border-[#FF579A] shadow-md">
-      <div class="container mx-auto px-5 md:px-10">
-        <div class="flex justify-between items-center">
-          <!-- Logo -->
-          <div class="logo flex items-center gap-3">
-            <span class="brand-name font-bold text-[#FF579A] tracking-wide text-2xl">
-              LOGO
-            </span>
-          </div>
-          
-          <!-- Navigation -->
-          <nav class="flex gap-6">
-            <router-link 
-              to="/" 
-              class="text-gray-700 font-medium hover:text-red-600 transition-colors"
-              :class="{ 'text-red-600 border-b-2 border-red-600': $route.path === '/' }"
-            >
-              Book
-            </router-link>
-            <router-link 
-              to="/check-in" 
-              class="text-gray-700 font-medium hover:text-red-600 transition-colors"
-              :class="{ 'text-red-600 border-b-2 border-red-600': $route.path === '/check-in' }"
-            >
-              Check-In
-            </router-link>
-            <router-link 
-              to="/status" 
-              class="text-gray-700 font-medium hover:text-red-600 transition-colors"
-              :class="{ 'text-red-600 border-b-2 border-red-600': $route.path === '/status' }"
-            >
-              Flight Status
-            </router-link>
-          </nav>
-        </div>
-      </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="main-content ">
-      <router-view />
-    </main>
-
-    <!-- Footer -->
-    <!-- <footer class="footer bg-gray-800 text-white py-6 mt-10">
-      <div class="container mx-auto px-5 md:px-10 text-center">
-        <p>&copy; 2024 Philippine Airlines. All rights reserved.</p>
-      </div>
-    </footer> -->
-  </div>
+  <!-- Dynamically wrap pages with the selected layout -->
+  <component :is="layoutComponent">
+    <router-view />
+  </component>
 </template>
 
 <script setup>
-import { useBookingStore } from '@/stores/booking';
-import { useRouter, useRoute } from 'vue-router';
-import BookingTimer from '@/components/booking/BookingTimer.vue';
-import { onMounted, onUnmounted } from 'vue';
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 
-const bookingStore = useBookingStore();
-const router = useRouter();
-const route = useRoute();
+// ❌ Admin layout commented out (file does not exist)
+// import AdminLayout from '@/views/admin/adminlayout.vue'
 
-let timerInterval = null;
-const checkExpiry = () => {
-  if (bookingStore.sessionExpiry && Date.now() > bookingStore.sessionExpiry){
-    alert("Your booking session has expired. You will be redirected to the home page.");
-    bookingStore.resetBooking();
-    router.push('/');
-  }
+// ✅ Instructor layout still active
+import InstructorLayout from '@/views/Instructor/InstructorLayout.vue'
+
+const route = useRoute()
+
+/**
+ * Map layout names (from route.meta.layout)
+ * to actual Vue components
+ */
+const layouts = {
+  // AdminLayout, // ❌ disabled for now
+  InstructorLayout
 }
-// onMounted(() => {
-//   timerInterval = setInterval(checkExpiry, 1000);
-// });
 
-onUnmounted (() => {
-  if (timerInterval) clearInterval(timerInterval);
-});
+/**
+ * Choose layout:
+ * - Uses meta.layout if defined
+ * - Falls back to a plain <div> if not
+ */
+const layoutComponent = computed(() => {
+  return layouts[route.meta.layout] || 'div'
+})
 </script>
 
 <style>
-/* Global button styles that might be used by child components */
+/* Global styles */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Unbounded:wght@400;700&display=swap');
+
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Shared button style */
 .btn-cancel {
   margin-left: 20px;
   background: transparent;

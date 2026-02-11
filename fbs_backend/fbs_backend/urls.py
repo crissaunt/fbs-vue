@@ -22,6 +22,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('app.urls')),
     path('flightapp/', include('flightapp.urls')),
+    path('api/', include('fbs_instructor.urls')),
+    
     #djoser
     path('api/auth/', include('djoser.urls')),
     path('api/auth/', include('djoser.urls.authtoken')),
