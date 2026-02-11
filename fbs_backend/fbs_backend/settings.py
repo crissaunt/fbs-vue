@@ -91,6 +91,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'app',
     'flightapp',
+    'fbs_instructor',
 ]
 
 MIDDLEWARE = [
@@ -168,10 +169,10 @@ WSGI_APPLICATION = 'fbs_backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'flight_database',                    
+        'NAME': 'flight_database1',                    
         'USER': 'postgres',                 
         'PASSWORD': 'postgres',     
-        'HOST': 'localhost',                  
+        'HOST': 'localhost',           
         'PORT': '5432',                 
     }
 }

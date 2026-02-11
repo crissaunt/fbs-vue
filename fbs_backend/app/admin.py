@@ -6,8 +6,102 @@ from django.urls import reverse
 from django.db.models import Count, Sum, Avg
 from .models import *
 from .models import SeatClass, Schedule
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as DefaultUserAdmin
+from django.contrib.auth.models import User
+from .models import UserProfile  # make sure the import is correct
+
+from django.contrib import admin
+from django.contrib.auth.models import User
+from django.contrib.auth.admin import UserAdmin as DefaultUserAdmin
+from django.forms.models import BaseInlineFormSet
+from .models import UserProfile
 
 
+class UserProfileInlineFormSet(BaseInlineFormSet):
+    """
+    Prevent Django admin from trying to create a second UserProfile.
+    """
+    def save_new(self, form, commit=True):
+        # Always reuse existing profile
+        return UserProfile.objects.get(user=self.instance)
+
+
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    formset = UserProfileInlineFormSet
+    can_delete = False
+    extra = 0
+    max_num = 1
+    verbose_name_plural = "Profile"
+
+
+def get_role(obj):
+    return getattr(obj.userprofile, 'role', '—')
+
+get_role.short_description = 'Role'
+
+
+admin.site.unregister(User)
+
+
+@admin.register(User)
+class UserAdmin(DefaultUserAdmin):
+    inlines = (UserProfileInline,)
+    list_display = (
+        'username',
+        'email',
+        'first_name',
+        'last_name',
+        'is_staff',
+        get_role,
+    )
+
+# ============================================================
+# STUDENT ADMINISTRATION
+# ============================================================
+
+@admin.register(Students)
+class StudentAdmin(admin.ModelAdmin):
+    # This controls the columns visible in the table list view
+    list_display = (
+        'student_number', 
+        'first_name', 
+        'mi', 
+        'last_name', 
+        'gender',  # ✅ Added gender to list view
+        'email', 
+        'phone_number', 
+        'date_enrolled',
+        'user'
+    )
+    
+    # Adds a search bar for these specific fields
+    search_fields = ('student_number', 'first_name', 'last_name', 'email')
+    
+    # Adds a filter sidebar for the enrollment date and gender
+    list_filter = ('date_enrolled', 'gender')  # ✅ Added gender filter
+    
+    # Orders the list so the newest students appear at the top
+    ordering = ('-date_enrolled',)
+    
+    # Makes the auto-generated date field viewable but not editable
+    readonly_fields = ('date_enrolled',)
+
+    # Groups the fields nicely when you click on a student to edit them
+    fieldsets = (
+        ('Account Details', {
+            'fields': ('user', 'student_number')
+        }),
+        ('Personal Information', {
+            'fields': (('first_name', 'mi', 'last_name'), 'gender', 'email', 'phone_number')  # ✅ Added gender field
+        }),
+        ('System Information', {
+            'fields': ('date_enrolled', 'password'),
+        }),
+    )
+
+    
 @admin.register(BookingContact)
 class BookingContactAdmin(admin.ModelAdmin):
     list_display = ('booking', 'first_name', 'last_name', 'email', 'phone', 'created_at')

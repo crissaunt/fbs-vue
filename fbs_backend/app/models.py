@@ -9,6 +9,91 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+#User Profile with Roles
+from django.contrib.auth.models import User
+from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+class UserProfile(models.Model):
+    ROLE_CHOICES = [
+        ('student', 'Student'),
+        ('instructor', 'Instructor'),
+        ('admin', 'Admin'),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    role = models.CharField(
+        max_length=10, 
+        choices=ROLE_CHOICES, 
+        null=True, 
+        blank=True
+    )
+
+    def __str__(self):
+        return f"{self.user.username} ({self.role or 'No role'})"
+
+# Signal to auto-create profile when User is created
+@receiver(post_save, sender=User)
+def create_or_update_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+    else:
+        if hasattr(instance, 'userprofile'):
+            instance.userprofile.save()
+
+class Students(models.Model):
+    # ✅ Link to User model (nullable to allow migration of existing data)
+    user = models.OneToOneField(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='student_profile',
+        null=True,
+        blank=True
+    )
+    
+    # Existing student fields (keep them for backward compatibility)
+    student_number = models.CharField(max_length=50, unique=True)
+    first_name = models.CharField(max_length=100, blank=True)
+    mi = models.CharField(max_length=1, blank=True, null=True)
+    last_name = models.CharField(max_length=100, blank=True)
+    email = models.EmailField(unique=True, blank=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    password = models.CharField(max_length=255, blank=True)  # Keep for existing records
+    
+    # Add this new field
+    GENDER_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female'),
+        ('other', 'Other'),
+    ]
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True, null=True)
+    
+    # Metadata
+    date_enrolled = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        # This tells Django exactly what to show in the Admin sidebar
+        verbose_name = "Student"
+        verbose_name_plural = "Students"
+    
+    def save(self, *args, **kwargs):
+        """Auto-sync data from User model if linked"""
+        if self.user:
+            # Auto-fill from User if fields are empty
+            if not self.first_name:
+                self.first_name = self.user.first_name
+            if not self.last_name:
+                self.last_name = self.user.last_name
+            if not self.email:
+                self.email = self.user.email
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        # ✅ Handle both cases: with user and without user
+        if self.user:
+            return f"{self.user.first_name} {self.user.last_name} ({self.student_number})"
+        return f"{self.first_name} {self.last_name} ({self.student_number})"
 
 # ============================================================
 # COUNTRY MODEL
