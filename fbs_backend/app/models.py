@@ -236,7 +236,7 @@ class Flight(models.Model):
         return f"{self.flight_number} ({self.airline.code})"
 
 
-# In your models.py, update the duration method in the Schedule model:
+
 
 class Schedule(models.Model):
     STATUS_CHOICES = [
@@ -251,11 +251,28 @@ class Schedule(models.Model):
     arrival_time = models.DateTimeField()
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Open')
+    
+    # ============ NEW FIELDS FOR ML PRICING ============
+    ml_base_price = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        help_text="ML predicted base price (saved from predictor)"
+    )
+    ml_price_updated_at = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="When the ML price was last calculated"
+    )
+    # ===================================================
 
     class Meta:
         indexes = [
             models.Index(fields=['departure_time', 'status']),
             models.Index(fields=['flight', 'departure_time']),
+            # Add index for ML price queries
+            models.Index(fields=['ml_base_price', 'status']),
         ]
 
     def __str__(self):
@@ -287,6 +304,51 @@ class Schedule(models.Model):
     @property
     def is_open(self):
         return self.status == "Open"
+    
+    
+    def update_ml_price(self, save=True):
+        """Update the ML predicted price for this schedule"""
+        try:
+            # Import inside the method to avoid circular imports
+            from flightapp.ml.predictor import predictor
+            
+            # Check if model is loaded - if not, try to load it
+            if not predictor.model:
+                print(f"⚠️ Schedule {self.id}: ML model not loaded, attempting to load...")
+                predictor.load_model()
+                
+                if not predictor.model:
+                    print(f"❌ Schedule {self.id}: Failed to load ML model")
+                    return False, None
+            
+            flight_data = {
+                'schedule_id': self.id,
+                'flight_number': self.flight.flight_number,
+                'airline_code': self.flight.airline.code,
+                'airline_name': self.flight.airline.name,
+                'origin': self.flight.route.origin_airport.code,
+                'destination': self.flight.route.destination_airport.code,
+                'departure_time': self.departure_time.isoformat(),
+                'arrival_time': self.arrival_time.isoformat(),
+                'total_stops': 0,
+                'is_domestic': self.flight.route.is_domestic,
+            }
+            
+            predicted_price = Decimal(str(predictor.predict_price(flight_data)))
+            self.ml_base_price = predicted_price
+            self.ml_price_updated_at = timezone.now()
+            
+            if save:
+                self.save(update_fields=['ml_base_price', 'ml_price_updated_at'])
+            
+            print(f"✅ Schedule {self.id}: ML price updated to ₱{predicted_price:,.2f}")
+            return True, predicted_price
+        except Exception as e:
+            print(f"❌ Error updating ML price for schedule {self.id}: {e}")
+            import traceback
+            traceback.print_exc()
+            return False, None
+        # ===================================================
 
 
 # Add this to your existing Seat model or update it
@@ -342,9 +404,16 @@ class Seat(models.Model):
     @property
     def final_price(self):
         """Calculate final price including adjustments"""
-        base_price = self.schedule.price if self.schedule else 0
-        multiplier = self.seat_class.price_multiplier if self.seat_class else 1
-        return (base_price * multiplier) + self.price_adjustment
+        if self.schedule:
+            # Use ML base price if available, otherwise fallback to regular price
+            base_price = self.schedule.ml_base_price or self.schedule.price or Decimal('0.00')
+        else:
+            base_price = Decimal('0.00')
+        
+        multiplier = self.seat_class.price_multiplier if self.seat_class else Decimal('1.00')
+        adjustment = self.price_adjustment or Decimal('0.00')
+        
+        return (base_price * multiplier) + adjustment
 
     @property
     def seat_features(self):

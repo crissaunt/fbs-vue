@@ -16,6 +16,12 @@ from .services.email_service import EmailService
 from .services.pdf_service import BoardingPassPDFService
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
+from .ml.predictor import predictor
+from .ml.dynamic_pricing import dynamic_pricing
+import hashlib
+import json
+from decimal import Decimal
+import random
 
 from app.models import (
     Airport, Route, Flight, Schedule, Seat, Country,
@@ -64,17 +70,23 @@ class AirportViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'city', 'code', 'country__name']
 
+from .ml.predictor import predictor
+from decimal import Decimal
+
+from .ml.dynamic_pricing import dynamic_pricing
+
 class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ScheduleSerializer
     queryset = Schedule.objects.none()
     permission_classes = [permissions.AllowAny]    
     
     def get_queryset(self):
-        # select_related joins the tables so we don't hit the DB 100 times
         queryset = Schedule.objects.filter(status='Open').select_related(
             'flight__airline', 
             'flight__route__origin_airport', 
             'flight__route__destination_airport'
+        ).prefetch_related(
+            'flight__aircraft'
         )
         
         origin = self.request.query_params.get('origin')
@@ -87,13 +99,255 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(flight__route__destination_airport__code=destination)
         if date:
             try:
-                # Ensures that even if a full ISO string is sent, we only filter by date
-                clean_date = date.split('T')[0] 
+                # Handle different date formats
+                clean_date = date.split('T')[0] if 'T' in date else date
                 queryset = queryset.filter(departure_time__date=clean_date)
-            except Exception:
+            except Exception as e:
+                print(f"Date filter error: {e}")
                 pass
 
         return queryset
+    
+    def list(self, request, *args, **kwargs):
+        """REAL-TIME PRICING - Prices change on EVERY request!"""
+        
+        # Get session ID for price differentiation
+        session_id = request.session.session_key
+        if not session_id:
+            request.session.save()
+            session_id = request.session.session_key
+        
+        # Get user for loyalty pricing
+        user = request.user if request.user.is_authenticated else None
+        
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # ============ UPDATE ML PRICES IN DATABASE ============
+        updated_count = 0
+        for schedule in queryset:
+            # Check if ML price is missing or stale (older than 1 hour)
+            needs_update = (
+                schedule.ml_base_price is None or
+                schedule.ml_price_updated_at is None or
+                (timezone.now() - schedule.ml_price_updated_at).total_seconds() > 3600
+            )
+            
+            if needs_update:
+                try:
+                    success, price = schedule.update_ml_price(save=True)
+                    if success:
+                        updated_count += 1
+                except Exception as e:
+                    print(f"Error updating ML price for schedule {schedule.id}: {e}")
+        
+        if updated_count > 0:
+            print(f"✅ Updated ML prices for {updated_count} schedules")
+        # ======================================================
+        
+        # ============ REAL-TIME PRICING - FRESH EVERY TIME ============
+        serializer = self.get_serializer(queryset, many=True)
+        data = serializer.data
+        
+        # Apply dynamic pricing on EVERY request - NO CACHING!
+        for i, schedule in enumerate(queryset):
+            if i < len(data):
+                try:
+                    flight_data = {
+                        'schedule_id': schedule.id,
+                        'flight_number': schedule.flight.flight_number,
+                        'airline_code': schedule.flight.airline.code,
+                        'airline_name': schedule.flight.airline.name,
+                        'origin': schedule.flight.route.origin_airport.code,
+                        'destination': schedule.flight.route.destination_airport.code,
+                        'departure_time': schedule.departure_time.isoformat(),
+                        'arrival_time': schedule.arrival_time.isoformat(),
+                        'total_stops': 0,
+                        'is_domestic': schedule.flight.route.is_domestic,
+                    }
+                    
+                    # FRESH dynamic price for this specific user/session
+                    price_data = dynamic_pricing.get_price_for_user(
+                        flight_data, 
+                        user=user,
+                        session_id=session_id
+                    )
+                    
+                    # Update response with fresh dynamic pricing
+                    data[i]['price'] = price_data['final_price']
+                    data[i]['base_price'] = price_data['base_price']
+                    data[i]['ml_base_price'] = float(schedule.ml_base_price) if schedule.ml_base_price else None
+                    data[i]['ml_predicted'] = True
+                    data[i]['dynamic_pricing'] = price_data['factors_applied']
+                    
+                    # Unique price ID for this exact moment
+                    timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
+                    price_id_input = f"{session_id}_{schedule.id}_{timestamp}_{random.randint(1, 1000)}"
+                    data[i]['price_id'] = hashlib.md5(price_id_input.encode()).hexdigest()[:8]
+                    
+                    # Add timestamp to show when price was calculated
+                    data[i]['price_calculated_at'] = datetime.now().isoformat()
+                    
+                    # Update seat classes with fresh dynamic prices
+                    if 'seat_classes' in data[i]:
+                        for seat_class in data[i]['seat_classes']:
+                            seat_class_name = seat_class.get('name', 'Economy')
+                            # Use ML base price from database
+                            ml_base = float(schedule.ml_base_price) if schedule.ml_base_price else schedule.price
+                            seat_class['base_price'] = ml_base
+                            seat_class['price'] = dynamic_pricing.round_price(
+                                ml_base * self.get_seat_class_multiplier(seat_class_name)
+                            )
+                except Exception as e:
+                    print(f"Error processing schedule {schedule.id}: {e}")
+                    continue
+        
+        # Track search for demand pricing
+        self.track_search_demand(request, queryset)
+        
+        return Response(data)
+    # ===================================================================
+    
+    def get_seat_class_multiplier(self, seat_class_name):
+        """Get multiplier for seat class"""
+        multipliers = {
+            'economy': 1.0,
+            'premium_economy': 1.35,
+            'business': 1.8,
+            'first': 2.4,
+            'economy class': 1.0,
+            'premium economy': 1.35,
+            'business class': 1.8,
+            'first class': 2.4,
+            'comfort': 1.2,
+            'deluxe': 1.6,
+            'executive': 2.0,
+        }
+        key = seat_class_name.lower().strip()
+        return multipliers.get(key, 1.0)
+    
+    def track_search_demand(self, request, queryset):
+        """Track search queries for demand-based pricing"""
+        from django.core.cache import cache
+        
+        # Track origin-destination pair demand
+        origin = request.query_params.get('origin')
+        destination = request.query_params.get('destination')
+        
+        if origin and destination:
+            route_key = f"route_demand_{origin}_{destination}"
+            searches = cache.get(route_key, 0)
+            cache.set(route_key, searches + 1, 3600)  # 1 hour expiry
+        
+        # Track specific flight demand
+        for schedule in queryset[:10]:  # Track top 10 only
+            try:
+                flight_key = f"flight_demand_{schedule.flight.flight_number}"
+                searches = cache.get(flight_key, 0)
+                cache.set(flight_key, searches + 1, 3600)
+            except Exception as e:
+                print(f"Error tracking demand: {e}")
+                continue
+# ====================================================================
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def test_dynamic_pricing(request):
+    """
+    Test endpoint to see different prices for different sessions/users
+    """
+    from .ml.dynamic_pricing import dynamic_pricing
+    import time
+    
+    # Test flight data
+    test_flight = {
+        'schedule_id': 1,
+        'flight_number': '5J 123',
+        'airline_code': '5J',
+        'airline_name': 'Cebu Pacific',
+        'origin': 'MNL',
+        'destination': 'CEB',
+        'departure_time': (datetime.now() + timedelta(days=14)).isoformat(),
+        'arrival_time': (datetime.now() + timedelta(days=14, hours=1, minutes=15)).isoformat(),
+        'total_stops': 0,
+        'is_domestic': True
+    }
+    
+    results = []
+    
+    # Simulate different users
+    for i in range(5):
+        # Create mock user
+        class MockUser:
+            def __init__(self, is_anonymous=True, id=None):
+                self.is_anonymous = is_anonymous
+                self.id = id
+        
+        if i == 0:
+            user = MockUser(is_anonymous=True)  # Anonymous
+        elif i == 1:
+            user = MockUser(is_anonymous=False, id=1)  # New user
+        elif i == 2:
+            user = MockUser(is_anonymous=False, id=2)  # Returning (1 booking)
+        elif i == 3:
+            user = MockUser(is_anonymous=False, id=3)  # Loyal (5+ bookings)
+        else:
+            user = MockUser(is_anonymous=False, id=4)  # Premium
+        
+        # Different session IDs
+        session_id = f"session_{i}_{int(time.time())}"
+        
+        price_data = dynamic_pricing.get_price_for_user(
+            test_flight, 
+            user=user,
+            session_id=session_id
+        )
+        
+        results.append({
+            'user_type': ['Anonymous', 'New', 'Returning', 'Loyal', 'Premium'][i],
+            'user_id': user.id if not user.is_anonymous else None,
+            'session_id': session_id[:10] + '...',
+            'price': price_data['final_price'],
+            'base_price': price_data['base_price'],
+            'factors': price_data['factors_applied']
+        })
+    
+    return Response({
+        'success': True,
+        'test_flight': test_flight,
+        'prices': results,
+        'note': 'Different users/sessions see different prices based on dynamic factors'
+    })
+
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def predict_flight_price(request):
+    """On-demand flight price prediction"""
+    try:
+        flight_data = request.data
+        predicted_price = predictor.predict_price(flight_data)
+        
+        # Also predict for different seat classes
+        seat_class_prices = {}
+        for seat_class in ['economy', 'premium_economy', 'business', 'first']:
+            seat_class_prices[seat_class] = predictor.predict_seat_class_price(
+                predicted_price, seat_class
+            )
+        
+        return Response({
+            'success': True,
+            'base_price': predicted_price,
+            'seat_class_prices': seat_class_prices,
+            'currency': 'PHP'
+        })
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+    
 
 # In views.py - Update the SeatViewSet class
 class SeatViewSet(viewsets.ReadOnlyModelViewSet):

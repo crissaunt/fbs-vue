@@ -60,7 +60,6 @@ class AirportSerializer(serializers.ModelSerializer):
         }
 
 
-# flightapp/serializers.py - Update ScheduleSerializer
 
 class ScheduleSerializer(serializers.ModelSerializer):
     # These "source" fields reach through the Foreign Keys
@@ -77,11 +76,29 @@ class ScheduleSerializer(serializers.ModelSerializer):
     # Helper method for duration (calls the model method)
     flight_duration = serializers.ReadOnlyField(source='duration')
     
-    # ADD THESE FIELDS FOR SEAT CLASS FILTERING
+    # Seat class fields
     available_classes = serializers.SerializerMethodField()
     seat_classes = serializers.SerializerMethodField()
     available_seats = serializers.SerializerMethodField()
     is_domestic = serializers.SerializerMethodField()
+    
+    # ============ ML PRICING FIELDS ============
+    # Override price to use ML price first
+    price = serializers.SerializerMethodField()
+    ml_base_price = serializers.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        read_only=True,
+        allow_null=True
+    )
+    ml_price_updated_at = serializers.DateTimeField(
+        read_only=True,
+        allow_null=True,
+        format='%Y-%m-%d %H:%M:%S'
+    )
+    using_ml_price = serializers.SerializerMethodField()
+    price_age_hours = serializers.SerializerMethodField()
+    # ============================================
     
     def get_available_classes(self, obj):
         """Get unique seat classes with available seats"""
@@ -116,6 +133,26 @@ class ScheduleSerializer(serializers.ModelSerializer):
     def get_is_domestic(self, obj):
         """Check if flight is domestic"""
         return obj.flight.route.is_domestic if obj.flight and obj.flight.route else False
+    
+    # ============ ML PRICING METHODS ============
+    def get_price(self, obj):
+        """Use ML price if available, otherwise fallback to regular price"""
+        if hasattr(obj, 'ml_base_price') and obj.ml_base_price is not None:
+            return obj.ml_base_price
+        return obj.price if obj.price else Decimal('0.00')
+    
+    def get_using_ml_price(self, obj):
+        """Indicate if ML price is being used"""
+        return hasattr(obj, 'ml_base_price') and obj.ml_base_price is not None
+    
+    def get_price_age_hours(self, obj):
+        """Get age of ML price in hours"""
+        if obj.ml_price_updated_at:
+            from django.utils import timezone
+            delta = timezone.now() - obj.ml_price_updated_at
+            return round(delta.total_seconds() / 3600, 1)
+        return None
+    # ============================================
 
     class Meta:
         model = Schedule
@@ -124,13 +161,71 @@ class ScheduleSerializer(serializers.ModelSerializer):
             'origin', 'origin_city', 'destination', 'destination_city',
             'departure_time', 'arrival_time', 'price', 'status', 
             'flight_duration', 'available_classes', 'seat_classes', 
-            'available_seats', 'is_domestic'  # Added new fields
+            'available_seats', 'is_domestic',
+            # ML pricing fields
+            'ml_base_price', 'ml_price_updated_at', 'using_ml_price', 'price_age_hours'
         ]
 
-class SeatClassSerializer(serializers.ModelSerializer):
+
+class SeatSerializer(serializers.ModelSerializer):
+    seat_class = serializers.SerializerMethodField()
+    final_price = serializers.SerializerMethodField()
+    seat_code = serializers.SerializerMethodField()
+    features = serializers.SerializerMethodField()
+    
     class Meta:
-        model = SeatClass
-        fields = ['id', 'name', 'price_multiplier', 'description']
+        model = Seat
+        fields = [
+            'id', 'seat_code', 'seat_number', 'row', 'column',
+            'is_available', 'final_price', 'price_adjustment',
+            'has_extra_legroom', 'is_exit_row', 'is_bulkhead',
+            'is_window', 'is_aisle', 'seat_class', 'features'
+        ]
+    
+    def get_seat_class(self, obj):
+        if obj.seat_class:
+            return {
+                'id': obj.seat_class.id,
+                'name': obj.seat_class.name,
+                'price_multiplier': float(obj.seat_class.price_multiplier)
+            }
+        return None
+    
+    def get_final_price(self, obj):
+        """Get final price using ML base price if available"""
+        try:
+            # Use the final_price property from your Seat model
+            # This will now use schedule.ml_base_price if available
+            return float(obj.final_price)
+        except:
+            # Fallback calculation with ML price first
+            if obj.schedule:
+                # Use ML base price if available, otherwise regular price
+                base_price = obj.schedule.ml_base_price or obj.schedule.price or Decimal('0.00')
+            else:
+                base_price = Decimal('0.00')
+            
+            multiplier = obj.seat_class.price_multiplier if obj.seat_class else Decimal('1.00')
+            adjustment = obj.price_adjustment if obj.price_adjustment else Decimal('0.00')
+            return float((base_price * multiplier) + adjustment)
+    
+    def get_seat_code(self, obj):
+        return f"{obj.row}{obj.column}" if obj.row and obj.column else obj.seat_number
+    
+    def get_features(self, obj):
+        # Use the seat_features property from your Seat model
+        features = []
+        if obj.has_extra_legroom:
+            features.append("Extra Legroom")
+        if obj.is_exit_row:
+            features.append("Exit Row")
+        if obj.is_bulkhead:
+            features.append("Bulkhead")
+        if obj.is_window:
+            features.append("Window")
+        if obj.is_aisle:
+            features.append("Aisle")
+        return features
 
 class SeatSerializer(serializers.ModelSerializer):
     seat_class = serializers.SerializerMethodField()

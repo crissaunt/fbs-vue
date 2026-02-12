@@ -15,6 +15,11 @@ router.register(r'bookings', views.BookingViewSet)
 
 urlpatterns = [
     path('api/', include(router.urls)),
+
+    # Dynamic pricing endpoints
+    path('api/test-dynamic-pricing/', views.test_dynamic_pricing, name='test-dynamic-pricing'),
+    path('api/predict-price/', views.predict_flight_price, name='predict-price'),
+
     # Payment endpoints
     path('create-payment-intent/', views.create_payment_intent, name='create_payment_intent'),
     path('create-payment-source/', views.create_payment_source, name='create_payment_source'),

@@ -152,6 +152,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'fbs_backend.wsgi.application'
 
+# Cache configuration for demand tracking
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+
+# Session configuration
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_COOKIE_AGE = 3600  # 1 hour
+SESSION_SAVE_EVERY_REQUEST = True
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
@@ -169,7 +181,7 @@ WSGI_APPLICATION = 'fbs_backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'flight_database1',                    
+        'NAME': 'flight_database',                    
         'USER': 'postgres',                 
         'PASSWORD': 'postgres',     
         'HOST': 'localhost',           
