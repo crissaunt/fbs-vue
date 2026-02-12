@@ -1080,6 +1080,8 @@
   </div>
 </template>
 
+
+
 <script setup>
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import { useBookingStore } from '@/stores/booking';
@@ -1096,6 +1098,12 @@ const filteredFlights = ref([]);
 const loading = ref(true);
 const showFilters = ref(false);
 const showNoResults = ref(false);
+
+// ============ NEW: ML PRICING STATE ============
+const mlPricingEnabled = ref(true); // Toggle ML pricing on/off
+const showPricingDetails = ref(false); // Show detailed pricing factors
+const selectedPriceId = ref(null); // Track which flight's pricing details to show
+// ================================================
 
 // Timeout handling
 const fetchTimeout = ref(null);
@@ -1194,7 +1202,9 @@ const filterOptions = ref({
 // Session watcher
 const sessionWatcher = ref(null);
 
-// Load seat class features from API
+// ============ NEW: ML PRICING METHODS ============
+
+// Load seat class features and ML pricing info
 const loadSeatClassFeatures = async () => {
   try {
     const response = await flightService.getSeatClassFeatures();
@@ -1209,6 +1219,109 @@ const loadSeatClassFeatures = async () => {
     console.error('❌ Failed to load seat class features:', error);
   }
 };
+
+// Get ML price prediction for a flight
+const getMLPricePrediction = async (flight) => {
+  if (!mlPricingEnabled.value) return flight.price;
+  
+  try {
+    const flightData = {
+      flight_number: flight.flight_number,
+      airline_code: flight.airline_code,
+      airline_name: flight.airline_name,
+      origin: flight.origin,
+      destination: flight.destination,
+      departure_time: flight.departure_time,
+      arrival_time: flight.arrival_time,
+      total_stops: 0,
+      is_domestic: flight.is_domestic,
+      duration_hours: flight.flight_duration ? parseDuration(flight.flight_duration) : 1.5
+    };
+    
+    const response = await flightService.getPricePrediction(flightData);
+    
+    if (response.data && response.data.success) {
+      console.log(`💰 ML Price for ${flight.flight_number}: ₱${response.data.base_price.toLocaleString()}`);
+      return {
+        ...flight,
+        price: response.data.base_price,
+        ml_predicted: true,
+        seat_class_prices: response.data.seat_class_prices,
+        base_price: response.data.base_price,
+        original_price: flight.price // Keep original for comparison
+      };
+    }
+  } catch (error) {
+    console.error('❌ Failed to get ML price prediction:', error);
+  }
+  
+  return flight;
+};
+
+// Parse duration string like "1h 30m" to hours
+const parseDuration = (durationStr) => {
+  if (!durationStr) return 1.5;
+  const hours = durationStr.match(/(\d+)h/);
+  const minutes = durationStr.match(/(\d+)m/);
+  let total = 0;
+  if (hours) total += parseInt(hours[1]);
+  if (minutes) total += parseInt(minutes[1]) / 60;
+  return total;
+};
+
+// Toggle pricing details for a specific flight
+const togglePricingDetails = (flightId) => {
+  if (selectedPriceId.value === flightId) {
+    selectedPriceId.value = null;
+    showPricingDetails.value = false;
+  } else {
+    selectedPriceId.value = flightId;
+    showPricingDetails.value = true;
+  }
+};
+
+// Format price with ML indicator
+const formatPrice = (flight) => {
+  if (flight.ml_predicted) {
+    return {
+      price: `₱${Number(flight.price).toLocaleString()}`,
+      label: 'ML Predicted Price',
+      tooltip: 'This price is dynamically adjusted based on demand, time, and availability',
+      class: 'text-pink-500'
+    };
+  }
+  return {
+    price: `₱${Number(flight.price).toLocaleString()}`,
+    label: 'Base Price',
+    tooltip: 'Standard fare',
+    class: 'text-gray-900'
+  };
+};
+
+// Calculate price with selected seat class
+const calculateSeatClassPrice = (basePrice, className, flight = null) => {
+  // Use ML predicted seat class prices if available
+  if (flight && flight.seat_class_prices && flight.seat_class_prices[className.toLowerCase()]) {
+    return flight.seat_class_prices[className.toLowerCase()];
+  }
+  
+  // Fallback to multipliers
+  const priceMultipliers = {
+    'economy': 1.0,
+    'business': 1.8,
+    'first': 2.5,
+    'premium_economy': 1.3,
+    'first_class': 2.5,
+    'business_class': 1.8,
+    'premium_economy': 1.3
+  };
+  
+  const key = className.toLowerCase().replace(' ', '_');
+  const multiplier = priceMultipliers[key] || 1.0;
+  return Math.round(basePrice * multiplier);
+};
+
+// =================================================
 
 // Update seat class filter options dynamically
 const updateSeatClassFilterOptions = () => {
@@ -1332,7 +1445,6 @@ const showSeatClasses = (flight) => {
 const extractSeatClassesFromFlight = (flight) => {
   if (!flight) return [];
   
-  // Try different possible structures
   let seatClasses = [];
   
   // Structure 1: flight.available_classes array
@@ -1340,9 +1452,10 @@ const extractSeatClassesFromFlight = (flight) => {
     seatClasses = flight.available_classes.map(className => ({
       name: className,
       description: getSeatClassDescription(className),
-      price: calculateSeatClassPrice(flight.price, className),
+      price: calculateSeatClassPrice(flight.price, className, flight),
       icon: getSeatClassIcon(className),
-      features: getSeatClassFeatures(className)
+      features: getSeatClassFeatures(className),
+      ml_predicted: flight.ml_predicted
     }));
   }
   // Structure 2: flight.seat_classes array
@@ -1352,17 +1465,19 @@ const extractSeatClassesFromFlight = (flight) => {
         return {
           name: seatClass,
           description: getSeatClassDescription(seatClass),
-          price: calculateSeatClassPrice(flight.price, seatClass),
+          price: calculateSeatClassPrice(flight.price, seatClass, flight),
           icon: getSeatClassIcon(seatClass),
-          features: getSeatClassFeatures(seatClass)
+          features: getSeatClassFeatures(seatClass),
+          ml_predicted: flight.ml_predicted
         };
       } else if (typeof seatClass === 'object') {
         return {
           name: seatClass.name || seatClass.class_name || seatClass.value || 'Unknown',
           description: seatClass.description || getSeatClassDescription(seatClass.name || seatClass.class_name),
-          price: seatClass.price || calculateSeatClassPrice(flight.price, seatClass.name || seatClass.class_name),
+          price: seatClass.price || calculateSeatClassPrice(flight.price, seatClass.name || seatClass.class_name, flight),
           icon: getSeatClassIcon(seatClass.name || seatClass.class_name),
-          features: seatClass.features || getSeatClassFeatures(seatClass.name || seatClass.class_name)
+          features: seatClass.features || getSeatClassFeatures(seatClass.name || seatClass.class_name),
+          ml_predicted: flight.ml_predicted || seatClass.ml_predicted
         };
       }
       return null;
@@ -1378,9 +1493,10 @@ const extractSeatClassesFromFlight = (flight) => {
       return {
         name: formattedName,
         description: getSeatClassDescription(className),
-        price: calculateSeatClassPrice(flight.price, className),
+        price: calculateSeatClassPrice(flight.price, className, flight),
         icon: getSeatClassIcon(className),
-        features: seatClassFeatures.value[className]
+        features: seatClassFeatures.value[className],
+        ml_predicted: flight.ml_predicted
       };
     });
   }
@@ -1392,43 +1508,29 @@ const extractSeatClassesFromFlight = (flight) => {
         description: getSeatClassDescription('economy'), 
         price: flight.price, 
         icon: getSeatClassIcon('economy'),
-        features: getSeatClassFeatures('economy')
+        features: getSeatClassFeatures('economy'),
+        ml_predicted: flight.ml_predicted
       },
       { 
         name: 'Business', 
         description: getSeatClassDescription('business'), 
-        price: calculateSeatClassPrice(flight.price, 'business'), 
+        price: calculateSeatClassPrice(flight.price, 'business', flight), 
         icon: getSeatClassIcon('business'),
-        features: getSeatClassFeatures('business')
+        features: getSeatClassFeatures('business'),
+        ml_predicted: flight.ml_predicted
       },
       { 
         name: 'First Class', 
         description: getSeatClassDescription('first'), 
-        price: calculateSeatClassPrice(flight.price, 'first'), 
+        price: calculateSeatClassPrice(flight.price, 'first', flight), 
         icon: getSeatClassIcon('first'),
-        features: getSeatClassFeatures('first')
+        features: getSeatClassFeatures('first'),
+        ml_predicted: flight.ml_predicted
       }
     ];
   }
   
   return seatClasses;
-};
-
-// Calculate seat class price based on base price
-const calculateSeatClassPrice = (basePrice, className) => {
-  const priceMultipliers = {
-    'economy': 1.0,
-    'business': 1.8,
-    'first': 2.5,
-    'premium_economy': 1.3,
-    'first_class': 2.5,
-    'business_class': 1.8,
-    'premium_economy': 1.3
-  };
-  
-  const key = className.toLowerCase().replace(' ', '_');
-  const multiplier = priceMultipliers[key] || 1.0;
-  return Math.round(basePrice * multiplier);
 };
 
 // Helper function to get seat class description
@@ -1532,12 +1634,13 @@ const handleSeatClassSelection = (seatClass) => {
   const flightWithSeatClass = {
     ...flightToStore,
     price: seatClass.price,
-    original_price: flightToStore.original_price || flightToStore.price, // Keep original if exists
-    base_price: flightToStore.base_price || flightToStore.price, // Also store as base_price
+    original_price: flightToStore.original_price || flightToStore.price,
+    base_price: flightToStore.base_price || flightToStore.price,
     seat_class: seatClass.name,
     selected_seat_class: seatClass.name,
     seat_class_details: seatClass,
-    seat_class_features: seatClass.features
+    seat_class_features: seatClass.features,
+    ml_predicted: seatClass.ml_predicted || flightToStore.ml_predicted
   };
   
   console.log('💾 Flight with seat class to store:', {
@@ -1545,6 +1648,7 @@ const handleSeatClassSelection = (seatClass) => {
     seat_class: flightWithSeatClass.selected_seat_class,
     price: flightWithSeatClass.price,
     original_price: flightWithSeatClass.original_price,
+    ml_predicted: flightWithSeatClass.ml_predicted,
     selection_phase: selectionPhase.value
   });
   
@@ -1552,40 +1656,23 @@ const handleSeatClassSelection = (seatClass) => {
   if (isRoundTrip.value) {
     if (selectionPhase.value === 'outbound') {
       bookingStore.selectFlight(flightWithSeatClass, 'outbound');
-      console.log('✅ Outbound flight with seat class saved to store:', {
-        flight: flightWithSeatClass.flight_number,
-        seat_class: flightWithSeatClass.selected_seat_class,
-        price: flightWithSeatClass.price
-      });
+      console.log('✅ Outbound flight with seat class saved to store');
     } else {
       bookingStore.selectFlight(flightWithSeatClass, 'return');
-      console.log('✅ Return flight with seat class saved to store:', {
-        flight: flightWithSeatClass.flight_number,
-        seat_class: flightWithSeatClass.selected_seat_class,
-        price: flightWithSeatClass.price
-      });
+      console.log('✅ Return flight with seat class saved to store');
     }
   } else {
     bookingStore.selectFlight(flightWithSeatClass, 'outbound');
-    console.log('✅ One-way flight with seat class saved to store:', {
-      flight: flightWithSeatClass.flight_number,
-      seat_class: flightWithSeatClass.selected_seat_class,
-      price: flightWithSeatClass.price
-    });
+    console.log('✅ One-way flight with seat class saved to store');
   }
   
   // Close seat classes modal
   showSeatClassesModal.value = false;
   selectedFlightForSeats.value = null;
   
-  // Show confirmation modal - pass the flight with seat class
+  // Show confirmation modal
   selectedFlight.value = flightWithSeatClass;
   showConfirmation.value = true;
-  
-  // Force UI update
-  setTimeout(() => {
-    // This will trigger reactive updates
-  }, 100);
 };
 
 // Cancel seat class selection
@@ -1609,6 +1696,7 @@ const logCompleteBookingDetails = () => {
     console.log(`  Departure: ${formatTime(outbound.departure_time)}`);
     console.log(`  Seat Class: ${outbound.selected_seat_class || outbound.seat_class || 'Not selected'}`);
     console.log(`  Price with Seat Class: ₱${Number(outbound.price).toLocaleString()}`);
+    console.log(`  ML Predicted: ${outbound.ml_predicted ? 'Yes' : 'No'}`);
     if (outbound.original_price) {
       console.log(`  Base Price: ₱${Number(outbound.original_price).toLocaleString()}`);
     }
@@ -1622,6 +1710,7 @@ const logCompleteBookingDetails = () => {
     console.log(`  Departure: ${formatTime(returnFlight.departure_time)}`);
     console.log(`  Seat Class: ${returnFlight.selected_seat_class || returnFlight.seat_class || 'Not selected'}`);
     console.log(`  Price with Seat Class: ₱${Number(returnFlight.price).toLocaleString()}`);
+    console.log(`  ML Predicted: ${returnFlight.ml_predicted ? 'Yes' : 'No'}`);
     if (returnFlight.original_price) {
       console.log(`  Base Price: ₱${Number(returnFlight.original_price).toLocaleString()}`);
     }
@@ -1658,10 +1747,9 @@ onMounted(() => {
   console.log('Has Outbound Selected:', hasOutboundSelected.value);
   console.log('Has Return Selected:', hasReturnSelected.value);
   
-  // AUTO-SWITCH TO RETURN PHASE IF OUTBOUND IS ALREADY SELECTED (only on page load)
-  // This handles when user comes back to page with outbound already selected
+  // AUTO-SWITCH TO RETURN PHASE IF OUTBOUND IS ALREADY SELECTED
   if (isRoundTrip.value && hasOutboundSelected.value && !hasReturnSelected.value) {
-    console.log('🔄 Outbound already selected (from previous session), auto-switching to return phase');
+    console.log('🔄 Outbound already selected, auto-switching to return phase');
     selectionPhase.value = 'return';
   }
   
@@ -2004,7 +2092,7 @@ const proceedToPassengerDetails = () => {
 };
 
 // Handle flight selection
-const handleSelectFlight = (flight) => {
+const handleSelectFlight = async (flight) => {
   // Check session before proceeding
   const sessionCheck = bookingStore.checkSession();
   if (!sessionCheck.valid) {
@@ -2016,6 +2104,13 @@ const handleSelectFlight = (flight) => {
   
   // Refresh session on user interaction
   bookingStore.startSession();
+  
+  // ============ NEW: Get ML price prediction ============
+  if (mlPricingEnabled.value && !flight.ml_predicted) {
+    const enhancedFlight = await getMLPricePrediction(flight);
+    flight = enhancedFlight;
+  }
+  // =====================================================
   
   // Store the flight for seat class selection
   selectedFlightForSeats.value = flight;
@@ -2036,8 +2131,6 @@ const handleSelectFlight = (flight) => {
   
   if (alreadySelected) {
     console.log('🔄 Flight already selected, showing seat classes for modification');
-    // Show seat classes modal even for already selected flights
-    // This allows users to change their seat class
     showSeatClasses(flight);
   } else {
     // First show seat classes modal for new selection
@@ -2135,6 +2228,7 @@ const logFlightSelection = (flight, type) => {
   console.log(`  Route: ${flight.origin} → ${flight.destination}`);
   console.log(`  Departure: ${formatTime(flight.departure_time)} on ${formatDate(flight.departure_time)}`);
   console.log(`  Price: ₱${Number(flight.price).toLocaleString()}`);
+  console.log(`  ML Predicted: ${flight.ml_predicted ? 'Yes' : 'No'}`);
   if (flight.original_price && flight.price !== flight.original_price) {
     console.log(`  Base Price: ₱${Number(flight.original_price).toLocaleString()}`);
     console.log(`  Seat Class Upcharge: ₱${Number(flight.price - flight.original_price).toLocaleString()}`);
@@ -2155,6 +2249,7 @@ const logCompleteBooking = () => {
     console.log(`  Departure: ${formatTime(outbound.departure_time)}`);
     console.log(`  Seat Class: ${outbound.selected_seat_class || outbound.seat_class || 'Not selected'}`);
     console.log(`  Price: ₱${Number(outbound.price).toLocaleString()}`);
+    console.log(`  ML Predicted: ${outbound.ml_predicted ? 'Yes' : 'No'}`);
   }
   
   if (bookingStore.selectedReturn) {
@@ -2164,6 +2259,7 @@ const logCompleteBooking = () => {
     console.log(`  Departure: ${formatTime(returnFlight.departure_time)}`);
     console.log(`  Seat Class: ${returnFlight.selected_seat_class || returnFlight.seat_class || 'Not selected'}`);
     console.log(`  Price: ₱${Number(returnFlight.price).toLocaleString()}`);
+    console.log(`  ML Predicted: ${returnFlight.ml_predicted ? 'Yes' : 'No'}`);
   }
   
   console.log('============================');
@@ -2224,18 +2320,36 @@ const fetchFlights = async () => {
     clearInterval(countdownInterval.value);
     clearTimeout(fetchTimeout.value);
     
-    flights.value = response.data || [];
+    let fetchedFlights = response.data || [];
+    
+    // ============ NEW: Enhance flights with ML predictions ============
+    if (mlPricingEnabled.value && fetchedFlights.length > 0) {
+      console.log('🧠 Enhancing flights with ML price predictions...');
+      const enhancedFlights = [];
+      
+      for (const flight of fetchedFlights) {
+        const enhancedFlight = await getMLPricePrediction(flight);
+        enhancedFlights.push(enhancedFlight);
+      }
+      
+      flights.value = enhancedFlights;
+      console.log('✅ ML price predictions applied to all flights');
+    } else {
+      flights.value = fetchedFlights;
+    }
+    // ================================================================
+    
     filteredFlights.value = [...flights.value];
     
     // DEBUG: Log flight data structure
     if (flights.value.length > 0) {
-      console.log('First flight structure:', flights.value[0]);
-      console.log('seat_classes type:', typeof flights.value[0].seat_classes);
-      console.log('seat_classes value:', flights.value[0].seat_classes);
-      if (flights.value[0].seat_classes && Array.isArray(flights.value[0].seat_classes)) {
-        console.log('First seat class item:', flights.value[0].seat_classes[0]);
-        console.log('First seat class type:', typeof flights.value[0].seat_classes[0]);
-      }
+      console.log('First flight structure:', {
+        flight_number: flights.value[0].flight_number,
+        price: flights.value[0].price,
+        ml_predicted: flights.value[0].ml_predicted,
+        base_price: flights.value[0].base_price,
+        seat_class_prices: flights.value[0].seat_class_prices
+      });
     }
     
     // Check if response has data
@@ -2361,7 +2475,8 @@ const selectedFlightsSummary = computed(() => {
       price: Number(bookingStore.selectedOutbound.price).toLocaleString(),
       selected_seat_class: bookingStore.selectedOutbound.selected_seat_class || bookingStore.selectedOutbound.seat_class,
       seat_class_price: bookingStore.selectedOutbound.price,
-      base_price: bookingStore.selectedOutbound.original_price || bookingStore.selectedOutbound.base_price || bookingStore.selectedOutbound.price
+      base_price: bookingStore.selectedOutbound.original_price || bookingStore.selectedOutbound.base_price || bookingStore.selectedOutbound.price,
+      ml_predicted: bookingStore.selectedOutbound.ml_predicted
     });
   }
   
@@ -2375,7 +2490,8 @@ const selectedFlightsSummary = computed(() => {
       price: Number(bookingStore.selectedReturn.price).toLocaleString(),
       selected_seat_class: bookingStore.selectedReturn.selected_seat_class || bookingStore.selectedReturn.seat_class,
       seat_class_price: bookingStore.selectedReturn.price,
-      base_price: bookingStore.selectedReturn.original_price || bookingStore.selectedReturn.base_price || bookingStore.selectedReturn.price
+      base_price: bookingStore.selectedReturn.original_price || bookingStore.selectedReturn.base_price || bookingStore.selectedReturn.price,
+      ml_predicted: bookingStore.selectedReturn.ml_predicted
     });
   }
   
@@ -2543,6 +2659,8 @@ const availableSeatClassOptions = computed(() => {
   return options;
 });
 </script>
+
+
 
 <style scoped>
 /* Custom scrollbar */

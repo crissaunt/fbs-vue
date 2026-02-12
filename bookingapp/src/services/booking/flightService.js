@@ -7,5 +7,8 @@ export default {
   
   getSeatClassFeatures() {
     return api.get('seat-class-features/');
+  },
+  getPricePrediction(flightData) {
+    return api.post('api/predict-price/', flightData);
   }
 };
