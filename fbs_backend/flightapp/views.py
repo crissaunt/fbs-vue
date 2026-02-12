@@ -86,7 +86,9 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             'flight__route__origin_airport', 
             'flight__route__destination_airport'
         ).prefetch_related(
-            'flight__aircraft'
+            'flight__aircraft',
+            'seats',  # Prefetch seats to avoid N+1 queries
+            'seats__seat_class'
         )
         
         origin = self.request.query_params.get('origin')
@@ -99,7 +101,6 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(flight__route__destination_airport__code=destination)
         if date:
             try:
-                # Handle different date formats
                 clean_date = date.split('T')[0] if 'T' in date else date
                 queryset = queryset.filter(departure_time__date=clean_date)
             except Exception as e:
@@ -123,6 +124,8 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = self.filter_queryset(self.get_queryset())
         
         # ============ UPDATE ML PRICES IN DATABASE ============
+        # Only run this occasionally - not every request!
+        # Consider moving this to a management command or cron job
         updated_count = 0
         for schedule in queryset:
             # Check if ML price is missing or stale (older than 1 hour)
@@ -172,12 +175,21 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
                         session_id=session_id
                     )
                     
-                    # Update response with fresh dynamic pricing
-                    data[i]['price'] = price_data['final_price']
-                    data[i]['base_price'] = price_data['base_price']
-                    data[i]['ml_base_price'] = float(schedule.ml_base_price) if schedule.ml_base_price else None
+                    # ============ FIXED ROUNDING LOGIC ============
+                    # Round ONLY ONCE at the very end
+                    final_price = dynamic_pricing.round_price(price_data['final_price'])
+                    base_price = dynamic_pricing.round_price(price_data['base_price'])
+                    ml_base = float(schedule.ml_base_price) if schedule.ml_base_price else schedule.price
+                    rounded_ml_base = dynamic_pricing.round_price(ml_base)
+                    # ==============================================
+                    
+                    # Update response with PROPERLY rounded prices
+                    data[i]['price'] = final_price
+                    data[i]['base_price'] = base_price
+                    data[i]['ml_base_price'] = rounded_ml_base
                     data[i]['ml_predicted'] = True
                     data[i]['dynamic_pricing'] = price_data['factors_applied']
+                    data[i]['raw_ml_price'] = float(schedule.ml_base_price) if schedule.ml_base_price else None  # For debugging
                     
                     # Unique price ID for this exact moment
                     timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
@@ -187,16 +199,23 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
                     # Add timestamp to show when price was calculated
                     data[i]['price_calculated_at'] = datetime.now().isoformat()
                     
+                    # ============ FIXED SEAT CLASS PRICING ============
                     # Update seat classes with fresh dynamic prices
                     if 'seat_classes' in data[i]:
                         for seat_class in data[i]['seat_classes']:
                             seat_class_name = seat_class.get('name', 'Economy')
                             # Use ML base price from database
                             ml_base = float(schedule.ml_base_price) if schedule.ml_base_price else schedule.price
-                            seat_class['base_price'] = ml_base
-                            seat_class['price'] = dynamic_pricing.round_price(
-                                ml_base * self.get_seat_class_multiplier(seat_class_name)
-                            )
+                            
+                            # Calculate raw seat class price
+                            raw_seat_price = ml_base * self.get_seat_class_multiplier(seat_class_name)
+                            
+                            # Round seat class prices using specialized rounding
+                            seat_class['base_price'] = dynamic_pricing.round_price(ml_base)
+                            seat_class['price'] = dynamic_pricing.round_seat_class_price(raw_seat_price)
+                            seat_class['raw_price'] = float(raw_seat_price)  # For debugging
+                    # ==============================================
+                    
                 except Exception as e:
                     print(f"Error processing schedule {schedule.id}: {e}")
                     continue

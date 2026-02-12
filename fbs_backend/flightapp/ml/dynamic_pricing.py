@@ -260,14 +260,60 @@ class DynamicPricingService:
         hash_value = int(hashlib.md5(hash_input.encode()).hexdigest()[:8], 16)
         return 0.98 + (hash_value % 5) / 100
     
+
     def round_price(self, price):
-        """Round to psychological price points"""
-        if price < 1000:
-            return int(round(price / 9) * 9)
-        elif price < 10000:
-            return int(round(price / 99) * 99)
+        """
+        Round to psychological price points
+        Philippine Airlines / Cebu Pacific style:
+        - 999, 1499, 1999, 2499, 2999, etc.
+        """
+        if price <= 0:
+            return 0
+            
+        price_int = int(round(price))
+        
+        if price_int < 1000:
+            # 999, 899, 799, 699, etc.
+            base = int(round(price_int / 100) * 100)
+            return max(base - 1, 0)
+        
+        elif price_int < 10000:
+            # 1499, 1999, 2499, 2999, 3499, etc.
+            base = int(round(price_int / 500) * 500)
+            return base - 1
+        
+        elif price_int < 20000:
+            # 9999, 10999, 11999, 12999, etc.
+            base = int(round(price_int / 1000) * 1000)
+            return base - 1
+        
         else:
-            return int(round(price / 999) * 999)
+            # 19999, 24999, 29999, 34999, etc.
+            base = int(round(price_int / 5000) * 5000)
+            return base - 1
+
+    def round_seat_class_price(self, price):
+        """
+        Special rounding for seat classes - cleaner numbers
+        Business/First class should round to nice numbers
+        """
+        if price <= 0:
+            return 0
+            
+        price_int = int(round(price))
+        
+        if price_int < 5000:
+            # Round to nearest 100
+            return int(round(price_int / 100) * 100)
+        elif price_int < 10000:
+            # Round to nearest 500
+            return int(round(price_int / 500) * 500)
+        elif price_int < 20000:
+            # Round to nearest 1000
+            return int(round(price_int / 1000) * 1000)
+        else:
+            # Round to nearest 5000
+            return int(round(price_int / 5000) * 5000)
 
 # Singleton instance
 dynamic_pricing = DynamicPricingService()

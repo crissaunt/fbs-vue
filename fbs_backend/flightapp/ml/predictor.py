@@ -11,7 +11,7 @@ import random
 from pathlib import Path
 
 class FlightPricePredictor:
-    """Service to predict flight prices using trained RandomForest model"""
+    """Service to predict flight prices using trained XGBoost model"""
     
     # Class-level singleton instance and cached model
     _instance = None
@@ -59,28 +59,33 @@ class FlightPricePredictor:
         return any(cmd in sys.argv for cmd in migration_commands)
     
     def load_model(self):
-        """Load the trained RandomForest model from the correct path"""
+        """Load the trained XGBoost model from the correct path"""
         try:
-            # Path to your model file
+            # Path to your XGBoost model file
             model_path = r'C:\Users\Crissaunt\Documents\GitHub\fbs-vue\fbs_backend\flight_xgb.pkl'
             
-            print(f"🔍 Attempting to load model from: {model_path}")
+            print(f"🔍 Attempting to load XGBoost model from: {model_path}")
             
             with open(model_path, 'rb') as file:
                 self.model = pickle.load(file)
                 # Cache at class level
                 FlightPricePredictor._model = self.model
             
-            print("✅ ML Model loaded successfully!")
+            print("✅ XGBoost Model loaded successfully!")
             print(f"   Model type: {type(self.model)}")
             
-            if hasattr(self.model, 'n_estimators'):
-                print(f"   Random Forest with {self.model.n_estimators} trees")
+            # Try to get XGBoost specific info
+            try:
+                if hasattr(self.model, 'get_params'):
+                    params = self.model.get_params()
+                    print(f"   XGBoost parameters: {params.get('n_estimators', 'N/A')} trees")
+            except:
+                pass
             
             return True
             
         except Exception as e:
-            print(f"❌ Failed to load ML model: {e}")
+            print(f"❌ Failed to load XGBoost model: {e}")
             # Try to use cached model if available
             if FlightPricePredictor._model:
                 self.model = FlightPricePredictor._model
@@ -188,12 +193,13 @@ class FlightPricePredictor:
             return df
             
         except Exception as e:
+            print(f"❌ Error preparing features: {e}")
             return None
     
     def predict_price(self, flight_data):
         """
-        Predict base price for a flight
-        Returns 0.0 if prediction fails
+        Predict base price for a flight using XGBoost
+        Returns RAW prediction - NO ROUNDING!
         """
         # Restore from cache if needed
         if not self.model and FlightPricePredictor._model:
@@ -202,7 +208,6 @@ class FlightPricePredictor:
             self.feature_mapping = FlightPricePredictor._feature_mapping
         
         if not self.model:
-            # Model not available - return 0
             return 0.0
         
         try:
@@ -210,23 +215,24 @@ class FlightPricePredictor:
             if features_df is None:
                 return 0.0
             
-            # Make prediction
+            # XGBoost prediction - RAW value
             predicted_price = self.model.predict(features_df)[0]
             
-            # ✅ NO MINIMUM PRICE FLOOR
-            # ✅ NO ROUNDING
-            # Just return the raw prediction
+            # XGBoost sometimes returns weird types
+            if hasattr(predicted_price, 'item'):
+                predicted_price = predicted_price.item()
             
-            print(f"💰 ML Model: ₱{predicted_price:,.2f}")
+            # Ensure positive price
+            predicted_price = max(predicted_price, 0)
+            
+            # Print raw prediction (remove in production)
+            print(f"💰 XGBoost: ₱{predicted_price:.2f}")
+            
             return float(predicted_price)
             
         except Exception as e:
-            # Silent fallback - return 0 on error
+            print(f"❌ XGBoost prediction error: {e}")
             return 0.0
-    
-    def fallback_price_calculation(self, flight_data):
-        """Fallback price calculation - now returns 0"""
-        return 0.0
     
     def predict_seat_class_price(self, base_price, seat_class_name):
         """Predict price with seat class adjustment"""
@@ -239,6 +245,9 @@ class FlightPricePredictor:
             'first_class': 2.4,
             'economy class': 1.0,
             'premium economy': 1.35,
+            'comfort': 1.2,
+            'deluxe': 1.6,
+            'executive': 2.0,
         }
         
         key = seat_class_name.lower().replace(' ', '_')
