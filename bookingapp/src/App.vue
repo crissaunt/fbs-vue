@@ -14,6 +14,8 @@ import { useRoute } from 'vue-router'
 
 // ✅ Instructor layout still active
 import InstructorLayout from '@/views/Instructor/InstructorLayout.vue'
+import BookingLayout from '@/views/booking/layout/BookingLayout.vue'  // ✅ add this
+
 
 const route = useRoute()
 
@@ -23,7 +25,8 @@ const route = useRoute()
  */
 const layouts = {
   // AdminLayout, // ❌ disabled for now
-  InstructorLayout
+  InstructorLayout,
+  BookingLayout
 }
 
 /**

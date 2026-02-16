@@ -84,51 +84,60 @@ const routes = [
     path: '/', 
     name: 'Home', 
     component: HomeView, 
-    meta: { title: 'Book a Flight | Philippine Airlines' } 
+    meta: {layout: 'BookingLayout', title: 'Book a Flight | Philippine Airlines' } 
   },
   { 
     path: '/check-in', 
     name: 'check-in', 
+    meta: { layout: 'BookingLayout' } ,
     component: () => import('../views/booking/CheckInView.vue') 
   },
   { 
     path: '/status', 
     name: 'status', 
+    meta: { layout: 'BookingLayout' } ,
     component: () => import('../views/booking/FlightStatusView.vue') 
   },
   { 
     path: '/flights/search', 
     name: 'SearchResults', 
+    meta: { layout: 'BookingLayout' } ,
     component: SearchResults 
   },
   { 
     path: '/booking/passengers', 
     name: 'PassengerDetails', 
+    meta: { layout: 'BookingLayout' } ,
     component: PassengerDetails 
   },
   { 
     path: '/addons', 
     name: 'Addons', 
+    meta: { layout: 'BookingLayout' } ,
     component: AddonsView 
   },
   { 
     path: '/addons/seats', 
     name: 'SeatSelection', 
+    meta: { layout: 'BookingLayout' } ,
     component: SeatSelection 
   },
   { 
     path: '/review/booking', 
     name: 'ReviewBooking', 
+    meta: { layout: 'BookingLayout' } ,
     component: ReviewBooking 
   },
   { 
     path: '/payment', 
     name: 'Payment', 
+    meta: { layout: 'BookingLayout' } ,
     component: Payment 
   },
   { 
     path: '/payment-callback', 
     name: 'PaymentCallback', 
+    meta: { layout: 'BookingLayout' } ,
     component: () => import('../views/booking/PaymentCallbackView.vue'), 
     meta: { requiresAuth: false } 
   }
