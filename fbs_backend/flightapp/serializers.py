@@ -141,7 +141,10 @@ class SeatSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'seat_number', 'row', 'column', 'is_available', 
             'price_adjustment', 'final_price', 'seat_class', 
-            'seat_class_name', 'is_window', 'is_aisle', 'has_extra_legroom'
+            'seat_class_name', 'is_window', 'is_aisle', 'has_extra_legroom',
+            'is_exit_row', 'is_wheelchair_accessible', 'has_bassinet', 
+            'has_nut_allergy', 'is_unaccompanied_minor', 'is_bulkhead', 
+            'price_adjustment_manual'
         ]
 
 

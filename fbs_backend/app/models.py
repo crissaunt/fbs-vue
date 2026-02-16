@@ -366,13 +366,13 @@ class Seat(models.Model):
     price_adjustment_auto = models.DecimalField(
         max_digits=10, 
         decimal_places=2, 
-        default=0.00,
+        default=Decimal('0.00'),
         help_text="Automatic price adjustment based on seat features"
     )
     price_adjustment_manual = models.DecimalField(
         max_digits=10, 
         decimal_places=2, 
-        default=0.00,
+        default=Decimal('0.00'),
         help_text="Manual price adjustment by admin"
     )
 
@@ -463,7 +463,7 @@ class Seat(models.Model):
     @property
     def total_price_adjustment(self):
         """Total of automatic + manual adjustments"""
-        return self.price_adjustment_auto + self.price_adjustment_manual
+        return self.price_adjustment_auto + Decimal(str(self.price_adjustment_manual))
 
     @property
     def final_price(self):

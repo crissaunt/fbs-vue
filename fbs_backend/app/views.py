@@ -1247,4 +1247,3 @@ class DashboardViewSet(viewsets.ViewSet):
             print(f"Alerts error: {str(e)}")
             return Response([], status=200)
         
-

@@ -613,7 +613,7 @@
           <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
             <div class="flex items-center gap-2">
               <div class="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                <i class="ph ph-exit text-white text-[8px]"></i>
+                <i class="ph ph-door-open text-white text-[8px]"></i>
               </div>
               <span class="text-[10px] text-gray-600">Exit Row</span>
             </div>
@@ -680,7 +680,7 @@
                     <div class="absolute bottom-full right-0 mb-2 hidden group-hover:block w-48 bg-gray-900 text-white text-[10px] rounded-lg p-2 z-50">
                       <div class="space-y-1">
                         <div v-if="getExitRowCountInClass(classId) > 0" class="flex items-center gap-2">
-                          <i class="ph ph-exit text-red-400"></i>
+                          <i class="ph ph-door-open text-red-400"></i>
                           <span>{{ getExitRowCountInClass(classId) }} Exit Row(s)</span>
                         </div>
                         <div v-if="getBassinetSeatsInClass(classId).length > 0" class="flex items-center gap-2">
@@ -715,7 +715,7 @@
                     <div v-if="hasSpecialSeat(classId, rowNum, colIdx)" class="absolute -top-1 -right-1 flex flex-col gap-0.5">
                       <!-- Exit Row Indicator -->
                       <div v-if="isExitRow(classId, rowNum)" class="w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
-                        <i class="ph ph-exit text-white text-[6px]"></i>
+                        <i class="ph ph-door-open text-white text-[6px]"></i>
                       </div>
                       
                       <!-- Wheelchair Indicator -->
@@ -749,7 +749,7 @@
                           <p class="font-semibold text-amber-300">Special Requirements:</p>
                           <ul class="pl-2 space-y-0.5">
                             <li v-if="isExitRow(classId, rowNum)" class="flex items-center gap-1">
-                              <i class="ph ph-exit text-red-400"></i>
+                              <i class="ph ph-door-open text-red-400"></i>
                               <span>Exit Row</span>
                             </li>
                             <li v-if="isWheelchairSeat(classId, rowNum, colIdx)" class="flex items-center gap-1">
@@ -785,7 +785,7 @@
                   
                   <!-- Row-level indicators -->
                   <div v-if="isExitRow(classId, rowNum)" class="absolute -top-1 -left-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                    <i class="ph ph-exit text-white text-[8px]"></i>
+                    <i class="ph ph-door-open text-white text-[8px]"></i>
                   </div>
                   
                   <!-- Bulkhead row indicator -->
@@ -798,7 +798,7 @@
                     <p class="font-bold">Row {{ getGlobalRowNumber(classId, rowNum) }}</p>
                     <div class="space-y-1 mt-1">
                       <div v-if="isExitRow(classId, rowNum)" class="flex items-center gap-1 text-red-300">
-                        <i class="ph ph-exit"></i>
+                        <i class="ph ph-door-open"></i>
                         <span>Emergency Exit Row</span>
                       </div>
                       <div v-if="isBulkheadRow(classId, rowNum)" class="flex items-center gap-1 text-cyan-300">
@@ -833,7 +833,7 @@
                     <!-- Special Indicators (same as left side) -->
                     <div v-if="hasSpecialSeat(classId, rowNum, colIdx)" class="absolute -top-1 -right-1 flex flex-col gap-0.5">
                       <div v-if="isExitRow(classId, rowNum)" class="w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
-                        <i class="ph ph-exit text-white text-[6px]"></i>
+                        <i class="ph ph-door-open text-white text-[6px]"></i>
                       </div>
                       <div v-if="isWheelchairSeat(classId, rowNum, colIdx)" class="w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
                         <i class="ph ph-wheelchair text-white text-[6px]"></i>
@@ -916,7 +916,7 @@
                 <!-- Special Indicator on Seat Display -->
                 <div v-if="hasSpecialSeatForActiveSeat" class="absolute -top-2 -right-2 flex gap-1">
                   <div v-if="activeSeat.is_exit_row" class="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
-                    <i class="ph ph-exit text-white text-[8px]"></i>
+                    <i class="ph ph-door-open text-white text-[8px]"></i>
                   </div>
                   <div v-if="activeSeat.is_wheelchair_accessible" class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
                     <i class="ph ph-wheelchair text-white text-[8px]"></i>
@@ -936,7 +936,7 @@
               <div class="space-y-2">
                 <div v-if="activeSeat.is_exit_row" class="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
                   <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                    <i class="ph ph-exit text-red-600"></i>
+                    <i class="ph ph-door-open text-red-600"></i>
                   </div>
                   <div>
                     <p class="text-sm font-bold text-red-800">Exit Row</p>
@@ -1169,7 +1169,7 @@
         >
           <div :class="['w-6 h-6 rounded-full flex items-center justify-center', 
                        contextMenuSeat?.is_exit_row ? 'bg-red-500' : 'bg-gray-200']">
-            <i class="ph ph-exit text-white text-xs"></i>
+            <i class="ph ph-door-open text-white text-xs"></i>
           </div>
           <span>{{ contextMenuSeat?.is_exit_row ? 'Remove Exit Row' : 'Mark as Exit Row' }}</span>
         </button>
@@ -1257,7 +1257,7 @@
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                  <i class="ph ph-exit text-red-600"></i>
+                  <i class="ph ph-door-open text-red-600"></i>
                 </div>
                 <div>
                   <p class="text-sm font-medium text-gray-800">Exit Row Seat</p>
@@ -1336,6 +1336,22 @@
                 <input type="checkbox" v-model="activeSeat.is_unaccompanied_minor" @change="updateSeatSpecialFeatures" class="sr-only peer">
                 <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
               </label>
+            </div>
+
+            <!-- Manual Price Adjustment -->
+            <div class="pt-4 border-t border-gray-100">
+              <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Manual Price Adjustment (PHP)</label>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₱</span>
+                <input 
+                  type="number" 
+                  v-model.number="activeSeat.price_adjustment_manual" 
+                  class="w-full border border-gray-300 p-3 pl-8 rounded-lg outline-none focus:border-[#fe3787] font-mono text-sm"
+                  placeholder="0.00"
+                  step="0.01"
+                >
+              </div>
+              <p class="text-[10px] text-gray-500 mt-1">Add or subtract from the final seat price.</p>
             </div>
           </div>
           
@@ -1431,7 +1447,12 @@ const orderedAirlineSeatClasses = computed(() => {
 });
 
 const orderedClassIds = computed(() => {
-  return classOrder.value.filter(id => layoutConfig.value[id]);
+  // Only include class IDs that exist in both layoutConfig AND seatClasses
+  return classOrder.value.filter(id => {
+    const existsInLayout = layoutConfig.value[id];
+    const existsInSeatClasses = seatClasses.value.some(sc => sc.id === id);
+    return existsInLayout && existsInSeatClasses;
+  });
 });
 
 const totalConfiguredSeats = computed(() => {
@@ -1906,11 +1927,32 @@ const deleteSeatClass = async (id) => {
   
   try {
     await api.delete(`/seat-classes/${id}/`);
+    
+    // IMPORTANT: Remove all references to this class ID
     delete layoutConfig.value[id];
     classOrder.value = classOrder.value.filter(cid => cid !== id);
     seatClasses.value = seatClasses.value.filter(sc => sc.id !== id);
+    
+    // Reset active seat if it belongs to deleted class
+    if (activeSeat.value && activeSeat.value.seat_class === id) {
+      activeSeat.value = null;
+    }
+    
+    // Force reactivity update
+    layoutConfig.value = { ...layoutConfig.value };
+    
+    // Optional: Reset if no seat classes left
+    if (seatClassesForAirline.value.length === 0) {
+      hasExistingLayout.value = false;
+      layoutConfig.value = {};
+      classOrder.value = [];
+    }
+    
+    console.log(`Seat class ${id} deleted and removed from layout`);
+    
   } catch (err) {
-    alert('Error deleting seat class');
+    console.error('Error deleting seat class:', err);
+    alert('Error deleting seat class: ' + (err.response?.data?.detail || err.message));
   }
 };
 
@@ -2056,6 +2098,7 @@ const seatMapData = computed(() => {
       has_bassinet: seat.has_bassinet || false,
       has_nut_allergy: seat.has_nut_allergy || false,
       is_unaccompanied_minor: seat.is_unaccompanied_minor || false,
+      price_adjustment_manual: seat.price_adjustment_manual || 0.00,
       has_extra_legroom: seat.has_extra_legroom || false,
       is_bulkhead: seat.is_bulkhead || false,
       is_window: seat.is_window || false,
@@ -2121,17 +2164,46 @@ const hasSpecialSeat = (classId, row, col) => {
 };
 
 const isExitRow = (classId, row) => {
-  const globalRow = getGlobalRowNumber(classId, row);
-  return globalRow === 14 || globalRow === 15 || globalRow === 25 || globalRow === 26;
+  // Check if any seat in this row is marked as an exit row
+  if (!seatMapData.value) return false;
+  
+  // iterate through all columns in this row
+  const config = layoutConfig.value[classId];
+  if (!config) return false;
+  
+  for (let col = 1; col <= config.columns; col++) {
+    const seat = getSeat(classId, row, col);
+    if (seat && seat.is_exit_row) return true;
+  }
+  return false;
 };
 
 const isBulkheadRow = (classId, row) => {
-  return row === 1;
+  // Check if any seat in this row is marked as a bulkhead
+  if (!seatMapData.value) return false;
+  
+  const config = layoutConfig.value[classId];
+  if (!config) return false;
+  
+  for (let col = 1; col <= config.columns; col++) {
+    const seat = getSeat(classId, row, col);
+    if (seat && seat.is_bulkhead) return true;
+  }
+  return false;
 };
 
 const hasExtraLegroom = (classId, row) => {
-  const globalRow = getGlobalRowNumber(classId, row);
-  return globalRow <= 3 || isExitRow(classId, row);
+  // Check if any seat in this row has extra legroom
+  if (!seatMapData.value) return false;
+  
+  const config = layoutConfig.value[classId];
+  if (!config) return false;
+  
+  for (let col = 1; col <= config.columns; col++) {
+    const seat = getSeat(classId, row, col);
+    if (seat && seat.has_extra_legroom) return true;
+  }
+  return false;
 };
 
 const isWheelchairSeat = (classId, row, col) => {
@@ -2183,11 +2255,13 @@ const getBassinetSeatsInClass = (classId) => {
   const config = layoutConfig.value[classId];
   if (!config || !config.rows) return seats;
   
-  if (isBulkheadRow(classId, 1)) {
-    const bassinetColumns = [1, 2, config.columns - 1, config.columns];
-    for (const col of bassinetColumns) {
-      const seat = getSeat(classId, 1, col);
-      if (seat) seats.push(seat);
+  // Check all seats in class (not just row 1)
+  for (let row = 1; row <= config.rows; row++) {
+    for (let col = 1; col <= config.columns; col++) {
+        const seat = getSeat(classId, row, col);
+        if (seat && seat.has_bassinet) {
+            seats.push(seat);
+        }
     }
   }
   return seats;
@@ -2210,17 +2284,23 @@ const initializeSeatFeatures = (seat) => {
   const globalRow = seat.row;
   
   // Set default features based on position
-  seat.is_exit_row = globalRow === 14 || globalRow === 15 || globalRow === 25 || globalRow === 26;
-  seat.has_extra_legroom = globalRow <= 3 || seat.is_exit_row;
-  seat.is_bulkhead = globalRow === 1;
+  // REMOVED HARDCODED DEFAULTS - Logic is now data-driven.
+  // User must explicitly set these properties.
+  
+  // Preserve existing values if they exist (e.g. from backend)
+  seat.is_exit_row = seat.is_exit_row || false;
+  seat.has_extra_legroom = seat.has_extra_legroom || false;
+  seat.is_bulkhead = seat.is_bulkhead || false;
+  
   seat.is_window = seat.column === 'A' || seat.column === getColumnLabel(layoutConfig.value[seat.seat_class]?.columns || 6);
   seat.is_aisle = seat.column === 'C' || seat.column === 'D' || seat.column === 'F';
   
   // Set defaults for new fields
-  seat.is_wheelchair_accessible = false;
-  seat.has_bassinet = false;
-  seat.has_nut_allergy = false;
-  seat.is_unaccompanied_minor = false;
+  seat.is_wheelchair_accessible = seat.is_wheelchair_accessible || false;
+  seat.has_bassinet = seat.has_bassinet || false;
+  seat.has_nut_allergy = seat.has_nut_allergy || false;
+  seat.is_unaccompanied_minor = seat.is_unaccompanied_minor || false;
+  seat.price_adjustment_manual = seat.price_adjustment_manual || 0.00;
   
   // Build features list
   seat.features = [];
@@ -2381,6 +2461,7 @@ const updateSeatSpecialRequirements = async (seat) => {
       is_bulkhead: seat.is_bulkhead || false,
       is_window: seat.is_window || false,
       is_aisle: seat.is_aisle || false,
+      price_adjustment_manual: seat.price_adjustment_manual || 0.00
     };
     
     // Add new fields only if they exist in the API response
