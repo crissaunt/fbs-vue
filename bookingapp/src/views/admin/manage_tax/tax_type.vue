@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6">
+  <div class="p-6 poppins">
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <button 
@@ -12,47 +12,47 @@
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-      <div class="bg-white p-4 border border-gray-200 rounded-[1px] shadow-sm">
+      <div class="bg-white p-5 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-md transition-shadow">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins">Total Tax Types</p>
-            <p class="text-2xl font-bold text-[#002D1E] poppins">{{ stats.total }}</p>
+            <p class="text-[10px] uppercase font-black text-gray-400 tracking-[2px] mb-1">Total Tax Types</p>
+            <p class="text-3xl font-bold text-[#002D1E]">{{ stats.total }}</p>
           </div>
-          <div class="w-12 h-12 rounded-full bg-green-200 flex items-center justify-center">
-            <i class="ph ph-receipt text-xl"></i>
+          <div class="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center border border-green-100">
+            <i class="ph ph-receipt text-green-500 text-2xl"></i>
           </div>
         </div>
       </div>
-      <div class="bg-white p-4 border border-gray-200 rounded-[1px] shadow-sm">
+      <div class="bg-white p-5 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-md transition-shadow">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins">Active</p>
-            <p class="text-2xl font-bold poppins">{{ stats.active }}</p>
+            <p class="text-[10px] uppercase font-black text-gray-400 tracking-[2px] mb-1">Active</p>
+            <p class="text-3xl font-bold text-blue-600">{{ stats.active }}</p>
           </div>
-          <div class="w-12 h-12 rounded-full bg-blue-200 flex items-center justify-center">
-            <i class="ph ph-check-circle text-xl"></i>
+          <div class="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100">
+            <i class="ph ph-check-circle text-blue-500 text-2xl"></i>
           </div>
         </div>
       </div>
-      <div class="bg-white p-4 border border-gray-200 rounded-[1px] shadow-sm">
+      <div class="bg-white p-5 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-md transition-shadow">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins">Government</p>
-            <p class="text-2xl font-bold poppins">{{ stats.government }}</p>
+            <p class="text-[10px] uppercase font-black text-gray-400 tracking-[2px] mb-1">Government</p>
+            <p class="text-3xl font-bold text-red-600">{{ stats.government }}</p>
           </div>
-          <div class="w-12 h-12 rounded-full bg-red-200 flex items-center justify-center">
-            <i class="ph ph-buildings text-xl"></i>
+          <div class="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center border border-red-100">
+            <i class="ph ph-buildings text-red-500 text-2xl"></i>
           </div>
         </div>
       </div>
-      <div class="bg-white p-4 border border-gray-200 rounded-[1px] shadow-sm">
+      <div class="bg-white p-5 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-md transition-shadow">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins">Airline</p>
-            <p class="text-2xl font-bold poppins">{{ stats.airline }}</p>
+            <p class="text-[10px] uppercase font-black text-gray-400 tracking-[2px] mb-1">Airline</p>
+            <p class="text-3xl font-bold text-purple-600">{{ stats.airline }}</p>
           </div>
-          <div class="w-12 h-12 rounded-full bg-purple-200 flex items-center justify-center">
-            <i class="ph ph-airplane-tilt text-xl"></i>
+          <div class="w-14 h-14 rounded-full bg-purple-50 flex items-center justify-center border border-purple-100">
+            <i class="ph ph-airplane-tilt text-purple-500 text-2xl"></i>
           </div>
         </div>
       </div>
@@ -105,15 +105,15 @@
     <!-- Tax Types Table -->
     <div class="bg-white border border-gray-200 rounded-[1px] shadow-sm overflow-hidden">
       <table class="w-full text-left">
-        <thead class="bg-gray-50 text-gray-600 text-[14px] uppercase font-semibold border-b border-gray-200">
+        <thead class="bg-gray-50 border-b border-gray-200">
           <tr>
-            <th class="px-6 py-4 poppins">Tax Type</th>
-            <th class="px-6 py-4 poppins">Code</th>
-            <th class="px-6 py-4 poppins">Category</th>
-            <th class="px-6 py-4 poppins">Base Amount</th>
-            <th class="px-6 py-4 poppins">Rules</th>
-            <th class="px-6 py-4 poppins">Status</th>
-            <th class="px-6 py-4 text-right poppins">Actions</th>
+            <th class="px-6 py-4 text-[11px] uppercase font-black text-[#002D1E] tracking-widest">Tax Type</th>
+            <th class="px-6 py-4 text-[11px] uppercase font-black text-[#002D1E] tracking-widest">Code</th>
+            <th class="px-6 py-4 text-[11px] uppercase font-black text-[#002D1E] tracking-widest">Category</th>
+            <th class="px-6 py-4 text-[11px] uppercase font-black text-[#002D1E] tracking-widest">Base Amount</th>
+            <th class="px-6 py-4 text-[11px] uppercase font-black text-[#002D1E] tracking-widest">Rules</th>
+            <th class="px-6 py-4 text-[11px] uppercase font-black text-[#002D1E] tracking-widest">Status</th>
+            <th class="px-6 py-4 text-[11px] uppercase font-black text-[#002D1E] tracking-widest text-right">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
@@ -234,16 +234,16 @@
     </div>
 
     <!-- Add/Edit Modal -->
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div class="bg-white w-full max-w-lg p-6 rounded-[1px] shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-lg font-bold text-[#002D1E] poppins">{{ isEditing ? 'Edit Tax Type' : 'Add Tax Type' }}</h2>
-          <button @click="closeModal" class="text-gray-400 hover:text-gray-600">
-            <i class="ph ph-x"></i>
+    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-[#002D1E]/60 backdrop-blur-sm p-4">
+      <div class="bg-white w-full max-w-lg rounded-[1px] shadow-2xl overflow-hidden">
+        <div class="bg-[#002D1E] p-4 text-white flex justify-between items-center">
+          <h2 class="text-sm font-black uppercase tracking-[2px]">{{ isEditing ? 'Revise Tax Type' : 'Register Tax Type' }}</h2>
+          <button @click="closeModal" class="text-white/70 hover:text-white transition-colors">
+            <i class="ph ph-x text-xl"></i>
           </button>
         </div>
         
-        <form @submit.prevent="saveTax" class="space-y-4">
+        <form @submit.prevent="saveTax" class="p-6 space-y-5">
           <div>
             <label class="block text-xs font-semibold text-gray-600 uppercase mb-1 poppins">Name *</label>
             <input 
@@ -385,16 +385,16 @@
     </div>
 
     <!-- View Details Modal -->
-    <div v-if="showDetailsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div class="bg-white w-full max-w-lg p-6 rounded-[1px] shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-lg font-bold text-[#002D1E] poppins">Tax Type Details</h2>
-          <button @click="showDetailsModal = false" class="text-gray-400 hover:text-gray-600">
-            <i class="ph ph-x"></i>
+    <div v-if="showDetailsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-[#002D1E]/60 backdrop-blur-sm p-4">
+      <div class="bg-white w-full max-w-lg rounded-[1px] shadow-2xl overflow-hidden">
+        <div class="bg-[#002D1E] p-4 text-white flex justify-between items-center">
+          <h2 class="text-sm font-black uppercase tracking-[2px]">Tax Type Information</h2>
+          <button @click="showDetailsModal = false" class="text-white/70 hover:text-white transition-colors">
+            <i class="ph ph-x text-xl"></i>
           </button>
         </div>
         
-        <div v-if="selectedTax" class="space-y-4">
+        <div v-if="selectedTax" class="p-8 space-y-6">
           <div class="flex items-center gap-4 mb-4">
             <div class="w-16 h-16 rounded-full bg-[#fe3787]/10 flex items-center justify-center">
               <i class="ph ph-receipt text-3xl text-[#fe3787]"></i>

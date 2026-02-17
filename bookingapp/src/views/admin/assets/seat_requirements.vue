@@ -1,43 +1,59 @@
 <template>
-  <div class="p-6">
+  <div class="p-6 poppins">
+    <!-- Header Section -->
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-[#002D1E]">Seat Requirements</h1>
-      <button @click="openModal()" class="bg-[#fe3787] text-white px-4 py-2 rounded-[1px] font-medium flex items-center gap-2">
-        <i class="ph ph-plus-circle"></i> Add Requirement
+      <button 
+        @click="openModal()" 
+        class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[14px] rounded-[1px] shadow-sm transition-all"
+      >
+        <i class="ph ph-plus"></i> Add Requirement
       </button>
     </div>
 
+    <!-- Table Section -->
     <div class="bg-white border border-gray-200 rounded-[1px] overflow-hidden shadow-sm">
       <table class="w-full text-left">
-        <thead class="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm">
+        <thead class="bg-gray-50 text-gray-600 text-[14px] uppercase font-semibold border-b border-gray-200">
           <tr>
-            <th class="px-6 py-4 font-semibold uppercase">Icon</th>
-            <th class="px-6 py-4 font-semibold uppercase">Name</th>
-            <th class="px-6 py-4 font-semibold uppercase">Code</th>
-            <th class="px-6 py-4 font-semibold uppercase text-right">Price</th>
-            <th class="px-6 py-4 font-semibold uppercase text-right">Actions</th>
+            <th class="px-6 py-4 poppins">Icon</th>
+            <th class="px-6 py-4 poppins">Name</th>
+            <th class="px-6 py-4 poppins">Code</th>
+            <th class="px-6 py-4 poppins text-right">Price</th>
+            <th class="px-6 py-4 poppins text-right">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200 text-sm">
-          <tr v-for="req in requirements" :key="req.id" class="hover:bg-gray-50">
+        <tbody class="divide-y divide-gray-100">
+          <tr v-for="req in requirements" :key="req.id" class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium">
             <td class="px-6 py-4">
-              <div class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                <i :class="[req.icon || 'ph ph-star', 'text-gray-600 text-lg']"></i>
+              <div class="w-10 h-10 bg-gray-50 border border-gray-100 rounded-[1px] flex items-center justify-center">
+                <i :class="[req.icon || 'ph ph-star', 'text-[#fe3787] text-xl']"></i>
               </div>
             </td>
             <td class="px-6 py-4">
-              <div class="font-bold text-[#002D1E]">{{ req.name }}</div>
-              <div class="text-xs text-gray-500 truncate max-w-[200px]">{{ req.description }}</div>
+              <div class="font-bold text-[#002D1E] poppins text-sm">{{ req.name }}</div>
+              <div class="text-[10px] text-gray-400 poppins truncate max-w-[200px]">{{ req.description }}</div>
             </td>
-            <td class="px-6 py-4 font-mono text-xs text-gray-500">{{ req.code }}</td>
-            <td class="px-6 py-4 text-right font-bold text-[#fe3787]">₱{{ formatPrice(req.price) }}</td>
-            <td class="px-6 py-4 text-right space-x-3">
-              <button @click="openModal(req)" class="text-blue-600 hover:text-blue-800"><i class="ph ph-pencil-simple text-lg"></i></button>
-              <button @click="deleteRequirement(req.id)" class="text-red-600 hover:text-red-800"><i class="ph ph-trash text-lg"></i></button>
+            <td class="px-6 py-4">
+               <span class="font-mono text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-[1px] uppercase tracking-wider">
+                 {{ req.code }}
+               </span>
+            </td>
+            <td class="px-6 py-4 text-right">
+              <span class="font-bold text-[#fe3787] poppins text-sm">₱{{ formatPrice(req.price) }}</span>
+            </td>
+            <td class="px-6 py-4 text-right">
+              <div class="flex justify-end gap-2">
+                <button @click="openModal(req)" class="text-green-600 hover:text-green-400 p-2 transition-colors">
+                  <i class="ph ph-pencil-simple text-lg"></i>
+                </button>
+                <button @click="deleteRequirement(req.id)" class="text-red-600 hover:text-red-400 p-2 transition-colors">
+                  <i class="ph ph-trash text-lg"></i>
+                </button>
+              </div>
             </td>
           </tr>
           <tr v-if="requirements.length === 0">
-            <td colspan="5" class="px-6 py-10 text-center text-gray-500">
+            <td colspan="5" class="px-6 py-10 text-center text-gray-400 italic poppins">
               No seat requirements found. Add one to get started!
             </td>
           </tr>
@@ -45,12 +61,12 @@
       </table>
     </div>
 
-    <!-- Modal -->
-    <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div class="bg-white w-full max-w-lg p-6 rounded-[1px] shadow-2xl">
+    <!-- Modal Section -->
+    <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 poppins">
+      <div class="bg-white w-full max-w-lg p-6 rounded-[1px] shadow-2xl animate-in fade-in zoom-in duration-200">
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-lg font-bold text-[#002D1E]">{{ isEditing ? 'Edit Requirement' : 'Add Requirement' }}</h2>
-          <button @click="isModalOpen = false" class="text-gray-400 hover:text-gray-600">
+          <h2 class="text-lg font-bold text-[#002D1E] poppins">{{ isEditing ? 'Edit Requirement' : 'Add Requirement' }}</h2>
+          <button @click="isModalOpen = false" class="text-gray-400 hover:text-black transition-colors">
             <i class="ph ph-x text-xl"></i>
           </button>
         </div>
@@ -58,25 +74,25 @@
         <form @submit.prevent="saveRequirement" class="space-y-4">
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Name</label>
-              <input v-model="form.name" type="text" class="w-full border p-2 rounded-[1px] outline-none focus:border-[#fe3787]" placeholder="e.g. Extra Legroom" required>
+              <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Name</label>
+              <input v-model="form.name" type="text" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px]" placeholder="e.g. Extra Legroom" required>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Code</label>
-              <input v-model="form.code" type="text" class="w-full border p-2 rounded-[1px] outline-none focus:border-[#fe3787]" placeholder="e.g. has_extra_legroom" required>
+              <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Code</label>
+              <input v-model="form.code" type="text" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px]" placeholder="e.g. has_extra_legroom" required>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Price (₱)</label>
-              <input v-model.number="form.price" type="number" step="0.01" class="w-full border p-2 rounded-[1px] outline-none focus:border-[#fe3787]" required>
+              <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Price (₱)</label>
+              <input v-model.number="form.price" type="number" step="0.01" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px]" required>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Icon (Phospor Class)</label>
+              <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Icon (Phospor Class)</label>
               <div class="flex gap-2">
-                <input v-model="form.icon" type="text" class="flex-1 border p-2 rounded-[1px] outline-none focus:border-[#fe3787]" placeholder="ph ph-stars">
-                <div class="w-10 h-10 bg-gray-50 border flex items-center justify-center">
+                <input v-model="form.icon" type="text" class="flex-1 border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px]" placeholder="ph ph-stars">
+                <div class="w-10 h-10 bg-gray-50 border border-gray-200 flex items-center justify-center rounded-[1px]">
                   <i :class="[form.icon || 'ph ph-star', 'text-[#fe3787]']"></i>
                 </div>
               </div>
@@ -84,13 +100,13 @@
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Description</label>
-            <textarea v-model="form.description" class="w-full border p-2 rounded-[1px] h-24 outline-none focus:border-[#fe3787]" placeholder="Describe this requirement..."></textarea>
+            <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Description</label>
+            <textarea v-model="form.description" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px] h-24" placeholder="Describe this requirement..."></textarea>
           </div>
 
-          <div class="flex justify-end gap-3 mt-8">
-            <button type="button" @click="isModalOpen = false" class="px-6 py-2 text-gray-600 font-medium hover:bg-gray-50">Cancel</button>
-            <button type="submit" class="px-6 py-2 bg-[#fe3787] text-white font-bold rounded-[1px] hover:bg-[#e62e7a]">
+          <div class="flex justify-end gap-3 pt-6 border-t mt-4">
+            <button type="button" @click="isModalOpen = false" class="text-sm text-gray-500 font-medium hover:text-gray-700 poppins">Cancel</button>
+            <button type="submit" class="bg-[#fe3787] text-white px-6 py-2 text-sm font-bold shadow-md hover:bg-[#e6327a] transition-all rounded-[1px] poppins">
               {{ isEditing ? 'Update Requirement' : 'Save Requirement' }}
             </button>
           </div>
@@ -132,9 +148,10 @@ const saveRequirement = async () => {
     } else {
       await api.post('/seat-requirements/', form.value);
     }
-    fetchRequirements();
+    await fetchRequirements();
     isModalOpen.value = false;
   } catch (err) {
+    console.error("Save Error:", err);
     alert("Error saving: " + JSON.stringify(err.response?.data || err.message));
   }
 };
@@ -143,8 +160,9 @@ const deleteRequirement = async (id) => {
   if (confirm('Are you sure you want to delete this seat requirement? This might affect existing seat configurations.')) {
     try {
       await api.delete(`/seat-requirements/${id}/`);
-      fetchRequirements();
+      await fetchRequirements();
     } catch (err) {
+      console.error("Delete Error:", err);
       alert("Error deleting: " + JSON.stringify(err.response?.data || err.message));
     }
   }
@@ -169,3 +187,11 @@ const formatPrice = (price) => {
 
 onMounted(fetchRequirements);
 </script>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+
+.poppins {
+  font-family: 'Poppins', sans-serif;
+}
+</style>

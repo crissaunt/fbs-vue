@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6">
+  <div class="p-6 poppins">
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <button 
@@ -12,47 +12,47 @@
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-      <div class="bg-white p-4 border border-gray-200 rounded-[1px] shadow-sm">
+      <div class="bg-white p-5 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-md transition-shadow">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins">Total Taxes</p>
-            <p class="text-2xl font-bold text-[#002D1E] poppins">{{ stats.total }}</p>
+            <p class="text-[10px] uppercase font-black text-gray-400 tracking-[2px] mb-1">Total Taxes</p>
+            <p class="text-3xl font-bold text-[#002D1E]">{{ stats.total }}</p>
           </div>
-          <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-            <i class="ph ph-airplane-tilt text-blue-600 text-xl"></i>
+          <div class="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100">
+            <i class="ph ph-airplane-tilt text-blue-500 text-2xl"></i>
           </div>
         </div>
       </div>
-      <div class="bg-white p-4 border border-gray-200 rounded-[1px] shadow-sm">
+      <div class="bg-white p-5 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-md transition-shadow">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins">Active Airlines</p>
-            <p class="text-2xl font-bold text-green-600 poppins">{{ stats.activeAirlines }}</p>
+            <p class="text-[10px] uppercase font-black text-gray-400 tracking-[2px] mb-1">Active Airlines</p>
+            <p class="text-3xl font-bold text-green-600">{{ stats.activeAirlines }}</p>
           </div>
-          <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-            <i class="ph ph-check-circle text-green-600 text-xl"></i>
+          <div class="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center border border-green-100">
+            <i class="ph ph-check-circle text-green-500 text-2xl"></i>
           </div>
         </div>
       </div>
-      <div class="bg-white p-4 border border-gray-200 rounded-[1px] shadow-sm">
+      <div class="bg-white p-5 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-md transition-shadow">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins">Total Surcharge</p>
-            <p class="text-2xl font-bold text-[#fe3787] poppins">₱{{ formatNumber(stats.totalAmount) }}</p>
+            <p class="text-[10px] uppercase font-black text-gray-400 tracking-[2px] mb-1">Total Surcharge</p>
+            <p class="text-3xl font-bold text-[#fe3787]">₱{{ formatNumber(stats.totalAmount) }}</p>
           </div>
-          <div class="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center">
-            <i class="ph ph-currency-circle-dollar text-[#fe3787] text-xl"></i>
+          <div class="w-14 h-14 rounded-full bg-pink-50 flex items-center justify-center border border-pink-100">
+            <i class="ph ph-currency-circle-dollar text-[#fe3787] text-2xl"></i>
           </div>
         </div>
       </div>
-      <div class="bg-white p-4 border border-gray-200 rounded-[1px] shadow-sm">
+      <div class="bg-white p-5 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-md transition-shadow">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins">Avg per Airline</p>
-            <p class="text-2xl font-bold text-purple-600 poppins">₱{{ formatNumber(stats.averagePerAirline) }}</p>
+            <p class="text-[10px] uppercase font-black text-gray-400 tracking-[2px] mb-1">Avg per Airline</p>
+            <p class="text-3xl font-bold text-purple-600">₱{{ formatNumber(stats.averagePerAirline) }}</p>
           </div>
-          <div class="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-            <i class="ph ph-chart-bar text-purple-600 text-xl"></i>
+          <div class="w-14 h-14 rounded-full bg-purple-50 flex items-center justify-center border border-purple-100">
+            <i class="ph ph-chart-bar text-purple-600 text-2xl"></i>
           </div>
         </div>
       </div>
@@ -106,14 +106,14 @@
     <!-- Taxes Table -->
     <div class="bg-white border border-gray-200 rounded-[1px] shadow-sm overflow-hidden">
       <table class="w-full text-left">
-        <thead class="bg-gray-50 text-gray-600 text-[14px] uppercase font-semibold border-b border-gray-200">
+        <thead class="bg-gray-50 border-b border-gray-200">
           <tr>
-            <th class="px-6 py-4 poppins">Airline</th>
-            <th class="px-6 py-4 poppins">Tax Type</th>
-            <th class="px-6 py-4 poppins">Category</th>
-            <th class="px-6 py-4 poppins">Amount</th>
-            <th class="px-6 py-4 poppins">Status</th>
-            <th class="px-6 py-4 text-right poppins">Actions</th>
+            <th class="px-6 py-4 text-[11px] uppercase font-black text-[#002D1E] tracking-widest">Airline</th>
+            <th class="px-6 py-4 text-[11px] uppercase font-black text-[#002D1E] tracking-widest">Tax Type</th>
+            <th class="px-6 py-4 text-[11px] uppercase font-black text-[#002D1E] tracking-widest">Category</th>
+            <th class="px-6 py-4 text-[11px] uppercase font-black text-[#002D1E] tracking-widest">Amount</th>
+            <th class="px-6 py-4 text-[11px] uppercase font-black text-[#002D1E] tracking-widest">Status</th>
+            <th class="px-6 py-4 text-[11px] uppercase font-black text-[#002D1E] tracking-widest text-right">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
@@ -272,16 +272,16 @@
     </div>
 
     <!-- Add/Edit Modal -->
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div class="bg-white w-full max-w-md p-6 rounded-[1px] shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-lg font-bold text-[#002D1E] poppins">{{ isEditing ? 'Edit Airline Tax' : 'Add Airline Tax' }}</h2>
-          <button @click="closeModal" class="text-gray-400 hover:text-gray-600">
-            <i class="ph ph-x"></i>
+    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-[#002D1E]/60 backdrop-blur-sm p-4">
+      <div class="bg-white w-full max-w-md rounded-[1px] shadow-2xl overflow-hidden">
+        <div class="bg-[#002D1E] p-4 text-white flex justify-between items-center">
+          <h2 class="text-sm font-black uppercase tracking-[2px]">{{ isEditing ? 'Revise Airline Tax' : 'Register Airline Tax' }}</h2>
+          <button @click="closeModal" class="text-white/70 hover:text-white transition-colors">
+            <i class="ph ph-x text-xl"></i>
           </button>
         </div>
         
-        <form @submit.prevent="saveTax" class="space-y-4">
+        <form @submit.prevent="saveTax" class="p-6 space-y-5">
           <div>
             <label class="block text-xs font-semibold text-gray-600 uppercase mb-1 poppins">Airline *</label>
             <select 
@@ -345,16 +345,16 @@
     </div>
 
     <!-- View Details Modal -->
-    <div v-if="showDetailsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div class="bg-white w-full max-w-lg p-6 rounded-[1px] shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-lg font-bold text-[#002D1E] poppins">Airline Tax Details</h2>
-          <button @click="showDetailsModal = false" class="text-gray-400 hover:text-gray-600">
-            <i class="ph ph-x"></i>
+    <div v-if="showDetailsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-[#002D1E]/60 backdrop-blur-sm p-4">
+      <div class="bg-white w-full max-w-lg rounded-[1px] shadow-2xl overflow-hidden">
+        <div class="bg-[#002D1E] p-4 text-white flex justify-between items-center">
+          <h2 class="text-sm font-black uppercase tracking-[2px]">Airline Tax Record</h2>
+          <button @click="showDetailsModal = false" class="text-white/70 hover:text-white transition-colors">
+            <i class="ph ph-x text-xl"></i>
           </button>
         </div>
         
-        <div v-if="selectedTax" class="space-y-4">
+        <div v-if="selectedTax" class="p-8 space-y-6">
           <div class="flex items-center gap-4 mb-4">
             <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
               <i class="ph ph-airplane-tilt text-3xl text-blue-600"></i>

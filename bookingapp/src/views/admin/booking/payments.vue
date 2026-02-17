@@ -1,64 +1,84 @@
 <template>
-  <div class="p-6">
+  <div class="p-6 poppins">
     <!-- Header -->
-    <div class="mb-6">
-      <h1 class="text-xl font-bold text-[#002D1E]">Payments</h1>
+    <div class="mb-6 flex justify-between items-center">
+    </div>
+
+    <!-- Stats Section -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div 
+        v-for="(count, label) in statsItems" 
+        :key="label" 
+        class="bg-white p-4 border border-gray-200 rounded-[1px] shadow-sm"
+      >
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins leading-none mb-2">{{ label }}</p>
+            <p class="text-2xl font-bold text-[#002D1E] poppins">
+              {{ label.includes('Amount') ? '₱' + count.toLocaleString() : count }}
+            </p>
+          </div>
+          <div :class="statIconClass(label)" class="w-12 h-12 rounded-full flex items-center justify-center">
+            <i :class="[statIcon(label), 'text-xl']"></i>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Table -->
     <div class="bg-white border border-gray-200 rounded-[1px] shadow-sm overflow-hidden">
       <table class="w-full text-left">
-        <thead class="bg-gray-50 border-b border-gray-200 text-xs text-gray-600 uppercase">
+        <thead class="bg-gray-50 text-gray-600 text-[14px] uppercase font-semibold border-b border-gray-200">
           <tr>
-            <th class="px-5 py-4">Payment ID</th>
-            <th class="px-5 py-4">Booking</th>
-            <th class="px-5 py-4">Amount</th>
-            <th class="px-5 py-4">Method</th>
-            <th class="px-5 py-4">Transaction</th>
-            <th class="px-5 py-4">Status</th>
-            <th class="px-5 py-4">Date</th>
+            <th class="px-6 py-4 poppins">Payment ID</th>
+            <th class="px-6 py-4 poppins">Booking</th>
+            <th class="px-6 py-4 poppins text-right">Amount</th>
+            <th class="px-6 py-4 poppins text-center">Method</th>
+            <th class="px-6 py-4 poppins">Transaction</th>
+            <th class="px-6 py-4 poppins text-center">Status</th>
+            <th class="px-6 py-4 poppins text-right">Date</th>
           </tr>
         </thead>
 
-        <tbody class="divide-y divide-gray-200 text-sm">
+        <tbody class="divide-y divide-gray-100">
           <tr
             v-for="payment in payments"
             :key="payment.id"
-            class="hover:bg-gray-50 transition"
+            class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium"
           >
             <!-- Payment ID -->
-            <td class="px-5 py-4 font-semibold text-[#fe3787]">
+            <td class="px-6 py-4 font-bold text-[#fe3787] poppins">
               #{{ payment.id }}
             </td>
 
             <!-- Booking -->
-            <td class="px-5 py-4 font-medium">
-              Booking #{{ payment.booking }}
+            <td class="px-6 py-4">
+              <span class="font-bold text-[#002D1E] poppins uppercase">BK-{{ payment.booking }}</span>
             </td>
 
             <!-- Amount -->
-            <td class="px-5 py-4 font-semibold">
-              ₱{{ payment.amount }}
+            <td class="px-6 py-4 text-right font-bold text-[#002D1E] poppins">
+              ₱{{ parseFloat(payment.amount).toLocaleString() }}
             </td>
 
             <!-- Method -->
-            <td class="px-5 py-4">
+            <td class="px-6 py-4 text-center">
               <span
-                class="px-2 py-1 text-[10px] font-bold uppercase rounded-full bg-blue-100 text-blue-700"
+                class="px-3 py-1 text-[10px] font-bold uppercase rounded-[1px] bg-blue-50 text-blue-600 poppins"
               >
                 {{ payment.method }}
               </span>
             </td>
 
             <!-- Transaction -->
-            <td class="px-5 py-4 text-xs text-gray-500">
+            <td class="px-6 py-4 text-gray-400 poppins italic">
               {{ payment.transaction_id || '—' }}
             </td>
 
             <!-- Status -->
-            <td class="px-5 py-4">
+            <td class="px-6 py-4 text-center">
               <span
-                class="px-2 py-1 text-[10px] font-bold uppercase rounded-full"
+                class="px-3 py-1 text-[10px] font-bold uppercase rounded-full poppins"
                 :class="statusBadge(payment.status)"
               >
                 {{ payment.status }}
@@ -66,14 +86,14 @@
             </td>
 
             <!-- Date -->
-            <td class="px-5 py-4 text-xs text-gray-500">
+            <td class="px-6 py-4 text-right text-gray-400 poppins">
               {{ formatDate(payment.payment_date) }}
             </td>
           </tr>
 
           <tr v-if="payments.length === 0">
-            <td colspan="7" class="px-6 py-10 text-center text-gray-400 italic">
-              No payments found.
+            <td colspan="7" class="px-6 py-10 text-center text-gray-400 italic poppins">
+              No financial records found.
             </td>
           </tr>
         </tbody>
@@ -83,31 +103,52 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue"
+import { ref, onMounted, computed } from "vue"
 import api from "@/services/admin/api"
 
 const payments = ref([])
 
+const statsItems = computed(() => {
+  const completed = payments.value.filter(p => p.status === 'Completed');
+  return {
+    'Total Collected Amount': completed.reduce((acc, p) => acc + parseFloat(p.amount), 0),
+    'Success Transactions': completed.length,
+    'Pending Approvals': payments.value.filter(p => p.status === 'Pending').length,
+  };
+});
+
+const statIcon = (label) => {
+  if (label === 'Total Collected Amount') return 'ph ph-currency-circle-dollar';
+  if (label === 'Success Transactions') return 'ph ph-chart-line-up';
+  return 'ph ph-hourglass-medium';
+};
+
+const statIconClass = (label) => {
+  if (label === 'Total Collected Amount') return 'bg-green-100 text-green-600';
+  if (label === 'Success Transactions') return 'bg-blue-100 text-blue-600';
+  return 'bg-purple-100 text-purple-600';
+};
+
 const fetchPayments = async () => {
   try {
     const res = await api.get("/payments/")
-    payments.value = res.data
+    payments.value = res.data.results || res.data
   } catch (err) {
     console.error("Failed to load payments", err)
   }
 }
 
 const formatDate = (date) =>
-  new Date(date).toLocaleString()
+  new Date(date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
 
 const statusBadge = (status) => {
   switch (status) {
     case "Completed":
       return "bg-green-100 text-green-700"
     case "Pending":
-      return "bg-yellow-100 text-yellow-700"
+      return "bg-purple-100 text-purple-700"
     case "Failed":
-      return "bg-red-100 text-red-700"
+      return "bg-pink-100 text-pink-700"
     default:
       return "bg-gray-100 text-gray-600"
   }
@@ -115,3 +156,11 @@ const statusBadge = (status) => {
 
 onMounted(fetchPayments)
 </script>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+
+.poppins {
+  font-family: 'Poppins', sans-serif;
+}
+</style>

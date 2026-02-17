@@ -1,79 +1,50 @@
 <template>
-  <div class="p-6">
+  <div class="p-6 poppins">
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <div class="flex items-center gap-2">
         <button 
           @click="exportLogs" 
-          class="border border-gray-300 text-gray-700 px-4 py-2 flex items-center gap-2 hover:bg-gray-50 font-semibold poppins text-[14px] rounded-[1px]"
+          class="bg-white border border-gray-200 text-gray-700 px-4 py-2 flex items-center gap-2 hover:bg-gray-50 font-semibold poppins text-[14px] rounded-[1px] shadow-sm transition-all"
         >
-          <i class="ph ph-export"></i> Export
+          <i class="ph ph-export"></i> Export CSV
         </button>
         <button 
           @click="refreshLogs" 
-          class="border border-gray-300 text-gray-700 px-4 py-2 flex items-center gap-2 hover:bg-gray-50 font-semibold poppins text-[14px] rounded-[1px]"
+          class="bg-white border border-gray-200 text-gray-700 px-4 py-2 flex items-center gap-2 hover:bg-gray-50 font-semibold poppins text-[14px] rounded-[1px] shadow-sm transition-all"
         >
           <i class="ph ph-arrows-clockwise"></i> Refresh
         </button>
         <button 
           @click="clearAllLogs" 
-          class="bg-red-500 text-white px-4 py-2 flex items-center gap-2 hover:bg-red-600 font-semibold poppins text-[14px] rounded-[1px]"
+          class="bg-red-50 text-red-600 px-4 py-2 flex items-center gap-2 hover:bg-red-100 font-bold poppins text-[14px] rounded-[1px] shadow-sm transition-all"
         >
-          <i class="ph ph-trash"></i> Clear All
+          <i class="ph ph-trash"></i> Clear All Logs
         </button>
       </div>
     </div>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-      <div class="bg-white p-4 border border-gray-200 rounded-[1px] shadow-sm">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div 
+        v-for="(stat, key) in statsItems" 
+        :key="key" 
+        class="bg-white p-4 border border-gray-200 rounded-[1px] shadow-sm"
+      >
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins">Total Logs</p>
-            <p class="text-2xl font-bold text-[#002D1E] poppins">{{ stats.total }}</p>
+            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins leading-none mb-2">{{ key }}</p>
+            <p class="text-2xl font-bold text-[#002D1E] poppins">{{ stat.value }}</p>
           </div>
-          <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-            <i class="ph ph-list-dashes text-blue-600 text-xl"></i>
-          </div>
-        </div>
-      </div>
-      <div class="bg-white p-4 border border-gray-200 rounded-[1px] shadow-sm">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins">Today's Activity</p>
-            <p class="text-2xl font-bold text-green-600 poppins">{{ stats.today }}</p>
-          </div>
-          <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-            <i class="ph ph-calendar-check text-green-600 text-xl"></i>
-          </div>
-        </div>
-      </div>
-      <div class="bg-white p-4 border border-gray-200 rounded-[1px] shadow-sm">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins">Unique Users</p>
-            <p class="text-2xl font-bold text-purple-600 poppins">{{ stats.uniqueUsers }}</p>
-          </div>
-          <div class="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-            <i class="ph ph-users text-purple-600 text-xl"></i>
-          </div>
-        </div>
-      </div>
-      <div class="bg-white p-4 border border-gray-200 rounded-[1px] shadow-sm">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins">This Week</p>
-            <p class="text-2xl font-bold text-orange-600 poppins">{{ stats.thisWeek }}</p>
-          </div>
-          <div class="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
-            <i class="ph ph-chart-line-up text-orange-600 text-xl"></i>
+          <div :class="stat.iconBg" class="w-12 h-12 rounded-full flex items-center justify-center">
+            <i :class="[stat.icon, stat.iconColor, 'text-xl']"></i>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Filters -->
-    <div class="bg-white border border-gray-200 rounded-[1px] shadow-sm p-4 mb-6 text-[14px]">
+    <div class="bg-white border border-gray-200 rounded-[1px] shadow-sm p-4 mb-6">
       <div class="flex flex-col md:flex-row md:items-center gap-4">
         <div class="relative flex-1">
           <i class="ph ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
@@ -81,14 +52,14 @@
             v-model="searchQuery" 
             type="text" 
             placeholder="Search by user, action, or keyword..." 
-            class="pl-10 pr-4 py-2 border border-gray-300 rounded-[1px] w-full focus:outline-none focus:ring-1 focus:ring-[#fe3787] focus:border-[#fe3787] poppins"
+            class="pl-10 pr-4 py-2 border border-gray-200 rounded-[1px] w-full outline-none focus:border-[#fe3787] transition-all poppins text-sm"
             @input="debounceSearch"
           />
         </div>
         
         <select 
           v-model="selectedUser" 
-          class="border border-gray-300 px-3 py-2 rounded-[1px] focus:outline-none focus:ring-1 focus:ring-[#fe3787] focus:border-[#fe3787] poppins text-[14px] min-w-[150px]"
+          class="border border-gray-200 px-3 py-2 rounded-[1px] outline-none focus:border-[#fe3787] transition-all poppins text-sm bg-white min-w-[150px]"
           @change="fetchLogs"
         >
           <option value="">All Users</option>
@@ -97,90 +68,101 @@
           </option>
         </select>
 
-        <input 
-          v-model="dateFrom" 
-          type="date" 
-          class="border border-gray-300 px-3 py-2 rounded-[1px] focus:outline-none focus:ring-1 focus:ring-[#fe3787] focus:border-[#fe3787] poppins text-[14px]"
-          @change="fetchLogs"
-        />
-        
-        <input 
-          v-model="dateTo" 
-          type="date" 
-          class="border border-gray-300 px-3 py-2 rounded-[1px] focus:outline-none focus:ring-1 focus:ring-[#fe3787] focus:border-[#fe3787] poppins text-[14px]"
-          @change="fetchLogs"
-        />
+        <div class="flex items-center gap-2">
+          <input 
+            v-model="dateFrom" 
+            type="date" 
+            class="border border-gray-200 px-3 py-2 rounded-[1px] outline-none focus:border-[#fe3787] transition-all poppins text-sm bg-white"
+            @change="fetchLogs"
+          />
+          <span class="text-gray-400">to</span>
+          <input 
+            v-model="dateTo" 
+            type="date" 
+            class="border border-gray-200 px-3 py-2 rounded-[1px] outline-none focus:border-[#fe3787] transition-all poppins text-sm bg-white"
+            @change="fetchLogs"
+          />
+        </div>
 
         <button 
           @click="clearFilters" 
-          class="text-white px-4 py-2 border bg-[#fe3787] rounded-[1px] hover:bg-[#fb1873] font-medium poppins text-[14px]"
+          class="bg-gray-100 text-gray-600 px-6 py-2 rounded-[1px] hover:bg-gray-200 font-bold poppins text-sm transition-all"
         >
-          Clear
+          Reset
         </button>
       </div>
     </div>
 
     <!-- Activity Timeline -->
     <div class="bg-white border border-gray-200 rounded-[1px] shadow-sm overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <h3 class="text-lg font-semibold text-[#002D1E] poppins">Activity Timeline</h3>
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
         <div class="flex items-center gap-2">
-          <span class="text-sm text-gray-500 poppins">Auto-refresh:</span>
+          <i class="ph ph-clock-counter-clockwise text-[#fe3787] text-xl"></i>
+          <h3 class="text-[14px] font-bold text-[#002D1E] uppercase tracking-wider poppins">Live Activity Feed</h3>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest poppins">Auto-refresh</span>
           <button 
             @click="toggleAutoRefresh" 
             :class="[
-              'px-3 py-1 rounded-[1px] text-sm font-medium poppins transition-colors',
-              autoRefresh ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+              'w-10 h-5 rounded-full relative transition-all duration-300',
+              autoRefresh ? 'bg-green-500' : 'bg-gray-200'
             ]"
           >
-            {{ autoRefresh ? 'ON' : 'OFF' }}
+            <div 
+              :class="[
+                'absolute top-1 w-3 h-3 bg-white rounded-full transition-all duration-300',
+                autoRefresh ? 'left-6' : 'left-1'
+              ]"
+            ></div>
           </button>
         </div>
       </div>
 
-      <div class="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
+      <div class="divide-y divide-gray-100 max-h-[600px] overflow-y-auto custom-scrollbar">
         <div 
           v-for="(log, index) in paginatedLogs" 
           :key="log.id" 
-          class="p-4 hover:bg-gray-50/50 transition-colors"
+          class="p-4 hover:bg-gray-50/50 transition-colors group"
         >
           <div class="flex items-start gap-4">
-            <div class="flex-shrink-0">
+            <div class="flex-shrink-0 relative">
               <div :class="[
-                'w-10 h-10 rounded-full flex items-center justify-center',
+                'w-10 h-10 rounded-full flex items-center justify-center shadow-sm',
                 getActionColor(log.action)
               ]">
                 <i :class="getActionIcon(log.action)" class="text-white text-lg"></i>
               </div>
+              <div class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-white border border-gray-100 flex items-center justify-center shadow-sm">
+                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              </div>
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between mb-1">
-                <p class="text-sm font-semibold text-[#002D1E] poppins">
-                  {{ log.user?.username || 'Unknown User' }}
+                <p class="text-[13px] font-bold text-[#002D1E] poppins">
+                  {{ log.user?.username || 'System Agent' }}
                 </p>
-                <span class="text-xs text-gray-400 poppins">
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest poppins">
                   {{ formatDateTime(log.timestamp) }}
                 </span>
               </div>
-              <p class="text-sm text-gray-600 poppins break-words">
+              <p class="text-sm text-gray-600 poppins leading-relaxed">
                 {{ log.action }}
               </p>
               <div class="flex items-center gap-4 mt-2">
-                <span class="text-xs text-gray-400 poppins flex items-center gap-1">
-                  <i class="ph ph-clock"></i>
+                <span class="text-[10px] font-bold text-[#fe3787] uppercase tracking-widest poppins bg-[#fe3787]/5 px-2 py-0.5 rounded-[1px]">
                   {{ timeAgo(log.timestamp) }}
                 </span>
-                <span class="text-xs text-gray-400 poppins flex items-center gap-1">
-                  <i class="ph ph-hash"></i>
-                  Log #{{ log.id }}
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest poppins">
+                  #{{ log.id }}
                 </span>
               </div>
             </div>
-            <div class="flex-shrink-0">
+            <div class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
               <button 
                 @click="deleteLog(log.id)" 
-                class="text-gray-400 hover:text-red-500 transition-colors p-1"
-                title="Delete Log"
+                class="text-gray-300 hover:text-red-600 transition-colors p-2"
+                title="Purge Log"
               >
                 <i class="ph ph-trash text-lg"></i>
               </button>
@@ -189,32 +171,32 @@
         </div>
 
         <!-- Empty State -->
-        <div v-if="logs.length === 0 && !loading" class="p-12 text-center">
-          <div class="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-            <i class="ph ph-clipboard-text text-2xl text-gray-400"></i>
+        <div v-if="logs.length === 0 && !loading" class="p-16 text-center poppins">
+          <div class="w-20 h-20 mx-auto mb-4 bg-gray-50 border border-gray-100 rounded-full flex items-center justify-center">
+            <i class="ph ph-clipboard-text text-3xl text-gray-200"></i>
           </div>
-          <h3 class="text-lg font-semibold text-gray-900 mb-2 poppins">No activity logs found</h3>
-          <p class="text-gray-500 poppins">User actions will be recorded here</p>
+          <h3 class="text-lg font-bold text-[#002D1E] mb-2 poppins">No Activity Recorded</h3>
+          <p class="text-sm text-gray-400 poppins max-w-xs mx-auto">System events and user movements will appear here once they occur.</p>
         </div>
 
         <!-- Loading State -->
-        <div v-if="loading" class="p-12 text-center">
-          <i class="ph ph-spinner animate-spin text-4xl text-[#fe3787]"></i>
-          <p class="mt-2 text-gray-500 poppins">Loading activity logs...</p>
+        <div v-if="loading" class="p-16 text-center">
+          <i class="ph ph-circle-notch animate-spin text-4xl text-[#fe3787]"></i>
+          <p class="mt-4 text-sm font-bold text-gray-400 uppercase tracking-widest poppins">Reading Audit Logs...</p>
         </div>
       </div>
 
       <!-- Pagination -->
-      <div v-if="filteredLogs.length > itemsPerPage" class="px-6 py-4 border-t border-gray-200">
+      <div v-if="filteredLogs.length > itemsPerPage" class="px-6 py-4 border-t border-gray-100 bg-gray-50/50">
         <div class="flex items-center justify-between">
-          <div class="text-sm text-gray-600 poppins">
-            Showing {{ startIndex + 1 }} to {{ endIndex }} of {{ filteredLogs.length }} logs
+          <div class="text-[11px] font-bold text-gray-400 uppercase tracking-widest poppins">
+            Showing {{ startIndex + 1 }} - {{ endIndex }} of {{ filteredLogs.length }} Entries
           </div>
           <div class="flex gap-1">
             <button 
               @click="prevPage" 
               :disabled="currentPage === 1"
-              class="px-3 py-1 border border-gray-300 rounded-[1px] text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed poppins"
+              class="px-4 py-2 bg-white border border-gray-200 rounded-[1px] text-xs font-bold uppercase hover:bg-gray-50 disabled:opacity-50 poppins transition-all shadow-sm"
             >
               Prev
             </button>
@@ -224,9 +206,9 @@
               @click="goToPage(page)"
               :disabled="page === '...'"
               :class="[
-                'px-3 py-1 border rounded-[1px] text-sm poppins',
-                page === '...' ? 'border-gray-300 cursor-default' : '',
-                currentPage === page ? 'bg-[#fe3787] text-white border-[#fe3787]' : 'border-gray-300 hover:bg-gray-50'
+                'px-4 py-2 border rounded-[1px] text-xs font-bold uppercase poppins transition-all shadow-sm',
+                page === '...' ? 'bg-white border-gray-200 text-gray-400' : 
+                currentPage === page ? 'bg-[#fe3787] text-white border-[#fe3787]' : 'bg-white border-gray-200 text-[#002D1E] hover:bg-gray-50'
               ]"
             >
               {{ page }}
@@ -234,7 +216,7 @@
             <button 
               @click="nextPage" 
               :disabled="currentPage === totalPages"
-              class="px-3 py-1 border border-gray-300 rounded-[1px] text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed poppins"
+              class="px-4 py-2 bg-white border border-gray-200 rounded-[1px] text-xs font-bold uppercase hover:bg-gray-50 disabled:opacity-50 poppins transition-all shadow-sm"
             >
               Next
             </button>
@@ -243,59 +225,71 @@
       </div>
     </div>
 
-    <!-- Activity Summary Chart -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+    <!-- Analytics Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
       <!-- Top Users -->
       <div class="bg-white border border-gray-200 rounded-[1px] shadow-sm p-6">
-        <h3 class="text-lg font-semibold text-[#002D1E] poppins mb-4">Most Active Users</h3>
-        <div class="space-y-3">
+        <div class="flex items-center gap-2 mb-6">
+          <i class="ph ph-users-four text-blue-600 text-xl"></i>
+          <h3 class="text-[14px] font-bold text-[#002D1E] uppercase tracking-wider poppins">Active Personnel</h3>
+        </div>
+        <div class="space-y-4">
           <div 
             v-for="(user, index) in topUsers" 
             :key="user.user__id"
-            class="flex items-center justify-between p-3 bg-gray-50 rounded-[1px]"
+            class="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-[1px] hover:border-[#fe3787]/30 transition-colors"
           >
-            <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-full bg-[#fe3787] text-white flex items-center justify-center text-sm font-bold">
-                {{ index + 1 }}
+            <div class="flex items-center gap-4">
+              <div class="w-10 h-10 rounded-full bg-[#fe3787]/10 text-[#fe3787] flex items-center justify-center font-bold text-sm">
+                0{{ index + 1 }}
               </div>
-              <span class="font-medium text-[#002D1E] poppins">{{ user.user__username }}</span>
+              <div>
+                <span class="font-bold text-[#002D1E] poppins block">{{ user.user__username }}</span>
+                <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest poppins">Security Clearance L1</span>
+              </div>
             </div>
-            <span class="text-sm font-semibold text-[#fe3787] poppins">{{ user.count }} actions</span>
+            <div class="text-right">
+              <span class="text-[14px] font-black text-[#fe3787] poppins">{{ user.count }}</span>
+              <span class="text-[10px] text-gray-400 ml-1 font-bold uppercase poppins">Actions</span>
+            </div>
           </div>
-          <div v-if="topUsers.length === 0" class="text-center text-gray-500 py-4">
-            No activity data available
+          <div v-if="topUsers.length === 0" class="text-center text-gray-300 py-8 poppins text-sm uppercase font-bold tracking-widest">
+            Insufficient Analytical Data
           </div>
         </div>
       </div>
 
-      <!-- Recent Actions Breakdown -->
+      <!-- Action Breakdown -->
       <div class="bg-white border border-gray-200 rounded-[1px] shadow-sm p-6">
-        <h3 class="text-lg font-semibold text-[#002D1E] poppins mb-4">Action Types</h3>
-        <div class="space-y-3">
+        <div class="flex items-center gap-2 mb-6">
+          <i class="ph ph-graph text-purple-600 text-xl"></i>
+          <h3 class="text-[14px] font-bold text-[#002D1E] uppercase tracking-wider poppins">Operations Metrics</h3>
+        </div>
+        <div class="space-y-6">
           <div 
             v-for="(action, index) in actionBreakdown" 
             :key="index"
-            class="flex items-center justify-between"
+            class="relative"
           >
-            <div class="flex items-center gap-3 flex-1">
-              <div :class="[
-                'w-3 h-3 rounded-full',
-                getActionColor(action.action)
-              ]"></div>
-              <span class="text-sm text-gray-600 poppins truncate">{{ truncateAction(action.action) }}</span>
-            </div>
-            <div class="flex items-center gap-3">
-              <div class="w-32 bg-gray-200 rounded-full h-2">
-                <div 
-                  class="bg-[#fe3787] h-2 rounded-full transition-all duration-300"
-                  :style="{ width: (action.count / stats.total * 100) + '%' }"
-                ></div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <div :class="[
+                  'w-2 h-2 rounded-full',
+                  getActionColor(action.action)
+                ]"></div>
+                <span class="text-[11px] font-bold text-gray-600 uppercase tracking-widest poppins truncate">{{ truncateAction(action.action) }}</span>
               </div>
-              <span class="text-sm font-semibold text-[#002D1E] poppins w-8 text-right">{{ action.count }}</span>
+              <span class="text-[11px] font-black text-[#002D1E] poppins">{{ action.count }}</span>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+              <div 
+                class="bg-[#fe3787] h-full transition-all duration-1000 ease-out"
+                :style="{ width: (action.count / stats.total * 100) + '%' }"
+              ></div>
             </div>
           </div>
-          <div v-if="actionBreakdown.length === 0" class="text-center text-gray-500 py-4">
-            No action data available
+          <div v-if="actionBreakdown.length === 0" class="text-center text-gray-300 py-8 poppins text-sm uppercase font-bold tracking-widest">
+            Audit Stream Empty
           </div>
         </div>
       </div>
@@ -324,85 +318,48 @@ const currentPage = ref(1)
 const itemsPerPage = 20
 
 // Stats
-const stats = ref({
-  total: 0,
-  today: 0,
-  uniqueUsers: 0,
-  thisWeek: 0
-})
-
+const stats = ref({ total: 0, today: 0, uniqueUsers: 0, thisWeek: 0 })
 const uniqueUsersList = ref([])
 const topUsers = ref([])
 const actionBreakdown = ref([])
 
+const statsItems = computed(() => ({
+  'Global Audit Logs': { value: stats.value.total, icon: 'ph ph-list-dashes', iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
+  'Today\'s Ops': { value: stats.value.today, icon: 'ph ph-calendar-check', iconBg: 'bg-green-100', iconColor: 'text-green-600' },
+  'Active Personnel': { value: stats.value.uniqueUsers, icon: 'ph ph-users-three', iconBg: 'bg-purple-100', iconColor: 'text-purple-600' },
+  'Weekly Trend': { value: stats.value.thisWeek, icon: 'ph ph-chart-line-up', iconBg: 'bg-orange-100', iconColor: 'text-orange-600' }
+}))
+
 // Computed
 const filteredLogs = computed(() => {
   let filtered = logs.value
-  
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(log => 
-      log.action?.toLowerCase().includes(query) ||
-      log.user?.username?.toLowerCase().includes(query)
-    )
+    const q = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(l => l.action?.toLowerCase().includes(q) || l.user?.username?.toLowerCase().includes(q))
   }
-  
-  if (selectedUser.value) {
-    filtered = filtered.filter(log => log.user?.id === parseInt(selectedUser.value))
-  }
-  
-  if (dateFrom.value) {
-    const fromDate = new Date(dateFrom.value)
-    filtered = filtered.filter(log => new Date(log.timestamp) >= fromDate)
-  }
-  
-  if (dateTo.value) {
-    const toDate = new Date(dateTo.value)
-    toDate.setHours(23, 59, 59)
-    filtered = filtered.filter(log => new Date(log.timestamp) <= toDate)
-  }
-  
+  if (selectedUser.value) filtered = filtered.filter(l => l.user?.id === parseInt(selectedUser.value))
+  if (dateFrom.value) { const d = new Date(dateFrom.value); filtered = filtered.filter(l => new Date(l.timestamp) >= d) }
+  if (dateTo.value) { const d = new Date(dateTo.value); d.setHours(23, 59, 59); filtered = filtered.filter(l => new Date(l.timestamp) <= d) }
   return filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
 })
 
 const totalPages = computed(() => Math.ceil(filteredLogs.value.length / itemsPerPage))
-
 const paginatedLogs = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
-  const end = start + itemsPerPage
-  return filteredLogs.value.slice(start, end)
+  return filteredLogs.value.slice(start, start + itemsPerPage)
 })
-
 const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage)
 const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, filteredLogs.value.length))
 
 const visiblePages = computed(() => {
   const pages = []
-  const total = totalPages.value
-  const current = currentPage.value
-  
-  if (total <= 5) {
-    for (let i = 1; i <= total; i++) pages.push(i)
-  } else {
-    if (current <= 3) {
-      for (let i = 1; i <= 4; i++) pages.push(i)
-      pages.push('...')
-      pages.push(total)
-    } else if (current >= total - 2) {
-      pages.push(1)
-      pages.push('...')
-      for (let i = total - 3; i <= total; i++) pages.push(i)
-    } else {
-      pages.push(1)
-      pages.push('...')
-      pages.push(current - 1)
-      pages.push(current)
-      pages.push(current + 1)
-      pages.push('...')
-      pages.push(total)
-    }
+  const t = totalPages.value; const c = currentPage.value;
+  if (t <= 5) for (let i = 1; i <= t; i++) pages.push(i)
+  else {
+    if (c <= 3) { for (let i = 1; i <= 4; i++) pages.push(i); pages.push('...', t) }
+    else if (c >= t - 2) { pages.push(1, '...'); for (let i = t - 3; i <= t; i++) pages.push(i) }
+    else pages.push(1, '...', c - 1, c, c + 1, '...', t)
   }
-  
   return pages
 })
 
@@ -410,284 +367,143 @@ const visiblePages = computed(() => {
 const fetchLogs = async () => {
   loading.value = true
   try {
-    const params = {}
-    if (dateFrom.value) params.date_from = dateFrom.value
-    if (dateTo.value) params.date_to = dateTo.value
-    
-    const response = await api.get('/tracklogs/', { params })
+    const response = await api.get('/tracklogs/')
     logs.value = response.data
-    
-    calculateStats()
-    extractUniqueUsers()
-    calculateTopUsers()
-    calculateActionBreakdown()
-  } catch (err) {
-    console.error('Fetch error:', err)
-    // Fallback: if API doesn't exist, show empty state
-    logs.value = []
-  } finally {
-    loading.value = false
-  }
+    calculateStats(); extractUniqueUsers(); calculateTopUsers(); calculateActionBreakdown()
+  } catch (err) { console.error(err); logs.value = [] } finally { loading.value = false }
 }
 
 const calculateStats = () => {
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
-  
   stats.value.total = logs.value.length
-  stats.value.today = logs.value.filter(log => new Date(log.timestamp) >= today).length
-  stats.value.thisWeek = logs.value.filter(log => new Date(log.timestamp) >= weekAgo).length
-  
-  const uniqueUserIds = new Set(logs.value.map(log => log.user?.id).filter(Boolean))
-  stats.value.uniqueUsers = uniqueUserIds.size
+  stats.value.today = logs.value.filter(l => new Date(l.timestamp) >= today).length
+  stats.value.thisWeek = logs.value.filter(l => new Date(l.timestamp) >= weekAgo).length
+  stats.value.uniqueUsers = new Set(logs.value.map(l => l.user?.id).filter(Boolean)).size
 }
 
 const extractUniqueUsers = () => {
   const usersMap = new Map()
-  logs.value.forEach(log => {
-    if (log.user && !usersMap.has(log.user.id)) {
-      usersMap.set(log.user.id, log.user)
-    }
-  })
+  logs.value.forEach(l => { if (l.user && !usersMap.has(l.user.id)) usersMap.set(l.user.id, l.user) })
   uniqueUsersList.value = Array.from(usersMap.values())
 }
 
 const calculateTopUsers = () => {
   const userCounts = {}
-  logs.value.forEach(log => {
-    const userId = log.user?.id
-    const username = log.user?.username
+  logs.value.forEach(l => {
+    const userId = l.user?.id; const username = l.user?.username
     if (userId) {
-      if (!userCounts[userId]) {
-        userCounts[userId] = { user__id: userId, user__username: username, count: 0 }
-      }
+      if (!userCounts[userId]) userCounts[userId] = { user__id: userId, user__username: username, count: 0 }
       userCounts[userId].count++
     }
   })
-  
-  topUsers.value = Object.values(userCounts)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5)
+  topUsers.value = Object.values(userCounts).sort((a, b) => b.count - a.count).slice(0, 5)
 }
 
 const calculateActionBreakdown = () => {
   const actionCounts = {}
-  logs.value.forEach(log => {
-    const action = log.action
-    if (!actionCounts[action]) {
-      actionCounts[action] = { action, count: 0 }
-    }
+  logs.value.forEach(l => {
+    const action = l.action
+    if (!actionCounts[action]) actionCounts[action] = { action, count: 0 }
     actionCounts[action].count++
   })
-  
-  actionBreakdown.value = Object.values(actionCounts)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10)
+  actionBreakdown.value = Object.values(actionCounts).sort((a, b) => b.count - a.count).slice(0, 10)
 }
 
 const getActionIcon = (action) => {
-  const actionLower = action?.toLowerCase() || ''
-  if (actionLower.includes('login')) return 'ph-sign-in'
-  if (actionLower.includes('logout')) return 'ph-sign-out'
-  if (actionLower.includes('create') || actionLower.includes('add')) return 'ph-plus-circle'
-  if (actionLower.includes('update') || actionLower.includes('edit')) return 'ph-pencil-simple'
-  if (actionLower.includes('delete')) return 'ph-trash'
-  if (actionLower.includes('book')) return 'ph-ticket'
-  if (actionLower.includes('pay')) return 'ph-credit-card'
-  if (actionLower.includes('check')) return 'ph-check-circle'
-  if (actionLower.includes('export')) return 'ph-export'
-  if (actionLower.includes('import')) return 'ph-import'
-  return 'ph-activity'
+  const a = action?.toLowerCase() || ''
+  if (a.includes('login')) return 'ph ph-sign-in'
+  if (a.includes('logout')) return 'ph ph-sign-out'
+  if (a.includes('create') || a.includes('add')) return 'ph ph-plus-circle'
+  if (a.includes('update') || a.includes('edit')) return 'ph ph-pencil-simple'
+  if (a.includes('delete')) return 'ph ph-trash'
+  if (a.includes('book')) return 'ph ph-ticket'
+  if (a.includes('pay')) return 'ph ph-credit-card'
+  if (a.includes('check')) return 'ph ph-check-circle'
+  return 'ph ph-activity'
 }
 
 const getActionColor = (action) => {
-  const actionLower = action?.toLowerCase() || ''
-  if (actionLower.includes('login')) return 'bg-green-500'
-  if (actionLower.includes('logout')) return 'bg-gray-500'
-  if (actionLower.includes('create') || actionLower.includes('add')) return 'bg-blue-500'
-  if (actionLower.includes('update') || actionLower.includes('edit')) return 'bg-yellow-500'
-  if (actionLower.includes('delete')) return 'bg-red-500'
-  if (actionLower.includes('book')) return 'bg-purple-500'
-  if (actionLower.includes('pay')) return 'bg-pink-500'
-  if (actionLower.includes('check')) return 'bg-teal-500'
+  const a = action?.toLowerCase() || ''
+  if (a.includes('login')) return 'bg-green-500'
+  if (a.includes('logout')) return 'bg-gray-400'
+  if (a.includes('create') || a.includes('add')) return 'bg-blue-500'
+  if (a.includes('update') || a.includes('edit')) return 'bg-amber-500'
+  if (a.includes('delete')) return 'bg-red-500'
   return 'bg-[#fe3787]'
 }
 
-const formatDateTime = (timestamp) => {
-  if (!timestamp) return ''
-  return new Date(timestamp).toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+const formatDateTime = (t) => t ? new Date(t).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
+
+const timeAgo = (t) => {
+  if (!t) return ''
+  const s = Math.floor((new Date() - new Date(t)) / 1000)
+  if (s < 60) return 'Just now'
+  if (s < 3600) return Math.floor(s / 60) + 'm ago'
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago'
+  return Math.floor(s / 86400) + 'd ago'
 }
 
-const timeAgo = (timestamp) => {
-  if (!timestamp) return ''
-  const date = new Date(timestamp)
-  const now = new Date()
-  const seconds = Math.floor((now - date) / 1000)
-  
-  let interval = seconds / 31536000
-  if (interval > 1) return Math.floor(interval) + ' years ago'
-  
-  interval = seconds / 2592000
-  if (interval > 1) return Math.floor(interval) + ' months ago'
-  
-  interval = seconds / 86400
-  if (interval > 1) return Math.floor(interval) + ' days ago'
-  
-  interval = seconds / 3600
-  if (interval > 1) return Math.floor(interval) + ' hours ago'
-  
-  interval = seconds / 60
-  if (interval > 1) return Math.floor(interval) + ' minutes ago'
-  
-  return 'Just now'
-}
-
-const truncateAction = (action) => {
-  if (!action) return ''
-  return action.length > 50 ? action.substring(0, 50) + '...' : action
-}
+const truncateAction = (a) => a ? (a.length > 40 ? a.substring(0, 40) + '...' : a) : ''
 
 const deleteLog = async (id) => {
-  if (!confirm('Are you sure you want to delete this log entry?')) return
-  
-  try {
-    await api.delete(`/tracklogs/${id}/`)
-    logs.value = logs.value.filter(log => log.id !== id)
-    calculateStats()
-    calculateTopUsers()
-    calculateActionBreakdown()
-  } catch (err) {
-    console.error('Delete error:', err)
-    alert('Failed to delete log entry')
+  if (confirm('Permanently purge this audit record?')) {
+    try {
+      await api.delete(`/tracklogs/${id}/`)
+      logs.value = logs.value.filter(l => l.id !== id); calculateStats()
+    } catch (err) { console.error(err) }
   }
 }
 
 const clearAllLogs = async () => {
-  if (!confirm('WARNING: This will permanently delete ALL log entries. Are you sure?')) return
-  
-  try {
-    await api.delete('/tracklogs/clear-all/')
-    logs.value = []
-    calculateStats()
-    topUsers.value = []
-    actionBreakdown.value = []
-    alert('All logs cleared successfully')
-  } catch (err) {
-    console.error('Clear error:', err)
-    alert('Failed to clear logs')
+  if (confirm('DANGER: This action will PERMANENTLY ERASE all audit history. Continue?')) {
+    try {
+      await api.delete('/tracklogs/clear-all/')
+      logs.value = []; calculateStats(); topUsers.value = []; actionBreakdown.value = []
+    } catch (err) { console.error(err) }
   }
 }
 
 const exportLogs = async () => {
   try {
-    const response = await api.get('/tracklogs/export/', {
-      responseType: 'blob'
-    })
-    
+    const response = await api.get('/tracklogs/export/', { responseType: 'blob' })
     const url = window.URL.createObjectURL(new Blob([response.data]))
     const link = document.createElement('a')
     link.href = url
-    link.setAttribute('download', `activity_logs_${new Date().toISOString().split('T')[0]}.csv`)
+    link.setAttribute('download', `audit_logs_${new Date().toISOString().split('T')[0]}.csv`)
     document.body.appendChild(link)
-    link.click()
-    link.remove()
-  } catch (err) {
-    console.error('Export error:', err)
-    alert('Failed to export logs')
-  }
+    link.click(); link.remove()
+  } catch (err) { console.error(err) }
 }
 
-const refreshLogs = () => {
-  fetchLogs()
-}
+const refreshLogs = () => fetchLogs()
 
 const toggleAutoRefresh = () => {
   autoRefresh.value = !autoRefresh.value
-  if (autoRefresh.value) {
-    refreshInterval = setInterval(fetchLogs, 30000) // Refresh every 30 seconds
-  } else {
-    clearInterval(refreshInterval)
-  }
+  if (autoRefresh.value) refreshInterval = setInterval(fetchLogs, 30000)
+  else clearInterval(refreshInterval)
 }
 
-const clearFilters = () => {
-  searchQuery.value = ''
-  selectedUser.value = ''
-  dateFrom.value = ''
-  dateTo.value = ''
-  currentPage.value = 1
-  fetchLogs()
-}
+const clearFilters = () => { searchQuery.value = ''; selectedUser.value = ''; dateFrom.value = ''; dateTo.value = ''; currentPage.value = 1; fetchLogs() }
 
-// Debounce search
 let searchTimeout = null
-const debounceSearch = () => {
-  clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => {
-    currentPage.value = 1
-  }, 500)
-}
+const debounceSearch = () => { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { currentPage.value = 1 }, 500) }
 
-const prevPage = () => {
-  if (currentPage.value > 1) currentPage.value--
-}
+const prevPage = () => { if (currentPage.value > 1) currentPage.value-- }
+const nextPage = () => { if (currentPage.value < totalPages.value) currentPage.value++ }
+const goToPage = (p) => { if (p !== '...') currentPage.value = p }
 
-const nextPage = () => {
-  if (currentPage.value < totalPages.value) currentPage.value++
-}
-
-const goToPage = (page) => {
-  if (page !== '...') currentPage.value = page
-}
-
-// Watch
-watch([searchQuery], () => {
-  currentPage.value = 1
-})
-
-// Lifecycle
-onMounted(() => {
-  fetchLogs()
-})
-
-onUnmounted(() => {
-  if (refreshInterval) clearInterval(refreshInterval)
-})
+watch(searchQuery, () => currentPage.value = 1)
+onMounted(fetchLogs)
+onUnmounted(() => { if (refreshInterval) clearInterval(refreshInterval) })
 </script>
 
 <style scoped>
-.poppins {
-  font-family: 'Poppins', sans-serif;
-}
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+.poppins { font-family: 'Poppins', sans-serif; }
 
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* Custom scrollbar for timeline */
-.max-h-\[600px\]::-webkit-scrollbar {
-  width: 6px;
-}
-.max-h-\[600px\]::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
-.max-h-\[600px\]::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-.max-h-\[600px\]::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
-}
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #eee; border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #ddd; }
 </style>

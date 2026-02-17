@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col lg:flex-row items-start justify-center bg-gray-100 min-h-screen py-10 px-4 lg:px-10 gap-8">
+  <div class="flex flex-col lg:flex-row items-start justify-center bg-gray-50 min-h-screen py-10 px-4 lg:px-10 gap-8 poppins">
 
     <!-- Debug Panel -->
     <div v-if="debugMode" class="fixed top-0 left-0 bg-black text-green-400 p-4 text-xs font-mono z-50 max-w-md overflow-auto max-h-screen">
@@ -23,22 +23,22 @@
 
     <!-- Left Panel -->
     <div class="w-full lg:w-80 order-2 lg:order-1">
-      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 sticky top-10 space-y-6">
+      <div class="bg-white rounded-[1px] shadow-sm p-6 border border-gray-200 sticky top-10 space-y-6">
         
         <!-- Header -->
         <div class="text-center pb-4 border-b border-gray-100">
-          <div class="w-12 h-12 bg-[#002D1E] rounded-full flex items-center justify-center mx-auto mb-3">
+          <div class="w-12 h-12 bg-[#002D1E] rounded-[1px] flex items-center justify-center mx-auto mb-3">
             <i class="ph ph-airplane-tilt text-white text-xl"></i>
           </div>
-          <h2 class="font-bold text-[#002D1E] text-lg uppercase tracking-tight">Aircraft Config</h2>
-          <button @click="debugMode = !debugMode" class="text-[10px] text-gray-400 mt-1 hover:text-[#fe3787]">
+          <h2 class="font-bold text-[#002D1E] text-lg uppercase tracking-tight poppins">Aircraft Config</h2>
+          <button @click="debugMode = !debugMode" class="text-[10px] text-gray-400 mt-1 hover:text-[#fe3787] poppins">
             {{ debugMode ? 'Hide Debug' : 'Show Debug' }}
           </button>
         </div>
 
         <!-- Schedule Selection -->
-        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <label for="schedule-select" class="flex items-center gap-2 text-[11px] font-bold uppercase text-gray-500 mb-2">
+        <div class="bg-gray-50 rounded-[1px] p-4 border border-gray-200">
+          <label for="schedule-select" class="flex items-center gap-2 text-[11px] font-bold uppercase text-gray-500 mb-2 poppins">
             <i class="ph ph-calendar-blank"></i>
             Select Schedule
           </label>
@@ -48,7 +48,7 @@
               name="schedule"
               v-model="selectedScheduleId" 
               @change="handleScheduleChange" 
-              class="w-full bg-white border border-gray-300 p-3 pr-10 text-sm rounded-lg outline-none focus:border-[#fe3787]"
+              class="w-full bg-white border border-gray-300 p-3 pr-10 text-sm rounded-[1px] outline-none focus:border-[#fe3787] poppins"
             >
               <option value="">Choose a flight schedule...</option>
               <option v-for="s in schedules" :key="s.id" :value="s.id">
@@ -72,20 +72,22 @@
         <template v-else>
           
           <!-- Aircraft Info -->
-          <div class="bg-gradient-to-br from-[#002D1E] to-[#004d2e] rounded-lg p-4 text-white relative overflow-hidden">
+          <div class="bg-gradient-to-br from-[#002D1E] to-[#004d2e] rounded-[1px] p-4 text-white relative overflow-hidden shadow-md">
             <div class="relative z-10">
-              <p class="text-[10px] font-bold text-white/60 uppercase tracking-wider mb-1">Current Aircraft</p>
-              <h3 class="font-bold text-lg mb-1">{{ aircraftInfo.name || 'Loading...' }}</h3>
+              <p class="text-[10px] font-bold text-white/60 uppercase tracking-wider mb-1 poppins">Current Aircraft</p>
+              <h3 class="font-bold text-lg mb-1 poppins">{{ aircraftInfo.name || 'Loading...' }}</h3>
               <div class="flex items-center gap-3 mt-2">
-                <span class="bg-white/20 px-2 py-1 rounded text-[10px] font-medium">
+                <span class="bg-white/20 px-2 py-1 rounded-[1px] text-[10px] font-medium poppins">
                   <i class="ph ph-users mr-1"></i>
                   {{ aircraftInfo.capacity }} Seats
                 </span>
               </div>
-              <p class="text-[10px] text-white/70 mt-2">
-                Airline: {{ currentAirlineName }} (ID: {{ aircraftInfo.airline_id || 'None' }})
+              <p class="text-[10px] text-white/70 mt-2 poppins">
+                Airline: {{ currentAirlineName }}
               </p>
             </div>
+            <!-- Decorative icon -->
+            <i class="ph ph-airplane absolute -right-4 -bottom-4 text-white/10 text-8xl transform rotate-12"></i>
           </div>
 
           <!-- Loading State -->
@@ -95,15 +97,15 @@
           </div>
 
           <!-- Error State -->
-          <div v-else-if="hasError" class="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div v-else-if="hasError" class="bg-red-50 border border-red-200 rounded-[1px] p-4">
             <div class="flex items-start gap-3">
               <i class="ph ph-warning-circle text-red-500 text-lg mt-0.5"></i>
               <div>
-                <p class="text-sm font-bold text-red-800 mb-1">Error Loading Data</p>
-                <p class="text-[11px] text-red-700 mb-3">{{ errorMessage }}</p>
+                <p class="text-sm font-bold text-red-800 mb-1 poppins">Error Loading Data</p>
+                <p class="text-[11px] text-red-700 mb-3 poppins">{{ errorMessage }}</p>
                 <button 
                   @click="handleScheduleChange" 
-                  class="w-full py-2 bg-[#fe3787] text-white rounded-lg text-[11px] font-bold uppercase hover:bg-[#e62e7a] transition-colors"
+                  class="w-full py-2 bg-[#fe3787] text-white rounded-[1px] text-[11px] font-bold uppercase hover:bg-[#fb1873] transition-colors poppins"
                 >
                   Retry
                 </button>
@@ -193,16 +195,16 @@
             </div>
           </div>
 
-          <!-- No Seat Classes Found -->
-          <div v-else-if="seatClassesForAirline.length === 0" class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <!-- Seat Classes List -->
+          <div v-else-if="seatClassesForAirline.length === 0" class="bg-amber-50 border border-amber-200 rounded-[1px] p-4">
             <div class="flex items-start gap-3">
               <i class="ph ph-warning-circle text-amber-500 text-lg mt-0.5"></i>
               <div>
-                <p class="text-sm font-bold text-amber-800 mb-1">No Seat Classes</p>
-                <p class="text-[11px] text-amber-700 mb-3">No seat classes for airline {{ currentAirlineName }}.</p>
+                <p class="text-sm font-bold text-amber-800 mb-1 poppins">No Seat Classes</p>
+                <p class="text-[11px] text-amber-700 mb-3 poppins">No seat classes for airline {{ currentAirlineName }}.</p>
                 <button 
                   @click="openClassModal()" 
-                  class="w-full py-2 bg-[#fe3787] text-white rounded-lg text-[11px] font-bold uppercase hover:bg-[#e62e7a] transition-colors"
+                  class="w-full py-2 bg-[#fe3787] text-white rounded-[1px] text-[11px] font-bold uppercase hover:bg-[#fb1873] transition-colors poppins"
                 >
                   <i class="ph ph-plus-circle mr-1"></i>
                   Create Seat Class
@@ -212,15 +214,15 @@
           </div>
 
           <!-- Auto-Generate Button -->
-          <div v-else-if="!hasExistingLayout && totalConfiguredSeats === 0" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div v-else-if="!hasExistingLayout && totalConfiguredSeats === 0" class="bg-blue-50 border border-blue-200 rounded-[1px] p-4">
             <div class="flex items-start gap-3">
               <i class="ph ph-info text-blue-500 text-lg mt-0.5"></i>
               <div>
-                <p class="text-sm font-bold text-blue-800 mb-1">New Aircraft</p>
-                <p class="text-[11px] text-blue-700 mb-3">Generate seat layout for this aircraft.</p>
+                <p class="text-sm font-bold text-blue-800 mb-1 poppins">New Aircraft</p>
+                <p class="text-[11px] text-blue-700 mb-3 poppins">Generate seat layout for this aircraft.</p>
                 <button 
                   @click="autoGenerateLayout" 
-                  class="w-full py-2.5 bg-[#fe3787] text-white rounded-lg text-[11px] font-bold uppercase hover:bg-[#e62e7a] transition-colors flex items-center justify-center gap-2"
+                  class="w-full py-2.5 bg-[#fe3787] text-white rounded-[1px] text-[11px] font-bold uppercase hover:bg-[#fb1873] transition-colors flex items-center justify-center gap-2 poppins"
                 >
                   <i class="ph ph-magic-wand"></i>
                   Auto-Generate Layout
@@ -232,18 +234,18 @@
           <!-- Seat Classes List -->
           <div v-else class="pt-4 border-t border-gray-200">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-[11px] font-black text-gray-700 uppercase tracking-wider flex items-center gap-2">
+              <h3 class="text-[11px] font-black text-gray-700 uppercase tracking-widest flex items-center gap-2 poppins">
                 <i class="ph ph-armchair text-[#fe3787]"></i>
                 Seat Classes
-                <span class="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-[9px]">
+                <span class="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-[1px] text-[9px]">
                   {{ seatClassesForAirline.length }}
                 </span>
               </h3>
               <button 
                 @click="openClassModal()" 
-                class="bg-[#fe3787] hover:bg-[#e62e7a] text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase"
+                class="bg-[#fe3787] hover:bg-[#fb1873] text-white px-3 py-1.5 rounded-[1px] text-[10px] font-bold uppercase poppins"
               >
-                <i class="ph ph-plus-circle"></i>
+                <i class="ph ph-plus-circle"></i> ADD
               </button>
             </div>
 
@@ -256,7 +258,7 @@
                 @dragend="handleDragEnd"
                 @dragover.prevent="handleDragOver($event, sc.id)"
                 @drop="handleDrop($event, sc.id)"
-                class="p-4 rounded-xl border-2 border-gray-200 bg-white relative group transition-all"
+                class="p-4 rounded-[1px] border border-gray-200 bg-white relative group transition-all hover:border-[#fe3787]/30"
               >
                 <div class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-300 cursor-grab opacity-0 group-hover:opacity-100">
                   <i class="ph ph-dots-six-vertical text-lg"></i>
@@ -299,10 +301,10 @@
                   </div>
 
                   <div class="flex flex-col gap-1 ml-2">
-                    <button @click="openClassModal(sc)" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
+                    <button @click="openClassModal(sc)" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-[1px]">
                       <i class="ph ph-pencil-simple text-sm"></i>
                     </button>
-                    <button @click="deleteSeatClass(sc.id)" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                    <button @click="deleteSeatClass(sc.id)" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-[1px]">
                       <i class="ph ph-trash text-sm"></i>
                     </button>
                   </div>
@@ -312,23 +314,23 @@
                 <div class="mt-4 pt-4 border-t border-gray-100" v-if="layoutConfig[sc.id]">
                   <div class="grid grid-cols-2 gap-3">
                     <div>
-                      <label :for="'rows-' + sc.id" class="text-[9px] font-bold text-gray-500 uppercase mb-1 block">Rows</label>
+                      <label :for="'rows-' + sc.id" class="text-[9px] font-bold text-gray-500 uppercase mb-1 block poppins">Rows</label>
                       <input 
                         :id="'rows-' + sc.id"
                         v-model.number="layoutConfig[sc.id].rows" 
                         type="number" 
                         min="1" 
                         max="50"
-                        class="w-full border border-gray-200 p-2 text-sm rounded-lg text-center font-mono"
+                        class="w-full border border-gray-200 p-2 text-sm rounded-[1px] text-center font-mono focus:border-[#fe3787] outline-none"
                         @change="updateLayout"
                       />
                     </div>
                     <div>
-                      <label :for="'cols-' + sc.id" class="text-[9px] font-bold text-gray-500 uppercase mb-1 block">Columns</label>
+                      <label :for="'cols-' + sc.id" class="text-[9px] font-bold text-gray-500 uppercase mb-1 block poppins">Columns</label>
                       <select 
                         :id="'cols-' + sc.id"
                         v-model.number="layoutConfig[sc.id].columns"
-                        class="w-full border border-gray-200 p-2 text-sm rounded-lg text-center"
+                        class="w-full border border-gray-200 p-2 text-sm rounded-[1px] text-center focus:border-[#fe3787] outline-none poppins"
                         @change="updateLayout"
                       >
                         <option :value="4">4 (2-2)</option>
@@ -345,11 +347,11 @@
               </div>
             </div>
 
-           <!-- Capacity Summary -->
-            <div class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <!-- Capacity Summary -->
+            <div class="mt-4 p-4 bg-gray-50 rounded-[1px] border border-gray-200 shadow-sm transition-all duration-300">
               <div class="flex justify-between items-center mb-2">
-                <span class="text-[10px] font-bold text-gray-500 uppercase">Total Seats</span>
-                <span class="text-sm font-bold" :class="{
+                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest poppins">Total Capacity</span>
+                <span class="text-sm font-bold poppins" :class="{
                   'text-emerald-600': capacityStatus === 'exact',
                   'text-amber-600': capacityStatus === 'under',
                   'text-red-600': capacityStatus === 'over'
@@ -357,9 +359,9 @@
                   {{ totalConfiguredSeats }} / {{ aircraftInfo.capacity }}
                 </span>
               </div>
-              <div class="w-full bg-gray-200 rounded-full h-2">
+              <div class="w-full bg-gray-200 rounded-[1px] h-2">
                 <div 
-                  class="h-2 rounded-full transition-all duration-500"
+                  class="h-2 rounded-[1px] transition-all duration-500"
                   :class="{
                     'bg-emerald-500': capacityStatus === 'exact',
                     'bg-amber-500': capacityStatus === 'under',
@@ -368,64 +370,64 @@
                   :style="{ width: Math.min((totalConfiguredSeats / Math.max(aircraftInfo.capacity, 1)) * 100, 100) + '%' }"
                 ></div>
               </div>
-              <p v-if="capacityStatus === 'under'" class="text-[10px] text-amber-600 mt-2">
+              <p v-if="capacityStatus === 'under'" class="text-[10px] text-amber-600 mt-2 font-medium poppins">
                 <i class="ph ph-warning mr-1"></i>
                 {{ aircraftInfo.capacity - totalConfiguredSeats }} seats remaining
               </p>
-              <p v-else-if="capacityStatus === 'over'" class="text-[10px] text-red-600 mt-2">
+              <p v-else-if="capacityStatus === 'over'" class="text-[10px] text-red-600 mt-2 font-medium poppins">
                 <i class="ph ph-warning mr-1"></i>
                 {{ totalConfiguredSeats - aircraftInfo.capacity }} seats over capacity
               </p>
-              <p v-else-if="capacityStatus === 'exact'" class="text-[10px] text-emerald-600 mt-2">
+              <p v-else-if="capacityStatus === 'exact'" class="text-[10px] text-emerald-600 mt-2 font-medium poppins">
                 <i class="ph ph-check-circle mr-1"></i>
-                Perfect match!
+                Configuration Complete
               </p>
             </div>
           </div>
 
           <!-- Stats -->
           <div v-if="totalConfiguredSeats > 0" class="pt-4 border-t border-gray-200 space-y-3">
-            <h3 class="text-[11px] font-black text-gray-700 uppercase flex items-center gap-2">
+            <h3 class="text-[11px] font-black text-gray-700 uppercase tracking-widest flex items-center gap-2 poppins">
               <i class="ph ph-chart-bar text-[#fe3787]"></i>
-              Seat Status
+              Inventory
             </h3>
             <div class="grid grid-cols-3 gap-2">
-              <div class="bg-gray-50 rounded-lg p-3 text-center">
-                <p class="text-lg font-bold text-gray-700">{{ totalConfiguredSeats }}</p>
-                <p class="text-[9px] text-gray-500 uppercase">Total</p>
+              <div class="bg-white border border-gray-100 rounded-[1px] p-3 text-center shadow-sm">
+                <p class="text-lg font-bold text-[#002D1E] poppins">{{ totalConfiguredSeats }}</p>
+                <p class="text-[9px] text-gray-400 uppercase font-bold tracking-tighter poppins">Total</p>
               </div>
-              <div class="bg-red-50 rounded-lg p-3 text-center">
-                <p class="text-lg font-bold text-red-600">{{ occupiedCount }}</p>
-                <p class="text-[9px] text-red-500 uppercase">Occupied</p>
+              <div class="bg-red-50/50 border border-red-100 rounded-[1px] p-3 text-center shadow-sm">
+                <p class="text-lg font-bold text-red-600 poppins">{{ occupiedCount }}</p>
+                <p class="text-[9px] text-red-400 uppercase font-bold tracking-tighter poppins">Sold</p>
               </div>
-              <div class="bg-emerald-50 rounded-lg p-3 text-center">
-                <p class="text-lg font-bold text-emerald-600">{{ availableCount }}</p>
-                <p class="text-[9px] text-emerald-500 uppercase">Available</p>
+              <div class="bg-emerald-50/50 border border-emerald-100 rounded-[1px] p-3 text-center shadow-sm">
+                <p class="text-lg font-bold text-emerald-600 poppins">{{ availableCount }}</p>
+                <p class="text-[9px] text-emerald-400 uppercase font-bold tracking-tighter poppins">Free</p>
               </div>
             </div>
             
             <!-- Special Seats Stats -->
             <div v-if="specialSeatsCount > 0" class="pt-4 border-t border-gray-200">
-              <h3 class="text-[11px] font-black text-gray-700 uppercase mb-3 flex items-center gap-2">
-                <i class="ph ph-star text-amber-500"></i>
-                Special Seats
+              <h3 class="text-[11px] font-black text-gray-700 uppercase mb-3 tracking-widest flex items-center gap-2 poppins">
+                <i class="ph ph-star-four text-amber-500"></i>
+                Attributes
               </h3>
               <div class="grid grid-cols-2 gap-2">
-                <div class="bg-red-50 rounded-lg p-2 text-center">
-                  <p class="text-sm font-bold text-red-600">{{ exitRowSeatsCount }}</p>
-                  <p class="text-[9px] text-red-500 uppercase">Exit Row</p>
+                <div class="bg-white border border-gray-100 rounded-[1px] p-2 text-center shadow-sm">
+                  <p class="text-sm font-bold text-red-600 poppins">{{ exitRowSeatsCount }}</p>
+                  <p class="text-[9px] text-gray-400 uppercase font-bold poppins">Exit Row</p>
                 </div>
-                <div class="bg-blue-50 rounded-lg p-2 text-center">
-                  <p class="text-sm font-bold text-blue-600">{{ wheelchairSeatsCount }}</p>
-                  <p class="text-[9px] text-blue-500 uppercase">Wheelchair</p>
+                <div class="bg-white border border-gray-100 rounded-[1px] p-2 text-center shadow-sm">
+                  <p class="text-sm font-bold text-blue-600 poppins">{{ wheelchairSeatsCount }}</p>
+                  <p class="text-[9px] text-gray-400 uppercase font-bold poppins">Accessible</p>
                 </div>
-                <div class="bg-purple-50 rounded-lg p-2 text-center">
-                  <p class="text-sm font-bold text-purple-600">{{ bassinetSeatsCount }}</p>
-                  <p class="text-[9px] text-purple-500 uppercase">Bassinet</p>
+                <div class="bg-white border border-gray-100 rounded-[1px] p-2 text-center shadow-sm">
+                  <p class="text-sm font-bold text-purple-600 poppins">{{ bassinetSeatsCount }}</p>
+                  <p class="text-[9px] text-gray-400 uppercase font-bold poppins">Bassinet</p>
                 </div>
-                <div class="bg-green-50 rounded-lg p-2 text-center">
-                  <p class="text-sm font-bold text-green-600">{{ unaccompaniedMinorSeatsCount }}</p>
-                  <p class="text-[9px] text-green-500 uppercase">Minor</p>
+                <div class="bg-white border border-gray-100 rounded-[1px] p-2 text-center shadow-sm">
+                  <p class="text-sm font-bold text-emerald-600 poppins">{{ unaccompaniedMinorSeatsCount }}</p>
+                  <p class="text-[9px] text-gray-400 uppercase font-bold poppins">U.M.</p>
                 </div>
               </div>
             </div>
@@ -438,17 +440,17 @@
             <div class="flex gap-2 mb-4">
               <button 
                 @click="saveMode = 'schedule'"
-                :class="['flex-1 py-2 text-xs font-bold uppercase rounded-lg', 
-                  saveMode === 'schedule' ? 'bg-[#002D1E] text-white' : 'bg-gray-200 text-gray-600']"
+                :class="['flex-1 py-2 text-[10px] font-bold uppercase rounded-[1px] poppins transition-all', 
+                  saveMode === 'schedule' ? 'bg-[#002D1E] text-white shadow-md' : 'bg-gray-100 text-gray-400 hover:bg-gray-200']"
               >
-                Save to This Flight Only
+                Flight Only
               </button>
               <button 
                 @click="saveMode = 'aircraft'"
-                :class="['flex-1 py-2 text-xs font-bold uppercase rounded-lg',
-                  saveMode === 'aircraft' ? 'bg-[#fe3787] text-white' : 'bg-gray-200 text-gray-600']"
+                :class="['flex-1 py-2 text-[10px] font-bold uppercase rounded-[1px] poppins transition-all',
+                  saveMode === 'aircraft' ? 'bg-[#fe3787] text-white shadow-md' : 'bg-gray-100 text-gray-400 hover:bg-gray-200']"
               >
-                Save as Aircraft Template
+                Global Template
               </button>
             </div>
             
@@ -463,40 +465,25 @@
             <!-- Replace the save button section with this -->
             <div v-if="totalConfiguredSeats > 0 && aircraftInfo.aircraft" class="pt-4 border-t border-gray-200 space-y-3">
               
-              <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p class="text-[11px] text-blue-800">
+              <div class="bg-blue-50 border border-blue-100 rounded-[1px] p-3 shadow-sm">
+                <p class="text-[11px] text-blue-800 poppins italic">
                   <i class="ph ph-info mr-1"></i>
-                  This will save the layout to <strong>{{ aircraftInfo.name }}</strong>. 
-                  All future schedules using this aircraft will automatically generate these seats.
-                </p>
-              </div>
-              
-              <!-- Capacity Warning -->
-              <div v-if="totalConfiguredSeats !== aircraftInfo.capacity" 
-                  class="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <p class="text-[11px] text-amber-800">
-                  <i class="ph ph-warning mr-1"></i>
-                  <span v-if="totalConfiguredSeats < aircraftInfo.capacity">
-                    {{ aircraftInfo.capacity - totalConfiguredSeats }} seats unused
-                  </span>
-                  <span v-else>
-                    {{ totalConfiguredSeats - aircraftInfo.capacity }} seats over capacity
-                  </span>
+                  Saves to <strong>{{ aircraftInfo.name }}</strong> master layout.
                 </p>
               </div>
               
               <button 
                 @click="saveLayout" 
                 :disabled="isSaving"
-                class="w-full py-3.5 bg-[#002D1E] text-white font-bold text-sm uppercase tracking-wider rounded-xl hover:bg-[#004d2e] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                class="w-full py-4 bg-[#002D1E] text-white font-bold text-[13px] uppercase tracking-[2px] rounded-[1px] hover:bg-[#004d2e] transition-all disabled:opacity-50 flex items-center justify-center gap-2 poppins shadow-lg hover:shadow-xl active:scale-95"
               >
                 <i v-if="!isSaving" class="ph ph-floppy-disk text-lg"></i>
                 <i v-else class="ph ph-spinner animate-spin text-lg"></i>
-                {{ isSaving ? 'Saving...' : 'Save Layout to Aircraft' }}
+                {{ isSaving ? 'Synchronizing...' : 'Commit Layout' }}
               </button>
               
-              <p class="text-[10px] text-center text-gray-500">
-                Current: {{ totalConfiguredSeats }} seats configured for {{ aircraftInfo.capacity }} capacity
+              <p class="text-[10px] text-center text-gray-400 poppins font-medium">
+                {{ totalConfiguredSeats }} of {{ aircraftInfo.capacity }} utilization
               </p>
             </div>
           </div>
@@ -507,12 +494,12 @@
     <!-- Center Panel - Seat Map -->
     <div class="max-w-lg lg:flex-1 order-1 lg:order-2 w-full">
       <!-- Empty State -->
-      <div v-if="!selectedScheduleId" class="bg-white rounded-2xl shadow-lg p-12 text-center min-h-[500px] flex flex-col items-center justify-center border border-gray-200">
-        <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-          <i class="ph ph-airplane-tilt text-gray-300 text-4xl"></i>
+      <div v-if="!selectedScheduleId" class="bg-white rounded-[1px] shadow-sm p-12 text-center min-h-[500px] flex flex-col items-center justify-center border border-gray-200 poppins">
+        <div class="w-24 h-24 bg-gray-50 rounded-[1px] flex items-center justify-center mb-4">
+          <i class="ph ph-airplane-tilt text-gray-200 text-4xl"></i>
         </div>
-        <h3 class="text-xl font-bold text-gray-800 mb-2">Select a Schedule</h3>
-        <p class="text-gray-500 max-w-xs mx-auto">Choose a flight schedule to view the aircraft seat layout.</p>
+        <h3 class="text-xl font-bold text-[#002D1E] mb-2 poppins">Select a Schedule</h3>
+        <p class="text-gray-400 max-w-xs mx-auto poppins">Choose a flight schedule to view the aircraft seat layout.</p>
       </div>
 
       <!-- Loading -->
@@ -522,17 +509,17 @@
       </div>
 
       <!-- Error State -->
-      <div v-else-if="hasError" class="bg-white rounded-2xl shadow-lg p-12 text-center min-h-[500px] flex flex-col items-center justify-center border border-gray-200">
-        <div class="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-4">
+      <div v-else-if="hasError" class="bg-white rounded-[1px] shadow-sm p-12 text-center min-h-[500px] flex flex-col items-center justify-center border border-gray-200 poppins">
+        <div class="w-24 h-24 bg-red-50 rounded-[1px] flex items-center justify-center mb-4">
           <i class="ph ph-warning-circle text-red-500 text-4xl"></i>
         </div>
-        <h3 class="text-xl font-bold text-gray-800 mb-2">Error</h3>
-        <p class="text-gray-500 max-w-xs mx-auto mb-4">{{ errorMessage }}</p>
+        <h3 class="text-xl font-bold text-red-800 mb-2 poppins">Critical Error</h3>
+        <p class="text-gray-400 max-w-xs mx-auto mb-4 poppins">{{ errorMessage }}</p>
         <button 
           @click="handleScheduleChange" 
-          class="px-6 py-3 bg-[#fe3787] text-white rounded-xl font-bold hover:bg-[#e62e7a] transition-colors"
+          class="px-8 py-3 bg-[#fe3787] text-white rounded-[1px] font-bold hover:bg-[#fb1873] transition-all poppins shadow-lg"
         >
-          Retry
+          Retry Connection
         </button>
       </div>
 
@@ -577,79 +564,38 @@
       </div>
 
       <!-- No Layout State -->
-      <div v-else-if="!hasValidLayout" class="bg-white rounded-2xl shadow-lg p-12 text-center min-h-[500px] flex flex-col items-center justify-center border border-gray-200">
-        <div class="w-24 h-24 bg-amber-100 rounded-full flex items-center justify-center mb-4">
+      <div v-else-if="!hasValidLayout" class="bg-white rounded-[1px] shadow-sm p-12 text-center min-h-[500px] flex flex-col items-center justify-center border border-gray-200 poppins">
+        <div class="w-24 h-24 bg-amber-50 rounded-[1px] flex items-center justify-center mb-4">
           <i class="ph ph-seat text-amber-500 text-4xl"></i>
         </div>
-        <h3 class="text-xl font-bold text-gray-800 mb-2">No Seat Layout</h3>
-        <p class="text-gray-500 max-w-xs mx-auto mb-6">This aircraft needs a seat configuration.</p>
+        <h3 class="text-xl font-bold text-[#002D1E] mb-2 poppins">No Seat Layout</h3>
+        <p class="text-gray-400 max-w-xs mx-auto mb-6 poppins">This aircraft requires a seat configuration.</p>
         <button 
           v-if="seatClassesForAirline.length > 0"
           @click="autoGenerateLayout" 
-          class="px-6 py-3 bg-[#fe3787] text-white rounded-xl font-bold hover:bg-[#e62e7a] transition-colors flex items-center gap-2"
+          class="px-8 py-3 bg-[#fe3787] text-white rounded-[1px] font-bold hover:bg-[#fb1873] transition-all flex items-center gap-2 poppins shadow-lg"
         >
           <i class="ph ph-magic-wand text-lg"></i>
-          Auto-Generate Layout
+          Generate Map
         </button>
       </div>
 
       <!-- Enhanced Seat Map -->
-      <div v-else class="bg-white border-x-[16px] border-t-[100px] border-b-[16px] border-gray-200 rounded-t-[160px] rounded-b-[40px] w-full px-8 py-12 shadow-2xl relative">
+      <div v-else class="bg-white border-x-[16px] border-t-[80px] border-b-[32px] border-gray-100 rounded-t-[140px] rounded-b-[60px] w-full px-8 py-12 shadow-xl relative poppins">
         
         <!-- Cockpit -->
-        <div class="absolute -top-[70px] left-1/2 -translate-x-1/2 text-center">
-          <div class="w-16 h-16 bg-gray-300 rounded-full mx-auto mb-2 flex items-center justify-center">
-            <i class="ph ph-cockpit text-gray-500 text-2xl"></i>
+        <div class="absolute -top-[60px] left-1/2 -translate-x-1/2 text-center">
+          <div class="w-12 h-12 bg-gray-100 rounded-[1px] mx-auto mb-2 flex items-center justify-center border border-gray-200">
+            <i class="ph ph-gauge text-gray-400 text-xl"></i>
           </div>
-          <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Cockpit</span>
+          <span class="text-[9px] font-bold text-gray-300 uppercase tracking-[3px] poppins">Flight Deck</span>
         </div>
 
-        <!-- Special Needs Legend -->
-        <div class="mb-6 bg-gray-50 rounded-xl p-4 border border-gray-200">
-          <h3 class="text-xs font-bold text-gray-700 mb-3 flex items-center gap-2">
-            <i class="ph ph-info text-blue-500"></i>
-            Special Seat Indicators
-          </h3>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <div class="flex items-center gap-2">
-              <div class="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                <i class="ph ph-door-open text-white text-[8px]"></i>
-              </div>
-              <span class="text-[10px] text-gray-600">Exit Row</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                <i class="ph ph-wheelchair text-white text-[8px]"></i>
-              </div>
-              <span class="text-[10px] text-gray-600">Wheelchair</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center">
-                <i class="ph ph-baby text-white text-[8px]"></i>
-              </div>
-              <span class="text-[10px] text-gray-600">Bassinet</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center">
-                <i class="ph ph-nut text-white text-[8px]"></i>
-              </div>
-              <span class="text-[10px] text-gray-600">Nut Allergy</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                <i class="ph ph-user-focus text-white text-[8px]"></i>
-              </div>
-              <span class="text-[10px] text-gray-600">Unaccompanied Minor</span>
-            </div>
-          </div>
-        </div>
 
         <div class="text-center mb-8">
-          <h1 class="font-black text-gray-800 tracking-widest uppercase text-2xl mb-1">{{ aircraftInfo.name }}</h1>
-          <p class="text-[11px] text-gray-400 uppercase font-bold tracking-wider">
-            {{ totalConfiguredSeats }} Seats • 
-            <span class="text-red-500">{{ exitRowSeatsCount }} Exit Rows</span> • 
-            <span class="text-blue-500">{{ wheelchairSeatsCount }} Wheelchair</span>
+          <h1 class="font-black text-[#002D1E] tracking-[4px] uppercase text-2xl mb-1 poppins">{{ aircraftInfo.name }}</h1>
+          <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest poppins">
+            Configuration: {{ totalConfiguredSeats }} Units
           </p>
         </div>
 
@@ -665,17 +611,17 @@
                   borderColor: getSeatClassColor(classId),
                 }"
               >
-                <div class="w-3 h-3 rounded-full" :style="{ backgroundColor: getSeatClassColor(classId) }"></div>
-                <span class="text-[11px] font-bold uppercase tracking-wider" :style="{ color: getSeatClassColor(classId) }">
+                <div class="w-2 h-2 rounded-[1px]" :style="{ backgroundColor: getSeatClassColor(classId) }"></div>
+                <span class="text-[10px] font-bold uppercase tracking-widest poppins" :style="{ color: getSeatClassColor(classId) }">
                   {{ getSeatClassName(classId) }}
                 </span>
-                <span class="text-[10px] text-gray-500 font-medium">x{{ getSeatClassMultiplier(classId) }}</span>
+                <span class="text-[9px] text-gray-400 font-bold poppins">x{{ getSeatClassMultiplier(classId) }}</span>
                 
                 <!-- Special features tooltip -->
                 <div v-if="hasSpecialSeatsInClass(classId)" class="absolute -top-2 -right-2">
                   <div class="relative group">
-                    <div class="w-6 h-6 bg-white border border-gray-300 rounded-full flex items-center justify-center shadow-sm">
-                      <i class="ph ph-star text-[10px] text-amber-500"></i>
+                    <div class="w-5 h-5 bg-white border border-gray-200 rounded-[1px] flex items-center justify-center shadow-sm">
+                      <i class="ph ph-star-four text-[8px] text-amber-500"></i>
                     </div>
                     <div class="absolute bottom-full right-0 mb-2 hidden group-hover:block w-48 bg-gray-900 text-white text-[10px] rounded-lg p-2 z-50">
                       <div class="space-y-1">
@@ -706,7 +652,7 @@
                     @contextmenu.prevent="showSeatContextMenu($event, classId, rowNum, colIdx)"
                     :class="getSeatStyle(classId, rowNum, colIdx)"
                     :style="getSeatColorStyle(classId, rowNum, colIdx)"
-                    class="w-12 h-12 rounded-xl border-2 flex items-center justify-center text-[12px] font-bold transition-all hover:scale-110 relative group"
+                    class="w-10 h-10 rounded-[1px] border flex items-center justify-center text-[11px] font-bold transition-all hover:scale-105 relative group shadow-sm poppins"
                   >
                     <!-- Seat number -->
                     <span>{{ getColumnLabel(colIdx) }}</span>
@@ -714,27 +660,27 @@
                     <!-- Special Indicators -->
                     <div v-if="hasSpecialSeat(classId, rowNum, colIdx)" class="absolute -top-1 -right-1 flex flex-col gap-0.5">
                       <!-- Exit Row Indicator -->
-                      <div v-if="isExitRow(classId, rowNum)" class="w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
+                      <div v-if="isExitRow(classId, rowNum)" class="w-3 h-3 bg-red-500 rounded-[1px] flex items-center justify-center shadow-sm">
                         <i class="ph ph-door-open text-white text-[6px]"></i>
                       </div>
                       
                       <!-- Wheelchair Indicator -->
-                      <div v-if="isWheelchairSeat(classId, rowNum, colIdx)" class="w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
+                      <div v-if="isWheelchairSeat(classId, rowNum, colIdx)" class="w-3 h-3 bg-blue-500 rounded-[1px] flex items-center justify-center shadow-sm">
                         <i class="ph ph-wheelchair text-white text-[6px]"></i>
                       </div>
                       
                       <!-- Bassinet Indicator -->
-                      <div v-if="isBassinetSeat(classId, rowNum, colIdx)" class="w-3 h-3 bg-purple-500 rounded-full flex items-center justify-center">
+                      <div v-if="isBassinetSeat(classId, rowNum, colIdx)" class="w-3 h-3 bg-purple-500 rounded-[1px] flex items-center justify-center shadow-sm">
                         <i class="ph ph-baby text-white text-[6px]"></i>
                       </div>
                       
                       <!-- Nut Allergy Indicator -->
-                      <div v-if="hasNutAllergy(classId, rowNum, colIdx)" class="w-3 h-3 bg-amber-500 rounded-full flex items-center justify-center">
+                      <div v-if="hasNutAllergy(classId, rowNum, colIdx)" class="w-3 h-3 bg-amber-500 rounded-[1px] flex items-center justify-center shadow-sm">
                         <i class="ph ph-nut text-white text-[6px]"></i>
                       </div>
                       
                       <!-- Unaccompanied Minor Indicator -->
-                      <div v-if="isUnaccompaniedMinor(classId, rowNum, colIdx)" class="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
+                      <div v-if="isUnaccompaniedMinor(classId, rowNum, colIdx)" class="w-3 h-3 bg-green-500 rounded-[1px] flex items-center justify-center shadow-sm">
                         <i class="ph ph-user-focus text-white text-[6px]"></i>
                       </div>
                     </div>
@@ -780,16 +726,16 @@
                 </div>
 
                 <!-- Row Number with special indicators -->
-                <div class="w-12 h-12 flex items-center justify-center bg-gray-100 rounded-xl relative group">
-                  <span class="text-[13px] font-black text-gray-600">{{ getGlobalRowNumber(classId, rowNum) }}</span>
+                <div class="w-10 h-10 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-[1px] relative group shadow-inner poppins">
+                  <span class="text-[11px] font-black text-gray-300">{{ getGlobalRowNumber(classId, rowNum) }}</span>
                   
                   <!-- Row-level indicators -->
-                  <div v-if="isExitRow(classId, rowNum)" class="absolute -top-1 -left-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                  <div v-if="isExitRow(classId, rowNum)" class="absolute -top-1 -left-1 w-4 h-4 bg-red-500 rounded-[1px] flex items-center justify-center shadow-sm">
                     <i class="ph ph-door-open text-white text-[8px]"></i>
                   </div>
                   
                   <!-- Bulkhead row indicator -->
-                  <div v-if="isBulkheadRow(classId, rowNum)" class="absolute -bottom-1 -left-1 w-4 h-4 bg-cyan-500 rounded-full flex items-center justify-center">
+                  <div v-if="isBulkheadRow(classId, rowNum)" class="absolute -bottom-1 -left-1 w-4 h-4 bg-cyan-500 rounded-[1px] flex items-center justify-center shadow-sm">
                     <i class="ph ph-wall text-white text-[8px]"></i>
                   </div>
                   
@@ -826,25 +772,25 @@
                     @contextmenu.prevent="showSeatContextMenu($event, classId, rowNum, colIdx)"
                     :class="getSeatStyle(classId, rowNum, colIdx)"
                     :style="getSeatColorStyle(classId, rowNum, colIdx)"
-                    class="w-12 h-12 rounded-xl border-2 flex items-center justify-center text-[12px] font-bold transition-all hover:scale-110 relative group"
+                    class="w-10 h-10 rounded-[1px] border flex items-center justify-center text-[11px] font-bold transition-all hover:scale-105 relative group shadow-sm poppins"
                   >
                     <span>{{ getColumnLabel(colIdx) }}</span>
                     
                     <!-- Special Indicators (same as left side) -->
                     <div v-if="hasSpecialSeat(classId, rowNum, colIdx)" class="absolute -top-1 -right-1 flex flex-col gap-0.5">
-                      <div v-if="isExitRow(classId, rowNum)" class="w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
+                      <div v-if="isExitRow(classId, rowNum)" class="w-3 h-3 bg-red-500 rounded-[1px] flex items-center justify-center shadow-sm">
                         <i class="ph ph-door-open text-white text-[6px]"></i>
                       </div>
-                      <div v-if="isWheelchairSeat(classId, rowNum, colIdx)" class="w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
+                      <div v-if="isWheelchairSeat(classId, rowNum, colIdx)" class="w-3 h-3 bg-blue-500 rounded-[1px] flex items-center justify-center shadow-sm">
                         <i class="ph ph-wheelchair text-white text-[6px]"></i>
                       </div>
-                      <div v-if="isBassinetSeat(classId, rowNum, colIdx)" class="w-3 h-3 bg-purple-500 rounded-full flex items-center justify-center">
+                      <div v-if="isBassinetSeat(classId, rowNum, colIdx)" class="w-3 h-3 bg-purple-500 rounded-[1px] flex items-center justify-center shadow-sm">
                         <i class="ph ph-baby text-white text-[6px]"></i>
                       </div>
-                      <div v-if="hasNutAllergy(classId, rowNum, colIdx)" class="w-3 h-3 bg-amber-500 rounded-full flex items-center justify-center">
+                      <div v-if="hasNutAllergy(classId, rowNum, colIdx)" class="w-3 h-3 bg-amber-500 rounded-[1px] flex items-center justify-center shadow-sm">
                         <i class="ph ph-nut text-white text-[6px]"></i>
                       </div>
-                      <div v-if="isUnaccompaniedMinor(classId, rowNum, colIdx)" class="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
+                      <div v-if="isUnaccompaniedMinor(classId, rowNum, colIdx)" class="w-3 h-3 bg-green-500 rounded-[1px] flex items-center justify-center shadow-sm">
                         <i class="ph ph-user-focus text-white text-[6px]"></i>
                       </div>
                     </div>
@@ -863,35 +809,35 @@
         <!-- Rear section -->
         <div class="mt-12 pt-8 border-t-2 border-gray-100 text-center relative">
           <!-- Lavatory indicators -->
-          <div class="absolute left-8 top-8 flex items-center gap-2">
-            <div class="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
-              <i class="ph ph-toilet text-gray-500"></i>
+          <div class="absolute left-8 top-8 flex items-center gap-2 poppins">
+            <div class="w-8 h-8 bg-gray-50 border border-gray-200 rounded-[1px] flex items-center justify-center">
+              <i class="ph ph-toilet text-gray-400"></i>
             </div>
-            <span class="text-[10px] font-medium text-gray-500">Lavatory</span>
+            <span class="text-[9px] font-bold text-gray-300 uppercase tracking-widest">Lav</span>
           </div>
           
-          <div class="absolute right-8 top-8 flex items-center gap-2">
-            <div class="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
-              <i class="ph ph-toilet text-gray-500"></i>
+          <div class="absolute right-8 top-8 flex items-center gap-2 poppins">
+            <div class="w-8 h-8 bg-gray-50 border border-gray-200 rounded-[1px] flex items-center justify-center">
+              <i class="ph ph-toilet text-gray-400"></i>
             </div>
-            <span class="text-[10px] font-medium text-gray-500">Lavatory</span>
+            <span class="text-[9px] font-bold text-gray-300 uppercase tracking-widest">Lav</span>
           </div>
           
-          <div class="w-16 h-16 bg-gray-300 rounded-full mx-auto mb-3 flex items-center justify-center">
-            <i class="ph ph-arrow-down text-gray-500 text-2xl"></i>
+          <div class="w-12 h-12 bg-gray-50 border border-gray-200 rounded-[1px] mx-auto mb-3 flex items-center justify-center poppins">
+            <i class="ph ph-arrow-down text-gray-300 text-xl"></i>
           </div>
-          <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Aft Galley & Lavatories</span>
+          <span class="text-[9px] font-black text-gray-300 uppercase tracking-[4px] poppins">Aft Galley System</span>
         </div>
       </div>
     </div>
 
     <!-- Right Panel - Enhanced Seat Details -->
     <div class="w-full lg:w-80 order-3">
-      <div class="bg-white rounded-xl shadow-lg border border-gray-200 sticky top-10 overflow-hidden">
+      <div class="bg-white rounded-[1px] shadow-sm border border-gray-200 sticky top-10 overflow-hidden poppins">
         <div class="bg-[#002D1E] p-4 text-white">
-          <h3 class="text-[11px] font-bold opacity-70 uppercase tracking-widest flex items-center gap-2">
-            <i class="ph ph-info"></i>
-            Seat Details
+          <h3 class="text-[10px] font-black uppercase tracking-[3px] flex items-center gap-2 poppins">
+            <i class="ph ph-fingerprint text-[#fe3787]"></i>
+            Unit Registry
           </h3>
         </div>
 
@@ -908,23 +854,23 @@
             <!-- Seat Header -->
             <div class="text-center mb-6">
               <div 
-                class="w-20 h-20 rounded-2xl mx-auto mb-3 flex items-center justify-center text-3xl font-black text-white shadow-lg relative"
+                class="w-20 h-20 rounded-[1px] mx-auto mb-4 flex items-center justify-center text-3xl font-black text-white shadow-xl relative poppins border-4 border-white"
                 :style="{ backgroundColor: activeSeat.color }"
               >
                 {{ activeSeat.seat_number }}
                 
                 <!-- Special Indicator on Seat Display -->
-                <div v-if="hasSpecialSeatForActiveSeat" class="absolute -top-2 -right-2 flex gap-1">
-                  <div v-if="activeSeat.is_exit_row" class="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+                <div v-if="hasSpecialSeatForActiveSeat" class="absolute -top-2 -right-2 flex flex-col gap-1">
+                  <div v-if="activeSeat.is_exit_row" class="w-6 h-6 bg-red-500 rounded-[1px] flex items-center justify-center shadow-md">
                     <i class="ph ph-door-open text-white text-[8px]"></i>
                   </div>
-                  <div v-if="activeSeat.is_wheelchair_accessible" class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                  <div v-if="activeSeat.is_wheelchair_accessible" class="w-6 h-6 bg-blue-500 rounded-[1px] flex items-center justify-center shadow-md">
                     <i class="ph ph-wheelchair text-white text-[8px]"></i>
                   </div>
                 </div>
               </div>
-              <h2 class="text-2xl font-black text-gray-800 mb-1">{{ activeSeat.seat_number }}</h2>
-              <p class="text-sm font-medium" :style="{ color: activeSeat.color }">{{ activeSeat.seat_class_name }}</p>
+              <h2 class="text-2xl font-black text-[#002D1E] mb-1 poppins tracking-tighter">{{ activeSeat.seat_number }}</h2>
+              <p class="text-[11px] font-bold uppercase tracking-widest poppins" :style="{ color: activeSeat.color }">{{ activeSeat.seat_class_name }}</p>
             </div>
 
             <!-- Special Requirements Section -->
@@ -1029,22 +975,22 @@
               <button 
                 @click="toggleAvailability" 
                 :class="[
-                  'w-full py-3.5 rounded-xl font-black text-xs uppercase tracking-[2px] transition-all flex items-center justify-center gap-2',
+                  'w-full py-4 rounded-[1px] font-black text-[11px] uppercase tracking-[2px] transition-all flex items-center justify-center gap-2 poppins shadow-sm',
                   activeSeat.is_available 
                     ? 'bg-red-500 hover:bg-red-600 text-white' 
                     : 'bg-emerald-500 hover:bg-emerald-600 text-white'
                 ]"
               >
-                <i :class="activeSeat.is_available ? 'ph ph-lock-key' : 'ph ph-lock-key-open'"></i>
-                {{ activeSeat.is_available ? 'Block Seat' : 'Unblock Seat' }}
+                <i :class="activeSeat.is_available ? 'ph ph-prohibit' : 'ph ph-check-circle'"></i>
+                {{ activeSeat.is_available ? 'Block Unit' : 'Release Unit' }}
               </button>
               
               <button 
                 @click="showSpecialRequirementsModal = true"
-                class="w-full py-3.5 bg-blue-500 hover:bg-blue-600 text-white font-black text-xs uppercase tracking-[2px] rounded-xl flex items-center justify-center gap-2"
+                class="w-full py-4 bg-white border border-gray-200 hover:border-[#fe3787] text-gray-700 font-black text-[11px] uppercase tracking-[2px] rounded-[1px] flex items-center justify-center gap-2 poppins transition-all"
               >
-                <i class="ph ph-gear"></i>
-                Manage Special Requirements
+                <i class="ph ph-sliders"></i>
+                Special Config
               </button>
             </div>
           </div>
@@ -1054,27 +1000,27 @@
 
     <!-- Seat Class Modal -->
     <div v-if="isClassModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+      <div class="bg-white w-full max-w-md rounded-[1px] shadow-2xl overflow-hidden poppins">
         <div class="bg-[#002D1E] p-4 text-white flex items-center justify-between">
-          <h2 class="text-lg font-bold">{{ isEditingClass ? 'Edit Seat Class' : 'New Seat Class' }}</h2>
+          <h2 class="text-sm font-bold uppercase tracking-widest poppins">{{ isEditingClass ? 'Modify Class' : 'Register Class' }}</h2>
           <button @click="isClassModalOpen = false" class="text-white/70 hover:text-white">
             <i class="ph ph-x text-xl"></i>
           </button>
         </div>
         <form @submit.prevent="saveSeatClass" class="p-6 space-y-4">
           <div>
-            <label for="class-name" class="block text-xs font-bold text-gray-500 uppercase mb-2">Class Name</label>
-            <input id="class-name" name="className" v-model="classForm.name" type="text" class="w-full border border-gray-300 p-3 rounded-lg outline-none focus:border-[#fe3787]" placeholder="e.g. Business Class" required>
+            <label for="class-name" class="block text-xs font-bold text-gray-500 uppercase mb-2 poppins">Label</label>
+            <input id="class-name" name="className" v-model="classForm.name" type="text" class="w-full border border-gray-200 p-3 rounded-[1px] outline-none focus:border-[#fe3787] poppins text-sm" placeholder="e.g. Business Class" required>
           </div>
           <div>
-            <label for="class-multiplier" class="block text-xs font-bold text-gray-500 uppercase mb-2">Price Multiplier</label>
-            <input id="class-multiplier" name="multiplier" v-model="classForm.price_multiplier" type="number" step="0.01" min="0.1" class="w-full border border-gray-300 p-3 rounded-lg outline-none focus:border-[#fe3787]" required>
+            <label for="class-multiplier" class="block text-xs font-bold text-gray-500 uppercase mb-2 poppins">Multiplier Rate</label>
+            <input id="class-multiplier" name="multiplier" v-model="classForm.price_multiplier" type="number" step="0.01" min="0.1" class="w-full border border-gray-200 p-3 rounded-[1px] outline-none focus:border-[#fe3787] poppins text-sm" required>
           </div>
           <div>
-            <label for="class-color" class="block text-xs font-bold text-gray-500 uppercase mb-2">Color</label>
+            <label for="class-color" class="block text-xs font-bold text-gray-500 uppercase mb-2 poppins">Ident Color</label>
             <div class="flex gap-3">
-              <input id="class-color" name="color" v-model="classForm.color" type="color" class="w-16 h-12 rounded-lg border border-gray-300 cursor-pointer">
-              <input v-model="classForm.color" type="text" class="flex-1 border border-gray-300 p-3 rounded-lg outline-none focus:border-[#fe3787] font-mono text-sm uppercase">
+              <input id="class-color" name="color" v-model="classForm.color" type="color" class="w-16 h-12 rounded-[1px] border border-gray-200 cursor-pointer p-1 bg-white">
+              <input v-model="classForm.color" type="text" class="flex-1 border border-gray-200 p-3 rounded-[1px] outline-none focus:border-[#fe3787] font-mono text-sm uppercase poppins">
             </div>
           </div>
           
@@ -1099,14 +1045,14 @@
             </p>
           </div>
 
-          <div class="flex justify-end gap-3 mt-6">
-            <button type="button" @click="isClassModalOpen = false" class="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-100 rounded-lg">Cancel</button>
+          <div class="flex justify-end gap-3 mt-8">
+            <button type="button" @click="isClassModalOpen = false" class="px-6 py-2.5 text-gray-500 font-bold text-[11px] uppercase tracking-widest hover:bg-gray-50 rounded-[1px] poppins transition-all">Cancel</button>
             <button 
               type="submit" 
-              class="px-5 py-2.5 bg-[#fe3787] text-white font-bold rounded-lg hover:bg-[#e62e7a]"
+              class="px-6 py-2.5 bg-[#fe3787] text-white font-black text-[11px] uppercase tracking-widest rounded-[1px] poppins hover:bg-[#fb1873] shadow-lg transition-all"
               :disabled="!isEditingClass && !isValidAirline(aircraftInfo.airline_id) && !classForm.airline"
             >
-              Save Class
+              Commit Changes
             </button>
           </div>
         </form>
@@ -1115,9 +1061,9 @@
 
     <!-- Create Airline Modal -->
     <div v-if="showCreateAirlineModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+      <div class="bg-white w-full max-w-md rounded-[1px] shadow-2xl overflow-hidden poppins">
         <div class="bg-[#002D1E] p-4 text-white flex items-center justify-between">
-          <h2 class="text-lg font-bold">Create New Airline</h2>
+          <h2 class="text-sm font-bold uppercase tracking-widest poppins">New Airline Entity</h2>
           <button @click="showCreateAirlineModal = false" class="text-white/70 hover:text-white">
             <i class="ph ph-x text-xl"></i>
           </button>
@@ -1137,15 +1083,15 @@
               This will create a new airline. You'll then need to assign it to fix the broken reference.
             </p>
           </div>
-          <div class="flex justify-end gap-3 mt-6">
-            <button type="button" @click="showCreateAirlineModal = false" class="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-100 rounded-lg">Cancel</button>
+          <div class="flex justify-end gap-3 mt-8">
+            <button type="button" @click="showCreateAirlineModal = false" class="px-6 py-2.5 text-gray-500 font-bold text-[11px] uppercase tracking-widest hover:bg-gray-50 rounded-[1px] poppins transition-all">Dismiss</button>
             <button 
               type="submit" 
-              class="px-5 py-2.5 bg-[#fe3787] text-white font-bold rounded-lg hover:bg-[#e62e7a]"
+              class="px-6 py-2.5 bg-[#fe3787] text-white font-black text-[11px] uppercase tracking-widest rounded-[1px] poppins hover:bg-[#fb1873] shadow-lg transition-all"
               :disabled="isCreatingAirline"
             >
               <i v-if="isCreatingAirline" class="ph ph-spinner animate-spin mr-1"></i>
-              {{ isCreatingAirline ? 'Creating...' : 'Create Airline' }}
+              {{ isCreatingAirline ? 'Processing...' : 'Register Airline' }}
             </button>
           </div>
         </form>
@@ -1192,9 +1138,9 @@
 
     <!-- Special Requirements Modal -->
     <div v-if="showSpecialRequirementsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+      <div class="bg-white w-full max-w-md rounded-[1px] shadow-2xl overflow-hidden poppins">
         <div class="bg-[#002D1E] p-4 text-white flex items-center justify-between">
-          <h2 class="text-lg font-bold">Special Requirements Management</h2>
+          <h2 class="text-sm font-bold uppercase tracking-widest poppins">Unit Configuration</h2>
           <button @click="showSpecialRequirementsModal = false" class="text-white/70 hover:text-white">
             <i class="ph ph-x text-xl"></i>
           </button>
@@ -1232,8 +1178,8 @@
           </div>
           
           <div class="mt-8 flex justify-end gap-3">
-            <button @click="showSpecialRequirementsModal = false" class="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-100 rounded-lg">Close</button>
-            <button @click="saveSpecialRequirements" class="px-5 py-2.5 bg-[#fe3787] text-white font-bold rounded-lg hover:bg-[#e62e7a]">Save Changes</button>
+            <button @click="showSpecialRequirementsModal = false" class="px-6 py-2.5 text-gray-500 font-bold text-[11px] uppercase tracking-widest hover:bg-gray-50 rounded-[1px] poppins transition-all">Close</button>
+            <button @click="saveSpecialRequirements" class="px-6 py-2.5 bg-[#fe3787] text-white font-black text-[11px] uppercase tracking-widest rounded-[1px] poppins hover:bg-[#fb1873] shadow-lg transition-all">Save Matrix</button>
           </div>
         </div>
       </div>

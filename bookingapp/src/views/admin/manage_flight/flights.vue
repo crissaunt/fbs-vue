@@ -1,74 +1,128 @@
 <template>
-  <div class="p-6">
+  <div class="p-6 poppins">
+    <!-- Header Section -->
     <div class="flex justify-between items-center mb-6">
-      <button @click="openModal()" class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#e02d74] transition-colors shadow-sm">
-        <i class="ph ph-plus"></i> Create Flight
+      <button 
+        @click="openModal()" 
+        class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[14px] rounded-[1px] shadow-sm transition-all"
+      >
+        <i class="ph ph-plus"></i>
+        Create Flight
       </button>
     </div>
 
-    <div class="bg-white border border-gray-200 shadow-sm overflow-hidden">
+    <!-- Stats Section -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div 
+        v-for="(count, label) in statsItems" 
+        :key="label" 
+        class="bg-white p-4 border border-gray-200 rounded-[1px] shadow-sm"
+      >
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins leading-none mb-2">{{ label }}</p>
+            <p class="text-2xl font-bold text-[#002D1E] poppins">{{ count }}</p>
+          </div>
+          <div :class="statIconClass(label)" class="w-12 h-12 rounded-full flex items-center justify-center">
+            <i :class="[statIcon(label), 'text-xl']"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table Section -->
+    <div class="bg-white border border-gray-200 rounded-[1px] overflow-hidden shadow-sm">
       <table class="w-full text-left">
-        <thead class="bg-gray-50 text-gray-600 text-sm border-b uppercase font-semibold">
+        <thead class="bg-gray-50 text-gray-600 text-[14px] uppercase font-semibold border-b border-gray-200">
           <tr>
-            <th class="px-6 py-4">Flight #</th>
-            <th class="px-6 py-4">Airline</th>
-            <th class="px-6 py-4">Aircraft</th>
-            <th class="px-6 py-4">Route</th>
-            <th class="px-6 py-4 text-right">Actions</th>
+            <th class="px-6 py-4 poppins">Flight #</th>
+            <th class="px-6 py-4 poppins">Airline</th>
+            <th class="px-6 py-4 poppins">Aircraft</th>
+            <th class="px-6 py-4 poppins">Route</th>
+            <th class="px-6 py-4 poppins text-right">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200 text-sm">
-          <tr v-for="f in flights" :key="f.id" class="hover:bg-gray-50 transition-colors">
-            <td class="px-6 py-4 font-bold text-[#fe3787]">{{ f.flight_number }}</td>
-            <td class="px-6 py-4">{{ f.airline_display || 'N/A' }}</td>
-            <td class="px-6 py-4">{{ f.aircraft_display || 'N/A' }}</td>
-            <td class="px-6 py-4 text-xs font-medium">{{ f.route_display || 'No Route' }}</td>
-            <td class="px-6 py-4 text-right space-x-2">
-              <button @click="openModal(f)" class="text-blue-600 hover:bg-blue-50 p-2 rounded"><i class="ph ph-pencil text-lg"></i></button>
-              <button @click="deleteFlight(f.id)" class="text-red-600 hover:bg-red-50 p-2 rounded"><i class="ph ph-trash text-lg"></i></button>
+        <tbody class="divide-y divide-gray-100">
+          <tr v-for="f in flights" :key="f.id" class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium">
+            <td class="px-6 py-4">
+              <span class="font-bold text-[#fe3787] poppins text-sm">{{ f.flight_number }}</span>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+                  <i class="ph ph-buildings text-blue-600"></i>
+                </div>
+                <span class="font-bold text-[#002D1E] poppins">{{ f.airline_display || 'N/A' }}</span>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-2">
+                <i class="ph ph-airplane-tilt text-gray-400"></i>
+                <span class="text-gray-700 poppins">{{ f.aircraft_display || 'N/A' }}</span>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+               <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-[1px] text-[10px] font-bold uppercase poppins tracking-tight">
+                 {{ f.route_display || 'No Route' }}
+               </span>
+            </td>
+            <td class="px-6 py-4 text-right">
+              <div class="flex justify-end gap-2">
+                <button @click="openModal(f)" class="text-green-600 hover:text-green-400 p-2 transition-colors">
+                  <i class="ph ph-pencil-simple text-lg"></i>
+                </button>
+                <button @click="deleteFlight(f.id)" class="text-red-600 hover:text-red-400 p-2 transition-colors">
+                  <i class="ph ph-trash text-lg"></i>
+                </button>
+              </div>
             </td>
           </tr>
           <tr v-if="flights.length === 0">
-            <td colspan="5" class="px-6 py-10 text-center text-gray-400 italic">No flights found.</td>
+            <td colspan="5" class="px-6 py-10 text-center text-gray-400 italic poppins">No flights found. Please add one.</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div class="bg-white w-full max-w-md p-6 shadow-2xl">
-        <h2 class="font-bold text-lg mb-4 text-[#002D1E]">{{ isEditing ? 'Edit Flight' : 'New Flight' }}</h2>
+    <!-- Modal Section -->
+    <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 poppins">
+      <div class="bg-white w-full max-w-md p-6 rounded-[1px] shadow-2xl animate-in fade-in zoom-in duration-200">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-lg font-bold text-[#002D1E] poppins">
+            {{ isEditing ? 'Edit Flight' : 'New Flight' }}
+          </h2>
+          <button @click="isModalOpen = false" class="text-gray-400 hover:text-black transition-colors">
+            <i class="ph ph-x text-xl"></i>
+          </button>
+        </div>
         
         <form @submit.prevent="saveFlight" class="space-y-4">
           <div>
-            <label class="block text-xs font-bold mb-1 uppercase text-gray-500">Flight Number</label>
-            <input v-model="form.flight_number" type="text" class="w-full border p-2 outline-none focus:border-[#fe3787]" placeholder="e.g. PR101" required>
+            <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Flight Number</label>
+            <input v-model="form.flight_number" type="text" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px]" placeholder="e.g. PR101" required>
           </div>
 
           <div>
-            <label class="block text-xs font-bold mb-1 uppercase text-gray-500">Airline</label>
-            <select v-model="form.airline" class="w-full border p-2 bg-white outline-none focus:border-[#fe3787]" required>
+            <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Airline Owner</label>
+            <select v-model="form.airline" class="w-full border p-2 text-sm bg-white outline-none focus:border-[#fe3787] transition-all rounded-[1px]" required>
               <option value="" disabled>Select Airline</option>
               <option v-for="a in airlines" :key="a.id" :value="a.id">{{ a.name }}</option>
             </select>
           </div>
 
           <div>
-            <label class="block text-xs font-bold mb-1 uppercase text-gray-500">Aircraft</label>
-            <select v-model="form.aircraft" class="w-full border p-2 bg-white outline-none focus:border-[#fe3787]" required :disabled="!form.airline">
+            <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Aircraft Model</label>
+            <select v-model="form.aircraft" class="w-full border p-2 text-sm bg-white outline-none focus:border-[#fe3787] transition-all rounded-[1px]" required :disabled="!form.airline">
               <option value="" disabled>{{ form.airline ? 'Select Aircraft' : 'Select Airline First' }}</option>
               <option v-for="ac in filteredAircrafts" :key="ac.id" :value="ac.id">
                 {{ ac.model }} ({{ ac.capacity }} seats)
               </option>
             </select>
-            <p v-if="form.airline && filteredAircrafts.length === 0" class="text-[10px] text-red-500 mt-1">
-              No aircraft assigned to this airline.
-            </p>
           </div>
 
           <div>
-            <label class="block text-xs font-bold mb-1 uppercase text-gray-500">Route</label>
-            <select v-model="form.route" class="w-full border p-2 bg-white outline-none focus:border-[#fe3787]" required>
+            <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Flight Route</label>
+            <select v-model="form.route" class="w-full border p-2 text-sm bg-white outline-none focus:border-[#fe3787] transition-all rounded-[1px]" required>
               <option value="" disabled>Select Route</option>
               <option v-for="r in routes" :key="r.id" :value="r.id">
                 {{ r.origin_info }} → {{ r.destination_info }}
@@ -76,10 +130,10 @@
             </select>
           </div>
 
-          <div class="flex justify-end gap-2 pt-4">
-            <button type="button" @click="isModalOpen = false" class="px-4 py-2 text-gray-500 hover:bg-gray-100 transition-colors">Cancel</button>
-            <button type="submit" class="bg-[#fe3787] text-white px-6 py-2 font-bold hover:bg-[#e02d74] transition-all">
-              {{ isEditing ? 'Update' : 'Create' }} Flight
+          <div class="flex justify-end gap-3 pt-6 border-t mt-4">
+            <button type="button" @click="isModalOpen = false" class="text-sm text-gray-500 font-medium hover:text-gray-700 poppins">Cancel</button>
+            <button type="submit" class="bg-[#fe3787] text-white px-6 py-2 text-sm font-bold shadow-md hover:bg-[#e6327a] transition-all rounded-[1px] poppins">
+              {{ isEditing ? 'Update Flight' : 'Confirm Flight' }}
             </button>
           </div>
         </form>
@@ -89,7 +143,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import api from '@/services/admin/api';
 
 const flights = ref([]);
@@ -108,6 +162,27 @@ const form = ref({
   route: ''
 });
 
+// --- Computed Stats ---
+const statsItems = computed(() => {
+  return {
+    'Total Flights': flights.value.length,
+    'Active Airlines': new Set(flights.value.map(f => f.airline)).size,
+    'Operational Aircraft': new Set(flights.value.map(f => f.aircraft)).size,
+  };
+});
+
+const statIcon = (label) => {
+  if (label === 'Total Flights') return 'ph ph-airplane';
+  if (label === 'Active Airlines') return 'ph ph-buildings';
+  return 'ph ph-airplane-tilt';
+};
+
+const statIconClass = (label) => {
+  if (label === 'Total Flights') return 'bg-blue-100 text-blue-600';
+  if (label === 'Active Airlines') return 'bg-green-100 text-green-600';
+  return 'bg-purple-100 text-purple-600';
+};
+
 const fetchData = async () => {
   try {
     const [resF, resA, resAc, resR] = await Promise.all([
@@ -117,26 +192,20 @@ const fetchData = async () => {
       api.get('/routes/')
     ]);
 
-    // Handle pagination (results) or flat lists
     flights.value = resF.data.results || resF.data;
     airlines.value = resA.data.results || resA.data;
     allAircrafts.value = resAc.data.results || resAc.data;
     routes.value = resR.data.results || resR.data;
-    
-    console.log("Aircrafts Data:", allAircrafts.value);
   } catch (err) {
     console.error("Data fetch failed:", err.response?.data || err.message);
   }
 };
 
-// Logic: Filter aircrafts whenever the airline selection changes
 watch(() => form.value.airline, (newAirlineId) => {
   if (newAirlineId) {
-    // IMPORTANT: Check if your Aircraft model has the 'airline' field as an ID
     filteredAircrafts.value = allAircrafts.value.filter(
       ac => ac.airline === newAirlineId
     );
-    // Reset aircraft selection if the current one isn't in the new list
     if (!filteredAircrafts.value.find(ac => ac.id === form.value.aircraft)) {
       form.value.aircraft = '';
     }
@@ -147,19 +216,20 @@ watch(() => form.value.airline, (newAirlineId) => {
 
 const saveFlight = async () => {
   try {
-    form.value.flight_number = form.value.flight_number.toUpperCase().trim();
+    const payload = { ...form.value };
+    payload.flight_number = payload.flight_number.toUpperCase().trim();
 
     if (isEditing.value) {
-      await api.put(`/flights/${currentId.value}/`, form.value);
+      await api.put(`/flights/${currentId.value}/`, payload);
     } else {
-      await api.post('/flights/', form.value);
+      await api.post('/flights/', payload);
     }
     
     await fetchData();
     isModalOpen.value = false;
   } catch (err) {
     console.error("Save error:", err.response?.data);
-    alert("Error: " + JSON.stringify(err.response?.data || "Save failed"));
+    alert("Error saving flight.");
   }
 };
 
@@ -167,9 +237,9 @@ const deleteFlight = async (id) => {
   if (confirm('Delete this flight?')) {
     try {
       await api.delete(`/flights/${id}/`);
-      fetchData();
+      await fetchData();
     } catch (err) {
-      alert("Delete failed.");
+      console.error("Delete Error:", err);
     }
   }
 };
@@ -181,9 +251,9 @@ const openModal = (flight = null) => {
   if (flight) {
     form.value = { 
       flight_number: flight.flight_number,
-      airline: flight.airline, // Ensure serializer sends the ID
-      aircraft: flight.aircraft, // Ensure serializer sends the ID
-      route: flight.route // Ensure serializer sends the ID
+      airline: flight.airline, 
+      aircraft: flight.aircraft, 
+      route: flight.route 
     };
   } else {
     form.value = { flight_number: '', airline: '', aircraft: '', route: '' };
@@ -193,3 +263,11 @@ const openModal = (flight = null) => {
 
 onMounted(fetchData);
 </script>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+
+.poppins {
+  font-family: 'Poppins', sans-serif;
+}
+</style>
