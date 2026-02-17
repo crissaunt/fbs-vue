@@ -2320,7 +2320,13 @@ const fetchFlights = async () => {
     clearInterval(countdownInterval.value);
     clearTimeout(fetchTimeout.value);
     
-    let fetchedFlights = response.data || [];
+    // Handle paginated or flat response
+    let fetchedFlights = [];
+    if (response.data && Array.isArray(response.data.results)) {
+      fetchedFlights = response.data.results;
+    } else if (Array.isArray(response.data)) {
+      fetchedFlights = response.data;
+    }
     
     // ============ NEW: Enhance flights with ML predictions ============
     if (mlPricingEnabled.value && fetchedFlights.length > 0) {

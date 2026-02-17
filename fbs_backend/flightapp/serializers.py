@@ -226,45 +226,6 @@ class SeatSerializer(serializers.ModelSerializer):
         if obj.is_aisle:
             features.append("Aisle")
         return features
-
-class SeatSerializer(serializers.ModelSerializer):
-    seat_class = serializers.SerializerMethodField()
-    final_price = serializers.SerializerMethodField()
-    seat_code = serializers.SerializerMethodField()
-    features = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Seat
-        fields = [
-            'id', 'seat_code', 'seat_number', 'row', 'column',
-            'is_available', 'final_price', 'price_adjustment',
-            'has_extra_legroom', 'is_exit_row', 'is_bulkhead',
-            'is_window', 'is_aisle', 'seat_class', 'features'
-        ]
-    
-    def get_seat_class(self, obj):
-        if obj.seat_class:
-            return {
-                'id': obj.seat_class.id,
-                'name': obj.seat_class.name,
-                'price_multiplier': float(obj.seat_class.price_multiplier)
-            }
-        return None
-    
-    def get_final_price(self, obj):
-        # Use the final_price property from your Seat model
-        try:
-            return float(obj.final_price)
-        except:
-            # Fallback calculation
-            base_price = obj.schedule.price if obj.schedule and obj.schedule.price else Decimal('0.00')
-            multiplier = obj.seat_class.price_multiplier if obj.seat_class else Decimal('1.00')
-            adjustment = obj.price_adjustment if obj.price_adjustment else Decimal('0.00')
-            return float((base_price * multiplier) + adjustment)
-    
-    def get_seat_code(self, obj):
-        return f"{obj.row}{obj.column}" if obj.row and obj.column else obj.seat_number
-    
     def get_features(self, obj):
         # Use the seat_features property from your Seat model
         features = []
@@ -630,7 +591,7 @@ class SelectedFlightSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     schedule_id = serializers.IntegerField(required=False)
     flight_number = serializers.CharField(max_length=20, required=False, allow_blank=True)
-    price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    price = serializers.DecimalField(max_digits=30, decimal_places=15)
     class_type = serializers.CharField(max_length=50, required=False, allow_blank=True)
     origin = serializers.CharField(max_length=10, required=False, allow_blank=True)
     destination = serializers.CharField(max_length=10, required=False, allow_blank=True)
@@ -667,7 +628,7 @@ class CreateBookingSerializer(serializers.Serializer):
     addons = AddonDataSerializer(required=False)
     return_addons = ReturnAddonDataSerializer(required=False, allow_null=True)  
     passengerCount = serializers.DictField(required=False)
-    total_amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=True)  # Make this REQUIRED
+    total_amount = serializers.DecimalField(max_digits=30, decimal_places=15, required=True)  # Make this REQUIRED
     
     def validate(self, data):
         """Custom validation for booking data"""
@@ -701,7 +662,7 @@ class ProcessPaymentSerializer(serializers.Serializer):
     booking_id = serializers.IntegerField()
     payment_method = serializers.CharField(max_length=50)
     transaction_id = serializers.CharField(max_length=100, required=False, allow_blank=True)
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    amount = serializers.DecimalField(max_digits=30, decimal_places=15)
     
     def validate_payment_method(self, value):
         """Validate payment method"""
@@ -795,7 +756,7 @@ class BookingResponseSerializer(serializers.Serializer):
     booking_id = serializers.IntegerField()
     booking_reference = serializers.CharField()
     status = serializers.CharField()
-    total_amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_amount = serializers.DecimalField(max_digits=30, decimal_places=15)
     message = serializers.CharField()
 
 class PaymentResponseSerializer(serializers.Serializer):

@@ -1684,3 +1684,81 @@ def reserve_seat_with_lock(seat_id, booking_detail_id):
 # Booking.total_amount = booking_total_amount
 
 # Booking.total_amount = booking_total_amount
+
+# ============================================================
+# PRICING CONFIGURATION (SINGLETON)
+# ============================================================
+class PricingConfiguration(models.Model):
+    """
+    Singleton model to store dynamic pricing configuration.
+    Allows business teams to adjust pricing algorithm without code changes.
+    """
+    # User Factors
+    anonymous_user_factor = models.DecimalField(max_digits=5, decimal_places=2, default=1.05)
+    new_user_factor = models.DecimalField(max_digits=5, decimal_places=2, default=1.03)
+    returning_user_factor = models.DecimalField(max_digits=5, decimal_places=2, default=0.97)
+    loyal_user_factor = models.DecimalField(max_digits=5, decimal_places=2, default=0.92)
+    
+    # Demand Factors
+    search_threshold_high = models.IntegerField(default=100)
+    search_threshold_medium = models.IntegerField(default=50)
+    search_threshold_low = models.IntegerField(default=20)
+    
+    demand_factor_high = models.DecimalField(max_digits=5, decimal_places=2, default=1.15)
+    demand_factor_medium = models.DecimalField(max_digits=5, decimal_places=2, default=1.08)
+    demand_factor_low = models.DecimalField(max_digits=5, decimal_places=2, default=1.03)
+    
+    # Days Until Departure Factors
+    days_departure_critical = models.IntegerField(default=3)
+    days_departure_near = models.IntegerField(default=7)
+    days_departure_medium = models.IntegerField(default=14)
+    days_departure_far = models.IntegerField(default=60)
+    
+    days_factor_critical = models.DecimalField(max_digits=5, decimal_places=2, default=1.25)
+    days_factor_near = models.DecimalField(max_digits=5, decimal_places=2, default=1.15)
+    days_factor_medium = models.DecimalField(max_digits=5, decimal_places=2, default=1.05)
+    days_factor_far = models.DecimalField(max_digits=5, decimal_places=2, default=0.90)
+    
+    # Time Factors
+    peak_hour_factor = models.DecimalField(max_digits=5, decimal_places=2, default=1.12)
+    weekend_factor = models.DecimalField(max_digits=5, decimal_places=2, default=1.08)
+    peak_month_factor = models.DecimalField(max_digits=5, decimal_places=2, default=1.20)
+    holiday_factor = models.DecimalField(max_digits=5, decimal_places=2, default=1.30)
+    
+    # Inventory Factors
+    occupancy_high_threshold = models.DecimalField(max_digits=3, decimal_places=2, default=0.80)
+    occupancy_medium_threshold = models.DecimalField(max_digits=3, decimal_places=2, default=0.60)
+    occupancy_low_threshold = models.DecimalField(max_digits=3, decimal_places=2, default=0.20)
+    
+    occupancy_factor_high = models.DecimalField(max_digits=5, decimal_places=2, default=1.20)
+    occupancy_factor_medium = models.DecimalField(max_digits=5, decimal_places=2, default=1.10)
+    occupancy_factor_low = models.DecimalField(max_digits=5, decimal_places=2, default=0.90)
+    
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Pricing Configuration"
+        verbose_name_plural = "Pricing Configuration"
+
+    def save(self, *args, **kwargs):
+        """Ensure singleton"""
+        if not self.pk and PricingConfiguration.objects.exists():
+            return
+        super().save(*args, **kwargs)
+        # Invalidate cache on save
+        from django.core.cache import cache
+        cache.delete('pricing_config')
+
+    def __str__(self):
+        return f"Pricing Configuration (Last updated: {self.updated_at})"
+
+    @classmethod
+    def load(cls):
+        """Load configuration with caching"""
+        from django.core.cache import cache
+        config = cache.get('pricing_config')
+        if config is None:
+            obj, created = cls.objects.get_or_create(pk=1)
+            config = obj
+            cache.set('pricing_config', config, 60*60) # Cache for 1 hour
+        return config

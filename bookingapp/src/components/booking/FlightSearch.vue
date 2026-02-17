@@ -44,8 +44,11 @@ const searchAirports = async (query, target) => {
       ? selectedTo.value?.code 
       : selectedFrom.value?.code;
 
-    // 2. Filter and Sort
-    const filteredResults = response.data
+    // 2. Handle paginated response (response.data.results) or flat array
+    const airports = response.data.results || response.data;
+
+    // 3. Filter and Sort
+    const filteredResults = airports
       .filter(airport => airport.code !== excludedCode) // Remove duplicates
       .sort((a, b) => {
         if (a.code === searchQuery) return -1;

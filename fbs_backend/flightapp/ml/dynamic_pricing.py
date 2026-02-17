@@ -40,6 +40,14 @@ class DynamicPricingService:
                 self._predictor = None
         return self._predictor
 
+    def get_config(self):
+        """Get pricing configuration with caching"""
+        try:
+            from app.models import PricingConfiguration
+            return PricingConfiguration.load()
+        except:
+            return None
+
 
     def get_price_for_user(self, flight_data, user=None, session_id=None):
         """
@@ -117,19 +125,30 @@ class DynamicPricingService:
     
     def get_user_factor(self, user, flight_data):
         """Different prices based on user history/loyalty"""
+        config = self.get_config()
+        
         if not user or user.is_anonymous:
-            return 1.05
+            return float(config.anonymous_user_factor) if config else 1.05
         
         try:
             from app.models import Booking
             previous_bookings = Booking.objects.filter(user=user).count()
             
-            if previous_bookings == 0:
-                return 1.03
-            elif previous_bookings >= 5:
-                return 0.92
-            elif previous_bookings >= 2:
-                return 0.97
+            if config:
+                if previous_bookings == 0:
+                    return float(config.new_user_factor)
+                elif previous_bookings >= 5:
+                    return float(config.loyal_user_factor)
+                elif previous_bookings >= 2:
+                    return float(config.returning_user_factor)
+            else:
+                # Fallback logic if config fails
+                if previous_bookings == 0:
+                    return 1.03
+                elif previous_bookings >= 5:
+                    return 0.92
+                elif previous_bookings >= 2:
+                    return 0.97
         except:
             pass
         
@@ -159,7 +178,8 @@ class DynamicPricingService:
         return factor
     
     def get_demand_factor(self, flight_data):
-        """Real-time demand pricing"""
+        """Real-time demand pricing based on config"""
+        config = self.get_config()
         factor = 1.0
         
         try:
@@ -167,12 +187,21 @@ class DynamicPricingService:
             flight_key = f"flight_demand_{flight_data.get('flight_number', '')}"
             search_count = cache.get(flight_key, 0)
             
-            if search_count > 100:
-                factor *= 1.15
-            elif search_count > 50:
-                factor *= 1.08
-            elif search_count > 20:
-                factor *= 1.03
+            if config:
+                if search_count > config.search_threshold_high:
+                    factor *= float(config.demand_factor_high)
+                elif search_count > config.search_threshold_medium:
+                    factor *= float(config.demand_factor_medium)
+                elif search_count > config.search_threshold_low:
+                    factor *= float(config.demand_factor_low)
+            else:
+                # Fallback
+                if search_count > 100:
+                    factor *= 1.15
+                elif search_count > 50:
+                    factor *= 1.08
+                elif search_count > 20:
+                    factor *= 1.03
         except:
             pass
         
@@ -183,21 +212,33 @@ class DynamicPricingService:
             
             days_until = (departure - datetime.now()).days
             
-            if days_until < 3:
-                factor *= 1.25
-            elif days_until < 7:
-                factor *= 1.15
-            elif days_until < 14:
-                factor *= 1.05
-            elif days_until > 60:
-                factor *= 0.90
+            if config:
+                if days_until < config.days_departure_critical:
+                    factor *= float(config.days_factor_critical)
+                elif days_until < config.days_departure_near:
+                    factor *= float(config.days_factor_near)
+                elif days_until < config.days_departure_medium:
+                    factor *= float(config.days_factor_medium)
+                elif days_until > config.days_departure_far:
+                    factor *= float(config.days_factor_far)
+            else:
+                # Fallback
+                if days_until < 3:
+                    factor *= 1.25
+                elif days_until < 7:
+                    factor *= 1.15
+                elif days_until < 14:
+                    factor *= 1.05
+                elif days_until > 60:
+                    factor *= 0.90
         except:
             pass
         
         return factor
     
     def get_time_factor(self, flight_data):
-        """Time-based pricing"""
+        """Time-based pricing based on config"""
+        config = self.get_config()
         factor = 1.0
         
         try:
@@ -205,26 +246,42 @@ class DynamicPricingService:
             if isinstance(departure, str):
                 departure = datetime.fromisoformat(departure.replace('Z', '+00:00'))
             
-            if 7 <= departure.hour <= 9 or 17 <= departure.hour <= 19:
-                factor *= 1.12
-            
-            if departure.weekday() >= 5:
-                factor *= 1.08
-            
-            if departure.month in [12, 3, 10]:
-                factor *= 1.20
-            
-            if departure.month == 12 and departure.day >= 20:
-                factor *= 1.30
+            # Peak hours
+            if config:
+                if 7 <= departure.hour <= 9 or 17 <= departure.hour <= 19:
+                    factor *= float(config.peak_hour_factor)
+                
+                if departure.weekday() >= 5:
+                    factor *= float(config.weekend_factor)
+                
+                if departure.month in [12, 3, 10]:
+                    factor *= float(config.peak_month_factor)
+                
+                if departure.month == 12 and departure.day >= 20:
+                    factor *= float(config.holiday_factor)
+            else:
+                # Fallback
+                if 7 <= departure.hour <= 9 or 17 <= departure.hour <= 19:
+                    factor *= 1.12
+                
+                if departure.weekday() >= 5:
+                    factor *= 1.08
+                
+                if departure.month in [12, 3, 10]:
+                    factor *= 1.20
+                
+                if departure.month == 12 and departure.day >= 20:
+                    factor *= 1.30
         except:
             pass
         
         return factor
     
     def get_inventory_factor(self, flight_data):
-        """Inventory-based pricing"""
+        """Inventory-based pricing based on config"""
         try:
             from app.models import Seat
+            config = self.get_config()
             
             schedule_id = flight_data.get('schedule_id')
             if schedule_id:
@@ -240,12 +297,21 @@ class DynamicPricingService:
                 if total_seats > 0:
                     occupancy_rate = 1 - (available_seats / total_seats)
                     
-                    if occupancy_rate > 0.8:
-                        return 1.20
-                    elif occupancy_rate > 0.6:
-                        return 1.10
-                    elif occupancy_rate < 0.2:
-                        return 0.90
+                    if config:
+                        if occupancy_rate > float(config.occupancy_high_threshold):
+                            return float(config.occupancy_factor_high)
+                        elif occupancy_rate > float(config.occupancy_medium_threshold):
+                            return float(config.occupancy_factor_medium)
+                        elif occupancy_rate < float(config.occupancy_low_threshold):
+                            return float(config.occupancy_factor_low)
+                    else:
+                        # Fallback
+                        if occupancy_rate > 0.8:
+                            return 1.20
+                        elif occupancy_rate > 0.6:
+                            return 1.10
+                        elif occupancy_rate < 0.2:
+                            return 0.90
         except:
             pass
         

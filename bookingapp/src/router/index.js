@@ -140,6 +140,12 @@ const routes = [
     meta: { layout: 'BookingLayout' } ,
     component: () => import('../views/booking/PaymentCallbackView.vue'), 
     meta: { requiresAuth: false } 
+  },
+  {
+    path: '/booking-success',
+    name: 'BookingSuccess',
+    meta: { layout: 'BookingLayout' } ,
+    component: () => import('@/views/booking/BookingSuccessView.vue')
   }
 ];
 

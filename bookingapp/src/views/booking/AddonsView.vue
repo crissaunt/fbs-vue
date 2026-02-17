@@ -482,9 +482,10 @@ onMounted(async () => {
       addonService.getAssistanceServices(airlineId)
     ]);
     
-    baggageOptions.value = bagRes.data || [];
-    mealOptions.value = mealRes.data || [];
-    assistanceOptions.value = assistRes.data || [];
+    // Handle paginated responses (response.data.results) or flat arrays (response.data)
+    baggageOptions.value = bagRes.data.results || bagRes.data || [];
+    mealOptions.value = mealRes.data.results || mealRes.data || [];
+    assistanceOptions.value = assistRes.data.results || assistRes.data || [];
 
     // Load existing selections from store if they exist
     console.log("📦 Loading existing add-ons from store...");

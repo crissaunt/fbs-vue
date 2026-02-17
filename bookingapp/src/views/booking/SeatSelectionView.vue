@@ -243,7 +243,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, defineAsyncComponent, watch } from 'vue';
+import { ref, computed, onMounted, defineAsyncComponent, watch, shallowRef } from 'vue';
 import { useRouter } from 'vue-router';
 import { useBookingStore } from '@/stores/booking';
 import { seatService } from '@/services/booking/seatService';
@@ -259,7 +259,7 @@ const isLoading = ref(true);
 const baseFlightPrice = ref(0);
 const aircraftModel = ref('');
 const aircraftCapacity = ref(0);
-const AircraftLayout = ref(null);
+const AircraftLayout = shallowRef(null);
 
 // Computed properties
 const currentFlight = computed(() => {
@@ -408,7 +408,10 @@ const fetchSeatData = async () => {
     const response = await seatService.getSeatsBySchedule(scheduleId);
     
     if (response.success) {
-      rawSeats.value = response.seats || [];
+      // Handle paginated response (response.seats.results) or flat array (response.seats)
+      const seatsData = response.seats?.results || response.seats || [];
+      rawSeats.value = Array.isArray(seatsData) ? seatsData : [];
+      
       baseFlightPrice.value = response.schedule_price || 0;
       aircraftModel.value = response.aircraft_model || 'Airbus A321';
       aircraftCapacity.value = response.aircraft_capacity || 220;
