@@ -90,6 +90,96 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
 
         return queryset
 
+    @action(detail=True, methods=['post'], url_path='generate-seats')
+    def generate_seats(self, request, pk=None):
+        """Generate seats for this schedule based on layout config"""
+        schedule = self.get_object()
+        
+        config_data = request.data.get('layout_config', {})
+        seat_classes = config_data.get('seat_classes', [])
+        
+        if not seat_classes:
+            return Response(
+                {'error': 'layout_config.seat_classes is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        try:
+            with transaction.atomic():
+                # Get existing seats to avoid duplicates or identify updates
+                existing_seats = Seat.objects.filter(schedule=schedule)
+                existing_map = {f"{s.row}-{s.column}": s for s in existing_seats}
+                
+                created_count = 0
+                updated_count = 0
+                
+                for sc_config in seat_classes:
+                    class_id = sc_config.get('class_id')
+                    rows = sc_config.get('rows', 0)
+                    columns = sc_config.get('columns', 0)
+                    start_row = sc_config.get('start_row', 1)
+                    
+                    try:
+                        seat_class = SeatClass.objects.get(id=class_id)
+                    except SeatClass.DoesNotExist:
+                        continue
+                        
+                    for r in range(rows):
+                        row_num = start_row + r
+                        
+                        for c in range(columns):
+                            col_num = c + 1
+                            col_label = chr(64 + col_num) # 1=A, 2=B, etc.
+                            
+                            seat_key = f"{row_num}-{col_label}"
+                            
+                            # Determine basic features based on position
+                            is_window = (col_num == 1 or col_num == columns)
+                            is_aisle = False
+                            
+                            # Simple aisle logic (assuming 2 aisles for wide body, 1 for narrow)
+                            # This is a simplification; ideally frontend passes this
+                            if columns == 6: # 3-3 => Aisle between 3 and 4
+                                is_aisle = (col_num == 3 or col_num == 4)
+                            elif columns == 4: # 2-2 => Aisle between 2 and 3
+                                is_aisle = (col_num == 2 or col_num == 3)
+                                
+                            seat_data = {
+                                'schedule': schedule,
+                                'seat_class': seat_class,
+                                'seat_number': f"{row_num}{col_label}",
+                                'row': row_num,
+                                'column': col_label,
+                                'is_window': is_window,
+                                'is_aisle': is_aisle,
+                                'is_available': True
+                            }
+                            
+                            if seat_key in existing_map:
+                                # Update existing seat class if changed
+                                seat = existing_map[seat_key]
+                                if seat.seat_class_id != class_id:
+                                    seat.seat_class = seat_class
+                                    seat.save()
+                                    updated_count += 1
+                            else:
+                                # Create new seat
+                                Seat.objects.create(**seat_data)
+                                created_count += 1
+                                
+                return Response({
+                    'success': True,
+                    'message': f'Generated {created_count} new seats, updated {updated_count} seats',
+                    'created': created_count,
+                    'updated': updated_count
+                })
+                
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
 class SeatViewSet(viewsets.ReadOnlyModelViewSet):
     """
     API endpoint that allows seats to be viewed based on a schedule.

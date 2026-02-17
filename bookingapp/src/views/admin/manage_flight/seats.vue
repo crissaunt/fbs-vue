@@ -1163,63 +1163,17 @@
       
       <div class="p-2 space-y-1">
         <button 
-          @click="toggleExitRow"
+          v-for="req in seatRequirements"
+          :key="req.id"
+          @click="toggleRequirement(req)"
           :class="['w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center gap-3', 
-                   contextMenuSeat?.is_exit_row ? 'bg-red-50 text-red-700' : 'hover:bg-gray-100 text-gray-700']"
+                   hasRequirement(contextMenuSeat, req.code) ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-100 text-gray-700']"
         >
           <div :class="['w-6 h-6 rounded-full flex items-center justify-center', 
-                       contextMenuSeat?.is_exit_row ? 'bg-red-500' : 'bg-gray-200']">
-            <i class="ph ph-door-open text-white text-xs"></i>
+                       hasRequirement(contextMenuSeat, req.code) ? 'bg-blue-500' : 'bg-gray-200']">
+            <i :class="[req.icon || 'ph ph-star', 'text-white text-xs']"></i>
           </div>
-          <span>{{ contextMenuSeat?.is_exit_row ? 'Remove Exit Row' : 'Mark as Exit Row' }}</span>
-        </button>
-        
-        <button 
-          @click="toggleWheelchairAccessible"
-          :class="['w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center gap-3', 
-                   contextMenuSeat?.is_wheelchair_accessible ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-100 text-gray-700']"
-        >
-          <div :class="['w-6 h-6 rounded-full flex items-center justify-center', 
-                       contextMenuSeat?.is_wheelchair_accessible ? 'bg-blue-500' : 'bg-gray-200']">
-            <i class="ph ph-wheelchair text-white text-xs"></i>
-          </div>
-          <span>{{ contextMenuSeat?.is_wheelchair_accessible ? 'Remove Wheelchair' : 'Mark as Wheelchair' }}</span>
-        </button>
-        
-        <button 
-          @click="toggleBassinet"
-          :class="['w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center gap-3', 
-                   contextMenuSeat?.has_bassinet ? 'bg-purple-50 text-purple-700' : 'hover:bg-gray-100 text-gray-700']"
-        >
-          <div :class="['w-6 h-6 rounded-full flex items-center justify-center', 
-                       contextMenuSeat?.has_bassinet ? 'bg-purple-500' : 'bg-gray-200']">
-            <i class="ph ph-baby text-white text-xs"></i>
-          </div>
-          <span>{{ contextMenuSeat?.has_bassinet ? 'Remove Bassinet' : 'Mark as Bassinet' }}</span>
-        </button>
-        
-        <button 
-          @click="toggleNutAllergy"
-          :class="['w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center gap-3', 
-                   contextMenuSeat?.has_nut_allergy ? 'bg-amber-50 text-amber-700' : 'hover:bg-gray-100 text-gray-700']"
-        >
-          <div :class="['w-6 h-6 rounded-full flex items-center justify-center', 
-                       contextMenuSeat?.has_nut_allergy ? 'bg-amber-500' : 'bg-gray-200']">
-            <i class="ph ph-nut text-white text-xs"></i>
-          </div>
-          <span>{{ contextMenuSeat?.has_nut_allergy ? 'Remove Allergy Zone' : 'Mark as Nut Allergy Zone' }}</span>
-        </button>
-        
-        <button 
-          @click="toggleUnaccompaniedMinor"
-          :class="['w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center gap-3', 
-                   contextMenuSeat?.is_unaccompanied_minor ? 'bg-green-50 text-green-700' : 'hover:bg-gray-100 text-gray-700']"
-        >
-          <div :class="['w-6 h-6 rounded-full flex items-center justify-center', 
-                       contextMenuSeat?.is_unaccompanied_minor ? 'bg-green-500' : 'bg-gray-200']">
-            <i class="ph ph-user-focus text-white text-xs"></i>
-          </div>
-          <span>{{ contextMenuSeat?.is_unaccompanied_minor ? 'Remove Minor Flag' : 'Mark as Unaccompanied Minor' }}</span>
+          <span>{{ hasRequirement(contextMenuSeat, req.code) ? 'Remove ' + req.name : 'Mark as ' + req.name }}</span>
         </button>
         
         <div class="border-t border-gray-200 pt-1">
@@ -1253,106 +1207,28 @@
           </div>
           
           <div class="space-y-4">
-            <!-- Exit Row -->
-            <div class="flex items-center justify-between">
+            <!-- Dynamic Requirements -->
+            <div v-for="req in seatRequirements" :key="req.id" class="flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                  <i class="ph ph-door-open text-red-600"></i>
+                <div :class="['w-10 h-10 rounded-lg flex items-center justify-center', hasRequirement(activeSeat, req.code) ? 'bg-blue-100' : 'bg-gray-100']">
+                  <i :class="[req.icon || 'ph ph-star', hasRequirement(activeSeat, req.code) ? 'text-blue-600' : 'text-gray-400']"></i>
                 </div>
                 <div>
-                  <p class="text-sm font-medium text-gray-800">Exit Row Seat</p>
-                  <p class="text-[10px] text-gray-500">Passenger must be capable of assisting</p>
+                  <p class="text-sm font-medium text-gray-800">{{ req.name }}</p>
+                  <p class="text-[10px] text-blue-600 font-bold" v-if="req.price > 0">+ ₱{{ req.price }}</p>
+                  <p class="text-[10px] text-gray-500">{{ req.description }}</p>
                 </div>
               </div>
               <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" v-model="activeSeat.is_exit_row" @change="updateSeatSpecialFeatures" class="sr-only peer">
-                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
-              </label>
-            </div>
-            
-            <!-- Wheelchair Accessible -->
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <i class="ph ph-wheelchair text-blue-600"></i>
-                </div>
-                <div>
-                  <p class="text-sm font-medium text-gray-800">Wheelchair Accessible</p>
-                  <p class="text-[10px] text-gray-500">Priority for reduced mobility</p>
-                </div>
-              </div>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" v-model="activeSeat.is_wheelchair_accessible" @change="updateSeatSpecialFeatures" class="sr-only peer">
+                <input type="checkbox" 
+                       :value="req.id" 
+                       v-model="activeSeat.requirements" 
+                       @change="updateSeatSpecialFeatures" 
+                       class="sr-only peer">
                 <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
               </label>
             </div>
-            
-            <!-- Bassinet -->
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <i class="ph ph-baby text-purple-600"></i>
-                </div>
-                <div>
-                  <p class="text-sm font-medium text-gray-800">Bassinet Position</p>
-                  <p class="text-[10px] text-gray-500">For passengers with infants</p>
-                </div>
-              </div>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" v-model="activeSeat.has_bassinet" @change="updateSeatSpecialFeatures" class="sr-only peer">
-                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
-              </label>
-            </div>
-            
-            <!-- Nut Allergy -->
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                  <i class="ph ph-nut text-amber-600"></i>
-                </div>
-                <div>
-                  <p class="text-sm font-medium text-gray-800">Nut Allergy Zone</p>
-                  <p class="text-[10px] text-gray-500">No nuts to be served</p>
-                </div>
-              </div>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" v-model="activeSeat.has_nut_allergy" @change="updateSeatSpecialFeatures" class="sr-only peer">
-                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
-              </label>
-            </div>
-            
-            <!-- Unaccompanied Minor -->
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <i class="ph ph-user-focus text-green-600"></i>
-                </div>
-                <div>
-                  <p class="text-sm font-medium text-gray-800">Unaccompanied Minor</p>
-                  <p class="text-[10px] text-gray-500">Special supervision required</p>
-                </div>
-              </div>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" v-model="activeSeat.is_unaccompanied_minor" @change="updateSeatSpecialFeatures" class="sr-only peer">
-                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
-              </label>
-            </div>
 
-            <!-- Manual Price Adjustment -->
-            <div class="pt-4 border-t border-gray-100">
-              <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Manual Price Adjustment (PHP)</label>
-              <div class="relative">
-                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₱</span>
-                <input 
-                  type="number" 
-                  v-model.number="activeSeat.price_adjustment_manual" 
-                  class="w-full border border-gray-300 p-3 pl-8 rounded-lg outline-none focus:border-[#fe3787] font-mono text-sm"
-                  placeholder="0.00"
-                  step="0.01"
-                >
-              </div>
-              <p class="text-[10px] text-gray-500 mt-1">Add or subtract from the final seat price.</p>
-            </div>
           </div>
           
           <div class="mt-8 flex justify-end gap-3">
@@ -1393,6 +1269,7 @@ const isCreatingAirline = ref(false);
 const airlineForm = ref({ name: '', code: '' });
 const selectedFixAirlineId = ref(null);
 const saveMode = ref('schedule'); // 'schedule' or 'aircraft'
+const seatRequirements = ref([]); 
 
 // Special seat features state
 const showContextMenu = ref(false);
@@ -2098,7 +1975,6 @@ const seatMapData = computed(() => {
       has_bassinet: seat.has_bassinet || false,
       has_nut_allergy: seat.has_nut_allergy || false,
       is_unaccompanied_minor: seat.is_unaccompanied_minor || false,
-      price_adjustment_manual: seat.price_adjustment_manual || 0.00,
       has_extra_legroom: seat.has_extra_legroom || false,
       is_bulkhead: seat.is_bulkhead || false,
       is_window: seat.is_window || false,
@@ -2300,7 +2176,6 @@ const initializeSeatFeatures = (seat) => {
   seat.has_bassinet = seat.has_bassinet || false;
   seat.has_nut_allergy = seat.has_nut_allergy || false;
   seat.is_unaccompanied_minor = seat.is_unaccompanied_minor || false;
-  seat.price_adjustment_manual = seat.price_adjustment_manual || 0.00;
   
   // Build features list
   seat.features = [];
@@ -2404,44 +2279,71 @@ const closeContextMenu = () => {
   document.removeEventListener('click', closeContextMenu);
 };
 
-// Special Requirements Toggles
-const toggleExitRow = async () => {
+const toggleRequirement = async (requirement) => {
   if (!contextMenuSeat.value) return;
-  contextMenuSeat.value.is_exit_row = !contextMenuSeat.value.is_exit_row;
+  
+  // Initialize requirements array if it doesn't exist
+  if (!contextMenuSeat.value.requirements) {
+    contextMenuSeat.value.requirements = [];
+  }
+  
+  const index = contextMenuSeat.value.requirements.indexOf(requirement.id);
+  if (index > -1) {
+    contextMenuSeat.value.requirements.splice(index, 1);
+  } else {
+    contextMenuSeat.value.requirements.push(requirement.id);
+  }
+  
+  // Also update legacy boolean if code matches
+  if (requirement.code && typeof contextMenuSeat.value[requirement.code] !== 'undefined') {
+    contextMenuSeat.value[requirement.code] = !contextMenuSeat.value[requirement.code];
+  }
+  
   await updateSeatSpecialRequirements(contextMenuSeat.value);
   closeContextMenu();
+};
+
+const hasRequirement = (seat, code) => {
+  if (!seat) return false;
+  
+  // Check Many-to-Many requirements
+  if (seat.requirements_detail) {
+    return seat.requirements_detail.some(r => r.code === code);
+  }
+  
+  // Fallback to booleans
+  return seat[code] || false;
+};
+
+// Keep old toggle functions for safety but map them to toggleRequirement
+const toggleExitRow = async () => {
+  const req = seatRequirements.value.find(r => r.code === 'is_exit_row');
+  if (req) await toggleRequirement(req);
 };
 
 const toggleWheelchairAccessible = async () => {
-  if (!contextMenuSeat.value) return;
-  contextMenuSeat.value.is_wheelchair_accessible = !contextMenuSeat.value.is_wheelchair_accessible;
-  await updateSeatSpecialRequirements(contextMenuSeat.value);
-  closeContextMenu();
+  const req = seatRequirements.value.find(r => r.code === 'is_wheelchair_accessible');
+  if (req) await toggleRequirement(req);
 };
 
 const toggleBassinet = async () => {
-  if (!contextMenuSeat.value) return;
-  contextMenuSeat.value.has_bassinet = !contextMenuSeat.value.has_bassinet;
-  await updateSeatSpecialRequirements(contextMenuSeat.value);
-  closeContextMenu();
+  const req = seatRequirements.value.find(r => r.code === 'has_bassinet');
+  if (req) await toggleRequirement(req);
 };
 
 const toggleNutAllergy = async () => {
-  if (!contextMenuSeat.value) return;
-  contextMenuSeat.value.has_nut_allergy = !contextMenuSeat.value.has_nut_allergy;
-  await updateSeatSpecialRequirements(contextMenuSeat.value);
-  closeContextMenu();
+  const req = seatRequirements.value.find(r => r.code === 'has_nut_allergy');
+  if (req) await toggleRequirement(req);
 };
 
 const toggleUnaccompaniedMinor = async () => {
-  if (!contextMenuSeat.value) return;
-  contextMenuSeat.value.is_unaccompanied_minor = !contextMenuSeat.value.is_unaccompanied_minor;
-  await updateSeatSpecialRequirements(contextMenuSeat.value);
-  closeContextMenu();
+  const req = seatRequirements.value.find(r => r.code === 'is_unaccompanied_minor');
+  if (req) await toggleRequirement(req);
 };
 
 const clearSpecialRequirements = async () => {
   if (!contextMenuSeat.value) return;
+  contextMenuSeat.value.requirements = [];
   contextMenuSeat.value.is_exit_row = false;
   contextMenuSeat.value.is_wheelchair_accessible = false;
   contextMenuSeat.value.has_bassinet = false;
@@ -2461,7 +2363,7 @@ const updateSeatSpecialRequirements = async (seat) => {
       is_bulkhead: seat.is_bulkhead || false,
       is_window: seat.is_window || false,
       is_aisle: seat.is_aisle || false,
-      price_adjustment_manual: seat.price_adjustment_manual || 0.00
+      requirements: seat.requirements || []
     };
     
     // Add new fields only if they exist in the API response
@@ -2526,30 +2428,6 @@ const saveSpecialRequirements = async () => {
 
 // ----- Save Layout -----
 const saveLayout = async () => {
-  let aircraftId = aircraftInfo.value.aircraft?.id 
-    || aircraftInfo.value.aircraft_id 
-    || rawApiData.value?.flight?.aircraft;
-  
-  if (!aircraftId) {
-    if (rawApiData.value?.flight) {
-      const flightId = typeof rawApiData.value.flight === 'object' 
-        ? rawApiData.value.flight.id 
-        : rawApiData.value.flight;
-      
-      try {
-        const flightRes = await api.get(`/flights/${flightId}/`);
-        aircraftId = flightRes.data.aircraft;
-      } catch (e) {
-        console.error('Failed to get aircraft from flight:', e);
-      }
-    }
-  }
-  
-  if (!aircraftId) {
-    alert('No aircraft information available. Cannot save layout.');
-    return;
-  }
-  
   isSaving.value = true;
   
   try {
@@ -2576,15 +2454,76 @@ const saveLayout = async () => {
     });
 
     const totalSeats = seatClassesConfig.reduce((sum, c) => sum + (c.rows * c.columns), 0);
-
-    const response = await api.post(`/aircraft/${aircraftId}/save-layout/`, {
+    const layoutPayload = {
       layout_config: {
         seat_classes: seatClassesConfig,
         total_seats: totalSeats
       }
-    });
+    };
 
-    alert(`✅ Layout saved!\nAircraft ID: ${aircraftId}\nTotal seats: ${totalSeats}`);
+    if (saveMode.value === 'schedule') {
+      // Save to currently selected schedule
+      if (!selectedScheduleId.value) {
+        alert('No schedule selected!');
+        return;
+      }
+      
+      const response = await api.post(`/schedules/${selectedScheduleId.value}/generate-seats/`, layoutPayload);
+      
+      alert(`✅ Seats generated for this flight!\n${response.data.message}`);
+      
+      // Refresh seats
+      await handleScheduleChange();
+      
+    } else {
+      // Existing logic: Save to Aircraft Template
+      let aircraftId = aircraftInfo.value.aircraft?.id 
+        || aircraftInfo.value.aircraft_id 
+        || rawApiData.value?.flight?.aircraft;
+      
+      if (!aircraftId) {
+        if (rawApiData.value?.flight) {
+          const flightId = typeof rawApiData.value.flight === 'object' 
+            ? rawApiData.value.flight.id 
+            : rawApiData.value.flight;
+          
+          try {
+            const flightRes = await api.get(`/flights/${flightId}/`);
+            aircraftId = flightRes.data.aircraft;
+          } catch (e) {
+            console.error('Failed to get aircraft from flight:', e);
+          }
+        }
+      }
+      
+      if (!aircraftId) {
+        alert('No aircraft information available. Cannot save layout.');
+        return;
+      }
+
+      // 1. Save to Aircraft Template
+      await api.post(`/aircraft/${aircraftId}/save-layout/`, layoutPayload);
+      
+      let message = `✅ Layout saved to Aircraft Template!\nAircraft ID: ${aircraftId}`;
+
+      // 2. ALSO generate seats for current schedule (if selected)
+      if (selectedScheduleId.value) {
+        try {
+          const seatRes = await api.post(`/schedules/${selectedScheduleId.value}/generate-seats/`, layoutPayload);
+          message += `\n\n✅ AND generated seats for this flight!\n${seatRes.data.message}`;
+        } catch (seatErr) {
+          console.error('Error generating seats after template save:', seatErr);
+          message += `\n\n⚠️ Template saved, but failed to generate seats for flight: ${seatErr.message}`;
+        }
+      }
+      
+      alert(message);
+      
+      // Refresh seats
+      if (selectedScheduleId.value) {
+        await handleScheduleChange();
+      }
+    }
     
   } catch (err) {
     console.error('Error:', err);
@@ -2624,10 +2563,11 @@ const applyAircraftTemplate = async (aircraftId) => {
 // ----- Fetch Initial Data -----
 const fetchData = async () => {
   try {
-    const [schedRes, scRes, aRes] = await Promise.all([
+    const [schedRes, scRes, aRes, reqRes] = await Promise.all([
       api.get('/schedules/'),
       api.get('/seat-classes/'),
-      api.get('/airlines/')
+      api.get('/airlines/'),
+      api.get('/seat-requirements/')
     ]);
     
     schedules.value = schedRes.data.results || schedRes.data || [];
@@ -2636,6 +2576,7 @@ const fetchData = async () => {
       color: sc.color || defaultColors[index % defaultColors.length]
     }));
     airlines.value = aRes.data.results || aRes.data || [];
+    seatRequirements.value = reqRes.data.results || reqRes.data || [];
     
   } catch (err) {
     console.error('Error fetching data:', err);

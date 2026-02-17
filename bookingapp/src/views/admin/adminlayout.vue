@@ -47,6 +47,7 @@
           <SidebarSubLink label="Airports" to="/admin/assets/airports" />
           <SidebarSubLink label="Add-Ons" to="/admin/assets/add-ons" />
           <SidebarSubLink label="Seat Classes" to="/admin/assets/seat-classes" />
+          <SidebarSubLink label="Seat Requirements" to="/admin/assets/seat-requirements" />
           <SidebarSubLink label="Airlines" to="/admin/assets/airlines" />
           <SidebarSubLink label="Aircraft" to="/admin/assets/aircraft" />
         </SidebarGroup>

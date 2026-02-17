@@ -1,7 +1,7 @@
 
 # serializers.py
 from rest_framework import serializers
-from .models import AirlineTax, AirportFee, Booking, BookingDetail, BookingTax, CheckInDetail, PassengerInfo, PassengerTypeTaxRate, Route, Airline, SeatClass, Aircraft, Airport, AddOnType, Flight, Schedule, Seat, TaxType, TrackLog
+from .models import AirlineTax, AirportFee, Booking, BookingDetail, BookingTax, CheckInDetail, PassengerInfo, PassengerTypeTaxRate, Route, Airline, SeatClass, Aircraft, Airport, AddOnType, Flight, Schedule, Seat, TaxType, TrackLog, SeatRequirement
 
 # ==========================================
 # MANAGE FLIGHT
@@ -62,6 +62,12 @@ class ScheduleSerializer(serializers.ModelSerializer):
         depth = 2  # This will auto-nest related objects 2 levels deep
 
 
+class SeatRequirementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SeatRequirement
+        fields = '__all__'
+
+
 # Update your SeatSerializer in serializers.py
 # Add this to your serializers.py
 
@@ -69,10 +75,13 @@ class SeatSerializer(serializers.ModelSerializer):
     class_name = serializers.ReadOnlyField(source='seat_class.name')
     final_price = serializers.ReadOnlyField()
     final_price_display = serializers.SerializerMethodField()
-    seat_features = serializers.SerializerMethodField()
-    special_requirements = serializers.SerializerMethodField()
-    price_breakdown = serializers.SerializerMethodField()
+    seat_features = serializers.ReadOnlyField()
+    special_requirements = serializers.ReadOnlyField()
+    price_breakdown = serializers.ReadOnlyField()
     seat_code = serializers.ReadOnlyField()
+    
+    # Requirements relation
+    requirements_detail = SeatRequirementSerializer(source='requirements', many=True, read_only=True)
     
     # Additional fields for frontend
     schedule_price = serializers.ReadOnlyField(source='schedule.price')
@@ -83,64 +92,28 @@ class SeatSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['price_adjustment_auto', 'seat_code']
 
-    def get_seat_features(self, obj):
-        return obj.seat_features
-    
-    def get_special_requirements(self, obj):
-        return obj.special_requirements
-    
-    def get_price_breakdown(self, obj):
-        return obj.price_breakdown
-    
     def get_final_price_display(self, obj):
         return f"₱{obj.final_price:,.2f}"
     
     def to_representation(self, instance):
-        """Custom representation to include all calculated fields"""
+        """Custom representation to include dynamic prices from database"""
         data = super().to_representation(instance)
         
-        # Add price adjustments info
-        price_adjustments = instance.get_price_adjustments()
-        data['price_adjustments_info'] = {
-            'is_exit_row': {
-                'price': price_adjustments['is_exit_row'],
-                'description': 'Exit row seat (additional responsibility)'
-            },
-            'is_wheelchair_accessible': {
-                'price': price_adjustments['is_wheelchair_accessible'],
-                'description': 'Wheelchair accessible (free accessibility feature)'
-            },
-            'has_bassinet': {
-                'price': price_adjustments['has_bassinet'],
-                'description': 'Bassinet position (premium service)'
-            },
-            'has_nut_allergy': {
-                'price': price_adjustments['has_nut_allergy'],
-                'description': 'Nut allergy zone (free safety feature)'
-            },
-            'is_unaccompanied_minor': {
-                'price': price_adjustments['is_unaccompanied_minor'],
-                'description': 'Unaccompanied minor (special supervision service)'
-            },
-            'has_extra_legroom': {
-                'price': price_adjustments['has_extra_legroom'],
-                'description': 'Extra legroom (premium comfort)'
-            },
-            'is_bulkhead': {
-                'price': price_adjustments['is_bulkhead'],
-                'description': 'Bulkhead seat (premium comfort)'
-            },
-            'is_window': {
-                'price': price_adjustments['is_window'],
-                'description': 'Window seat (view preference)'
-            },
-            'is_aisle': {
-                'price': price_adjustments['is_aisle'],
-                'description': 'Aisle seat (access preference)'
+        # Add dynamic price adjustments info from SeatRequirement table
+        reqs = SeatRequirement.objects.all()
+        req_info = {}
+        for r in reqs:
+            req_info[r.code] = {
+                'id': r.id,
+                'name': r.name,
+                'price': float(r.price),
+                'icon': r.icon,
+                'description': r.description
             }
-        }
-        
+            
+        data['price_adjustments_info'] = req_info
         return data
+
 
 # ==========================================
 # ASSETS

@@ -326,13 +326,50 @@ class ScheduleAdmin(admin.ModelAdmin):
 
 @admin.register(Seat)
 class SeatAdmin(admin.ModelAdmin):
-    list_display = ('schedule', 'seat_number', 'seat_class', 'is_available', 'booking_link')
-    list_filter = ('is_available', 'seat_class', 'schedule__flight__airline')
+    list_display = (
+        'seat_number', 'schedule', 'seat_class', 'is_available', 
+        'row', 'column', 'is_exit_row', 'is_wheelchair_accessible', 
+        'display_requirements', 'booking_link'
+    )
+    list_filter = (
+        'is_available', 'seat_class', 'is_exit_row', 
+        'is_wheelchair_accessible', 'schedule__flight__airline'
+    )
     search_fields = ('seat_number', 'schedule__flight__flight_number')
     ordering = ('schedule', 'seat_number')
     raw_id_fields = ('schedule', 'seat_class')
-    list_editable = ('is_available',)
+    list_editable = ('is_available', 'is_exit_row', 'is_wheelchair_accessible')
+    filter_horizontal = ('requirements',)
     
+    fieldsets = (
+        ('Basic Info', {
+            'fields': ('schedule', 'seat_class', 'seat_number', 'is_available')
+        }),
+        ('Position', {
+            'fields': ('row', 'column')
+        }),
+        ('Static Features (Booleans)', {
+            'fields': (
+                ('is_window', 'is_aisle'),
+                ('is_exit_row', 'is_bulkhead', 'has_extra_legroom'),
+                ('is_wheelchair_accessible', 'has_bassinet'),
+                ('has_nut_allergy', 'is_unaccompanied_minor'),
+            )
+        }),
+        ('Dynamic Requirements', {
+            'fields': ('requirements',),
+            'description': 'Select multiple special requirements from the database.'
+        }),
+        ('Pricing', {
+            'fields': (('price_adjustment_auto', 'price_adjustment_manual'),)
+        }),
+    )
+    readonly_fields = ('price_adjustment_auto',)
+
+    def display_requirements(self, obj):
+        return ", ".join([r.name for r in obj.requirements.all()])
+    display_requirements.short_description = 'Requirements'
+
     def booking_link(self, obj):
         booking_detail = BookingDetail.objects.filter(seat=obj).first()
         if booking_detail:
@@ -340,6 +377,13 @@ class SeatAdmin(admin.ModelAdmin):
             return format_html('<a href="{}">View Booking</a>', url)
         return '-'
     booking_link.short_description = 'Booking'
+
+
+@admin.register(SeatRequirement)
+class SeatRequirementAdmin(admin.ModelAdmin):
+    list_display = ('name', 'code', 'price', 'icon')
+    list_editable = ('price',)
+    search_fields = ('name', 'code')
 
 
 # ============================================================

@@ -327,16 +327,18 @@ class Schedule(models.Model):
         super().save(*args, **kwargs)
 
 
-# Add this to your existing Seat model or update it
-# Add this to your existing Seat model in models.py
-# In your models.py, replace the entire Seat model with this:
+# ============================================================
+# SEAT REQUIREMENT MODEL (Prices for special seats)
+# ============================================================
+class SeatRequirement(models.Model):
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=50, unique=True) # e.g., 'is_exit_row'
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    icon = models.CharField(max_length=50, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
 
-from django.db import models
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from django.core.exceptions import ValidationError
-from django.utils import timezone
-from decimal import Decimal
+    def __str__(self):
+        return f"{self.name} (₱{self.price})"
 
 
 class Seat(models.Model):
@@ -349,18 +351,21 @@ class Seat(models.Model):
     row = models.PositiveIntegerField(null=True)
     column = models.CharField(max_length=1, null=True)
     
-    # Seat features
+    # Seat features (Booleans for backward compatibility and fast lookup)
     has_extra_legroom = models.BooleanField(default=False)
     is_exit_row = models.BooleanField(default=False)
     is_bulkhead = models.BooleanField(default=False)
     is_window = models.BooleanField(default=False)
     is_aisle = models.BooleanField(default=False)
     
-    # Special requirements with PRICES
+    # Special requirements (Keep booleans for now)
     is_wheelchair_accessible = models.BooleanField(default=False)
     has_bassinet = models.BooleanField(default=False)
     has_nut_allergy = models.BooleanField(default=False)
     is_unaccompanied_minor = models.BooleanField(default=False)
+    
+    # Many-to-Many link for dynamic requirements
+    requirements = models.ManyToManyField(SeatRequirement, blank=True)
     
     # Price adjustments
     price_adjustment_auto = models.DecimalField(
@@ -381,10 +386,6 @@ class Seat(models.Model):
             models.UniqueConstraint(
                 fields=['schedule', 'seat_number'],
                 name='unique_seat_per_schedule'
-            ),
-            models.UniqueConstraint(
-                fields=['schedule', 'row', 'column'],
-                name='unique_position_per_schedule'
             )
         ]
         indexes = [
@@ -394,76 +395,67 @@ class Seat(models.Model):
         ]
 
     def __str__(self):
-        special_features = []
-        if self.is_exit_row:
-            special_features.append("Exit")
-        if self.is_wheelchair_accessible:
-            special_features.append("Wheelchair")
-        if self.has_bassinet:
-            special_features.append("Bassinet")
-        if self.has_nut_allergy:
-            special_features.append("Nut Allergy")
-        if self.is_unaccompanied_minor:
-            special_features.append("Minor")
+        special_features = [req.name for req in self.requirements.all()]
+        
+        # Complement with legacy booleans if not redundant
+        if self.is_exit_row and "Exit" not in "".join(special_features):
+            special_features.append("Exit Row")
         
         features_str = f" ({', '.join(special_features)})" if special_features else ""
-        return f"{self.seat_number} - {self.seat_class.name}{features_str}"
+        return f"{self.seat_number} - {self.seat_class.name if self.seat_class else 'N/A'}{features_str}"
 
-    # PRICE ADJUSTMENT CONSTANTS
+    # LEGACY FALLBACK ADJUSTMENTS
     @classmethod
     def get_price_adjustments(cls):
-        """Return dictionary of price adjustments for special features"""
+        """Return dictionary of fallback price adjustments"""
         return {
-            # Special Requirements with PRICES
-            'is_exit_row': 150.00,           # Exit Row: ₱150 (added responsibility)
-            'is_wheelchair_accessible': 0.00,  # Wheelchair: FREE (accessibility requirement)
-            'has_bassinet': 200.00,          # Bassinet: ₱200 (premium service)
-            'has_nut_allergy': 0.00,         # Nut Allergy: FREE (safety requirement)
-            'is_unaccompanied_minor': 300.00, # Unaccompanied Minor: ₱300 (special service)
-            
-            # Comfort Features
-            'has_extra_legroom': 500.00,     # Extra Legroom: ₱500
-            'is_bulkhead': 400.00,           # Bulkhead: ₱400
-            'is_window': 100.00,             # Window: ₱100
-            'is_aisle': 120.00,              # Aisle: ₱120
+            'is_exit_row': 150.00,
+            'is_wheelchair_accessible': 0.00,
+            'has_bassinet': 200.00,
+            'has_nut_allergy': 0.00,
+            'is_unaccompanied_minor': 300.00,
+            'has_extra_legroom': 500.00,
+            'is_bulkhead': 400.00,
+            'is_window': 100.00,
+            'is_aisle': 120.00,
         }
 
-    @property
-    def seat_code(self):
-        """Return seat code like '1A'"""
-        return f"{self.row}{self.column}"
-
     def calculate_auto_adjustment(self):
-        """Calculate automatic price adjustment based on seat features"""
-        adjustments = self.get_price_adjustments()
+        """Calculate automatic price adjustment based on seat features and dynamic requirements"""
         adjustment = Decimal('0.00')
         
-        # Check each feature and add its price adjustment
-        if self.has_extra_legroom:
-            adjustment += Decimal(str(adjustments['has_extra_legroom']))
-        if self.is_exit_row:
-            adjustment += Decimal(str(adjustments['is_exit_row']))
-        if self.is_wheelchair_accessible:
-            adjustment += Decimal(str(adjustments['is_wheelchair_accessible']))
-        if self.has_bassinet:
-            adjustment += Decimal(str(adjustments['has_bassinet']))
-        if self.has_nut_allergy:
-            adjustment += Decimal(str(adjustments['has_nut_allergy']))
-        if self.is_unaccompanied_minor:
-            adjustment += Decimal(str(adjustments['is_unaccompanied_minor']))
-        if self.is_bulkhead:
-            adjustment += Decimal(str(adjustments['is_bulkhead']))
-        if self.is_window:
-            adjustment += Decimal(str(adjustments['is_window']))
-        if self.is_aisle:
-            adjustment += Decimal(str(adjustments['is_aisle']))
+        # 1. Total from dynamic requirements
+        if self.pk:
+            for req in self.requirements.all():
+                adjustment += req.price
         
+        # 2. Fallback for booleans (only if not already mapped via code)
+        # This helps during migration from booleans to ManyToMany requirements
+        fallbacks = self.get_price_adjustments()
+        codes_present = set(self.requirements.values_list('code', flat=True)) if self.pk else set()
+        
+        boolean_fields = [
+            ('is_exit_row', self.is_exit_row),
+            ('is_wheelchair_accessible', self.is_wheelchair_accessible),
+            ('has_bassinet', self.has_bassinet),
+            ('has_nut_allergy', self.has_nut_allergy),
+            ('is_unaccompanied_minor', self.is_unaccompanied_minor),
+            ('has_extra_legroom', self.has_extra_legroom),
+            ('is_bulkhead', self.is_bulkhead),
+            ('is_window', self.is_window),
+            ('is_aisle', self.is_aisle),
+        ]
+        
+        for field, value in boolean_fields:
+            if value and field not in codes_present:
+                adjustment += Decimal(str(fallbacks.get(field, 0.00)))
+                
         return adjustment
 
     @property
     def total_price_adjustment(self):
         """Total of automatic + manual adjustments"""
-        return self.price_adjustment_auto + Decimal(str(self.price_adjustment_manual))
+        return self.calculate_auto_adjustment() + Decimal(str(self.price_adjustment_manual))
 
     @property
     def final_price(self):
@@ -471,183 +463,111 @@ class Seat(models.Model):
         base_price = self.schedule.price if self.schedule else Decimal('0.00')
         multiplier = self.seat_class.price_multiplier if self.seat_class else Decimal('1.00')
         
-        # Base price calculation
-        calculated_price = base_price * multiplier
-        
-        # Add all adjustments
-        return calculated_price + self.total_price_adjustment
+        return (base_price * multiplier) + self.total_price_adjustment
 
     @property
     def price_breakdown(self):
         """Get detailed price breakdown"""
-        base_price = self.schedule.price if self.schedule else Decimal('0.00')
-        multiplier = self.seat_class.price_multiplier if self.seat_class else Decimal('1.00')
+        base_price = float(self.schedule.price) if self.schedule else 0.0
+        multiplier = float(self.seat_class.price_multiplier) if self.seat_class else 1.0
         calculated_base = base_price * multiplier
         
-        auto_adjustment = self.calculate_auto_adjustment()
-        total_adjustment = auto_adjustment + self.price_adjustment_manual
+        auto_adjustment = float(self.calculate_auto_adjustment())
         
         return {
-            'base_price': float(base_price),
-            'seat_class_multiplier': float(multiplier),
-            'calculated_base': float(calculated_base),
+            'base_price': base_price,
+            'seat_class_multiplier': multiplier,
+            'calculated_base': calculated_base,
             'auto_adjustment': {
-                'amount': float(auto_adjustment),
+                'amount': auto_adjustment,
                 'details': self.get_adjustment_details()
             },
             'manual_adjustment': float(self.price_adjustment_manual),
-            'total_adjustment': float(total_adjustment),
+            'total_adjustment': auto_adjustment + float(self.price_adjustment_manual),
             'final_price': float(self.final_price)
         }
 
     def get_adjustment_details(self):
         """Get details of what features contribute to price adjustment"""
-        adjustments = self.get_price_adjustments()
         details = []
         
-        if self.has_extra_legroom:
-            details.append({
-                'feature': 'Extra Legroom',
-                'adjustment': float(adjustments['has_extra_legroom']),
-                'type': 'premium'
-            })
-        if self.is_exit_row:
-            details.append({
-                'feature': 'Exit Row Seat',
-                'adjustment': float(adjustments['is_exit_row']),
-                'type': 'responsibility'
-            })
-        if self.is_unaccompanied_minor:
-            details.append({
-                'feature': 'Unaccompanied Minor Service',
-                'adjustment': float(adjustments['is_unaccompanied_minor']),
-                'type': 'service'
-            })
-        if self.is_bulkhead:
-            details.append({
-                'feature': 'Bulkhead Seat',
-                'adjustment': float(adjustments['is_bulkhead']),
-                'type': 'premium'
-            })
-        if self.is_window:
-            details.append({
-                'feature': 'Window Seat',
-                'adjustment': float(adjustments['is_window']),
-                'type': 'preference'
-            })
-        if self.is_aisle:
-            details.append({
-                'feature': 'Aisle Seat',
-                'adjustment': float(adjustments['is_aisle']),
-                'type': 'preference'
-            })
-        if self.has_bassinet:
-            details.append({
-                'feature': 'Bassinet Position',
-                'adjustment': float(adjustments['has_bassinet']),
-                'type': 'service'
-            })
+        # 1. From requirements
+        if self.pk:
+            for req in self.requirements.all():
+                details.append({
+                    'feature': req.name,
+                    'adjustment': float(req.price),
+                    'type': 'requirement'
+                })
+        
+        # 2. From booleans (fallback/legacy)
+        fallbacks = self.get_price_adjustments()
+        codes_present = set(self.requirements.values_list('code', flat=True)) if self.pk else set()
+        
+        boolean_fields = [
+            ('is_exit_row', 'Exit Row Seat'),
+            ('is_wheelchair_accessible', 'Wheelchair Accessible'),
+            ('has_bassinet', 'Bassinet Position'),
+            ('has_nut_allergy', 'Nut Allergy Zone'),
+            ('is_unaccompanied_minor', 'Unaccompanied Minor'),
+            ('has_extra_legroom', 'Extra Legroom'),
+            ('is_bulkhead', 'Bulkhead Seat'),
+            ('is_window', 'Window Seat'),
+            ('is_aisle', 'Aisle Seat'),
+        ]
+        
+        for field, name in boolean_fields:
+            if getattr(self, field) and field not in codes_present:
+                details.append({
+                    'feature': f"{name} (Legacy)",
+                    'adjustment': float(fallbacks.get(field, 0.00)),
+                    'type': 'legacy'
+                })
         
         return details
 
     @property
     def seat_features(self):
         """Return list of seat features with pricing info"""
-        adjustments = self.get_price_adjustments()
         features = []
         
-        if self.has_extra_legroom:
-            features.append({
-                'name': "Extra Legroom",
-                'price': float(adjustments['has_extra_legroom']),
-                'type': 'premium',
-                'icon': 'ph-ruler',
-                'description': 'Additional legroom for comfort'
-            })
-        if self.is_exit_row:
-            features.append({
-                'name': "Exit Row Seat",
-                'price': float(adjustments['is_exit_row']),
-                'type': 'responsibility',
-                'icon': 'ph-exit',
-                'description': 'Emergency exit row - passenger must be capable'
-            })
-        if self.is_wheelchair_accessible:
-            features.append({
-                'name': "Wheelchair Accessible",
-                'price': float(adjustments['is_wheelchair_accessible']),
-                'type': 'service',
-                'icon': 'ph-wheelchair',
-                'description': 'Priority for passengers with reduced mobility'
-            })
-        if self.has_bassinet:
-            features.append({
-                'name': "Bassinet Position",
-                'price': float(adjustments['has_bassinet']),
-                'type': 'service',
-                'icon': 'ph-baby',
-                'description': 'For passengers with infants'
-            })
-        if self.has_nut_allergy:
-            features.append({
-                'name': "Nut Allergy Zone",
-                'price': float(adjustments['has_nut_allergy']),
-                'type': 'safety',
-                'icon': 'ph-nut',
-                'description': 'No nuts to be served in this area'
-            })
-        if self.is_unaccompanied_minor:
-            features.append({
-                'name': "Unaccompanied Minor",
-                'price': float(adjustments['is_unaccompanied_minor']),
-                'type': 'service',
-                'icon': 'ph-user-focus',
-                'description': 'Special supervision required'
-            })
-        if self.is_bulkhead:
-            features.append({
-                'name': "Bulkhead",
-                'price': float(adjustments['is_bulkhead']),
-                'type': 'premium',
-                'icon': 'ph-wall',
-                'description': 'Front row with extra legroom'
-            })
-        if self.is_window:
-            features.append({
-                'name': "Window",
-                'price': float(adjustments['is_window']),
-                'type': 'preference',
-                'icon': 'ph-airplane-takeoff',
-                'description': 'Window view seat'
-            })
-        if self.is_aisle:
-            features.append({
-                'name': "Aisle",
-                'price': float(adjustments['is_aisle']),
-                'type': 'preference',
-                'icon': 'ph-walk',
-                'description': 'Easy access aisle seat'
-            })
+        # 1. Dynamic requirements
+        if self.pk:
+            for req in self.requirements.all():
+                features.append({
+                    'name': req.name,
+                    'price': float(req.price),
+                    'code': req.code,
+                    'icon': req.icon or 'ph-star',
+                    'description': req.description
+                })
         
+        # 2. Legacy booleans if not redundant
+        codes_present = set(self.requirements.values_list('code', flat=True)) if self.pk else set()
+        
+        legacy_features = [
+            ('is_exit_row', 'Exit Row', 'ph-exit'),
+            ('is_wheelchair_accessible', 'Wheelchair', 'ph-wheelchair'),
+            ('has_bassinet', 'Bassinet', 'ph-baby'),
+            ('has_nut_allergy', 'Nut Allergy', 'ph-nut'),
+            ('is_unaccompanied_minor', 'Minor', 'ph-user'),
+        ]
+        
+        for field, name, icon in legacy_features:
+            if getattr(self, field) and field not in codes_present:
+                features.append({
+                    'name': name,
+                    'is_legacy': True,
+                    'icon': icon
+                })
+                
         return features
 
     @property
     def special_requirements(self):
-        """Get special passenger requirements"""
-        return {
-            'is_exit_row': self.is_exit_row,
-            'is_wheelchair_accessible': self.is_wheelchair_accessible,
-            'has_bassinet': self.has_bassinet,
-            'has_nut_allergy': self.has_nut_allergy,
-            'is_unaccompanied_minor': self.is_unaccompanied_minor,
-            'price_impact': {
-                'is_exit_row': float(self.get_price_adjustments()['is_exit_row']),
-                'is_wheelchair_accessible': float(self.get_price_adjustments()['is_wheelchair_accessible']),
-                'has_bassinet': float(self.get_price_adjustments()['has_bassinet']),
-                'has_nut_allergy': float(self.get_price_adjustments()['has_nut_allergy']),
-                'is_unaccompanied_minor': float(self.get_price_adjustments()['is_unaccompanied_minor']),
-            }
-        }
+        """Simplified list of special requirements for frontend"""
+        return self.seat_features
+
 
     def save(self, *args, **kwargs):
         """Override save to auto-calculate price adjustments"""

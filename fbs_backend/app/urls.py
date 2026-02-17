@@ -19,12 +19,16 @@ from .views import (
     FlightViewSet,
     ScheduleViewSet,
     SeatViewSet,
+    SeatRequirementViewSet,
     AirportFeeViewSet,
     TaxTypeViewSet
 )
 
 # Create a router and register our viewsets
 router = DefaultRouter()
+
+# ... (rest of the router registrations)
+router.register(r'seat-requirements', SeatRequirementViewSet, basename='seatrequirement')
 
 # ==========================================
 # DASHBOARD

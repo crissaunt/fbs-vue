@@ -75,6 +75,12 @@ const adminRoutes = [
         component: () => import('@/views/admin/assets/aircraft.vue'),
         meta: { title: 'Aircraft' }
       },
+      {
+        path: 'assets/seat-requirements',
+        name: 'AdminSeatRequirements',
+        component: () => import('@/views/admin/assets/seat_requirements.vue'),
+        meta: { title: 'Seat Requirements' }
+      },
 
       // --- Booking ---
       {
