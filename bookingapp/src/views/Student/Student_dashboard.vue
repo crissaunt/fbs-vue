@@ -221,7 +221,28 @@
                   </div>
                 </div>
                 
+                
               </div>
+
+              <!-- Practice Booking Button -->
+              <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-5 text-white shadow-lg hover:shadow-xl transition-all">
+                <div class="flex items-center gap-3 mb-3">
+                  <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-2xl">
+                    🎯
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-bold">Practice Booking</h3>
+                    <p class="text-xs opacity-90">Try the booking system</p>
+                  </div>
+                </div>
+                <button 
+                  @click="startPracticeBooking"
+                  class="w-full bg-white text-blue-600 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors shadow-sm"
+                >
+                  Start Practice Session
+                </button>
+              </div>
+
               <div class="bg-white border border-gray-300 rounded-lg p-4 text-gray-800 shadow-lg">
                 <h3 class="text-sm font-bold mb-3">My Section</h3>
 
@@ -291,6 +312,12 @@
                         <p class="text-xs text-gray-500 mb-2">{{ activity.section_code }} - {{ activity.section_name }}</p>
                       </div>
                       <span 
+                        v-if="activity.completed"
+                        class="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-full uppercase"
+                      >
+                        ✓ Completed
+                      </span>
+                      <span 
                         :class="[
                           'px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase',
                           activity.is_active 
@@ -346,9 +373,15 @@
                   </span>
                   <button 
                     @click.stop="viewActivityDetails(activity.id)"
-                    class="px-4 py-2 bg-pink-500 text-white text-xs font-semibold rounded-lg hover:bg-pink-600 transition-colors"
+                    :disabled="activity.completed"
+                    :class="[
+                      'px-4 py-2 text-white text-xs font-semibold rounded-lg transition-colors',
+                      activity.completed 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : 'bg-pink-500 hover:bg-pink-600'
+                    ]"
                   >
-                    View Details
+                    {{ activity.completed ? 'Finished' : 'View Details' }}
                   </button>
                 </div>
               </div>
@@ -376,6 +409,7 @@
 
 <script>
 import StudentApi from '@/services/Student/Student_dashboard_api';
+import { useBookingStore } from '@/stores/booking';
 
 export default {
   name: 'StudentDashboard',
@@ -546,6 +580,24 @@ export default {
       console.log('🔗 Navigating to activity details:', activityId);
       this.$router.push(`/student/activity/${activityId}`);
     },
+
+    startPracticeBooking() {
+      console.log('🎯 Starting practice booking session');
+      
+      // Use the booking store
+      const bookingStore = useBookingStore();
+      
+      // Enable practice mode
+      bookingStore.setPracticeMode();
+      
+      console.log('✅ Practice mode enabled:', {
+        isPractice: bookingStore.isPractice,
+        hasActivityCodeValidation: bookingStore.hasActivityCodeValidation
+      });
+      
+      // Redirect to home page to start booking
+      this.$router.push('/');
+    },
     
     toggleSidebar() {
       this.sidebarOpen = !this.sidebarOpen;
@@ -555,9 +607,7 @@ export default {
     },
     handleLogout() {
       console.log('👋 User manually logging out');
-      localStorage.removeItem('token');
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('student_data');
+      localStorage.clear();
       this.$router.push('/login');
     },
     goToHome() {

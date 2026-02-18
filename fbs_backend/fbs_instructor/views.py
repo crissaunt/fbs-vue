@@ -27,7 +27,7 @@ import traceback
 # ============================================================================
 # CROSS-APP IMPORTS (from app.models)
 # ============================================================================
-from app.models import AddOn, Airline, Airport, Students, UserProfile
+from app.models import AddOn, Airline, Airport, Students, UserProfile, Booking
 
 # ============================================================================
 # LOCAL APP IMPORTS (from fbs_instructor)
@@ -686,6 +686,86 @@ def Activity_Student_Bind(activity):
     return students_bound
 
 
+@api_view(['GET'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_activity_submissions(request, activity_id):
+    """
+    Get all student submissions for a specific activity.
+    Shows the status of each student enrolled in the section.
+    """
+    try:
+        # 1. Get activity and verify instructor ownership
+        activity = get_object_or_404(
+            Activity.objects.select_related('section'),
+            id=activity_id,
+            section__instructor=request.user
+        )
+        
+        # 2. Get all students enrolled in this section
+        enrollments = SectionEnrollment.objects.filter(
+            section=activity.section
+        ).select_related('student', 'student__user')
+        
+        submissions_data = []
+        
+        for enrollment in enrollments:
+            student = enrollment.student
+            
+            # Find the binding for this activity
+            binding = ActivityStudentBinding.objects.filter(
+                activity=activity,
+                student=student
+            ).first()
+            
+            # Find any confirmed booking for this activity by this student
+            # We look for ANY booking linked to this activity for this user
+            booking = Booking.objects.filter(
+                user=student.user,
+                activity=activity
+            ).order_by('-created_at').first()
+            
+            submission = {
+                "student_id": student.id,
+                "student_number": student.student_number,
+                "first_name": student.first_name,
+                "last_name": student.last_name,
+                "email": student.email,
+                "status": binding.status if binding else "not_assigned",
+                "binding_id": binding.id if binding else None,
+                "grade": float(binding.grade) if binding and binding.grade else None,
+                "submitted_at": binding.submitted_at.isoformat() if binding and binding.submitted_at else None,
+                "booking": None
+            }
+            
+            if booking:
+                submission["booking"] = {
+                    "id": booking.id,
+                    "status": booking.status,
+                    "is_practice": booking.is_practice,
+                    "total_amount": float(booking.total_amount),
+                    "created_at": booking.created_at.isoformat()
+                }
+                
+                # If there's a confirmed booking but the binding is still 'assigned' or 'in_progress',
+                # we should probably treat it as 'submitted' for the instructor's view
+                if submission["status"] in ["assigned", "in_progress"] and booking.status == "Confirmed":
+                    submission["status"] = "submitted"
+            
+            submissions_data.append(submission)
+            
+        return Response({
+            "activity_id": activity.id,
+            "activity_title": activity.title,
+            "submissions": submissions_data,
+            "total_students": len(submissions_data)
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 # ==========================================
 # LOGOUT VIEW
 # ==========================================
@@ -947,7 +1027,15 @@ def student_dashboard(request):
             'is_active': activity.is_code_active,
             'section_id': section.id,
             'section_name': section.section_name,
-            'section_code': section.section_code
+            'section_code': section.section_code,
+            
+            # ✅ NEW: Add completion status based on bookings
+            'completed': Booking.objects.filter(
+                user=user,
+                activity=activity,
+                status='Confirmed',
+                is_practice=False
+            ).exists()
         })
     
     section_data = {
@@ -1255,7 +1343,15 @@ def student_activity_details(request, activity_id):
             'is_active': activity.is_code_active,
             
             # 🔑 NEW: Activity code for verification
-            'activity_code': activity.activity_code or ''
+            'activity_code': activity.activity_code or '',
+            
+            # ✅ NEW: Add completion status based on bookings
+            'completed': Booking.objects.filter(
+                user=user,
+                activity=activity,
+                status='Confirmed',
+                is_practice=False
+            ).exists()
         }
         
         response_data = {

@@ -1,20 +1,18 @@
 // paymentService.js
 import api from './api.js';
-import axios from 'axios';
+import axios from 'axios'; // Only used for direct PayMongo API calls (external)
 
 const PAYMONGO_PUBLIC_KEY = 'pk_test_jpMbi5RUd8YQkvdFduig63Ga'; // Your PayMongo public key
 
 export const paymentService = {
-  
+
   /**
    * Method 1: Create a PayMongo Checkout Session (Hosted Payment Page)
    * This allows users to choose from multiple payment methods
    */
   async createCheckoutSession(bookingData) {
     try {
-      console.log('Creating checkout session for booking:', bookingData);
-      
-      const response = await api.post('create-checkout-session/', {
+      const response = await api.post('flightapp/create-checkout-session/', {
         amount: bookingData.amount,
         booking_id: bookingData.booking_id,
         booking_reference: bookingData.booking_reference,
@@ -31,9 +29,9 @@ export const paymentService = {
       } else {
         throw new Error(response.data.error || 'Failed to create checkout session');
       }
-      
+
     } catch (error) {
-      console.error('Checkout session creation error:', error);
+      // Error is reported by global interceptor toast
       return {
         success: false,
         error: error.response?.data?.error || error.message || 'Failed to create checkout session'
@@ -47,10 +45,8 @@ export const paymentService = {
    */
   async processGcashPayment(bookingData, billingInfo) {
     try {
-      console.log('Processing GCash payment for booking:', bookingData);
-      
-      // 1. Create Payment Intent via Django Backend
-      const intentResponse = await api.post('create-payment-intent/', {
+      // 1. Create Payment Intent via Django Backend (uses global interceptor)
+      const intentResponse = await api.post('flightapp/create-payment-intent/', {
         amount: bookingData.amount,
         booking_id: bookingData.booking_id,
         description: `Flight Booking ${bookingData.booking_id}`
@@ -62,7 +58,7 @@ export const paymentService = {
 
       const { client_key, intent_id } = intentResponse.data;
 
-      // 2. Create Payment Method (Directly to PayMongo)
+      // 2. Create Payment Method (Directly to PayMongo - external API, uses raw axios)
       const pmResponse = await axios.post('https://api.paymongo.com/v1/payment_methods', {
         data: {
           attributes: {
@@ -75,7 +71,7 @@ export const paymentService = {
           }
         }
       }, {
-        headers: { 
+        headers: {
           'Authorization': `Basic ${btoa(PAYMONGO_PUBLIC_KEY + ':')}`,
           'Content-Type': 'application/json'
         }
@@ -83,9 +79,9 @@ export const paymentService = {
 
       const paymentMethodId = pmResponse.data.data.id;
 
-      // 3. Attach to Intent
+      // 3. Attach to Intent (Directly to PayMongo - external API, uses raw axios)
       const attachResponse = await axios.post(
-        `https://api.paymongo.com/v1/payment_intents/${intent_id}/attach`, 
+        `https://api.paymongo.com/v1/payment_intents/${intent_id}/attach`,
         {
           data: {
             attributes: {
@@ -94,9 +90,9 @@ export const paymentService = {
               return_url: `${window.location.origin}/payment-callback`
             }
           }
-        }, 
+        },
         {
-          headers: { 
+          headers: {
             'Authorization': `Basic ${btoa(PAYMONGO_PUBLIC_KEY + ':')}`,
             'Content-Type': 'application/json'
           }
@@ -109,16 +105,13 @@ export const paymentService = {
         next_action: attachResponse.data.data.attributes.next_action,
         message: 'GCash payment initiated successfully'
       };
-      
+
     } catch (error) {
-      console.error('GCash payment processing error:', error);
-      
       let errorMessage = 'GCash payment failed';
       if (error.response) {
-        console.error('PayMongo API error:', error.response.data);
         errorMessage = error.response.data?.errors?.[0]?.detail || error.response.data?.error || errorMessage;
       }
-      
+
       return {
         success: false,
         error: errorMessage
@@ -131,7 +124,7 @@ export const paymentService = {
    */
   async verifyPayment(intentId) {
     try {
-      const response = await api.post('verify-payment/', {
+      const response = await api.post('flightapp/verify-payment/', {
         intent_id: intentId
       });
 
@@ -140,9 +133,8 @@ export const paymentService = {
         status: response.data.status,
         data: response.data.data
       };
-      
+
     } catch (error) {
-      console.error('Payment verification error:', error);
       return {
         success: false,
         error: error.response?.data?.error || error.message
@@ -155,7 +147,7 @@ export const paymentService = {
    */
   async createPaymentSource(amount, paymentType = 'gcash', bookingId = null) {
     try {
-      const response = await api.post('create-payment-source/', {
+      const response = await api.post('flightapp/create-payment-source/', {
         amount: amount,
         type: paymentType,
         booking_id: bookingId
@@ -171,9 +163,8 @@ export const paymentService = {
       } else {
         throw new Error(response.data.error);
       }
-      
+
     } catch (error) {
-      console.error('Payment source creation error:', error);
       return {
         success: false,
         error: error.response?.data?.error || error.message

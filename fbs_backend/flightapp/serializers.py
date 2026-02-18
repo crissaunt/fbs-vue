@@ -628,7 +628,10 @@ class CreateBookingSerializer(serializers.Serializer):
     addons = AddonDataSerializer(required=False)
     return_addons = ReturnAddonDataSerializer(required=False, allow_null=True)  
     passengerCount = serializers.DictField(required=False)
-    total_amount = serializers.DecimalField(max_digits=30, decimal_places=15, required=True)  # Make this REQUIRED
+    total_amount = serializers.DecimalField(max_digits=30, decimal_places=15, required=False)  # Changed to False
+    activity_id = serializers.IntegerField(required=False, allow_null=True)
+    activity_code = serializers.CharField(max_length=8, required=False, allow_null=True, allow_blank=True)
+    is_practice = serializers.BooleanField(required=False, default=False)
     
     def validate(self, data):
         """Custom validation for booking data"""
@@ -646,11 +649,6 @@ class CreateBookingSerializer(serializers.Serializer):
         # For round trips, both flights should be present
         if data.get('trip_type') == 'round_trip' and not data.get('selectedReturn'):
             raise serializers.ValidationError("Return flight is required for round trips")
-        
-        # Validate total_amount is present and positive
-        total_amount = data.get('total_amount')
-        if not total_amount or total_amount <= Decimal('0.00'):
-            raise serializers.ValidationError("Total amount must be a positive number")
         
         return data
 # ============================================================

@@ -156,7 +156,15 @@
       <aside class="sidebar">
         <div class="summary-card sticky">
           <div class="summary-header">Payment Summary</div>
-          <div class="summary-body">
+          <div class="summary-body" v-if="isCalculatingPrice">
+            <div class="price-loading">
+              <div class="loading-dots">
+                <span></span><span></span><span></span>
+              </div>
+              <p>Verifying price with server...</p>
+            </div>
+          </div>
+          <div class="summary-body" v-else>
             <!-- Flight Base Fares -->
             <div class="flight-base-summary" v-if="bookingStore.selectedOutbound">
               <div class="price-line">
@@ -220,6 +228,11 @@ const baggageOptions = ref([]);
 const mealOptions = ref([]);
 const assistanceOptions = ref([]);
 
+// Backend Price Data
+const backendTotal = ref(null);
+const backendBreakdown = ref(null);
+const isCalculatingPrice = ref(false);
+
 onMounted(async () => {
   try {
 
@@ -278,9 +291,21 @@ onMounted(async () => {
       addonService.getAssistanceServices(airlineId)
     ]);
 
-    if (results[0].status === 'fulfilled') baggageOptions.value = results[0].value.data || [];
-    if (results[1].status === 'fulfilled') mealOptions.value = results[1].value.data || [];
-    if (results[2].status === 'fulfilled') assistanceOptions.value = results[2].value.data || [];
+    if (results[0].status === 'fulfilled') {
+      const data = results[0].value.data;
+      baggageOptions.value = Array.isArray(data) ? data : (data?.results || []);
+    }
+    if (results[1].status === 'fulfilled') {
+      const data = results[1].value.data;
+      mealOptions.value = Array.isArray(data) ? data : (data?.results || []);
+    }
+    if (results[2].status === 'fulfilled') {
+      const data = results[2].value.data;
+      assistanceOptions.value = Array.isArray(data) ? data : (data?.results || []);
+    }
+
+    // Fetch backend-calculated price
+    await fetchBackendPrice();
 
   } catch (error) {
     console.error("Review page data fetch error:", error);
@@ -288,6 +313,25 @@ onMounted(async () => {
     isLoading.value = false;
   }
 });
+
+const fetchBackendPrice = async () => {
+  isCalculatingPrice.value = true;
+  try {
+    console.log('🔍 Fetching authoritative backend price...');
+    const result = await bookingService.calculatePrice(bookingStore);
+    if (result.success) {
+      backendTotal.value = result.totalAmount;
+      backendBreakdown.value = result.breakdown;
+      console.log('✅ Backend price confirmed:', backendTotal.value);
+    } else {
+      console.warn('⚠️ Could not get backend price, falling back to store calculation:', result.error);
+    }
+  } catch (error) {
+    console.error('❌ Error in fetchBackendPrice:', error);
+  } finally {
+    isCalculatingPrice.value = false;
+  }
+};
 
 // Helper functions
 const getItemById = (list, id) => {
@@ -329,7 +373,7 @@ const getMealLabel = (passengerKey, segment = 'depart') => {
 
 const getAssistanceLabel = (passengerKey, segment = 'depart') => {
   const assistanceId = bookingStore.addons?.wheelchair?.[segment]?.[passengerKey];
-  if (!assistanceId) return 'No assistance';
+  if (!assistanceId || !Array.isArray(assistanceOptions.value)) return 'No assistance';
   
   const option = assistanceOptions.value.find(a => a.id == assistanceId);
   return option ? option.name : 'Special Assistance';
@@ -451,6 +495,9 @@ const totalAssistancePrice = computed(() => {
 });
 
 const grandTotal = computed(() => {
+  // Prioritize backend-calculated total if available
+  if (backendTotal.value !== null) return backendTotal.value;
+  
   return bookingStore.grandTotal || (departBaseFare.value + returnBaseFare.value + totalSeatsPrice.value + totalBaggagePrice.value + totalMealsPrice.value + totalAssistancePrice.value);
 });
 
@@ -1042,5 +1089,44 @@ const handleBookingError = (error) => {
     margin-left: 0;
     align-self: flex-start;
   }
+}
+
+/* Price Loading Styles */
+.price-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 10px;
+  text-align: center;
+}
+
+.price-loading p {
+  margin-top: 15px;
+  color: #666;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.loading-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.loading-dots span {
+  width: 8px;
+  height: 8px;
+  background-color: #003870;
+  border-radius: 50%;
+  display: inline-block;
+  animation: dot-pulse 1.4s infinite ease-in-out both;
+}
+
+.loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+.loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes dot-pulse {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1.0); }
 }
 </style>

@@ -5,9 +5,13 @@ import '@vuepic/vue-datepicker/dist/main.css';
 import airportService from '@/services/booking/airportService';
 import { useBookingStore } from '@/stores/booking';
 import { useRouter } from 'vue-router';
+import ActivityCodeEntry from '@/components/booking/ActivityCodeEntry.vue';
 
 const router = useRouter()
 const bookingStore = useBookingStore();
+
+// Activity Code Modal State
+const showActivityCodeModal = ref(false);
 
 // --- 1. TRIP TYPE STATE ---
 const tripType = ref('round-trip');
@@ -122,6 +126,12 @@ const updateCount = (type, delta) => {
 
 // --- 5. SEARCH EXECUTION ---
 const handleSearch = () => {
+  // Check if activity code validation is complete
+  if (!bookingStore.hasActivityCodeValidation) {
+    showActivityCodeModal.value = true;
+    return;
+  }
+
   // Check if fields are empty
   if (!selectedFrom.value || !selectedTo.value) {
     alert("Please select both Origin and Destination.");
@@ -159,9 +169,23 @@ const handleSearch = () => {
     }
   })
 };
+
+// Handle activity code modal continue
+const handleActivityCodeContinue = () => {
+  console.log('✅ Activity code validation complete, proceeding with search');
+  // After modal closes, automatically trigger search
+  handleSearch();
+};
 </script>
 
 <template>
+  <!-- Activity Code Entry Modal -->
+  <ActivityCodeEntry 
+    :isOpen="showActivityCodeModal"
+    @close="showActivityCodeModal = false"
+    @continue="handleActivityCodeContinue"
+  />
+
   <div class="mx-auto my-5 rounded bg-white p-6 text-gray-800 shadow-[0_10px_30px_rgba(0,0,0,0.15)]">
 
     <!-- Trip Type Tabs -->

@@ -27,6 +27,7 @@ urlpatterns = [
     path('verify-payment/', views.verify_payment, name='verify_payment'),
     path('attach-payment-method/', views.attach_payment_method, name='attach_payment_method'),
     # Booking endpoints
+    path('validate-activity-code/', views.validate_activity_code, name='validate_activity_code'),
     path('create-booking/', views.create_booking, name='create_booking'),
     path('update-booking/<int:booking_id>/', views.update_booking, name='update_booking'),
     path('process-payment/', views.process_payment, name='process_payment'),
@@ -46,6 +47,8 @@ urlpatterns = [
     path('download-boarding-pass/<int:booking_detail_id>/', views.download_boarding_pass, name='download_boarding_pass'),
     path('download-itinerary/<int:booking_id>/', views.download_itinerary, name='download_itinerary'),
 
+    # Pricing
+    path('calculate-price/', views.calculate_booking_price, name='calculate_booking_price'),
 
 ]
 

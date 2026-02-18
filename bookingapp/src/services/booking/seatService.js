@@ -9,10 +9,10 @@ export const seatService = {
   async getSeatsBySchedule(scheduleId) {
     try {
       console.log(`🔍 Fetching seats for schedule ${scheduleId}...`);
-      
+
       // Try the new endpoint first (recommended)
-      const response = await api.get(`api/schedules/${scheduleId}/seats-with-info/`);
-      
+      const response = await api.get(`flightapp/api/schedules/${scheduleId}/seats-with-info/`);
+
       if (response.data.success) {
         console.log('✅ Seat data loaded with new endpoint:', {
           scheduleId: response.data.schedule_id,
@@ -45,18 +45,18 @@ export const seatService = {
   async getSeatsByScheduleOld(scheduleId) {
     try {
       console.log(`🔄 Trying old endpoint for schedule ${scheduleId}...`);
-      const response = await api.get('api/seats/', {
+      const response = await api.get('flightapp/api/seats/', {
         params: { schedule: scheduleId }
       });
-      
+
       console.log('Old endpoint response:', response.data);
-      
+
       // Check response structure
       let seatsData = [];
       let schedulePrice = 0;
       let totalSeats = 0;
       let availableSeats = 0;
-      
+
       if (response.data && response.data.seats) {
         // New structure from updated SeatViewSet
         seatsData = response.data.seats;
@@ -68,10 +68,10 @@ export const seatService = {
         seatsData = response.data;
         totalSeats = seatsData.length;
         availableSeats = seatsData.filter(seat => seat.is_available).length;
-        
+
         // Try to get schedule price separately
         try {
-          const scheduleResponse = await api.get(`api/schedules/${scheduleId}/`);
+          const scheduleResponse = await api.get(`flightapp/api/schedules/${scheduleId}/`);
           schedulePrice = scheduleResponse.data.price || 0;
         } catch (e) {
           console.warn('Could not get schedule price:', e.message);
@@ -80,13 +80,13 @@ export const seatService = {
       } else {
         throw new Error('Invalid response format from seat endpoint');
       }
-      
+
       console.log('✅ Seat data loaded with old endpoint:', {
         seatsCount: seatsData.length,
         schedulePrice: schedulePrice,
         hasFinalPrice: seatsData[0] && 'final_price' in seatsData[0]
       });
-      
+
       return {
         success: true,
         seats: seatsData,
@@ -96,7 +96,7 @@ export const seatService = {
       };
     } catch (error) {
       console.error(`❌ Error with old endpoint for schedule ${scheduleId}:`, error);
-      
+
       // Create mock data as last resort
       console.log('⚠️ Creating mock seats for development');
       return this.createMockSeats(scheduleId);
@@ -114,7 +114,7 @@ export const seatService = {
       { id: 2, name: 'Comfort', price_multiplier: 1.5 },
       { id: 3, name: 'Economy', price_multiplier: 1.0 }
     ];
-    
+
     let seatId = 1;
     for (let row = 1; row <= 37; row++) {
       let seatClass;
@@ -125,15 +125,15 @@ export const seatService = {
       } else {
         seatClass = seatClasses[2]; // Economy
       }
-      
+
       const columns = ['A', 'B', 'C', 'D', 'E', 'F'];
-      
+
       for (const col of columns) {
         const seatCode = `${row}${col}`;
         const multiplier = seatClass.price_multiplier;
         const adjustment = row <= 9 ? 100 : 0;
         const finalPrice = (basePrice * multiplier) + adjustment;
-        
+
         mockSeats.push({
           id: seatId++,
           seat_code: seatCode,
@@ -153,9 +153,9 @@ export const seatService = {
         });
       }
     }
-    
+
     console.log(`Created ${mockSeats.length} mock seats`);
-    
+
     return {
       success: true,
       seats: mockSeats,
@@ -172,48 +172,48 @@ export const seatService = {
   async debugSeatPrices(scheduleId) {
     try {
       console.log('🔍 DEBUG: Checking seat prices...');
-      
+
       // First get schedule
-      const scheduleResponse = await api.get(`api/schedules/${scheduleId}/`);
+      const scheduleResponse = await api.get(`flightapp/api/schedules/${scheduleId}/`);
       const schedule = scheduleResponse.data;
-      
+
       console.log('Schedule info:', {
         id: schedule.id,
         price: schedule.price,
         flight_number: schedule.flight?.flight_number
       });
-      
+
       // Then get seats
-      const seatsResponse = await api.get('api/seats/', {
+      const seatsResponse = await api.get('flightapp/api/seats/', {
         params: { schedule: scheduleId }
       });
-      
+
       console.log('Seats response:', {
         count: Array.isArray(seatsResponse.data) ? seatsResponse.data.length : 'unknown',
         structure: Array.isArray(seatsResponse.data) ? 'array' : typeof seatsResponse.data
       });
-      
+
       if (Array.isArray(seatsResponse.data) && seatsResponse.data.length > 0) {
         const sampleSeat = seatsResponse.data[0];
         console.log('Sample Seat:', sampleSeat);
-        
+
         // Calculate expected price
         const basePrice = schedule.price || 0;
         const multiplier = sampleSeat.seat_class?.price_multiplier || 1;
         const adjustment = sampleSeat.price_adjustment || 0;
         const expectedPrice = (basePrice * multiplier) + adjustment;
-        
+
         console.log('Price Calculation:');
         console.log(`  Base Price: ${basePrice}`);
         console.log(`  Multiplier: ${multiplier}`);
         console.log(`  Adjustment: ${adjustment}`);
         console.log(`  Expected: ${expectedPrice}`);
         console.log(`  Actual (final_price): ${sampleSeat.final_price}`);
-        
+
         // Check if final_price exists
         console.log(`Has final_price property: ${'final_price' in sampleSeat}`);
       }
-      
+
       return {
         success: true,
         schedule: schedule,
@@ -230,7 +230,7 @@ export const seatService = {
    */
   async testSeatData(scheduleId) {
     try {
-      const response = await api.get(`api/test-seat-data/${scheduleId}/`);
+      const response = await api.get(`flightapp/api/test-seat-data/${scheduleId}/`);
       return response.data;
     } catch (error) {
       console.error('Error getting test data:', error);

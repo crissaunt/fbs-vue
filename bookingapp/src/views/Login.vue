@@ -108,7 +108,7 @@
 
 <script>
 import bgImage from '@/assets/image/bg-cthm.svg'
-import axios from 'axios'
+import api from '@/services/api/axios'
 
 export default {
   name: 'InstructorLogin',
@@ -138,8 +138,8 @@ export default {
         console.log('🔐 Attempting login for:', this.username)
         
         // 1. Send Login Request
-        const response = await axios.post(
-          'http://127.0.0.1:8000/api/login/', 
+        const response = await api.post(
+          'api/login/', 
           {
             username: this.username,
             password: this.password
@@ -204,14 +204,6 @@ export default {
         this.loading = false
       }
     }
-  },
-  mounted() {
-    // Clear any existing tokens when login page loads
-    console.log('🧹 Login page mounted - clearing old tokens')
-    localStorage.removeItem('token')
-    localStorage.removeItem('auth_token')
-    localStorage.removeItem('user')
-    localStorage.removeItem('user_data')
   }
 }
 </script>

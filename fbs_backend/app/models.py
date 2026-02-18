@@ -1047,6 +1047,29 @@ class Booking(models.Model):
         help_text="Total amount from frontend calculation"
     )
     
+    # Instructor Activity Link
+    activity = models.ForeignKey(
+        'fbs_instructor.Activity', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='bookings',
+        help_text="Optional link to an instructor's activity"
+    )
+    is_graded = models.BooleanField(default=False)
+    
+    # Practice Booking Support
+    is_practice = models.BooleanField(
+        default=False,
+        help_text="True if this is a practice booking (not graded)"
+    )
+    activity_code_used = models.CharField(
+        max_length=8, 
+        null=True, 
+        blank=True,
+        help_text="The activity code that was used for this booking"
+    )
+    
     class Meta:
         indexes = [
             models.Index(fields=['user', 'created_at']),

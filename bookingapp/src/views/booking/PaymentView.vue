@@ -407,7 +407,7 @@ const handlePayMongoCheckout = async () => {
       customer_phone: bookingStore.contactInfo.phone || '09171234567'
     };
 
-    const response = await api.post('create-checkout-session/', paymentData);
+    const response = await api.post('flightapp/create-checkout-session/', paymentData);
 
     if (response.data && response.data.success === true && response.data.checkout_url) {
       localStorage.setItem('payment_session', JSON.stringify({

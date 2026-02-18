@@ -1,16 +1,5 @@
 // src/services/instructor/Activity_details_api.js
-import axios from 'axios';
-
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
-
-// Get authentication token from localStorage
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('auth_token');
-  return {
-    'Authorization': `Token ${token}`,
-    'Content-Type': 'application/json'
-  };
-};
+import api from '../api/axios';
 
 export const Activity_details_api = {
   /**
@@ -20,13 +9,10 @@ export const Activity_details_api = {
    */
   async getActivity(id) {
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/instructor/activities/${id}/`,
-        { headers: getAuthHeaders() }
-      );
+      const response = await api.get(`api/instructor/activities/${id}/`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching activity:', error);
+      // Handled by global interceptor
       throw error;
     }
   },
@@ -38,14 +24,24 @@ export const Activity_details_api = {
    */
   async activateActivity(activityId) {
     try {
-      const response = await axios.post(
-        `${API_BASE_URL}/instructor/activity/${activityId}/activate/`,
-        {},
-        { headers: getAuthHeaders() }
-      );
+      const response = await api.post(`api/instructor/activity/${activityId}/activate/`, {});
       return response.data;
     } catch (error) {
-      console.error('Error activating activity:', error);
+      // Handled by global interceptor
+      throw error;
+    }
+  },
+
+  /**
+   * Get all student submissions for an activity
+   * @param {number} activityId - Activity ID
+   * @returns {Promise} Submissions data
+   */
+  async getSubmissions(activityId) {
+    try {
+      const response = await api.get(`api/instructor/activities/${activityId}/submissions/`);
+      return response.data;
+    } catch (error) {
       throw error;
     }
   }

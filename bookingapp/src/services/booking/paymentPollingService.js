@@ -10,27 +10,27 @@ export const paymentPollingService = {
     const {
       maxAttempts = 30,
       interval = 2000,
-      onProgress = () => {},
+      onProgress = () => { },
       immediateFirstCheck = true
     } = options;
-    
+
     let attempts = 0;
-    
+
     const checkStatus = async () => {
       attempts++;
-      
+
       try {
         console.log(`🔄 Polling booking status (attempt ${attempts}/${maxAttempts})...`);
-        
+
         // Use the simple endpoint that doesn't search PayMongo
-        const response = await api.get(`check-booking-status/${bookingId}/`);
-        
+        const response = await api.get(`flightapp/check-booking-status/${bookingId}/`);
+
         onProgress({
           attempt: attempts,
           maxAttempts,
           data: response.data
         });
-        
+
         if (response.data.paid || response.data.booking_status === 'Confirmed') {
           console.log('✅ Booking confirmed!', response.data);
           return {
@@ -40,7 +40,7 @@ export const paymentPollingService = {
             attempts: attempts
           };
         }
-        
+
         if (attempts >= maxAttempts) {
           console.log('⏰ Polling timeout reached');
           return {
@@ -51,7 +51,7 @@ export const paymentPollingService = {
             message: 'Payment verification timeout'
           };
         }
-        
+
         // Continue polling
         return new Promise((resolve) => {
           setTimeout(async () => {
@@ -59,7 +59,7 @@ export const paymentPollingService = {
             resolve(result);
           }, interval);
         });
-        
+
       } catch (error) {
         console.error('Polling error:', error);
         return {
@@ -70,21 +70,21 @@ export const paymentPollingService = {
         };
       }
     };
-    
+
     // Start polling
     return checkStatus();
   },
-  
+
   /**
    * Check payment status once (no polling)
    */
   async checkPaymentStatusOnce(bookingId) {
     try {
       console.log(`🔍 Checking payment status for booking ${bookingId}...`);
-      
+
       // Try the simple endpoint first
-      const simpleResponse = await api.get(`check-booking-status/${bookingId}/`);
-      
+      const simpleResponse = await api.get(`flightapp/check-booking-status/${bookingId}/`);
+
       if (simpleResponse.data.paid || simpleResponse.data.booking_status === 'Confirmed') {
         return {
           success: true,
@@ -93,17 +93,17 @@ export const paymentPollingService = {
           immediate: true
         };
       }
-      
+
       // If not confirmed, try the full check
-      const fullResponse = await api.get(`check-payment-status/${bookingId}/`);
-      
+      const fullResponse = await api.get(`flightapp/check-payment-status/${bookingId}/`);
+
       return {
         success: fullResponse.data.success !== false,
         paid: fullResponse.data.paid === true,
         data: fullResponse.data,
         immediate: false
       };
-      
+
     } catch (error) {
       console.error('Payment check error:', error);
       return {

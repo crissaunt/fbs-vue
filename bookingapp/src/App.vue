@@ -3,6 +3,9 @@
   <component :is="layoutComponent">
     <router-view />
   </component>
+  
+  <!-- Global Components -->
+  <GlobalToast />
 </template>
 
 <script setup>
@@ -15,6 +18,7 @@ import { useRoute } from 'vue-router'
 // ✅ Instructor layout still active
 import InstructorLayout from '@/views/Instructor/InstructorLayout.vue'
 import BookingLayout from '@/views/booking/layout/BookingLayout.vue'  // ✅ add this
+import GlobalToast from '@/components/common/GlobalToast.vue'
 
 
 const route = useRoute()

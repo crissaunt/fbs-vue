@@ -171,37 +171,15 @@
             <h2 class="text-2xl font-bold text-gray-900 mb-6">Quick Actions</h2>
             
             <div class="space-y-4">
-              <button @click="viewBooking" 
+              <button @click="goToDashboard" 
                       class="w-full group flex items-center justify-between p-5 bg-gradient-to-r from-pink-50 to-white hover:from-[#FF579A] hover:to-pink-500 border border-pink-100 hover:border-transparent rounded-xl transition-all duration-300">
                 <div class="flex items-center space-x-4">
                   <div class="w-12 h-12 bg-white group-hover:bg-white/20 rounded-lg flex items-center justify-center">
-                    <span class="text-2xl text-[#FF579A] group-hover:text-white">👁️</span>
+                    <span class="text-2xl text-[#FF579A] group-hover:text-white">📋</span>
                   </div>
-                  <span class="text-lg font-semibold text-gray-900 group-hover:text-white">View Details</span>
+                  <span class="text-lg font-semibold text-gray-900 group-hover:text-white">Back to Dashboard</span>
                 </div>
                 <span class="text-xl text-gray-400 group-hover:text-white group-hover:translate-x-2 transition-transform">→</span>
-              </button>
-
-              <button @click="downloadTicket" 
-                      class="w-full group flex items-center justify-between p-5 bg-gradient-to-r from-blue-50 to-white hover:from-blue-600 hover:to-blue-500 border border-blue-100 hover:border-transparent rounded-xl transition-all duration-300">
-                <div class="flex items-center space-x-4">
-                  <div class="w-12 h-12 bg-white group-hover:bg-white/20 rounded-lg flex items-center justify-center">
-                    <span class="text-2xl text-blue-600 group-hover:text-white">📥</span>
-                  </div>
-                  <span class="text-lg font-semibold text-gray-900 group-hover:text-white">Download Ticket</span>
-                </div>
-                <span class="text-xl text-gray-400 group-hover:text-white group-hover:translate-y-2 transition-transform">↓</span>
-              </button>
-
-              <button @click="addToCalendar" 
-                      class="w-full group flex items-center justify-between p-5 bg-gradient-to-r from-emerald-50 to-white hover:from-emerald-600 hover:to-emerald-500 border border-emerald-100 hover:border-transparent rounded-xl transition-all duration-300">
-                <div class="flex items-center space-x-4">
-                  <div class="w-12 h-12 bg-white group-hover:bg-white/20 rounded-lg flex items-center justify-center">
-                    <span class="text-2xl text-emerald-600 group-hover:text-white">📅</span>
-                  </div>
-                  <span class="text-lg font-semibold text-gray-900 group-hover:text-white">Add to Calendar</span>
-                </div>
-                <span class="text-xl text-gray-400 group-hover:text-white group-hover:scale-125 transition-transform">+</span>
               </button>
 
               <button @click="goHome" 
@@ -352,9 +330,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useBookingStore } from '@/stores/booking';
 
 const route = useRoute();
 const router = useRouter();
+const bookingStore = useBookingStore();
 
 const bookingReference = ref('PAL' + Math.random().toString(36).substr(2, 9).toUpperCase());
 const paymentId = ref('PAY' + Math.random().toString(36).substr(2, 12).toUpperCase());
@@ -428,9 +408,12 @@ const showToastMessage = (message) => {
   }, 3000);
 };
 
-const viewBooking = () => {
-  showToastMessage('Opening booking details...');
-  // router.push({ name: 'BookingDetails', params: { reference: bookingReference.value } });
+const goToDashboard = () => {
+  showToastMessage('Returning to dashboard...');
+  // Clear activity code validation so the student can access their dashboard
+  bookingStore.clearActivityCodeValidation();
+  bookingStore.resetBooking();
+  router.push({ name: 'StudentDashboard' });
 };
 
 const downloadTicket = () => {
@@ -442,7 +425,9 @@ const addToCalendar = () => {
 };
 
 const goHome = () => {
-  showToastMessage('Returning to homepage...');
+  showToastMessage('Starting new booking...');
+  // Keep the same session if they want new booking, but reset selection
+  bookingStore.resetBooking();
   router.push({ name: 'Home' });
 };
 </script>

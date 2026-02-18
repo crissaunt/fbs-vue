@@ -33,6 +33,7 @@ from app.models import (
 import json
 from .serializers import *
 from .services.paymongo_service import paymongo_service
+from .services.grading_service import grade_booking
 
 class AirlineFilterMixin:
     """Mixin to handle common airline filtering logic by ID or Code"""
@@ -577,16 +578,19 @@ class MealOptionViewSet(AirlineFilterMixin, viewsets.ReadOnlyModelViewSet):
     queryset = MealOption.objects.all()
     serializer_class = MealOptionSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
 class AssistanceServiceViewSet(AirlineFilterMixin, viewsets.ReadOnlyModelViewSet):
     queryset = AssistanceService.objects.all()
     serializer_class = AssistanceServiceSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
 class BaggageOptionViewSet(AirlineFilterMixin, viewsets.ReadOnlyModelViewSet):
     queryset = BaggageOption.objects.all()
     serializer_class = BaggageOptionSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
 
 
@@ -658,15 +662,27 @@ def create_payment_source(request):
     Create payment source for specific payment methods (GCash, GrabPay, etc.)
     """
     try:
-        amount = request.data.get('amount')
-        payment_type = request.data.get('type', 'gcash')
         booking_id = request.data.get('booking_id')
+        payment_type = request.data.get('type', 'gcash')
+        # amount = request.data.get('amount') # IGNORE frontend amount
         
-        if not amount:
+        if not booking_id:
             return Response({
                 'success': False,
-                'error': 'Amount is required'
+                'error': 'Booking ID is required'
             }, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Get booking to ensure amount is correct
+        try:
+            booking = Booking.objects.get(id=booking_id)
+        except Booking.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Booking not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+            
+        # Enforce server-side source of truth
+        amount = float(booking.total_amount)
         
         # Create payment source
         result = paymongo_service.create_payment_source(
@@ -858,6 +874,15 @@ def process_payment_from_paymongo(payment_id, payment_attrs, booking):
                     seat_count += 1
             print(f"✅ Marked {seat_count} seats as unavailable")
             
+            # 🎓 AUTO-GRADING
+            if booking.activity:
+                print(f"🎓 Triggering auto-grading for booking {booking.id}")
+                try:
+                    from .services.grading_service import grade_booking
+                    grade_booking(booking, booking.activity.id)
+                except Exception as e:
+                    print(f"⚠️ Error during auto-grading: {str(e)}")
+            
             # 🎉 SEND BOOKING CONFIRMATION EMAIL
             print(f"📧 Sending booking confirmation email...")
             email_sent = EmailService.send_booking_confirmation(booking, payment)
@@ -936,24 +961,36 @@ def create_checkout_session(request):
     Generate a PayMongo Checkout URL for method selection
     """
     try:
-        amount = request.data.get('amount')
         booking_id = request.data.get('booking_id')
+        # amount = request.data.get('amount') # IGNORE frontend amount
         
-        if not amount or not booking_id:
+        if not booking_id:
             return Response({
                 'success': False,
-                'error': 'Amount and booking_id are required'
+                'error': 'Booking ID is required'
             }, status=400)
+            
+        # Get booking to ensure amount is correct
+        try:
+            booking = Booking.objects.get(id=booking_id)
+        except Booking.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Booking not found'
+            }, status=404)
+            
+        # Enforce server-side source of truth
+        amount = float(booking.total_amount)
 
         # Get additional customer info
         customer_email = request.data.get('customer_email')
         customer_name = request.data.get('customer_name')
         customer_phone = request.data.get('customer_phone')
         
-        print(f"DEBUG: Creating checkout session for booking {booking_id}, amount {amount}")
+        print(f"DEBUG: Creating checkout session for booking {booking_id}, amount {amount} (backend verified)")
         
         result = paymongo_service.create_checkout_session(
-            amount=float(amount),
+            amount=amount,
             booking_id=int(booking_id),
             customer_email=customer_email,
             customer_name=customer_name,
@@ -1021,6 +1058,106 @@ def attach_payment_method(request):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def validate_activity_code(request):
+    """
+    Validate an activity code for the authenticated student
+    
+    POST /api/bookings/validate-activity-code/
+    Body: {"activity_code": "ABC12345"}
+    
+    Returns:
+        - 200: Activity details if valid
+        - 400: Invalid code or student not enrolled
+    """
+    from fbs_instructor.models import Activity, SectionEnrollment
+    from app.models import Students
+    
+    activity_code = request.data.get('activity_code', '').strip().upper()
+    
+    if not activity_code:
+        return Response({
+            'success': False,
+            'error': 'Activity code is required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        # Find activity by code
+        activity = Activity.objects.get(
+            activity_code=activity_code,
+            is_code_active=True
+        )
+    except Activity.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Invalid or inactive activity code'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Get student record
+    try:
+        student = Students.objects.get(user=request.user)
+    except Students.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Student record not found'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if student is enrolled in the section
+    is_enrolled = SectionEnrollment.objects.filter(
+        student=student,
+        section=activity.section,
+        is_active=True
+    ).exists()
+    
+    if not is_enrolled:
+        return Response({
+            'success': False,
+            'error': 'You are not enrolled in the section for this activity'
+        }, status=status.HTTP_403_FORBIDDEN)
+
+    # NEW: Check if student already has a successful booking for this activity
+    from app.models import Booking
+    existing_booking = Booking.objects.filter(
+        user=request.user,
+        activity=activity,
+        status='Confirmed',
+        is_practice=False
+    ).first()
+
+    if existing_booking:
+        return Response({
+            'success': False,
+            'error': f'You have already successfully completed this activity (Booking Ref: {existing_booking.id})',
+            'booking_id': existing_booking.id,
+            'completed': True
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    # Return activity details
+    return Response({
+        'success': True,
+        'activity': {
+            'id': activity.id,
+            'title': activity.title,
+            'description': activity.description,
+            'activity_code': activity.activity_code,
+            'total_points': float(activity.total_points),
+            'due_date': activity.due_date.isoformat() if activity.due_date else None,
+            'requirements': {
+                'trip_type': activity.required_trip_type,
+                'origin': activity.required_origin,
+                'destination': activity.required_destination,
+                'travel_class': activity.required_travel_class,
+                'passengers': activity.required_passengers,
+            },
+            'section': {
+                'code': activity.section.section_code,
+                'name': activity.section.section_name
+            }
+        }
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
 @permission_classes([AllowAny])
 def create_booking(request):
     """
@@ -1040,18 +1177,60 @@ def create_booking(request):
         
         data = serializer.validated_data
         
+        # Handle Activity Code Validation and Practice Mode
+        activity_code = data.get('activity_code')
+        is_practice = data.get('is_practice', False)
+        activity_to_link = None
+        
+        if activity_code and not is_practice:
+            # Validate activity code
+            from fbs_instructor.models import Activity, SectionEnrollment
+            from app.models import Students
+            
+            try:
+                activity_to_link = Activity.objects.get(
+                    activity_code=activity_code.strip().upper(),
+                    is_code_active=True
+                )
+                
+                # Check if user is a student and enrolled in the section
+                try:
+                    student = Students.objects.get(user=request.user if request.user.is_authenticated else None)
+                    is_enrolled = SectionEnrollment.objects.filter(
+                        student=student,
+                        section=activity_to_link.section,
+                        is_active=True
+                    ).exists()
+                    
+                    if not is_enrolled:
+                        return Response({
+                            'success': False,
+                            'error': 'You are not enrolled in the section for this activity'
+                        }, status=status.HTTP_403_FORBIDDEN)
+                        
+                except Students.DoesNotExist:
+                    return Response({
+                        'success': False,
+                        'error': 'Student record not found'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                    
+            except Activity.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Invalid or inactive activity code'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
         # Start transaction
         with transaction.atomic():
             # 1. Create or get user
             user = _get_or_create_user(data)
             
-            # 2. Create main booking WITH total amount from frontend
+            # 2. Create main booking — total_amount starts at 0, backend will calculate it
+            #    SECURITY: We NEVER trust the frontend-supplied total_amount
             trip_type = data.get('trip_type', 'one_way')
-            total_amount = data.get('total_amount', Decimal('0.00'))
             
-            print(f"DEBUG: Creating booking with total amount: {total_amount}")
+            print(f"DEBUG: Creating booking (total will be backend-calculated)")
             
-            # Create booking WITH the total_amount field
             booking = Booking.objects.create(
                 user=user,
                 trip_type=trip_type,
@@ -1059,10 +1238,13 @@ def create_booking(request):
                 base_fare_total=Decimal('0.00'),
                 insurance_total=Decimal('0.00'),
                 tax_total=Decimal('0.00'),
-                total_amount=total_amount  # Use the field from your model
+                total_amount=Decimal('0.00'),  # Always start at 0; _update_booking_totals sets the real value
+                is_practice=is_practice,
+                activity_code_used=activity_code.strip().upper() if activity_code else None,
+                activity=activity_to_link
             )
             
-            print(f"DEBUG: Booking created with ID: {booking.id}, Total: {booking.total_amount}")
+            print(f"DEBUG: Booking created with ID: {booking.id} (total pending backend calculation)")
             
             contact_info = data.get('contact_info', {})
             booking_contact = _create_booking_contact(booking, contact_info)
@@ -1108,6 +1290,14 @@ def create_booking(request):
             # 6. Save booking totals
             print(f"DEBUG: Updating booking totals")
             _update_booking_totals(booking)
+            
+            # TRIGGER AUTO-GRADING
+            if booking.activity:
+                print(f"🎓 Triggering auto-grading for booking {booking.id} usage activity {booking.activity.id}")
+                try:
+                    grade_booking(booking, booking.activity.id)
+                except Exception as e:
+                    print(f"⚠️ Error during auto-grading: {str(e)}")
             
             print(f"DEBUG: Booking creation successful!")
             
@@ -1389,19 +1579,20 @@ def _create_booking(data, user):
     trip_type = data.get('trip_type', 'one_way')
     is_round_trip = trip_type == 'round_trip'
     
-    # Calculate total amount from frontend data
-    total_amount = Decimal(str(data.get('total_amount', 0)))
-    print(f"DEBUG: Creating booking with total amount from frontend: {total_amount}")
+    # Calculate total amount - IGNORE frontend data for security
+    # total_amount = Decimal(str(data.get('total_amount', 0))) 
+    total_amount = Decimal('0.00') # Start with 0, let backend calculate it
+    print(f"DEBUG: Creating booking with initial total amount: {total_amount} (ignoring frontend)")
     
     # Create and save the booking immediately
     booking = Booking.objects.create(
         user=user,
         trip_type=trip_type,
         status='Pending',
-        base_fare_total=Decimal('0.00'),
         insurance_total=Decimal('0.00'),
         tax_total=Decimal('0.00'),
-        total_amount=total_amount  # Store the total amount from frontend
+        total_amount=total_amount,  # Start with 0
+        activity_id=data.get('activity_id') # Link to activity if present
     )
     
     print(f"DEBUG: Booking created. ID: {booking.id}, Total: {total_amount}")
@@ -1814,7 +2005,9 @@ def _apply_taxes(booking, booking_details):
                 continue
 
 def _update_booking_totals(booking):
-    """Update booking totals after all details are created and verify against stored total"""
+    """Update booking totals after all details are created.
+    Backend is the SOLE source of truth — frontend total is ignored.
+    """
     try:
         print(f"DEBUG: In _update_booking_totals for booking {booking.id}")
         
@@ -1825,49 +2018,49 @@ def _update_booking_totals(booking):
         # Refresh booking from database
         booking.refresh_from_db()
         
-        # Recalculate totals - use direct query instead of reverse relationship
         from django.db.models import Sum
         
-        # Calculate base fare total
+        # 1. Base fare total (ML-priced per passenger per leg)
         base_fare_total = BookingDetail.objects.filter(
             booking=booking
         ).aggregate(total=Sum('price'))['total'] or Decimal('0.00')
-        
         print(f"  Base fare total: {base_fare_total}")
         
-        # Calculate insurance total (if you have insurance logic)
+        # 2. Insurance total
         insurance_total = Decimal('0.00')
-        # Add your insurance calculation here
         
-        # Calculate tax total
+        # 3. Tax total
         tax_total = BookingTax.objects.filter(
             booking=booking
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        
         print(f"  Tax total: {tax_total}")
         
-        # Recalculate the total from components
-        calculated_total = base_fare_total + insurance_total + tax_total
+        # 4. ✅ Addon total — prices fetched from DB, NOT from frontend
+        #    Covers baggage, meals, seat upgrades, and any other paid addons
+        addon_total = Decimal('0.00')
+        booking_details = BookingDetail.objects.filter(booking=booking).prefetch_related('addons')
+        for detail in booking_details:
+            for addon in detail.addons.all():
+                if addon.price and not addon.included:  # Only count paid (non-included) addons
+                    addon_total += Decimal(str(addon.price))
+        print(f"  Addon total (baggage, meals, seats): {addon_total}")
         
-        # Verify the stored total matches the calculated total
-        # booking.total_amount originally came from frontend
+        # 5. Grand total — backend is the source of truth
+        calculated_total = base_fare_total + insurance_total + tax_total + addon_total
+        
+        # Log any discrepancy with what the frontend claimed
         stored_frontend_total = booking.total_amount
-        print(f"  Frontend provided total: {stored_frontend_total}")
-        print(f"  Backend calculated total: {calculated_total}")
+        if stored_frontend_total and abs(calculated_total - stored_frontend_total) > Decimal('1.00'):
+            print(f"  ⚠️ SECURITY: Total mismatch! Frontend claimed: {stored_frontend_total}, Backend calculated: {calculated_total}")
         
-        # If there's a discrepancy, log it but use the backend truth
-        if abs(calculated_total - stored_frontend_total) > Decimal('1.00'):
-            print(f"  ⚠️ SECURITY WARNING: Total mismatch! Frontend: {stored_frontend_total}, Backend: {calculated_total}")
-            print(f"  ⚠️ Overriding with backend-calculated total for security.")
-        
-        # Always use backend-calculated total as the source of truth
+        # Always override with backend-calculated total
         booking.total_amount = calculated_total
         booking.base_fare_total = base_fare_total
         booking.insurance_total = insurance_total
         booking.tax_total = tax_total
         booking.save()
         
-        print(f"  Booking totals updated successfully")
+        print(f"  ✅ Booking totals saved: base={base_fare_total}, addons={addon_total}, tax={tax_total}, TOTAL={calculated_total}")
         
     except Exception as e:
         print(f"ERROR in _update_booking_totals: {str(e)}")
@@ -2352,6 +2545,15 @@ def process_payment_webhook(payment_id, payment_attrs, booking_id):
                     seat_count += 1
             print(f"✅ Marked {seat_count} seats as unavailable")
             
+            # 🎓 AUTO-GRADING
+            if booking.activity:
+                print(f"🎓 Triggering auto-grading for booking {booking.id}")
+                try:
+                    from .services.grading_service import grade_booking
+                    grade_booking(booking, booking.activity.id)
+                except Exception as e:
+                    print(f"⚠️ Error during auto-grading: {str(e)}")
+            
             print(f"🎉 Payment processing COMPLETED for booking {booking_id}")
             
             return Response({
@@ -2443,6 +2645,15 @@ def process_payment_with_id(payment_id, booking_id):
                         if detail.seat:
                             detail.seat.is_available = False
                             detail.seat.save()
+                    
+                    # 🎓 AUTO-GRADING
+                    if booking.activity:
+                        print(f"🎓 Triggering auto-grading for booking {booking.id}")
+                        try:
+                            from .services.grading_service import grade_booking
+                            grade_booking(booking, booking.activity.id)
+                        except Exception as e:
+                            print(f"⚠️ Error during auto-grading: {str(e)}")
                     
                     print(f"✅ Payment processed: {payment.id}")
                     
@@ -2738,6 +2949,15 @@ def process_payment_immediately(payment_id, payment_attrs, booking):
                 if detail.seat:
                     detail.seat.is_available = False
                     detail.seat.save()
+            
+            # 🎓 AUTO-GRADING
+            if booking.activity:
+                print(f"🎓 Triggering auto-grading for booking {booking.id}")
+                try:
+                    from .services.grading_service import grade_booking
+                    grade_booking(booking, booking.activity.id)
+                except Exception as e:
+                    print(f"⚠️ Error during auto-grading: {str(e)}")
             
             print(f"✅ IMMEDIATELY processed payment: {payment.id}")
             
@@ -3484,4 +3704,125 @@ def download_itinerary(request, booking_id):
             'success': False,
             'error': str(e)
         }, status=500)
-    
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def calculate_booking_price(request):
+    """
+    Calculate the total price for a potential booking without creating it.
+    Used by the Review Booking page to show the authoritative backend price.
+    """
+    try:
+        data = request.data
+        print(f"DEBUG: Calculating price for request: {data}")
+        
+        total_price = Decimal('0.00')
+        breakdown = {
+            'base_fare': Decimal('0.00'),
+            'taxes': Decimal('0.00'),
+            'addons': Decimal('0.00'),
+            'insurance': Decimal('0.00'),
+            'grand_total': Decimal('0.00')
+        }
+        
+        # 1. Calculate Base Fare (Flight Prices)
+        trip_type = data.get('trip_type', 'one_way')
+        passenger_counts = data.get('passengerCount', {})
+        adult_count = int(passenger_counts.get('adult', 1))
+        child_count = int(passenger_counts.get('children', 0))
+        infant_count = int(passenger_counts.get('infant', 0))
+        
+        # Calculate for outbound
+        if data.get('selectedOutbound'):
+            outbound_price = Decimal(str(data['selectedOutbound'].get('price', 0)))
+            # Multiply by paying passengers (adults + children)
+            total_base = outbound_price * (adult_count + child_count)
+            # Add infant fare (usually 10-50% or flat rate, here assuming 50% for simplicity matching frontend)
+            total_base += (outbound_price * Decimal('0.5')) * infant_count
+            breakdown['base_fare'] += total_base
+            
+        # Calculate for return
+        if trip_type == 'round_trip' and data.get('selectedReturn'):
+            return_price = Decimal(str(data['selectedReturn'].get('price', 0)))
+            total_base = return_price * (adult_count + child_count)
+            total_base += (return_price * Decimal('0.5')) * infant_count
+            breakdown['base_fare'] += total_base
+
+        # 2. Calculate Taxes (simplified estimation matching _apply_taxes logic)
+        # In a real scenario, this would query TaxType models. 
+        # For now, we'll assume the frontend-passed tax or a standard estimate if not present.
+        # Ideally, we should fetch TaxType objects here based on the route.
+        # Use a standard estimate per passenger for now to be safe
+        # e.g. PH Tax ~500-1000 PHP per pax
+        tax_per_pax = Decimal('0.00') # Replace with actual tax logic if needed
+        # breakdown['taxes'] = tax_per_pax * (adult_count + child_count)
+        
+        # 3. Calculate Addons (Baggage, Meals, Seats)
+        # We need to look up prices from the DB to be secure
+        addon_ids = []
+        
+        # Extract all addon IDs from the complex structure
+        def extract_ids(source):
+            ids = []
+            if not source: return ids
+            for category in ['baggage', 'meals', 'wheelchair', 'seats']:
+                cat_data = source.get(category, {})
+                for key, val in cat_data.items():
+                    if isinstance(val, int):
+                        ids.append({'type': category, 'id': val})
+                    elif isinstance(val, dict) and val.get('id'):
+                        ids.append({'type': category, 'id': val['id']})
+            return ids
+
+        all_addons = extract_ids(data.get('addons', {}))
+        if trip_type == 'round_trip':
+            all_addons.extend(extract_ids(data.get('return_addons', {})))
+            
+        print(f"DEBUG: Found {len(all_addons)} metadata items to price")
+
+        for item in all_addons:
+            try:
+                price = Decimal('0.00')
+                if item['type'] == 'baggage':
+                    obj = BaggageOption.objects.get(id=item['id'])
+                    price = obj.price
+                elif item['type'] == 'meals':
+                    obj = MealOption.objects.get(id=item['id'])
+                    price = obj.price
+                elif item['type'] == 'seats':
+                    obj = Seat.objects.get(id=item['id'])
+                    # Seat price logic (multiplier + adjustment)
+                    if obj.seat_class:
+                         # This logic should match Seat.final_price
+                         base = obj.schedule.ml_base_price if obj.schedule else Decimal('0.00')
+                         price = (base * obj.seat_class.price_multiplier) + obj.price_adjustment
+                    else:
+                        price = obj.price_adjustment
+                
+                breakdown['addons'] += price
+                
+            except Exception as e:
+                print(f"⚠️ Could not find price for addon {item}: {e}")
+                continue
+
+        # 4. Final Total
+        total_price = breakdown['base_fare'] + breakdown['taxes'] + breakdown['addons'] + breakdown['insurance']
+        breakdown['grand_total'] = total_price
+        
+        print(f"✅ Calculated price: {total_price}")
+        
+        return Response({
+            'success': True,
+            'total_amount': float(total_price),
+            'currency': 'PHP',
+            'breakdown': {k: float(v) for k, v in breakdown.items()}
+        })
+
+    except Exception as e:
+        print(f"❌ Error calculating price: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)

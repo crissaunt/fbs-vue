@@ -716,7 +716,7 @@
 <script setup>
 import { ref, computed, onMounted, watch, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
+import api from '@/services/api/axios'
 import { section_details_api } from '@/services/instructor/section_details_api'
 import { Instructor_Dashboard_api } from '@/services/instructor/Instructor_Dashboard_api'
 import { ActivityService } from '@/services/instructor/Activity_api'
@@ -813,9 +813,8 @@ const submitEnrollment = async () => {
     const sectionId = route.params.id
     const token = localStorage.getItem('auth_token')
     
-    const response = await axios.post(`http://127.0.0.1:8000/api/instructor/sections/${sectionId}/enroll/`, 
-      { student_number: studentNumberInput.value },
-      { headers: { 'Authorization': `Token ${token}` } }
+    const response = await api.post(`api/instructor/sections/${sectionId}/enroll/`, 
+      { student_number: studentNumberInput.value }
     )
     
     alert(response.data.message)
@@ -882,9 +881,8 @@ const confirmDeleteActivity = async () => {
     const activityId = activityToDelete.value.id
     const token = localStorage.getItem('auth_token')
     
-    const response = await axios.delete(
-      `http://127.0.0.1:8000/api/instructor/sections/${sectionId}/activities/${activityId}/delete/`,
-      { headers: { 'Authorization': `Token ${token}` } }
+    const response = await api.delete(
+      `api/instructor/sections/${sectionId}/activities/${activityId}/delete/`
     )
     
     showSuccess(response.data.message || 'Activity deleted successfully!')
@@ -928,9 +926,8 @@ const fetchAirportsAndAddons = async () => {
     const sectionId = route.params.id
     const token = localStorage.getItem('auth_token')
     
-    const response = await axios.get(
-      `http://127.0.0.1:8000/api/instructor/sections/${sectionId}/activities/create/`,
-      { headers: { 'Authorization': `Token ${token}` } }
+    const response = await api.get(
+      `api/instructor/sections/${sectionId}/activities/create/`
     )
     
     airports.value = response.data.airports || []
@@ -1414,7 +1411,7 @@ const initials = computed(() => userData.value?.username ? userData.value.userna
 
 const handleLogout = () => {
   localStorage.clear()
-  router.push('/instructor/login')
+  router.push('/login')
 }
 
 const goToSection = (id) => { router.push(`/instructor/section/${id}`) }

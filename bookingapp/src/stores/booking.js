@@ -45,6 +45,11 @@ export const useBookingStore = defineStore('booking', {
       }
     },
 
+    // Activity Code & Practice Mode
+    activityCode: null,           // Activity code entered by student
+    isPractice: false,            // Whether this is a practice booking
+    hasActivityCodeValidation: false, // Whether student has completed activity code step
+
     sessionExpiry: null,
     isFreshSession: true,
   }),
@@ -262,7 +267,7 @@ export const useBookingStore = defineStore('booking', {
     },
 
     startSession() {
-      this.sessionExpiry = Date.now() + (15 * 60 * 100000);
+      this.sessionExpiry = Date.now() + (15 * 60 * 1000);
       this.isFreshSession = true;
       console.log('🔄 Session started, expires at:', new Date(this.sessionExpiry).toLocaleString());
 
@@ -285,6 +290,7 @@ export const useBookingStore = defineStore('booking', {
 
       if (timeLeft <= 0) {
         console.log('⏰ Session expired, resetting booking');
+        this.clearActivityCodeValidation();
         this.resetBooking();
         return {
           valid: false,
@@ -389,6 +395,33 @@ export const useBookingStore = defineStore('booking', {
       this.passengerCount.adults = counts.adult;
       this.passengerCount.children = counts.children;
       this.passengerCount.infants = counts.infant;
+    },
+
+    // Activity Code & Practice Mode Actions
+    setActivityCode(code, activityData = null) {
+      this.activityCode = code;
+      this.isPractice = false;
+      this.hasActivityCodeValidation = true;
+      this.startSession();
+      console.log('✅ Activity code set:', code);
+      if (activityData) {
+        console.log('📋 Activity details:', activityData);
+      }
+    },
+
+    setPracticeMode() {
+      this.activityCode = null;
+      this.isPractice = true;
+      this.hasActivityCodeValidation = true;
+      this.startSession();
+      console.log('✅ Practice mode enabled');
+    },
+
+    clearActivityCodeValidation() {
+      this.activityCode = null;
+      this.isPractice = false;
+      this.hasActivityCodeValidation = false;
+      console.log('🔄 Activity code validation cleared');
     },
 
     selectFlight(flight, type = 'outbound') {

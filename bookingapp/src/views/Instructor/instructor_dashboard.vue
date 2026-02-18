@@ -231,8 +231,7 @@ const goToSection = (id) => {
 
 // Logout logic
 const handleLogout = () => {
-  localStorage.removeItem('auth_token') 
-  localStorage.removeItem('user_data')
+  localStorage.clear()
   router.push('/login')
 }
 

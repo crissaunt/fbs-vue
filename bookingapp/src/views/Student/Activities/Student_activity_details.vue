@@ -298,20 +298,77 @@
             </div>
           </div>
 
+          <!-- Submission & Grading Section (Always visible for clarity) -->
+          <div class="mb-8 border-2 border-dashed border-gray-200 rounded-xl p-6 bg-gray-50/50">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-base font-bold text-gray-900 uppercase tracking-tight">Submission & Grading</h2>
+              <span :class="['px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider', getStatusClass(activity.status)]">
+                {{ getStatusLabel(activity.status) }}
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Grade Card -->
+              <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 bg-pink-50 rounded-full flex items-center justify-center text-pink-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Score / Grade</p>
+                  <p class="text-2xl font-black text-gray-900">
+                    {{ activity.grade !== null ? activity.grade : '-' }}
+                    <span class="text-xs text-gray-400 font-medium">/ {{ activity.total_points }} pts</span>
+                  </p>
+                </div>
+              </div>
+
+              <!-- Date Submitted -->
+              <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Submitted At</p>
+                  <p class="text-sm font-bold text-gray-900">
+                    {{ activity.submitted_at ? formatDateTime(activity.submitted_at) : 'Not submitted yet' }}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Feedback -->
+            <div v-if="activity.feedback" class="mt-6 bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+              <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2 flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                </svg>
+                Feedback
+              </p>
+              <p class="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap italic">{{ activity.feedback }}</p>
+            </div>
+          </div>
+
           <!-- Start Button -->
-          <div class="flex justify-center mt-8">
+          <div class="flex flex-col items-center gap-3 mt-8">
             <button 
               @click="openCodeModal"
-              :disabled="!activity.is_active"
+              :disabled="!activity.is_active || activity.grade !== null || activity.status === 'submitted' || activity.status === 'graded'"
               :class="[
                 'w-full max-w-md py-4 rounded-lg font-bold text-sm uppercase tracking-wider transition-all shadow-md',
-                activity.is_active 
+                activity.is_active && activity.grade === null
                   ? 'bg-[#f5c842] hover:bg-[#e5b832] text-gray-900' 
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               ]"
             >
-              {{ activity.is_active ? 'Start' : 'Activity Not Active' }}
+              {{ getButtonText() }}
             </button>
+            <p v-if="activity.grade !== null" class="text-[10px] text-gray-400 italic">
+              Activity has been graded. You cannot re-submit.
+            </p>
           </div>
         </div>
       </div>
@@ -395,6 +452,7 @@
 
 <script>
 import StudentActivityDetailsApi from '@/services/Student/Student_activity_details.api.js';
+import { useBookingStore } from '@/stores/booking';
 
 export default {
   name: 'StudentActivityDetails',
@@ -558,6 +616,7 @@ export default {
           submitted_at: activityData.submitted_at,
           grade: activityData.grade,
           feedback: activityData.feedback || '',
+          completed: activityData.completed || false,
           created_at: activityData.created_at
         };
         
@@ -665,6 +724,13 @@ export default {
       if (enteredCodeClean === activityCodeClean) {
         console.log('✅ Code verified successfully!');
         
+        // Update the booking store
+        const bookingStore = useBookingStore();
+        bookingStore.setActivityCode(this.enteredCode, {
+          id: this.activity.id,
+          title: this.activity.title
+        });
+        
         // Store code verification in localStorage (optional)
         const verificationKey = `activity_${this.activity.id}_verified`;
         localStorage.setItem(verificationKey, 'true');
@@ -715,6 +781,51 @@ export default {
       } catch (e) {
         return 'N/A';
       }
+    },
+    
+    formatDateTime(dateString) {
+      if (!dateString) return 'N/A';
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'N/A';
+        return date.toLocaleDateString('en-US', { 
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      } catch (e) {
+        return 'N/A';
+      }
+    },
+    
+    getStatusLabel(status) {
+      const labels = {
+        'assigned': 'Assigned',
+        'in_progress': 'In Progress',
+        'submitted': 'Submitted',
+        'graded': 'Graded'
+      };
+      return labels[status] || status;
+    },
+    
+    getStatusClass(status) {
+      const classes = {
+        'assigned': 'bg-gray-100 text-gray-600',
+        'in_progress': 'bg-blue-100 text-blue-600',
+        'submitted': 'bg-green-100 text-green-700',
+        'graded': 'bg-purple-100 text-purple-700'
+      };
+      return classes[status] || 'bg-gray-50 text-gray-500';
+    },
+    
+    getButtonText() {
+      if (this.activity.completed || this.activity.grade !== null || this.activity.status === 'submitted' || this.activity.status === 'graded') {
+        return 'Activity Completed';
+      }
+      if (!this.activity.is_active) return 'Activity Not Active';
+      return 'Start';
     }
   }
 }

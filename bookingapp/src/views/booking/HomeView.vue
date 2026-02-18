@@ -33,8 +33,15 @@ onMounted(() => {
   const session = bookingStore.checkSession();
   
   if (session.valid) {
-    console.log('⚠️ Active booking session found. Resetting...');
+    console.log('⚠️ Active booking session found. Checking if reset is needed...');
     
+    // Skip auto-reset for instructors (they might be testing/demonstrating)
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (user.role === 'instructor') {
+       console.log('👨‍🏫 Instructor session - skipping automatic reset');
+       return;
+    }
+
     // Show confirmation if user has unsaved data
     if (bookingStore.passengers.length > 0 || bookingStore.selectedOutbound) {
       const userConfirmed = window.confirm(
@@ -56,13 +63,17 @@ onMounted(() => {
           return;
         }
       }
-    } else {
-      // Just reset silently if no real data
+    } else if (!bookingStore.hasActivityCodeValidation) {
+      // Just reset silently if no real data AND no validation
       bookingStore.resetBooking();
     }
-  } else {
-    // Make sure store is clean
-    bookingStore.resetBooking();
+  } else if (!bookingStore.hasActivityCodeValidation) {
+    // Make sure store is clean if session is invalid AND no validation
+    // But check role first - instructors don't need activity validation
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (user.role !== 'instructor') {
+      bookingStore.resetBooking();
+    }
   }
   
   // Log status for debugging

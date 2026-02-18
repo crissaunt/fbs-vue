@@ -13,6 +13,7 @@ from .views import (
     activate_activity,
     student_activity_details,  # ✅ ADD THIS
     student_dashboard,         # ✅ ADD THIS
+    get_activity_submissions,  # ✅ ADD THIS
 )
 
 urlpatterns = [
@@ -34,6 +35,7 @@ urlpatterns = [
     
     # Activity Details & Activation
     path('instructor/activities/<int:activity_id>/', activity_details, name='activity-details'),
+    path('instructor/activities/<int:activity_id>/submissions/', get_activity_submissions, name='activity-submissions'),
     path('instructor/activity/<int:activity_id>/activate/', activate_activity, name='activate_activity'),
 
     # ============================================

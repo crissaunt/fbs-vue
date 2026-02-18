@@ -5,7 +5,7 @@ export const bookingService = {
   async createBooking(bookingData) {
     try {
       console.log('📤 Sending booking data:', JSON.stringify(bookingData, null, 2))
-      const response = await api.post('create-booking/', bookingData)
+      const response = await api.post('flightapp/create-booking/', bookingData)
       console.log('✅ API Response:', response.data)
       return response.data
     } catch (error) {
@@ -21,9 +21,9 @@ export const bookingService = {
     try {
       console.log(`🔄 Updating existing booking ID: ${bookingId}`)
       console.log('📤 Update data:', JSON.stringify(bookingData, null, 2))
-      
+
       // Use PATCH to update the booking
-      const response = await api.patch(`update-booking/${bookingId}/`, bookingData)
+      const response = await api.patch(`flightapp/update-booking/${bookingId}/`, bookingData)
       console.log('✅ Update API Response:', response.data)
       return response.data
     } catch (error) {
@@ -37,7 +37,7 @@ export const bookingService = {
 
   async processPayment(paymentData) {
     try {
-      const response = await api.post('process-payment/', paymentData)
+      const response = await api.post('flightapp/process-payment/', paymentData)
       return response.data
     } catch (error) {
       console.error('Error processing payment:', error.response?.data || error.message)
@@ -47,7 +47,7 @@ export const bookingService = {
 
   async getBookingDetails(bookingId) {
     try {
-      const response = await api.get(`booking/${bookingId}/`)
+      const response = await api.get(`flightapp/booking/${bookingId}/`)
       return response.data
     } catch (error) {
       console.error('Error fetching booking details:', error)
@@ -60,12 +60,12 @@ export const bookingService = {
     console.log('Store trip type:', bookingStore.tripType)
     console.log('Is round trip:', bookingStore.isRoundTrip)
     console.log('Store addons structure:', bookingStore.addons)
-    
+
     // Ensure store is in new format
     if (bookingStore.migrateAddonsToNewFormat) {
       bookingStore.migrateAddonsToNewFormat();
     }
-    
+
     // Format passengers
     const formattedPassengers = bookingStore.passengers.map(p => ({
       first_name: p.firstName || '',
@@ -78,9 +78,9 @@ export const bookingService = {
       type: p.type || 'Adult',
       key: p.key || `pax_${Math.random().toString(36).substr(2, 9)}`
     }))
-    
+
     console.log('Formatted passengers:', formattedPassengers.length, 'passengers')
-    
+
     // Contact info
     const contactInfo = {
       title: bookingStore.contactInfo?.title || 'MR',
@@ -90,9 +90,9 @@ export const bookingService = {
       phone: bookingStore.contactInfo?.phone || '',
       middleName: bookingStore.contactInfo?.middleName || ''
     }
-    
+
     console.log('Formatted contact info:', contactInfo)
-    
+
     // Format addons with new depart/return structure
     const formattedAddons = {
       baggage: {},
@@ -100,7 +100,7 @@ export const bookingService = {
       wheelchair: {},
       seats: {}
     };
-    
+
     // Extract baggage addons for depart flight
     if (bookingStore.addons?.baggage?.depart) {
       Object.entries(bookingStore.addons.baggage.depart).forEach(([key, baggage]) => {
@@ -109,7 +109,7 @@ export const bookingService = {
         }
       });
     }
-    
+
     // Extract meal addons for depart flight
     if (bookingStore.addons?.meals?.depart) {
       Object.entries(bookingStore.addons.meals.depart).forEach(([key, meal]) => {
@@ -118,7 +118,7 @@ export const bookingService = {
         }
       });
     }
-    
+
     // Extract assistance addons for depart flight
     if (bookingStore.addons?.wheelchair?.depart) {
       Object.entries(bookingStore.addons.wheelchair.depart).forEach(([key, serviceId]) => {
@@ -127,7 +127,7 @@ export const bookingService = {
         }
       });
     }
-    
+
     // Extract seats (not segmented)
     if (bookingStore.addons?.seats) {
       Object.entries(bookingStore.addons.seats).forEach(([key, seat]) => {
@@ -136,9 +136,9 @@ export const bookingService = {
         }
       });
     }
-    
+
     console.log('Formatted addons (depart flight only):', formattedAddons);
-    
+
     // If round trip, need to handle return flight add-ons separately
     let returnAddons = null;
     if (bookingStore.isRoundTrip) {
@@ -147,7 +147,7 @@ export const bookingService = {
         meals: {},
         wheelchair: {}
       };
-      
+
       // Extract return baggage addons
       if (bookingStore.addons?.baggage?.return) {
         Object.entries(bookingStore.addons.baggage.return).forEach(([key, baggage]) => {
@@ -156,7 +156,7 @@ export const bookingService = {
           }
         });
       }
-      
+
       // Extract return meal addons
       if (bookingStore.addons?.meals?.return) {
         Object.entries(bookingStore.addons.meals.return).forEach(([key, meal]) => {
@@ -165,7 +165,7 @@ export const bookingService = {
           }
         });
       }
-      
+
       // Extract return assistance addons
       if (bookingStore.addons?.wheelchair?.return) {
         Object.entries(bookingStore.addons.wheelchair.return).forEach(([key, serviceId]) => {
@@ -174,10 +174,10 @@ export const bookingService = {
           }
         });
       }
-      
+
       console.log('Return flight addons:', returnAddons);
     }
-    
+
     // Build complete booking data
     const bookingData = {
       trip_type: bookingStore.selectedReturn ? 'round_trip' : 'one_way',
@@ -212,10 +212,11 @@ export const bookingService = {
         children: parseInt(bookingStore.passengerCount?.children) || 0,
         infant: parseInt(bookingStore.passengerCount?.infants) || 0
       },
-      // Include grand total for validation
-      total_amount: bookingStore.grandTotal || 0
+      activity_code: bookingStore.activityCode || null,
+      is_practice: bookingStore.isPractice || false
+      // NOTE: total_amount is intentionally omitted — the backend calculates it server-side
     };
-    
+
     console.log('✅ Final formatted booking data:', JSON.stringify(bookingData, null, 2));
     return bookingData;
   },
@@ -225,5 +226,31 @@ export const bookingService = {
     const date = new Date()
     date.setFullYear(date.getFullYear() - 20)
     return date.toISOString().split('T')[0]  // YYYY-MM-DD format
+  },
+
+  /**
+   * Fetch the authoritative price from the backend before booking creation.
+   * Use this on the Review Booking page to display the real total.
+   */
+  async calculatePrice(bookingStore) {
+    try {
+      const payload = this.formatBookingData(bookingStore)
+      const response = await api.post('flightapp/calculate-price/', payload)
+      if (response.data?.success) {
+        return {
+          success: true,
+          totalAmount: response.data.total_amount,
+          breakdown: response.data.breakdown,
+          currency: response.data.currency
+        }
+      }
+      return { success: false, error: response.data?.error || 'Failed to calculate price' }
+    } catch (error) {
+      console.error('❌ Error calculating price:', error.response?.data || error.message)
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Failed to calculate price'
+      }
+    }
   }
 }
