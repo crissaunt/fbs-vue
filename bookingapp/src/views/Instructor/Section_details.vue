@@ -717,12 +717,14 @@
 import { ref, computed, onMounted, watch, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/services/api/axios'
-import { section_details_api } from '@/services/instructor/section_details_api'
-import { Instructor_Dashboard_api } from '@/services/instructor/Instructor_Dashboard_api'
-import { ActivityService } from '@/services/instructor/Activity_api'
+import { sectionDetailsService } from '@/services/instructor/sectionDetailsService'
+import { instructorDashboardService } from '@/services/instructor/instructorDashboardService'
+import { activityService } from '@/services/instructor/activityService'
+import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 
 const section = ref(null)
 const sidebarSections = ref([])
@@ -1374,7 +1376,7 @@ const submitActivity = async () => {
     
     console.log('Submitting activity data:', formData);
     
-    const response = await ActivityService.createActivity(sectionId, formData)
+    const response = await activityService.createActivity(sectionId, formData);
     
     showSuccess(response.data.message || 'Activity created successfully!')
     
@@ -1406,11 +1408,11 @@ const submitActivity = async () => {
 const toggleSidebar = () => { sidebarOpen.value = !sidebarOpen.value }
 const toggleDropdown = () => { dropdownOpen.value = !dropdownOpen.value }
 
-const userFullName = computed(() => userData.value ? `${userData.value.first_name} ${userData.value.last_name}` : "Instructor")
-const initials = computed(() => userData.value?.username ? userData.value.username[0].toUpperCase() : "I")
+const userFullName = computed(() => userStore.user ? `${userStore.user.first_name} ${userStore.user.last_name}` : "Instructor")
+const initials = computed(() => userStore.userInitials)
 
 const handleLogout = () => {
-  localStorage.clear()
+  userStore.logout()
   router.push('/login')
 }
 
@@ -1418,15 +1420,15 @@ const goToSection = (id) => { router.push(`/instructor/section/${id}`) }
 
 const fetchAllData = async () => {
   try {
-    const id = route.params.id
-    const sectionData = await section_details_api.getSectionDetails(id)
-    section.value = sectionData
-    activities.value = sectionData.activities || []
+    const id = route.params.id;
+    const detailData = await sectionDetailsService.getSectionDetails(id);
+    section.value = detailData;
+    activities.value = detailData.activities || [];
     
-    const dashData = await Instructor_Dashboard_api.getDashboard()
-    sidebarSections.value = dashData.sections
-    const storedUser = localStorage.getItem('user_data')
-    if (storedUser) userData.value = JSON.parse(storedUser)
+    const dashData = await instructorDashboardService.getDashboard();
+    this.sidebarSections = dashData.sections || [];
+    
+    await this.userStore.ensureUserLoaded();
   } catch (error) { 
     console.error("Failed to load section data", error) 
   }

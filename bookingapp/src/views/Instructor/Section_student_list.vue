@@ -164,18 +164,19 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/services/api/axios'
-import { section_details_api } from '@/services/instructor/section_details_api'
-import { Instructor_Dashboard_api } from '@/services/instructor/Instructor_Dashboard_api'
-import { Section_people_list_api } from '@/services/instructor/Section_people_list_api'
+import { sectionDetailsService } from '@/services/instructor/sectionDetailsService'
+import { instructorDashboardService } from '@/services/instructor/instructorDashboardService'
+import { sectionPeopleListService } from '@/services/instructor/sectionPeopleListService'
+import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 
 // Data State
 const section = ref(null)
 const sidebarSections = ref([])
 const enrolledStudents = ref([])
-const userData = ref(null)
 const sidebarOpen = ref(false)
 const dropdownOpen = ref(false)
 
@@ -217,13 +218,13 @@ const toggleSidebar = () => { sidebarOpen.value = !sidebarOpen.value }
 const toggleDropdown = () => { dropdownOpen.value = !dropdownOpen.value }
 
 // Logic: Computed Props
-const userFullName = computed(() => userData.value ? `${userData.value.first_name} ${userData.value.last_name}` : "Instructor")
-const initials = computed(() => userData.value?.username ? userData.value.username[0].toUpperCase() : "I")
+const userFullName = computed(() => userStore.userFullName || "Instructor")
+const initials = computed(() => userStore.userInitials)
 
 // Logic: Auth/Nav
 const handleLogout = () => {
-  localStorage.clear()
-  router.push('/instructor/login')
+  userStore.logout()
+  router.push('/login')
 }
 const goToSection = (id) => { router.push(`/instructor/section/${id}`) }
 
@@ -232,15 +233,15 @@ const fetchAllData = async () => {
   try {
     const id = route.params.id;
     // 1. Fetch Section Details
-    section.value = await section_details_api.getSectionDetails(id);
+    section.value = await sectionDetailsService.getSectionDetails(id);
     // 2. Fetch Enrolled Students from Django API
-    enrolledStudents.value = await Section_people_list_api.getEnrolledStudents(id);
+    enrolledStudents.value = await sectionPeopleListService.getEnrolledStudents(id);
     // 3. Fetch Sidebar Navigation
-    const dashData = await Instructor_Dashboard_api.getDashboard();
+    const dashData = await instructorDashboardService.getDashboard();
     sidebarSections.value = dashData.sections;
-    // 4. Fetch User Data
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) userData.value = JSON.parse(storedUser);
+    
+    // 4. Ensure user data is loaded in store
+    await userStore.ensureUserLoaded();
   } catch (error) { 
     console.error("Failed to load people data", error) 
   }

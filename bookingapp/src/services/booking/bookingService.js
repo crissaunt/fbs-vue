@@ -212,6 +212,7 @@ export const bookingService = {
         children: parseInt(bookingStore.passengerCount?.children) || 0,
         infant: parseInt(bookingStore.passengerCount?.infants) || 0
       },
+      // ✅ FIX: Include activity code & practice mode so the booking is linked to the activity
       activity_code: bookingStore.activityCode || null,
       is_practice: bookingStore.isPractice || false
       // NOTE: total_amount is intentionally omitted — the backend calculates it server-side

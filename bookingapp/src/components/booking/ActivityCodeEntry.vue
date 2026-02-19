@@ -68,7 +68,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { useBookingStore } from '@/stores/booking';
-import axios from 'axios';
+import api from '@/services/api/axios';
 
 const props = defineProps({
   isOpen: {
@@ -107,16 +107,9 @@ const validateActivityCode = async () => {
   error.value = '';
 
   try {
-    const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
-    const response = await axios.post(
-      'http://localhost:8000/validate-activity-code/',
-      { activity_code: activityCode.value },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Token ${token}`
-        }
-      }
+    const response = await api.post(
+      'validate-activity-code/',
+      { activity_code: activityCode.value }
     );
 
     if (response.data.success) {

@@ -74,9 +74,34 @@
           </div>
 
           <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
-            <!-- Loading State -->
-            <div v-if="loading" class="text-center py-20 text-gray-400 font-bold animate-pulse uppercase tracking-widest">
-              Loading activity details...
+            <!-- Loading State (Skeleton UI) -->
+            <div v-if="loading" class="animate-pulse">
+              <div class="flex justify-between items-start mb-10">
+                <div class="space-y-4 w-2/3">
+                  <div class="h-10 bg-gray-200 rounded-lg w-3/4"></div>
+                  <div class="h-4 bg-gray-100 rounded w-1/2"></div>
+                  <div class="flex gap-2">
+                    <div class="h-6 bg-gray-50 rounded w-20 border border-gray-100"></div>
+                    <div class="h-6 bg-gray-50 rounded w-20 border border-gray-100"></div>
+                  </div>
+                </div>
+                <div class="w-32 h-4 bg-gray-100 rounded"></div>
+              </div>
+              
+              <div class="space-y-6">
+                <!-- Activity Stats Skeleton -->
+                <div class="grid grid-cols-3 gap-6 mb-10">
+                  <div v-for="i in 3" :key="i" class="h-24 bg-gray-50 rounded-xl border border-gray-100"></div>
+                </div>
+                
+                <!-- Content Placeholder -->
+                <div class="space-y-4">
+                  <div class="h-6 bg-gray-200 rounded w-48"></div>
+                  <div class="space-y-2">
+                    <div v-for="i in 5" :key="i" class="h-12 bg-gray-50 rounded border border-gray-100"></div>
+                  </div>
+                </div>
+              </div>
             </div>
             
             <!-- Activity Content -->
@@ -338,6 +363,7 @@
                         <td class="px-6 py-5">
                           <button 
                             v-if="sub.booking"
+                            @click="viewStudentDetails(sub)"
                             class="text-[9px] font-black text-pink-500 hover:text-pink-700 uppercase tracking-widest border border-pink-100 px-3 py-1.5 rounded-lg hover:bg-pink-50 transition-all"
                           >
                             View Details
@@ -379,15 +405,30 @@
         <button @click="showSuccessModal = false" class="w-full bg-black text-white py-3 rounded-lg font-bold uppercase text-xs tracking-widest">Close</button>
       </div>
     </div>
+
+    <!-- Comparison Modal -->
+    <ComparisonModal
+      :is-open="showComparison"
+      :is-loading="isLoadingBooking"
+      :error-message="comparisonError"
+      :activity="activity"
+      :booking="comparisonBooking"
+      :grade="comparisonGrade"
+      @close="showComparison = false"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Instructor_Dashboard_api } from '@/services/instructor/Instructor_Dashboard_api'
-import { Activity_details_api } from '@/services/instructor/Activity_details_api'
+import { instructorDashboardService } from '@/services/instructor/instructorDashboardService'
+import { activityDetailsService } from '@/services/instructor/activityDetailsService'
+import { bookingService } from '@/services/booking/bookingService'
+import ComparisonModal from '@/components/common/ComparisonModal.vue'
+import { useNotificationStore } from '@/stores/notification'
 
+const notificationStore = useNotificationStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -429,6 +470,12 @@ const sections = ref([])
 const user = ref({ first_name: '', last_name: '', username: '' })
 const activity = ref(null)
 const submissions = ref([])
+
+const showComparison = ref(false)
+const comparisonBooking = ref(null)
+const isLoadingBooking = ref(false)
+const comparisonGrade = ref(null)
+const comparisonError = ref('')
 
 // --- Computed ---
 const fullName = computed(() => {
@@ -475,7 +522,7 @@ const fetchData = async () => {
   
   try {
     // 1. Fetch Dashboard data for sidebar sections and user info
-    const dashData = await Instructor_Dashboard_api.getDashboard()
+    const dashData = await instructorDashboardService.getDashboard()
     sections.value = dashData.sections || []
     user.value = dashData.user || { first_name: '', last_name: '', username: '' }
 
@@ -490,7 +537,7 @@ const fetchData = async () => {
     }
 
     console.log('Fetching activity with ID:', activityId)
-    const data = await Activity_details_api.getActivity(activityId)
+    const data = await activityDetailsService.getActivity(activityId)
     console.log('Activity data received:', data)
     activity.value = data
     
@@ -513,7 +560,7 @@ const fetchSubmissions = async () => {
   
   submissionsLoading.value = true
   try {
-    const data = await Activity_details_api.getSubmissions(activity.value.id)
+    const data = await activityDetailsService.getSubmissions(activity.value.id)
     submissions.value = data.submissions || []
     console.log('Submissions received:', submissions.value)
   } catch (error) {
@@ -530,7 +577,7 @@ const handleActivation = async () => {
   
   try {
     console.log('Activating activity:', activity.value.id)
-    const res = await Activity_details_api.activateActivity(activity.value.id)
+    const res = await activityDetailsService.activateActivity(activity.value.id)
     
     console.log('Activation response:', res)
     
@@ -542,9 +589,33 @@ const handleActivation = async () => {
   } catch (error) {
     console.error("Activation error:", error)
     const errorMsg = error.response?.data?.error || error.response?.data?.detail || 'Failed to activate activity.'
-    alert(errorMsg)
+    notificationStore.error(errorMsg)
   } finally {
     activating.value = false
+  }
+}
+
+const viewStudentDetails = async (sub) => {
+  if (!sub.booking) return
+  
+  showComparison.value = true
+  comparisonBooking.value = null
+  isLoadingBooking.value = true
+  comparisonGrade.value = sub.grade
+  comparisonError.value = ''
+
+  try {
+    const data = await bookingService.getBookingDetails(sub.booking.id)
+    if (data.success) {
+      comparisonBooking.value = data.booking
+    } else {
+      comparisonError.value = data.error || "Could not find booking data for this student."
+    }
+  } catch (error) {
+    console.error("Error fetching booking details:", error)
+    comparisonError.value = "Failed to load student work details. Please try again."
+  } finally {
+    isLoadingBooking.value = false
   }
 }
 

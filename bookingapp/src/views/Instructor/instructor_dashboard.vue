@@ -188,14 +188,16 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 // Import the new API service
-import { Instructor_Dashboard_api } from '@/services/instructor/Instructor_Dashboard_api'
+import { instructorDashboardService } from '@/services/instructor/instructorDashboardService'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const userStore = useUserStore()
+
 const sidebarOpen = ref(false) 
 const dropdownOpen = ref(false)
 const showModal = ref(false)
 const sections = ref([])
-const user = ref({ first_name: '', last_name: '', username: '' })
 
 // Form state for creating a new section
 const form = ref({
@@ -209,14 +211,14 @@ const form = ref({
 
 // Computed: Full name display logic
 const fullName = computed(() => {
-  if (user.value.first_name && user.value.last_name) return `${user.value.first_name} ${user.value.last_name}`
-  if (user.value.first_name) return user.value.first_name
-  return user.value.username || 'Instructor'
+  if (userStore.user.first_name && userStore.user.last_name) return `${userStore.user.first_name} ${userStore.user.last_name}`
+  if (userStore.user.first_name) return userStore.user.first_name
+  return userStore.user.username || 'Instructor'
 })
 
 // Computed: User initials for the avatar
 const initials = computed(() => {
-  const u = user.value.username || 'I'
+  const u = userStore.user?.username || 'I'
   return u[0].toUpperCase()
 })
 
@@ -240,12 +242,12 @@ const handleLogout = () => {
  */
 const fetchInstructorData = async () => {
   try {
-    const data = await Instructor_Dashboard_api.getDashboard();
+    const data = await instructorDashboardService.getDashboard();
     
     // Update local refs with data from Django
     sections.value = data.sections;
     if (data.user) {
-      user.value = data.user;
+      userStore.user = data.user;
     }
   } catch (error) {
     if (error.response?.status === 401 || error.response?.status === 403) {
@@ -260,7 +262,7 @@ const fetchInstructorData = async () => {
  */
 const submitSection = async () => {
   try {
-    await Instructor_Dashboard_api.createSection(form.value);
+    await instructorDashboardService.createSection(form.value);
     
     // Reset UI state
     showModal.value = false;
@@ -284,7 +286,7 @@ const submitSection = async () => {
 const deleteSection = async (id) => {
   if (confirm("Are you sure you want to delete this section?")) {
     try {
-      await Instructor_Dashboard_api.deleteSection(id);
+      await instructorDashboardService.deleteSection(id);
       await fetchInstructorData(); // Refresh list
     } catch (error) {
       alert("Failed to delete section.");
@@ -293,15 +295,8 @@ const deleteSection = async (id) => {
 }
 
 // Lifecycle: Initialize data
-onMounted(() => {
-  // Optional: Quick load from storage while waiting for API
-  const storedUser = localStorage.getItem('user_data')
-  if (storedUser) {
-    try {
-      user.value = JSON.parse(storedUser);
-    } catch (e) { /* silent fail */ }
-  }
-  
-  fetchInstructorData();
+onMounted(async () => {
+  await userStore.ensureUserLoaded();
+  await fetchInstructorData();
 })
 </script>

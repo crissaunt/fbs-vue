@@ -733,7 +733,7 @@ def get_activity_submissions(request, activity_id):
                 "email": student.email,
                 "status": binding.status if binding else "not_assigned",
                 "binding_id": binding.id if binding else None,
-                "grade": float(binding.grade) if binding and binding.grade else None,
+                "grade": float(binding.grade) if (binding and binding.grade is not None) else None,
                 "submitted_at": binding.submitted_at.isoformat() if binding and binding.submitted_at else None,
                 "booking": None
             }
@@ -982,13 +982,17 @@ def student_dashboard(request):
     section = enrollment.section
     print(f"📚 Enrolled in: {section.section_name} ({section.section_code})")
     
-    # 4. Get activities
+    # 4. Get activities - either active OR already has progress (submitted/graded)
+    from django.db.models import Q
     section_activities = Activity.objects.filter(
-        section=section,
-        is_code_active=True
-    ).order_by('-created_at')
+        Q(section=section) & 
+        (Q(is_code_active=True) | Q(student_bindings__student=student, student_bindings__status__in=['submitted', 'graded']))
+    ).distinct().order_by('-created_at')
     
-    print(f"  Total active activities: {section_activities.count()}")
+    print(f"  Total visible activities: {section_activities.count()}")
+    for act in section_activities:
+        reason = "active" if act.is_code_active else "completed/graded"
+        print(f"    - [{act.id}] {act.title} ({reason})")
     
     # 5. Build activities data
     from .models import ActivityStudentBinding
@@ -1007,6 +1011,14 @@ def student_dashboard(request):
         if created:
             print(f"  ✨ Created binding: {activity.title}")
         
+        # Search for a confirmed booking for this activity
+        booking_obj = Booking.objects.filter(
+            user=user,
+            activity=activity,
+            status='Confirmed',
+            is_practice=False
+        ).first()
+
         activities_data.append({
             'id': activity.id,
             'title': activity.title,
@@ -1028,14 +1040,12 @@ def student_dashboard(request):
             'section_id': section.id,
             'section_name': section.section_name,
             'section_code': section.section_code,
+            'grade': float(binding.grade) if binding.grade is not None else None,
+            'submitted_at': binding.submitted_at.isoformat() if binding.submitted_at else None,
             
-            # ✅ NEW: Add completion status based on bookings
-            'completed': Booking.objects.filter(
-                user=user,
-                activity=activity,
-                status='Confirmed',
-                is_practice=False
-            ).exists()
+            # ✅ NEW: Add completion status and booking ID
+            'completed': booking_obj is not None,
+            'confirmed_booking_id': booking_obj.id if booking_obj else None
         })
     
     section_data = {
@@ -1304,6 +1314,14 @@ def student_activity_details(request, activity_id):
                     return str(date_obj)
             return None
         
+        # Search for a confirmed booking for this activity
+        booking_obj = Booking.objects.filter(
+            user=user,
+            activity=activity,
+            status='Confirmed',
+            is_practice=False
+        ).first()
+
         # Build activity data with PROPER field mapping
         activity_data = {
             'id': activity.id,
@@ -1336,7 +1354,7 @@ def student_activity_details(request, activity_id):
             'status': binding.status,
             'assigned_at': safe_iso_format(binding.assigned_at),
             'submitted_at': safe_iso_format(binding.submitted_at) if binding.submitted_at else None,
-            'grade': float(binding.grade) if binding.grade else None,
+            'grade': float(binding.grade) if binding.grade is not None else None,
             'feedback': binding.feedback or '',
             
             # Activity status
@@ -1345,13 +1363,9 @@ def student_activity_details(request, activity_id):
             # 🔑 NEW: Activity code for verification
             'activity_code': activity.activity_code or '',
             
-            # ✅ NEW: Add completion status based on bookings
-            'completed': Booking.objects.filter(
-                user=user,
-                activity=activity,
-                status='Confirmed',
-                is_practice=False
-            ).exists()
+            # ✅ NEW: Add completion status and booking ID
+            'completed': booking_obj is not None,
+            'confirmed_booking_id': booking_obj.id if booking_obj else None
         }
         
         response_data = {

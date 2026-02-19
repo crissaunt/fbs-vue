@@ -35,6 +35,20 @@ export const useNotificationStore = defineStore('notification', {
             if (index !== -1) {
                 this.notifications.splice(index, 1);
             }
+        },
+
+        // Helper methods
+        success(message, duration = 5000) {
+            return this.addNotification({ message, type: 'success', duration });
+        },
+        error(message, duration = 5000) {
+            return this.addNotification({ message, type: 'error', duration });
+        },
+        warn(message, duration = 5000) {
+            return this.addNotification({ message, type: 'warning', duration });
+        },
+        info(message, duration = 5000) {
+            return this.addNotification({ message, type: 'info', duration });
         }
     }
 });

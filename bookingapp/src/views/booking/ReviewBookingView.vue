@@ -407,98 +407,18 @@ const hasFlightData = computed(() => {
   return !!outbound && typeof outbound === 'object' && 'price' in outbound;
 });
 
-const payingPassengerCount = computed(() => {
-  const { adults = 0, children = 0 } = bookingStore.passengerCount || {};
-  return adults + children;
-});
-
-const departBaseFare = computed(() => {
-  const outboundPrice = parseFloat(bookingStore.selectedOutbound?.price) || 0;
-  return outboundPrice * payingPassengerCount.value;
-});
-
-const returnBaseFare = computed(() => {
-  if (!bookingStore.selectedReturn) return 0;
-  const returnPrice = parseFloat(bookingStore.selectedReturn?.price) || 0;
-  return returnPrice * payingPassengerCount.value;
-});
-
-const totalSeatsPrice = computed(() => {
-  const seats = bookingStore.addons?.seats || {};
-  return Object.values(seats).reduce((sum, seat) => {
-    if (!seat) return sum;
-    // Use seat_price instead of final_price
-    const seatPrice = parseFloat(seat.seat_price) || 0;
-    return sum + seatPrice;
-  }, 0);
-});
-
-const totalBaggagePrice = computed(() => {
-  let total = 0;
-  const segments = bookingStore.isRoundTrip ? ['depart', 'return'] : ['depart'];
-  
-  segments.forEach(segment => {
-    const baggage = bookingStore.addons?.baggage?.[segment] || {};
-    Object.values(baggage).forEach(baggageItem => {
-      // Check if baggageItem exists and is not null
-      if (!baggageItem) return;
-      
-      if (typeof baggageItem === 'object' && baggageItem.price !== undefined) {
-        total += (parseFloat(baggageItem.price) || 0);
-      } else {
-        const option = getItemById(baggageOptions.value, baggageItem);
-        total += (option ? parseFloat(option.price) : 0);
-      }
-    });
-  });
-  
-  return total;
-});
-
-const totalMealsPrice = computed(() => {
-  let total = 0;
-  const segments = bookingStore.isRoundTrip ? ['depart', 'return'] : ['depart'];
-  
-  segments.forEach(segment => {
-    const meals = bookingStore.addons?.meals?.[segment] || {};
-    Object.values(meals).forEach(meal => {
-      // Check if meal exists and is not null
-      if (!meal) return;
-      
-      if (typeof meal === 'object' && meal.price !== undefined) {
-        total += (parseFloat(meal.price) || 0);
-      }
-    });
-  });
-  
-  return total;
-});
-
-const totalAssistancePrice = computed(() => {
-  let total = 0;
-  const segments = bookingStore.isRoundTrip ? ['depart', 'return'] : ['depart'];
-  
-  segments.forEach(segment => {
-    const assistance = bookingStore.addons?.wheelchair?.[segment] || {};
-    Object.values(assistance).forEach(assistanceId => {
-      // Check if assistanceId exists and is not null
-      if (!assistanceId) return;
-      
-      const option = assistanceOptions.value.find(a => a.id == assistanceId);
-      if (option && option.price) {
-        total += parseFloat(option.price);
-      }
-    });
-  });
-  
-  return total;
-});
+const payingPassengerCount = computed(() => bookingStore.payingPassengerCount);
+const departBaseFare = computed(() => bookingStore.departBaseFare);
+const returnBaseFare = computed(() => bookingStore.returnBaseFare);
+const totalSeatsPrice = computed(() => bookingStore.totalSeatsPrice);
+const totalBaggagePrice = computed(() => bookingStore.totalBaggagePrice);
+const totalMealsPrice = computed(() => bookingStore.totalMealsPrice);
+const totalAssistancePrice = computed(() => bookingStore.totalAssistancePrice);
 
 const grandTotal = computed(() => {
   // Prioritize backend-calculated total if available
   if (backendTotal.value !== null) return backendTotal.value;
-  
-  return bookingStore.grandTotal || (departBaseFare.value + returnBaseFare.value + totalSeatsPrice.value + totalBaggagePrice.value + totalMealsPrice.value + totalAssistancePrice.value);
+  return bookingStore.calculatedGrandTotal;
 });
 
 // Validation function

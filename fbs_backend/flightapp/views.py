@@ -1222,8 +1222,16 @@ def create_booking(request):
         
         # Start transaction
         with transaction.atomic():
-            # 1. Create or get user
-            user = _get_or_create_user(data)
+            # 1. Get or create user — prefer the authenticated student's account
+            #    This is critical: if a student is logged in (has an activity code),
+            #    we MUST use their real Django user so the booking links to their
+            #    Student profile and grading can succeed.
+            if request.user and request.user.is_authenticated:
+                user = request.user
+                print(f"✅ Using authenticated user: {user.id} - {user.username}")
+            else:
+                user = _get_or_create_user(data)
+
             
             # 2. Create main booking — total_amount starts at 0, backend will calculate it
             #    SECURITY: We NEVER trust the frontend-supplied total_amount
@@ -1291,15 +1299,11 @@ def create_booking(request):
             print(f"DEBUG: Updating booking totals")
             _update_booking_totals(booking)
             
-            # TRIGGER AUTO-GRADING
-            if booking.activity:
-                print(f"🎓 Triggering auto-grading for booking {booking.id} usage activity {booking.activity.id}")
-                try:
-                    grade_booking(booking, booking.activity.id)
-                except Exception as e:
-                    print(f"⚠️ Error during auto-grading: {str(e)}")
+            # NOTE: Auto-grading happens in process_payment_webhook and process_payment_with_id
+            # AFTER the payment is confirmed (status = 'Confirmed'). DO NOT grade here.
             
             print(f"DEBUG: Booking creation successful!")
+
             
             # Return the correct total amount (backend source of truth)
             return Response({
@@ -2153,6 +2157,15 @@ def process_payment(request):
                     if detail.seat:
                         detail.seat.is_available = False
                         detail.seat.save()
+
+                # 🎓 AUTO-GRADING
+                if booking.activity:
+                    print(f"🎓 Triggering auto-grading for booking {booking.id}")
+                    try:
+                        from .services.grading_service import grade_booking
+                        grade_booking(booking, booking.activity.id)
+                    except Exception as e:
+                        print(f"⚠️ Error during auto-grading: {str(e)}")
                 
                 return Response({
                     'success': True,

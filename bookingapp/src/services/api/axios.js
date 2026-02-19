@@ -3,7 +3,7 @@ import { useNotificationStore } from '@/stores/notification';
 import router from '@/router';
 
 const api = axios.create({
-    baseURL: 'http://localhost:8000/', // Root base URL for the whole API
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/', // Use env variable with fallback
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'

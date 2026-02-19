@@ -60,7 +60,116 @@ export const useBookingStore = defineStore('booking', {
   },
 
   getters: {
-    isRoundTrip: (state) => state.tripType === 'round_trip',
+    isRoundTrip: (state) => state.tripType === 'round-trip',
+
+    payingPassengerCount: (state) => {
+      const { adults = 0, children = 0 } = state.passengerCount || {};
+      return adults + children;
+    },
+
+    departBaseFare: (state) => {
+      const outboundPrice = parseFloat(state.selectedOutbound?.price) || 0;
+      return outboundPrice * ((state.passengerCount?.adults || 0) + (state.passengerCount?.children || 0));
+    },
+
+    returnBaseFare: (state) => {
+      if (!state.selectedReturn) return 0;
+      const returnPrice = parseFloat(state.selectedReturn?.price) || 0;
+      return returnPrice * ((state.passengerCount?.adults || 0) + (state.passengerCount?.children || 0));
+    },
+
+    totalSeatsPrice: (state) => {
+      const seats = state.addons?.seats || {};
+      let total = 0;
+      // Iterate over depart and return segments
+      for (const segmentKey in seats) {
+        if (Object.prototype.hasOwnProperty.call(seats, segmentKey)) {
+          const segmentSeats = seats[segmentKey];
+          Object.values(segmentSeats).forEach(seat => {
+            if (seat && seat.seat_price !== undefined) {
+              total += (parseFloat(seat.seat_price) || 0);
+            }
+          });
+        }
+      }
+      return total;
+    },
+
+    totalBaggagePrice: (state) => {
+      let total = 0;
+      const segments = state.tripType === 'round_trip' ? ['depart', 'return'] : ['depart'];
+      segments.forEach(segment => {
+        const baggage = state.addons?.baggage?.[segment] || {};
+        Object.values(baggage).forEach(baggageItem => {
+          if (!baggageItem) return;
+          if (typeof baggageItem === 'object' && baggageItem.price !== undefined) {
+            total += (parseFloat(baggageItem.price) || 0);
+          }
+          // Note: If baggageItem is just an ID, we'd need baggageOptions which are in the component.
+          // However, for the Review page, they are often objects if already selected.
+        });
+      });
+      return total;
+    },
+
+    totalMealsPrice: (state) => {
+      let total = 0;
+      const segments = state.tripType === 'round_trip' ? ['depart', 'return'] : ['depart'];
+      segments.forEach(segment => {
+        const meals = state.addons?.meals?.[segment] || {};
+        Object.values(meals).forEach(meal => {
+          if (!meal) return;
+          if (typeof meal === 'object' && meal.price !== undefined) {
+            total += (parseFloat(meal.price) || 0);
+          }
+        });
+      });
+      return total;
+    },
+
+    totalAssistancePrice: (state) => {
+      // This getter might still need option lists to be authoritative if only IDs are stored,
+      // but if objects are stored it works.
+      return 0; // Fallback or handle separately
+    },
+
+    calculatedGrandTotal: (state) => {
+      // Prioritize backend-calculated total if available in state
+      if (state.booking_total) return parseFloat(state.booking_total);
+
+      const outboundPrice = parseFloat(state.selectedOutbound?.price) || 0;
+      const returnPrice = state.selectedReturn ? parseFloat(state.selectedReturn?.price) : 0;
+      const paxCount = (state.passengerCount?.adults || 0) + (state.passengerCount?.children || 0);
+
+      const baseFare = (outboundPrice + returnPrice) * paxCount;
+
+      // Calculate add-ons from state
+      let addonsTotal = 0;
+
+      // Seats
+      const seats = state.addons?.seats || {};
+      for (const segmentKey in seats) {
+        if (Object.prototype.hasOwnProperty.call(seats, segmentKey)) {
+          const segmentSeats = seats[segmentKey];
+          addonsTotal += Object.values(segmentSeats).reduce((sum, s) => sum + (parseFloat(s?.seat_price) || 0), 0);
+        }
+      }
+
+      // Baggage, Meals, Wheelchair (Assuming objects with price are stored)
+      const segments = state.tripType === 'round_trip' ? ['depart', 'return'] : ['depart'];
+      segments.forEach(seg => {
+        ['baggage', 'meals', 'wheelchair'].forEach(type => {
+          const items = state.addons?.[type]?.[seg] || {};
+          Object.values(items).forEach(item => {
+            if (typeof item === 'object' && item?.price) {
+              addonsTotal += parseFloat(item.price);
+            }
+          });
+        });
+      });
+
+      return baseFare + addonsTotal;
+    },
     isOneWay: (state) => state.tripType === 'one_way',
 
     adultPassengers: (state) => {

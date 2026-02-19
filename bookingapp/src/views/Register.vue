@@ -92,7 +92,7 @@
 
 <script>
 import bgImage from '@/assets/image/bg-cthm.svg'
-import { registerService } from '@/services/Register_api'
+import { authService } from '@/services/auth/authService'
 
 export default {
   name: 'UnifiedRegister',
@@ -130,7 +130,7 @@ export default {
 
       try {
         // This hits your fbs_instructor/views.py register_view
-        const response = await registerService.register(this.form);
+        const response = await authService.register(this.form);
         
         alert("Account Created Successfully! Redirecting to login...");
         this.$router.push('/login');

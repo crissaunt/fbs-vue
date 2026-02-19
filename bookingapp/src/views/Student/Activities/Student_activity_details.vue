@@ -14,11 +14,63 @@
         </button>
       </div>
 
-      <!-- Loading State -->
-      <div v-if="loading" class="flex items-center justify-center h-96">
-        <div class="text-center">
-          <div class="inline-block animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-pink-500"></div>
-          <p class="mt-3 text-sm text-gray-600">Loading activity details...</p>
+      <!-- Loading State (Skeleton UI) -->
+      <div v-if="loading" class="animate-pulse">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-300 overflow-hidden">
+          <!-- Header Skeleton -->
+          <div class="px-8 pt-8 pb-6 border-b border-gray-200">
+            <div class="flex items-start justify-between mb-6">
+              <div class="flex-1">
+                <div class="h-9 bg-gray-200 rounded-lg w-3/4 mb-4"></div>
+                <div class="h-4 bg-gray-100 rounded w-1/3"></div>
+              </div>
+              <div class="w-32 space-y-2">
+                <div class="h-3 bg-gray-100 rounded ml-auto w-full"></div>
+                <div class="h-3 bg-gray-100 rounded ml-auto w-3/4"></div>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <div v-for="i in 4" :key="i" class="h-6 bg-gray-50 rounded-full w-20 border border-gray-100"></div>
+            </div>
+          </div>
+          
+          <!-- Instructions Skeleton -->
+          <div class="px-8 py-6 border-b border-gray-200">
+            <div class="h-5 bg-gray-200 rounded w-32 mb-4"></div>
+            <div class="space-y-2">
+              <div class="h-4 bg-gray-100 rounded w-full"></div>
+              <div class="h-4 bg-gray-100 rounded w-5/6"></div>
+              <div class="h-4 bg-gray-100 rounded w-4/5"></div>
+            </div>
+          </div>
+
+          <!-- Quick Info Bar Skeleton -->
+          <div class="px-8 py-4 bg-gray-50/50 border-b border-gray-200 flex justify-around">
+            <div v-for="i in 4" :key="i" class="text-center space-y-2">
+              <div class="h-3 bg-gray-200 rounded w-12 mx-auto"></div>
+              <div class="h-4 bg-gray-300 rounded w-20 mx-auto"></div>
+            </div>
+          </div>
+
+          <!-- Passenger Info Skeleton -->
+          <div class="px-8 py-6">
+            <div class="h-5 bg-gray-200 rounded w-40 mb-6"></div>
+            <div v-for="i in 2" :key="i" class="border border-gray-200 rounded-lg p-6 mb-6">
+              <div class="flex justify-between mb-6">
+                <div class="h-4 bg-gray-200 rounded w-48"></div>
+                <div class="h-4 bg-gray-100 rounded w-32"></div>
+              </div>
+              <div class="grid grid-cols-12 gap-3 mb-4">
+                <div class="col-span-2 h-10 bg-gray-50 rounded border border-gray-100"></div>
+                <div class="col-span-4 h-10 bg-gray-50 rounded border border-gray-100"></div>
+                <div class="col-span-5 h-10 bg-gray-50 rounded border border-gray-100"></div>
+                <div class="col-span-1 h-10 bg-gray-50 rounded border border-gray-100"></div>
+              </div>
+              <div class="grid grid-cols-3 gap-3">
+                <div v-for="j in 3" :key="j" class="h-10 bg-gray-50 rounded border border-gray-100"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -350,6 +402,19 @@
               </p>
               <p class="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap italic">{{ activity.feedback }}</p>
             </div>
+            
+            <!-- View Work Button -->
+            <div v-if="activity.completed" class="mt-6 flex justify-center">
+              <button 
+                @click="openComparisonModal"
+                class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg transition-all shadow-md flex items-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+                View Work
+              </button>
+            </div>
           </div>
 
           <!-- Start Button -->
@@ -447,15 +512,37 @@
         </div>
       </div>
     </div>
+
+    <!-- Comparison Modal -->
+    <ComparisonModal
+      :is-open="showComparison"
+      :is-loading="isLoadingBooking"
+      :error-message="comparisonError"
+      :activity="activity"
+      :booking="comparisonBooking"
+      :grade="activity.grade"
+      @close="showComparison = false"
+    />
   </div>
 </template>
 
 <script>
-import StudentActivityDetailsApi from '@/services/Student/Student_activity_details.api.js';
+import { studentActivityDetailsService } from '@/services/Student/studentActivityDetailsService.js';
 import { useBookingStore } from '@/stores/booking';
+import ComparisonModal from '@/components/common/ComparisonModal.vue';
+import { comparisonService } from '@/services/Student/comparisonService';
+import { useUserStore } from '@/stores/user'
+import api from '@/services/api/axios';
 
 export default {
   name: 'StudentActivityDetails',
+  setup() {
+    const userStore = useUserStore()
+    return { userStore }
+  },
+  components: {
+    ComparisonModal
+  },
   data() {
     return {
       activity: {
@@ -493,7 +580,13 @@ export default {
       enteredCode: '',
       showError: false,
       errorMessage: '',
-      verifying: false
+      verifying: false,
+
+      // Comparison Modal State
+      showComparison: false,
+      comparisonBooking: null,
+      isLoadingBooking: false,
+      comparisonError: null
     }
   },
   computed: {
@@ -522,12 +615,10 @@ export default {
     }
   },
   async created() {
-    const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
     console.log('🔐 Activity Details Component Created');
-    console.log('🔑 Token check:', token ? 'EXISTS' : 'MISSING');
     
-    if (!token) {
-      console.error('❌ No token found in localStorage!');
+    if (!this.userStore.isAuthenticated) {
+      console.error('❌ No token found!');
       this.error = "Authentication required. Please login.";
       this.loading = false;
       
@@ -537,17 +628,14 @@ export default {
       return;
     }
     
-    const studentData = localStorage.getItem('student_data');
-    if (studentData) {
-      try {
-        const parsed = JSON.parse(studentData);
-        this.studentEmail = parsed.email || '';
-        this.studentFirstName = parsed.first_name || '';
-        this.studentLastName = parsed.last_name || '';
-        console.log('✅ Student data loaded from localStorage');
-      } catch (e) {
-        console.error('❌ Error parsing student data:', e);
-      }
+    // Ensure user profile is loaded (handles cache clears)
+    await this.userStore.ensureUserLoaded();
+
+    if (this.userStore.studentProfile) {
+      this.studentEmail = this.userStore.studentProfile.email || '';
+      this.studentFirstName = this.userStore.studentProfile.first_name || '';
+      this.studentLastName = this.userStore.studentProfile.last_name || '';
+      console.log('✅ Student data loaded from store');
     }
     
     await this.loadActivityDetails();
@@ -569,7 +657,7 @@ export default {
         }
         
         console.log('🌐 Making API request...');
-        const response = await StudentActivityDetailsApi.getActivityDetails(activityId);
+        const response = await studentActivityDetailsService.getActivityDetails(activityId);
         
         console.log('✅ Response received:', response.data);
         
@@ -678,6 +766,30 @@ export default {
     
     goToHome() {
       this.$router.push('/student/dashboard');
+    },
+
+    async openComparisonModal() {
+      this.showComparison = true;
+      this.comparisonBooking = null;
+      this.isLoadingBooking = true;
+      this.comparisonError = null;
+
+      try {
+        console.log('🔍 Loading comparison data for activity:', this.activity.id);
+        const data = await comparisonService.getComparisonData(this.activity.id, this.activity.confirmed_booking_id);
+        
+        if (data.success) {
+          if (data.activity) this.activity = { ...this.activity, ...data.activity };
+          this.comparisonBooking = data.booking;
+        } else {
+          this.comparisonError = data.error || "Could not find booking data for this activity.";
+        }
+      } catch (error) {
+        console.error("Error loading comparison data:", error);
+        this.comparisonError = "Failed to connect to the server. Please try again later.";
+      } finally {
+        this.isLoadingBooking = false;
+      }
     },
     
     openCodeModal() {

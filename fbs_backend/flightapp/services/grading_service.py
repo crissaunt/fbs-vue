@@ -50,10 +50,10 @@ def grade_booking(booking, activity_id):
             return
 
         # 2. Check Origin
-        booked_origin = outbound_detail.schedule.flight.route.origin.city
+        booked_origin = outbound_detail.schedule.flight.route.origin_airport.city
         if activity.required_origin and activity.required_origin.lower() not in booked_origin.lower():
              # Also check code
-            booked_origin_code = outbound_detail.schedule.flight.route.origin.code
+            booked_origin_code = outbound_detail.schedule.flight.route.origin_airport.code
             if activity.required_origin.upper() != booked_origin_code:
                 feedback.append(f"❌ Incorrect Origin: Requires {activity.required_origin}, got {booked_origin} ({booked_origin_code})")
                 is_perfect = False
@@ -63,10 +63,10 @@ def grade_booking(booking, activity_id):
             feedback.append("✅ Correct Origin")
 
         # 3. Check Destination
-        booked_dest = outbound_detail.schedule.flight.route.destination.city
+        booked_dest = outbound_detail.schedule.flight.route.destination_airport.city
         if activity.required_destination and activity.required_destination.lower() not in booked_dest.lower():
             # Also check code
-            booked_dest_code = outbound_detail.schedule.flight.route.destination.code
+            booked_dest_code = outbound_detail.schedule.flight.route.destination_airport.code
             if activity.required_destination.upper() != booked_dest_code:
                 feedback.append(f"❌ Incorrect Destination: Requires {activity.required_destination}, got {booked_dest} ({booked_dest_code})")
                 is_perfect = False

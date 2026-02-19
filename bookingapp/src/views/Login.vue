@@ -108,15 +108,22 @@
 
 <script>
 import bgImage from '@/assets/image/bg-cthm.svg'
-import api from '@/services/api/axios'
+import { authService } from '@/services/auth/authService'
+import { useUserStore } from '@/stores/user'
+import { useNotificationStore } from '@/stores/notification'
 
 export default {
-  name: 'InstructorLogin',
+  name: 'LoginView',
+  setup() {
+    const userStore = useUserStore()
+    const notificationStore = useNotificationStore()
+    return { userStore, notificationStore }
+  },
   data() {
     return {
       username: '',
       password: '',
-      loading: false,
+      isLoading: false,
       error: null,
       successMessage: ''
     }
@@ -130,7 +137,12 @@ export default {
   },
   methods: {
     async handleLogin() {
-      this.loading = true
+      if (!this.username || !this.password) {
+        this.notificationStore.warn('Please enter both username and password')
+        return
+      }
+      
+      this.isLoading = true
       this.error = null
       this.successMessage = ''
 
@@ -138,70 +150,36 @@ export default {
         console.log('🔐 Attempting login for:', this.username)
         
         // 1. Send Login Request
-        const response = await api.post(
-          'api/login/', 
-          {
-            username: this.username,
-            password: this.password
-          }
-        )
-
-        console.log("LOGIN SUCCESS:", response.data)
-
-        // 2. Extract Data
-        const { token, user, dashboard_route } = response.data
+        const { token, user, role, dashboard_route } = await authService.login(this.username, this.password);
         
-        // ✅ CRITICAL FIX: Store token with BOTH keys for compatibility
-        if (token) {
-          // Store with primary key (used by Student_dashboard_api.js)
-          localStorage.setItem('token', token)
-          // Also store with auth_token key (used by router)
-          localStorage.setItem('auth_token', token)
-          
-          console.log('✅ Token stored successfully:', token)
-          console.log('✅ Verification - token:', localStorage.getItem('token'))
-          console.log('✅ Verification - auth_token:', localStorage.getItem('auth_token'))
-        } else {
-          console.error('❌ No token received from server!')
-        }
+        // 2. Update Central Store
+        this.userStore.setAuth({ token, user, role });
         
-        // 3. Save User Data
-        if (user) {
-          localStorage.setItem('user', JSON.stringify(user))
-          localStorage.setItem('user_data', JSON.stringify(user)) // Keep for compatibility
-          console.log('✅ User data stored:', user)
-        }
-
-        // 4. Show success message
+        console.log('✅ Login successful - User Store Updated');
         this.successMessage = 'Login successful! Redirecting...'
-
-        // 5. Redirect after short delay to ensure storage is complete
+        
+        // 3. Move to appropriate dashboard
         setTimeout(() => {
-          if (dashboard_route) {
-            console.log('🔄 Redirecting to:', dashboard_route)
-            this.$router.push(dashboard_route)
-          } else {
-            console.error('❌ No dashboard route provided')
-            this.error = "Unknown role or route."
-          }
-        }, 1000) // 1 second delay to show success message and ensure storage
-
+          this.$router.push(dashboard_route)
+        }, 500)
+        
       } catch (err) {
         console.error('❌ LOGIN ERROR:', err)
-        
         if (err.response) {
           const data = err.response.data
-          this.error = data.error || data.detail || data.message || "Invalid credentials."
-          console.error('❌ Server error:', this.error)
-        } else if (err.request) {
-          this.error = "Unable to connect to the server. Please check if the server is running."
-          console.error('❌ Network error - no response from server')
+          if (err.response?.status === 401) {
+            this.error = 'Invalid credentials'
+            this.notificationStore.error('Invalid username or password')
+          } else {
+            this.error = data.error || data.detail || data.message || 'An error occurred during login. Please try again.'
+            this.notificationStore.error('Login failed. Please check your connection.')
+          }
         } else {
           this.error = "An unexpected error occurred. Please try again."
-          console.error('❌ Unexpected error:', err.message)
+          this.notificationStore.error('Login failed. Please check your internet connection.')
         }
       } finally {
-        this.loading = false
+        this.isLoading = false
       }
     }
   }

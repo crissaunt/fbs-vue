@@ -152,10 +152,46 @@
           'px-6 py-6 mx-6 mb-6',
           section ? 'bg-white rounded-b-lg shadow-sm' : 'bg-transparent'
         ]">
-          <!-- Loading State -->
-          <div v-if="loading" class="text-center py-10">
-            <div class="inline-block animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-pink-500"></div>
-            <p class="mt-3 text-sm text-gray-600">Loading your dashboard...</p>
+          <!-- Loading State (Skeleton UI) -->
+          <div v-if="loading" class="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 animate-pulse">
+            <!-- Left Side Skeleton -->
+            <div class="space-y-4">
+              <!-- Deadlines Card Skeleton -->
+              <div class="bg-gray-200/50 border border-gray-200 rounded-lg p-4 h-48">
+                <div class="h-4 bg-gray-300 rounded w-1/2 mb-4"></div>
+                <div class="space-y-3">
+                  <div v-for="i in 3" :key="i" class="h-12 bg-white rounded border border-gray-200"></div>
+                </div>
+              </div>
+              <!-- Practice Booking Skeleton -->
+              <div class="bg-gray-200 rounded-lg p-5 h-32"></div>
+              <!-- Section Card Skeleton -->
+              <div class="bg-gray-100/50 border border-gray-200 rounded-lg p-4 h-64">
+                <div class="h-4 bg-gray-200 rounded w-1/3 mb-4"></div>
+                <div class="space-y-2">
+                  <div v-for="i in 4" :key="i" class="h-10 bg-gray-200 rounded opacity-50"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Side Skeleton (Activities) -->
+            <div class="space-y-5">
+              <div v-for="i in 3" :key="i" class="bg-white rounded-lg p-5 border border-gray-200 h-32 flex gap-4">
+                <div class="w-10 h-10 bg-gray-200 rounded-full flex-shrink-0"></div>
+                <div class="flex-1 space-y-3">
+                  <div class="flex justify-between items-start">
+                    <div class="space-y-2 w-full">
+                      <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+                      <div class="h-3 bg-gray-100 rounded w-1/4"></div>
+                    </div>
+                    <div class="h-5 bg-gray-100 rounded-full w-20"></div>
+                  </div>
+                  <div class="flex gap-2">
+                    <div v-for="j in 2" :key="j" class="h-5 bg-gray-50 rounded-full w-16 border border-gray-100"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Error State -->
@@ -239,7 +275,7 @@
                   @click="startPracticeBooking"
                   class="w-full bg-white text-blue-600 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors shadow-sm"
                 >
-                  Start Practice Session
+                  Start Practice Booking
                 </button>
               </div>
 
@@ -340,6 +376,12 @@
                       >
                         {{ activity.status }}
                       </span>
+                      <span 
+                        v-if="activity.grade !== null"
+                        class="px-2.5 py-0.5 bg-pink-50 text-pink-700 text-[10px] font-black rounded-full uppercase border border-pink-100"
+                      >
+                        Score: {{ activity.grade }} / {{ activity.total_points }} pts
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -371,18 +413,27 @@
                   <span class="text-[11px] text-gray-500">
                     Assigned: {{ formatDate(activity.assigned_at) }}
                   </span>
-                  <button 
-                    @click.stop="viewActivityDetails(activity.id)"
-                    :disabled="activity.completed"
-                    :class="[
-                      'px-4 py-2 text-white text-xs font-semibold rounded-lg transition-colors',
-                      activity.completed 
-                        ? 'bg-gray-400 cursor-not-allowed' 
-                        : 'bg-pink-500 hover:bg-pink-600'
-                    ]"
-                  >
-                    {{ activity.completed ? 'Finished' : 'View Details' }}
-                  </button>
+                  <div class="flex gap-2">
+                    <button 
+                      v-if="activity.completed"
+                      @click.stop="openComparisonModal(activity)"
+                      class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                    >
+                      View Work
+                    </button>
+                    <button 
+                      @click.stop="viewActivityDetails(activity.id)"
+                      :disabled="activity.completed"
+                      :class="[
+                        'px-4 py-2 text-white text-xs font-semibold rounded-lg transition-colors',
+                        activity.completed 
+                          ? 'bg-gray-400 cursor-not-allowed' 
+                          : 'bg-pink-500 hover:bg-pink-600'
+                      ]"
+                    >
+                      {{ activity.completed ? 'Finished' : 'View Details' }}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -404,15 +455,37 @@
         </div>
       </main>
     </div>
+
+    <!-- Comparison Modal -->
+    <ComparisonModal
+      :is-open="showComparison"
+      :is-loading="isLoadingBooking"
+      :error-message="comparisonError"
+      :activity="comparisonActivity"
+      :booking="comparisonBooking"
+      @close="showComparison = false"
+    />
   </div>
 </template>
 
 <script>
-import StudentApi from '@/services/Student/Student_dashboard_api';
+import { studentDashboardService } from '@/services/Student/studentDashboardService.js';
 import { useBookingStore } from '@/stores/booking';
+import ComparisonModal from '@/components/common/ComparisonModal.vue';
+import { comparisonService } from '@/services/Student/comparisonService';
+import api from '@/services/api/axios';
+import { useUserStore } from '@/stores/user'
+import { useModalStore } from '@/stores/modal'
+import { useNotificationStore } from '@/stores/notification'
 
 export default {
   name: 'StudentDashboard',
+  setup() {
+    const userStore = useUserStore()
+    const modalStore = useModalStore()
+    const notificationStore = useNotificationStore()
+    return { userStore, modalStore, notificationStore }
+  },
   data() {
     return {
       student: {
@@ -436,7 +509,15 @@ export default {
       loading: true,
       error: null,
       sidebarOpen: false,
-      dropdownOpen: false
+      dropdownOpen: false,
+      
+      // Comparison Modal State
+      showComparison: false,
+      comparisonActivity: null,
+      comparisonBooking: null,
+      isLoadingBooking: false,
+      comparisonError: null,
+      sidebarOpen: true,
     }
   },
   computed: {
@@ -460,7 +541,7 @@ export default {
       } else if (this.activeTab === 'assigned') {
         filtered = filtered.filter(a => a.status === 'assigned');
       } else if (this.activeTab === 'submitted') {
-        filtered = filtered.filter(a => a.status === 'submitted');
+        filtered = filtered.filter(a => ['submitted', 'graded'].includes(a.status));
       }
 
       return filtered;
@@ -476,11 +557,10 @@ export default {
     }
   },
   async created() {
-    const token = localStorage.getItem('token');
-    console.log('🔐 Component Created - Token Check:', token ? 'EXISTS' : 'MISSING');
+    console.log('🔐 Component Created - Auth Check');
     
-    if (!token) {
-      console.error('❌ No token found in localStorage!');
+    if (!this.userStore.isAuthenticated) {
+      console.error('❌ No token found!');
       this.error = "Authentication required. Please login.";
       this.loading = false;
       
@@ -507,7 +587,7 @@ export default {
           throw new Error('No authentication token found');
         }
         
-        const response = await StudentApi.getStudentDashboard();
+        const response = await studentDashboardService.getStudentDashboard();
         
         console.log('✅ Response received:', response.data);
         
@@ -522,8 +602,8 @@ export default {
             phone_number: response.data.user.phone_number || ''
           };
           
-          // Store student data in localStorage for activity details page
-          localStorage.setItem('student_data', JSON.stringify(this.student));
+          // Store student data in central store
+          this.userStore.setStudentProfile(this.student);
           
           this.section = response.data.section || null;
           this.activities = response.data.activities || [];
@@ -566,7 +646,7 @@ export default {
             this.error = error.response.data.error || `Error: ${error.response.status}`;
           }
         } else if (error.request) {
-          this.error = "Cannot connect to server. Please check if Django is running on http://localhost:8000";
+          this.error = "Cannot connect to server. Please check your connection.";
           console.error("🔌 Server connection failed");
         } else {
           this.error = error.message || "An unexpected error occurred. Please try again.";
@@ -580,10 +660,18 @@ export default {
       console.log('🔗 Navigating to activity details:', activityId);
       this.$router.push(`/student/activity/${activityId}`);
     },
-
-    startPracticeBooking() {
+    async startPracticeBooking() {
       console.log('🎯 Starting practice booking session');
       
+      const confirmed = await this.modalStore.confirm({
+        title: 'Start Practice Booking?',
+        message: 'This will start a simulation where you can practice the booking flow without affecting real data. Any activity code you enter will be verified against your assignments.',
+        confirmText: 'Start Simulation',
+        cancelText: 'Maybe Later'
+      });
+
+      if (!confirmed) return;
+
       // Use the booking store
       const bookingStore = useBookingStore();
       
@@ -595,8 +683,35 @@ export default {
         hasActivityCodeValidation: bookingStore.hasActivityCodeValidation
       });
       
+      this.notificationStore.success('Practice mode enabled. Happy booking!');
+      
       // Redirect to home page to start booking
       this.$router.push('/');
+    },
+
+    async openComparisonModal(activity) {
+      this.showComparison = true;
+      this.comparisonActivity = activity;
+      this.comparisonBooking = null;
+      this.isLoadingBooking = true;
+      this.comparisonError = null;
+
+      try {
+        console.log('🔍 Loading comparison data for activity:', activity.id);
+        const data = await comparisonService.getComparisonData(activity.id, activity.confirmed_booking_id);
+        
+        if (data.success) {
+          if (data.activity) this.comparisonActivity = data.activity;
+          this.comparisonBooking = data.booking;
+        } else {
+          this.comparisonError = data.error || "Could not find booking data for this activity.";
+        }
+      } catch (error) {
+        console.error("Error loading comparison data:", error);
+        this.comparisonError = "Failed to connect to the server. Please try again later.";
+      } finally {
+        this.isLoadingBooking = false;
+      }
     },
     
     toggleSidebar() {
@@ -619,7 +734,7 @@ export default {
       } else if (tabName === 'assigned') {
         return this.activities.filter(a => a.status === 'assigned').length;
       } else if (tabName === 'submitted') {
-        return this.activities.filter(a => a.status === 'submitted').length;
+        return this.activities.filter(a => ['submitted', 'graded'].includes(a.status)).length;
       }
       
       return this.activities.length;

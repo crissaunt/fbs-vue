@@ -6,6 +6,7 @@
   
   <!-- Global Components -->
   <GlobalToast />
+  <GlobalModalManager />
 </template>
 
 <script setup>
@@ -19,6 +20,7 @@ import { useRoute } from 'vue-router'
 import InstructorLayout from '@/views/Instructor/InstructorLayout.vue'
 import BookingLayout from '@/views/booking/layout/BookingLayout.vue'  // ✅ add this
 import GlobalToast from '@/components/common/GlobalToast.vue'
+import GlobalModalManager from '@/components/common/GlobalModalManager.vue'
 
 
 const route = useRoute()

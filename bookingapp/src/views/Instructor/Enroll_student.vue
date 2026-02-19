@@ -156,15 +156,16 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { section_details_api } from '@/services/instructor/section_details_api'
-import { Instructor_Dashboard_api } from '@/services/instructor/Instructor_Dashboard_api'
+import { sectionDetailsService } from '@/services/instructor/sectionDetailsService'
+import { instructorDashboardService } from '@/services/instructor/instructorDashboardService'
+import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 
 const section = ref(null)
 const sidebarSections = ref([])
-const userData = ref(null)
 const students = ref([]) // Local list for UI
 const sidebarOpen = ref(false)
 const dropdownOpen = ref(false)
@@ -183,12 +184,12 @@ const studentForm = ref({
 const toggleSidebar = () => { sidebarOpen.value = !sidebarOpen.value }
 const toggleDropdown = () => { dropdownOpen.value = !dropdownOpen.value }
 
-const userFullName = computed(() => userData.value ? `${userData.value.first_name} ${userData.value.last_name}` : "Instructor")
-const initials = computed(() => userData.value?.username ? userData.value.username[0].toUpperCase() : "I")
+const userFullName = computed(() => userStore.userFullName || "Instructor")
+const initials = computed(() => userStore.userInitials)
 
 const handleLogout = () => {
-  localStorage.removeItem('auth_token'); localStorage.removeItem('user_data');
-  router.push('/instructor/login')
+  userStore.logout()
+  router.push('/login')
 }
 
 const goToSection = (id) => { router.push(`/instructor/section/${id}`) }
@@ -206,12 +207,13 @@ const handleEnroll = async () => {
 const fetchAllData = async () => {
   try {
     const id = route.params.id;
-    const detailData = await section_details_api.getSectionDetails(id);
+    const detailData = await sectionDetailsService.getSectionDetails(id);
     section.value = detailData;
-    const dashData = await Instructor_Dashboard_api.getDashboard();
+    const dashData = await instructorDashboardService.getDashboard();
     sidebarSections.value = dashData.sections;
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) userData.value = JSON.parse(storedUser);
+    
+    // Ensure user data is loaded in store
+    await userStore.ensureUserLoaded();
   } catch (error) {
     console.error("Failed to load data", error);
   }

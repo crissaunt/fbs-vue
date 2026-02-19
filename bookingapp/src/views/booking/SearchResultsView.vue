@@ -873,22 +873,55 @@
             
           </div>
           
-          <!-- Loading State with Countdown -->
-          <div v-if="loading && !showNoResults" class="bg-white rounded-sm shadow-sm border border-gray-200 p-12 text-center">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
-            <p class="text-gray-600">Searching for available flights...</p>
-            
-            <!-- Countdown indicator -->
-            <div class="mt-6 max-w-sm mx-auto">
-              <div class="text-sm text-gray-500 mb-2">
-                Searching... ({{ timeoutCountdown }}s)
+          <!-- Loading State (Skeleton UI) -->
+          <div v-if="loading && !showNoResults" class="space-y-4 animate-pulse">
+            <!-- Flight Count Skeleton -->
+            <div class="flex justify-between items-center mb-6">
+              <div class="h-8 bg-gray-200 rounded w-64"></div>
+              <div class="h-4 bg-gray-100 rounded w-32"></div>
+            </div>
+
+            <!-- Skeleton Flight Cards -->
+            <div v-for="i in 3" :key="i" class="bg-white rounded-sm border border-gray-200 overflow-hidden shadow-sm">
+              <div class="px-6 py-4">
+                <!-- Card Header Skeleton -->
+                <div class="flex justify-between items-center mb-6 pb-6 border-b border-gray-100">
+                  <div class="flex items-center gap-4">
+                    <div class="space-y-2">
+                      <div class="h-5 bg-pink-100 rounded w-32"></div>
+                      <div class="h-3 bg-green-50 rounded w-20"></div>
+                    </div>
+                    <div class="h-6 bg-blue-50 rounded-full w-24"></div>
+                  </div>
+                  <div class="text-right">
+                    <div class="h-8 bg-pink-200 rounded w-32 mb-1"></div>
+                    <div class="h-3 bg-green-50 rounded w-20 ml-auto"></div>
+                  </div>
+                </div>
+
+                <!-- Card Body Skeleton -->
+                <div class="flex justify-between items-center gap-8 mb-4 px-4">
+                  <div class="flex-1 space-y-2">
+                    <div class="h-9 bg-gray-200 rounded w-28"></div>
+                    <div class="h-4 bg-gray-100 rounded w-20"></div>
+                  </div>
+                  <div class="w-32 flex flex-col items-center">
+                    <div class="w-full h-px bg-gray-200 mb-2"></div>
+                    <div class="h-4 bg-gray-100 rounded w-20"></div>
+                    <div class="w-full h-px bg-gray-200 mt-2"></div>
+                  </div>
+                  <div class="flex-1 text-right space-y-2">
+                    <div class="h-9 bg-gray-200 rounded w-28 ml-auto"></div>
+                    <div class="h-4 bg-gray-100 rounded w-20 ml-auto"></div>
+                  </div>
+                </div>
               </div>
-              <div class="w-full bg-gray-200 rounded-full h-2">
-                <div class="bg-pink-500 h-2 rounded-full transition-all duration-1000" 
-                     :style="{ width: `${((5 - timeoutCountdown) / 5) * 100}%` }"></div>
-              </div>
-              <p class="text-xs text-gray-500 mt-4">
-                If no flights appear in {{ timeoutCountdown }} seconds, we'll show alternative options.
+            </div>
+
+            <!-- Search Status Info -->
+            <div class="text-center py-6">
+              <p class="text-xs text-gray-400 font-medium tracking-widest uppercase">
+                Searching for the best deals... ({{ timeoutCountdown }}s)
               </p>
             </div>
           </div>

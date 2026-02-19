@@ -20,14 +20,21 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useBookingStore } from '@/stores/booking';
+import { useUserStore } from '@/stores/user';
+import { useModalStore } from '@/stores/modal';
+import { useNotificationStore } from '@/stores/notification';
 import FlightSearch from '@/components/booking/FlightSearch.vue';
 
 const bookingStore = useBookingStore();
+const userStore = useUserStore();
 const sessionCleared = ref(false);
 
 // Clear any existing booking session when visiting home
-onMounted(() => {
+onMounted(async () => {
   console.log('🏠 HomeView mounted - checking for active booking sessions...');
+  
+  // Ensure user data is loaded in store
+  await userStore.ensureUserLoaded();
   
   // Check if there's an active session
   const session = bookingStore.checkSession();
@@ -36,21 +43,27 @@ onMounted(() => {
     console.log('⚠️ Active booking session found. Checking if reset is needed...');
     
     // Skip auto-reset for instructors (they might be testing/demonstrating)
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    if (user.role === 'instructor') {
+    if (userStore.isInstructor) {
        console.log('👨‍🏫 Instructor session - skipping automatic reset');
        return;
     }
 
     // Show confirmation if user has unsaved data
     if (bookingStore.passengers.length > 0 || bookingStore.selectedOutbound) {
-      const userConfirmed = window.confirm(
-        'We found an active booking session. Would you like to start a new search? Your current booking data will be cleared.'
-      );
+      const modalStore = useModalStore();
+      const notificationStore = useNotificationStore();
+      
+      const userConfirmed = await modalStore.confirm({
+        title: 'Clear Active Session?',
+        message: 'We found an active booking session. Would you like to start a new search? Your current booking data will be cleared.',
+        confirmText: 'Start New Search',
+        cancelText: 'Continue Previous'
+      });
       
       if (userConfirmed) {
         bookingStore.resetBooking();
         sessionCleared.value = true;
+        notificationStore.info('Previous session cleared.');
         
         // Hide message after 5 seconds
         setTimeout(() => {
@@ -70,8 +83,7 @@ onMounted(() => {
   } else if (!bookingStore.hasActivityCodeValidation) {
     // Make sure store is clean if session is invalid AND no validation
     // But check role first - instructors don't need activity validation
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    if (user.role !== 'instructor') {
+    if (!userStore.isInstructor) {
       bookingStore.resetBooking();
     }
   }
