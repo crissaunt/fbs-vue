@@ -38,12 +38,15 @@ CORS_ALLOW_ALL_ORIGINS = True    # Only in development
 CORS_ALLOW_CREDENTIALS = True
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'fbs_instructor.authentication.MultiSessionTokenAuthentication',
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,  # Default page size for all paginated endpoints
 }
 
 
@@ -91,6 +94,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'app',
     'flightapp',
+    'fbs_instructor',
 ]
 
 MIDDLEWARE = [
@@ -137,7 +141,7 @@ ROOT_URLCONF = 'fbs_backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS':  [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -151,6 +155,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'fbs_backend.wsgi.application'
 
+# Cache configuration for demand tracking
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+
+# Session configuration
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_COOKIE_AGE = 3600  # 1 hour
+SESSION_SAVE_EVERY_REQUEST = True
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
@@ -171,7 +187,7 @@ DATABASES = {
         'NAME': 'flight_database',                    
         'USER': 'postgres',                 
         'PASSWORD': 'postgres',     
-        'HOST': 'localhost',                  
+        'HOST': 'localhost',           
         'PORT': '5432',                 
     }
 }
@@ -222,3 +238,24 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+
+
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # Or your SMTP server
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'solayaoflorence@gmail.com'  # Your email
+EMAIL_HOST_PASSWORD = 'ivrj sehi txqz zvwp'  # App-specific password
+DEFAULT_FROM_EMAIL = 'CTHM Flight Booking System <cthmfbs@gmail.com>'
+SERVER_EMAIL = 'cthmfbs@gmail.com'
+
+# Support Contact Info (used in emails)
+SUPPORT_EMAIL = 'support@philippineairlines.com'
+SUPPORT_PHONE = '(02) 8855-8888'
+WEBSITE_URL = 'http://localhost:5173/'
+# WEBSITE_URL = 'https://www.philippineairlines.com'
+
+# For development (prints emails to console instead of sending)
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

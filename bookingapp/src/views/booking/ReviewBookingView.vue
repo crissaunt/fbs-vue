@@ -156,7 +156,15 @@
       <aside class="sidebar">
         <div class="summary-card sticky">
           <div class="summary-header">Payment Summary</div>
-          <div class="summary-body">
+          <div class="summary-body" v-if="isCalculatingPrice">
+            <div class="price-loading">
+              <div class="loading-dots">
+                <span></span><span></span><span></span>
+              </div>
+              <p>Verifying price with server...</p>
+            </div>
+          </div>
+          <div class="summary-body" v-else>
             <!-- Flight Base Fares -->
             <div class="flight-base-summary" v-if="bookingStore.selectedOutbound">
               <div class="price-line">
@@ -220,9 +228,55 @@ const baggageOptions = ref([]);
 const mealOptions = ref([]);
 const assistanceOptions = ref([]);
 
+// Backend Price Data
+const backendTotal = ref(null);
+const backendBreakdown = ref(null);
+const isCalculatingPrice = ref(false);
+
 onMounted(async () => {
   try {
-    // Migrate store to new format if needed
+
+    bookingStore.loadBookingFromStorage();
+    
+    // Debug: Log current store state
+    console.log('📊 ========== PINIA STORE STATE ==========');
+    console.log('🎫 Trip Type:', bookingStore.tripType, '(Round Trip:', bookingStore.isRoundTrip + ')');
+    console.log('📋 Booking ID:', bookingStore.booking_id);
+    console.log('📋 Booking Reference:', bookingStore.booking_reference);
+    console.log('📋 Booking Status:', bookingStore.booking_status);
+    console.log('💰 Booking Total:', bookingStore.booking_total);
+    // Debug: Log current store state
+    console.log('📊 ========== PINIA STORE STATE ==========');
+    console.log('🎫 Trip Type:', bookingStore.tripType, '(Round Trip:', bookingStore.isRoundTrip + ')');
+    
+    // Flight data
+    console.log('✈️ Outbound Flight:', bookingStore.selectedOutbound);
+    console.log('🔄 Return Flight:', bookingStore.selectedReturn);
+    
+    // Passenger data
+    console.log('👥 Passenger Count:', bookingStore.passengerCount);
+    console.log('📋 Passengers:', JSON.parse(JSON.stringify(bookingStore.passengers)));
+    
+    // Contact info
+    console.log('📞 Contact Info:', JSON.parse(JSON.stringify(bookingStore.contactInfo)));
+    
+    // Add-ons (deep clone to avoid reactivity issues)
+    console.log('🎯 Add-ons Structure:', JSON.parse(JSON.stringify(bookingStore.addons)));
+    
+    // Financial calculations
+    console.log('💰 Financial Summary:');
+    console.log('  - Combined Base Price:', bookingStore.combinedBasePrice);
+    console.log('  - Total Add-ons Price:', bookingStore.totalAddonsPrice);
+    console.log('  - Grand Total (computed):', bookingStore.grandTotal);
+    console.log('  - Booking Total (stored):', bookingStore.booking_total);
+    
+    // Session info
+    const sessionStatus = bookingStore.checkSession();
+    console.log('⏰ Session Status:', sessionStatus);
+    
+    console.log('📊 ========== END PINIA STORE ==========');
+
+    // Rest of your existing code...
     bookingStore.migrateAddonsToNewFormat();
     
     const airlineId = bookingStore.selectedOutbound?.airline_code || bookingStore.selectedOutbound?.airline;
@@ -237,9 +291,21 @@ onMounted(async () => {
       addonService.getAssistanceServices(airlineId)
     ]);
 
-    if (results[0].status === 'fulfilled') baggageOptions.value = results[0].value.data || [];
-    if (results[1].status === 'fulfilled') mealOptions.value = results[1].value.data || [];
-    if (results[2].status === 'fulfilled') assistanceOptions.value = results[2].value.data || [];
+    if (results[0].status === 'fulfilled') {
+      const data = results[0].value.data;
+      baggageOptions.value = Array.isArray(data) ? data : (data?.results || []);
+    }
+    if (results[1].status === 'fulfilled') {
+      const data = results[1].value.data;
+      mealOptions.value = Array.isArray(data) ? data : (data?.results || []);
+    }
+    if (results[2].status === 'fulfilled') {
+      const data = results[2].value.data;
+      assistanceOptions.value = Array.isArray(data) ? data : (data?.results || []);
+    }
+
+    // Fetch backend-calculated price
+    await fetchBackendPrice();
 
   } catch (error) {
     console.error("Review page data fetch error:", error);
@@ -247,6 +313,25 @@ onMounted(async () => {
     isLoading.value = false;
   }
 });
+
+const fetchBackendPrice = async () => {
+  isCalculatingPrice.value = true;
+  try {
+    console.log('🔍 Fetching authoritative backend price...');
+    const result = await bookingService.calculatePrice(bookingStore);
+    if (result.success) {
+      backendTotal.value = result.totalAmount;
+      backendBreakdown.value = result.breakdown;
+      console.log('✅ Backend price confirmed:', backendTotal.value);
+    } else {
+      console.warn('⚠️ Could not get backend price, falling back to store calculation:', result.error);
+    }
+  } catch (error) {
+    console.error('❌ Error in fetchBackendPrice:', error);
+  } finally {
+    isCalculatingPrice.value = false;
+  }
+};
 
 // Helper functions
 const getItemById = (list, id) => {
@@ -262,6 +347,9 @@ const getOptionById = (list, id) => {
 const getBaggageLabel = (passengerKey, segment = 'depart') => {
   const baggage = bookingStore.addons?.baggage?.[segment]?.[passengerKey];
   if (!baggage) return 'Standard (Free)';
+  
+  // Handle null or undefined baggage
+  if (baggage === null || baggage === undefined) return 'Standard (Free)';
   
   if (typeof baggage === 'object' && baggage.formatted_weight) {
     return `${baggage.formatted_weight} (₱${parseFloat(baggage.price).toLocaleString()})`;
@@ -285,7 +373,7 @@ const getMealLabel = (passengerKey, segment = 'depart') => {
 
 const getAssistanceLabel = (passengerKey, segment = 'depart') => {
   const assistanceId = bookingStore.addons?.wheelchair?.[segment]?.[passengerKey];
-  if (!assistanceId) return 'No assistance';
+  if (!assistanceId || !Array.isArray(assistanceOptions.value)) return 'No assistance';
   
   const option = assistanceOptions.value.find(a => a.id == assistanceId);
   return option ? option.name : 'Special Assistance';
@@ -295,7 +383,9 @@ const getSeatLabel = (passengerKey) => {
   const seat = bookingStore.addons?.seats?.[passengerKey];
   if (!seat) return 'Not selected';
   
-  return `${seat.seat_code || 'N/A'} (₱${parseFloat(seat.final_price || 0).toLocaleString()})`;
+  // Use seat_price instead of final_price
+  const price = parseFloat(seat.seat_price) || 0;
+  return `${seat.seat_code || 'N/A'} (₱${price.toLocaleString()})`;
 };
 
 const formatDate = (dateStr) => {
@@ -313,90 +403,22 @@ const formatDate = (dateStr) => {
 
 // Computed Properties
 const hasFlightData = computed(() => {
-  return !!bookingStore.selectedOutbound && !!bookingStore.selectedOutbound.price;
+  const outbound = bookingStore.selectedOutbound;
+  return !!outbound && typeof outbound === 'object' && 'price' in outbound;
 });
 
-const payingPassengerCount = computed(() => {
-  const { adults = 0, children = 0 } = bookingStore.passengerCount || {};
-  return adults + children;
-});
-
-const departBaseFare = computed(() => {
-  const outboundPrice = parseFloat(bookingStore.selectedOutbound?.price) || 0;
-  return outboundPrice * payingPassengerCount.value;
-});
-
-const returnBaseFare = computed(() => {
-  if (!bookingStore.selectedReturn) return 0;
-  const returnPrice = parseFloat(bookingStore.selectedReturn?.price) || 0;
-  return returnPrice * payingPassengerCount.value;
-});
-
-const totalSeatsPrice = computed(() => {
-  const seats = bookingStore.addons?.seats || {};
-  return Object.values(seats).reduce((sum, seat) => {
-    if (!seat) return sum;
-    const seatPrice = parseFloat(seat.final_price) || 0;
-    return sum + seatPrice;
-  }, 0);
-});
-
-const totalBaggagePrice = computed(() => {
-  let total = 0;
-  const segments = bookingStore.isRoundTrip ? ['depart', 'return'] : ['depart'];
-  
-  segments.forEach(segment => {
-    const baggage = bookingStore.addons?.baggage?.[segment] || {};
-    Object.values(baggage).forEach(baggageItem => {
-      if (typeof baggageItem === 'object' && baggageItem.price !== undefined) {
-        total += (parseFloat(baggageItem.price) || 0);
-      } else {
-        const option = getItemById(baggageOptions.value, baggageItem);
-        total += (option ? parseFloat(option.price) : 0);
-      }
-    });
-  });
-  
-  return total;
-});
-
-const totalMealsPrice = computed(() => {
-  let total = 0;
-  const segments = bookingStore.isRoundTrip ? ['depart', 'return'] : ['depart'];
-  
-  segments.forEach(segment => {
-    const meals = bookingStore.addons?.meals?.[segment] || {};
-    Object.values(meals).forEach(meal => {
-      if (typeof meal === 'object' && meal.price !== undefined) {
-        total += (parseFloat(meal.price) || 0);
-      }
-    });
-  });
-  
-  return total;
-});
-
-const totalAssistancePrice = computed(() => {
-  let total = 0;
-  const segments = bookingStore.isRoundTrip ? ['depart', 'return'] : ['depart'];
-  
-  segments.forEach(segment => {
-    const assistance = bookingStore.addons?.wheelchair?.[segment] || {};
-    Object.values(assistance).forEach(assistanceId => {
-      if (assistanceId) {
-        const option = assistanceOptions.value.find(a => a.id == assistanceId);
-        if (option && option.price) {
-          total += parseFloat(option.price);
-        }
-      }
-    });
-  });
-  
-  return total;
-});
+const payingPassengerCount = computed(() => bookingStore.payingPassengerCount);
+const departBaseFare = computed(() => bookingStore.departBaseFare);
+const returnBaseFare = computed(() => bookingStore.returnBaseFare);
+const totalSeatsPrice = computed(() => bookingStore.totalSeatsPrice);
+const totalBaggagePrice = computed(() => bookingStore.totalBaggagePrice);
+const totalMealsPrice = computed(() => bookingStore.totalMealsPrice);
+const totalAssistancePrice = computed(() => bookingStore.totalAssistancePrice);
 
 const grandTotal = computed(() => {
-  return bookingStore.grandTotal || (departBaseFare.value + returnBaseFare.value + totalSeatsPrice.value + totalBaggagePrice.value + totalMealsPrice.value + totalAssistancePrice.value);
+  // Prioritize backend-calculated total if available
+  if (backendTotal.value !== null) return backendTotal.value;
+  return bookingStore.calculatedGrandTotal;
 });
 
 // Validation function
@@ -506,113 +528,96 @@ const preparePassengersForSubmission = () => {
   return preparedPassengers;
 };
 
+
 const confirmBooking = async () => {
   isProcessing.value = true;
   
   try {
-    // Validate data before proceeding
-    const errors = validateBooking();
-    if (errors.length > 0) {
-      alert(errors.join('\n'));
-      isProcessing.value = false;
-      return;
-    }
-    
-    const preparedPassengers = preparePassengersForSubmission();
-    
-    // DEBUG: Check all data
-    console.log('🔍 DEBUG - Booking Store State for Review:');
-    console.log('Trip Type:', bookingStore.tripType);
-    console.log('Is Round Trip:', bookingStore.isRoundTrip);
-    console.log('Passengers:', JSON.stringify(bookingStore.passengers, null, 2));
-    console.log('Addons Structure:', JSON.stringify(bookingStore.addons, null, 2));
-    console.log('Depart Base Fare:', departBaseFare.value);
-    console.log('Return Base Fare:', returnBaseFare.value);
-    console.log('Total Add-ons:', {
-      seats: totalSeatsPrice.value,
-      baggage: totalBaggagePrice.value,
-      meals: totalMealsPrice.value,
-      assistance: totalAssistancePrice.value
-    });
-    console.log('Calculated Total:', grandTotal.value);
-    console.log('Store Grand Total:', bookingStore.grandTotal);
-    
-    // Format booking data for API
+    // 1. Prepare data using your existing formatBookingData
     const bookingData = bookingService.formatBookingData(bookingStore);
     
-    console.log('📞 Calling createBooking API...');
-    const response = await bookingService.createBooking(bookingData);
+    // 2. Check for an existing ID (from store or local storage)
+    const existingBookingId = bookingStore.booking_id || 
+                             JSON.parse(localStorage.getItem('current_booking'))?.id;
+
+    let response;
     
-    console.log('✅ Booking response:', response);
+    if (existingBookingId) {
+      // SCENARIO: User went back from Add-ons/Review to change details
+      console.log('🔄 Updating existing booking:', existingBookingId);
+      response = await bookingService.updateBooking(existingBookingId, bookingData);
+    } else {
+      // SCENARIO: First time clicking "Confirm"
+      console.log('🆕 Creating new booking...');
+      response = await bookingService.createBooking(bookingData);
+    }
+    
+    console.log('📊 FULL BOOKING RESPONSE:', response);
     
     if (response.success) {
-      bookingStore.saveBookingConfirmation(response);
+      // 3. Save ALL booking data to the store using saveBookingConfirmation
+      bookingStore.saveBookingConfirmation({
+        booking_id: response.booking_id,
+        booking_reference: response.booking_reference || `CSUCC${String(response.booking_id).padStart(8, '0')}`,
+        status: response.status || 'pending',
+        total_amount: response.total_amount || bookingStore.grandTotal
+      });
+      
+      // 4. Also set individual fields (for backward compatibility)
+      bookingStore.setBookingId(response.booking_id);
+      bookingStore.booking_reference = response.booking_reference || `CSUCC${String(response.booking_id).padStart(8, '0')}`;
+      bookingStore.booking_status = response.status || 'pending';
+      
+      // 5. Persist to LocalStorage so a page refresh doesn't lose the ID
       localStorage.setItem('current_booking', JSON.stringify({
         id: response.booking_id,
-        reference: response.booking_reference,
-        total: response.total_amount,
-        status: response.status,
-        created_at: new Date().toISOString()
+        reference: response.booking_reference || `CSUCC${String(response.booking_id).padStart(8, '0')}`,
+        total: response.total_amount || bookingStore.grandTotal,
+        status: response.status || 'pending'
       }));
       
-      router.push({
-        name: 'Payment',
+      console.log('✅ Booking saved to store:', {
+        id: bookingStore.booking_id,
+        reference: bookingStore.booking_reference,
+        status: bookingStore.booking_status,
+        total: bookingStore.booking_total
+      });
+      
+      // 6. Move to Payment
+      router.push({ 
+        name: 'Payment', 
         query: { 
           bookingId: response.booking_id,
-          amount: response.total_amount 
-        }
+          bookingReference: response.booking_reference || `CSUCC${String(response.booking_id).padStart(8, '0')}`
+        } 
       });
     } else {
-      console.error('❌ Booking creation failed:', response.error);
-      let errorMsg = response.error;
-      
-      if (typeof response.error === 'object') {
-        errorMsg = 'Validation errors:\n';
-        Object.entries(response.error).forEach(([field, errors]) => {
-          errorMsg += `• ${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}\n`;
-        });
-      }
-      
-      alert('Failed to create booking: ' + errorMsg);
-      isProcessing.value = false;
+      alert(`Booking Error: ${response.error}`);
     }
-    
   } catch (error) {
-    console.error('❌ Booking creation error:', error);
-    
-    let errorMessage = 'Failed to create booking. Please try again.';
-    
-    if (error.response) {
-      console.error('Error response data:', error.response.data);
-      console.error('Error status:', error.response.status);
-      
-      if (error.response.data) {
-        if (error.response.data.errors) {
-          errorMessage = 'Validation errors:\n';
-          Object.entries(error.response.data.errors).forEach(([field, errors]) => {
-            errorMessage += `• ${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}\n`;
-          });
-        } else if (error.response.data.error) {
-          if (typeof error.response.data.error === 'object') {
-            errorMessage = 'Validation errors:\n';
-            Object.entries(error.response.data.error).forEach(([field, errors]) => {
-              errorMessage += `• ${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}\n`;
-            });
-          } else {
-            errorMessage = error.response.data.error;
-          }
-        }
-      }
-    } else if (error.request) {
-      console.error('Error request:', error.request);
-      errorMessage = 'Network error. Please check your connection.';
-    } else {
-      errorMessage = error.message;
-    }
-    
-    alert(`Booking Error: ${errorMessage}`);
+    console.error("Booking critical failure:", error);
+    alert("An unexpected error occurred. Please try again.");
+  } finally {
     isProcessing.value = false;
   }
+};
+
+/**
+ * Extracted error handler to keep confirmBooking clean
+ */
+const handleBookingError = (error) => {
+  let errorMessage = 'Failed to process booking. Please try again.';
+  
+  if (error?.response?.data?.errors) {
+    errorMessage = 'Validation errors:\n' + 
+      Object.entries(error.response.data.errors)
+        .map(([field, errs]) => `• ${field}: ${Array.isArray(errs) ? errs.join(', ') : errs}`)
+        .join('\n');
+  } else if (typeof error === 'string') {
+    errorMessage = error;
+  }
+  
+  alert(errorMessage);
 };
 </script>
 
@@ -1004,5 +1009,44 @@ const confirmBooking = async () => {
     margin-left: 0;
     align-self: flex-start;
   }
+}
+
+/* Price Loading Styles */
+.price-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 10px;
+  text-align: center;
+}
+
+.price-loading p {
+  margin-top: 15px;
+  color: #666;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.loading-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.loading-dots span {
+  width: 8px;
+  height: 8px;
+  background-color: #003870;
+  border-radius: 50%;
+  display: inline-block;
+  animation: dot-pulse 1.4s infinite ease-in-out both;
+}
+
+.loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+.loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes dot-pulse {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1.0); }
 }
 </style>

@@ -9,6 +9,91 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+#User Profile with Roles
+from django.contrib.auth.models import User
+from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+class UserProfile(models.Model):
+    ROLE_CHOICES = [
+        ('student', 'Student'),
+        ('instructor', 'Instructor'),
+        ('admin', 'Admin'),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    role = models.CharField(
+        max_length=10, 
+        choices=ROLE_CHOICES, 
+        null=True, 
+        blank=True
+    )
+
+    def __str__(self):
+        return f"{self.user.username} ({self.role or 'No role'})"
+
+# Signal to auto-create profile when User is created
+@receiver(post_save, sender=User)
+def create_or_update_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+    else:
+        if hasattr(instance, 'userprofile'):
+            instance.userprofile.save()
+
+class Students(models.Model):
+    # ✅ Link to User model (nullable to allow migration of existing data)
+    user = models.OneToOneField(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='student_profile',
+        null=True,
+        blank=True
+    )
+    
+    # Existing student fields (keep them for backward compatibility)
+    student_number = models.CharField(max_length=50, unique=True)
+    first_name = models.CharField(max_length=100, blank=True)
+    mi = models.CharField(max_length=1, blank=True, null=True)
+    last_name = models.CharField(max_length=100, blank=True)
+    email = models.EmailField(unique=True, blank=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    password = models.CharField(max_length=255, blank=True)  # Keep for existing records
+    
+    # Add this new field
+    GENDER_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female'),
+        ('other', 'Other'),
+    ]
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True, null=True)
+    
+    # Metadata
+    date_enrolled = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        # This tells Django exactly what to show in the Admin sidebar
+        verbose_name = "Student"
+        verbose_name_plural = "Students"
+    
+    def save(self, *args, **kwargs):
+        """Auto-sync data from User model if linked"""
+        if self.user:
+            # Auto-fill from User if fields are empty
+            if not self.first_name:
+                self.first_name = self.user.first_name
+            if not self.last_name:
+                self.last_name = self.user.last_name
+            if not self.email:
+                self.email = self.user.email
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        # ✅ Handle both cases: with user and without user
+        if self.user:
+            return f"{self.user.first_name} {self.user.last_name} ({self.student_number})"
+        return f"{self.first_name} {self.last_name} ({self.student_number})"
 
 # ============================================================
 # COUNTRY MODEL
@@ -214,7 +299,7 @@ class Flight(models.Model):
         return f"{self.flight_number} ({self.airline.code})"
 
 
-# In your models.py, update the duration method in the Schedule model:
+
 
 from django.db import models
 from django.utils import timezone
@@ -234,11 +319,28 @@ class Schedule(models.Model):
     arrival_time = models.DateTimeField()
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Open')
+    
+    # ============ NEW FIELDS FOR ML PRICING ============
+    ml_base_price = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        help_text="ML predicted base price (saved from predictor)"
+    )
+    ml_price_updated_at = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="When the ML price was last calculated"
+    )
+    # ===================================================
 
     class Meta:
         indexes = [
             models.Index(fields=['departure_time', 'status']),
             models.Index(fields=['flight', 'departure_time']),
+            # Add index for ML price queries
+            models.Index(fields=['ml_base_price', 'status']),
         ]
 
     def __str__(self):
@@ -285,6 +387,7 @@ class Schedule(models.Model):
 
     @property
     def is_open(self):
+<<<<<<< HEAD
         return self.automatic_status == "Open"
 
     # --- VALIDATION ---
@@ -339,6 +442,54 @@ class SeatRequirement(models.Model):
 
     def __str__(self):
         return f"{self.name} (₱{self.price})"
+=======
+        return self.status == "Open"
+    
+    
+    def update_ml_price(self, save=True):
+        """Update the ML predicted price for this schedule"""
+        try:
+            # Import inside the method to avoid circular imports
+            from flightapp.ml.predictor import predictor
+            
+            # Check if model is loaded - if not, try to load it
+            if not predictor.model:
+                print(f"⚠️ Schedule {self.id}: ML model not loaded, attempting to load...")
+                predictor.load_model()
+                
+                if not predictor.model:
+                    print(f"❌ Schedule {self.id}: Failed to load ML model")
+                    return False, None
+            
+            flight_data = {
+                'schedule_id': self.id,
+                'flight_number': self.flight.flight_number,
+                'airline_code': self.flight.airline.code,
+                'airline_name': self.flight.airline.name,
+                'origin': self.flight.route.origin_airport.code,
+                'destination': self.flight.route.destination_airport.code,
+                'departure_time': self.departure_time.isoformat(),
+                'arrival_time': self.arrival_time.isoformat(),
+                'total_stops': 0,
+                'is_domestic': self.flight.route.is_domestic,
+            }
+            
+            predicted_price = Decimal(str(predictor.predict_price(flight_data)))
+            self.ml_base_price = predicted_price
+            self.ml_price_updated_at = timezone.now()
+            
+            if save:
+                self.save(update_fields=['ml_base_price', 'ml_price_updated_at'])
+            
+            print(f"✅ Schedule {self.id}: ML price updated to ₱{predicted_price:,.2f}")
+            return True, predicted_price
+        except Exception as e:
+            print(f"❌ Error updating ML price for schedule {self.id}: {e}")
+            import traceback
+            traceback.print_exc()
+            return False, None
+        # ===================================================
+>>>>>>> origin/criss
 
 
 class Seat(models.Model):
@@ -459,6 +610,7 @@ class Seat(models.Model):
 
     @property
     def final_price(self):
+<<<<<<< HEAD
         """Calculate final price including all adjustments"""
         base_price = self.schedule.price if self.schedule else Decimal('0.00')
         multiplier = self.seat_class.price_multiplier if self.seat_class else Decimal('1.00')
@@ -525,6 +677,19 @@ class Seat(models.Model):
                 })
         
         return details
+=======
+        """Calculate final price including adjustments"""
+        if self.schedule:
+            # Use ML base price if available, otherwise fallback to regular price
+            base_price = self.schedule.ml_base_price or self.schedule.price or Decimal('0.00')
+        else:
+            base_price = Decimal('0.00')
+        
+        multiplier = self.seat_class.price_multiplier if self.seat_class else Decimal('1.00')
+        adjustment = self.price_adjustment or Decimal('0.00')
+        
+        return (base_price * multiplier) + adjustment
+>>>>>>> origin/criss
 
     @property
     def seat_features(self):
@@ -1192,6 +1357,29 @@ class Booking(models.Model):
         decimal_places=2, 
         default=0.00,
         help_text="Total amount from frontend calculation"
+    )
+    
+    # Instructor Activity Link
+    activity = models.ForeignKey(
+        'fbs_instructor.Activity', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='bookings',
+        help_text="Optional link to an instructor's activity"
+    )
+    is_graded = models.BooleanField(default=False)
+    
+    # Practice Booking Support
+    is_practice = models.BooleanField(
+        default=False,
+        help_text="True if this is a practice booking (not graded)"
+    )
+    activity_code_used = models.CharField(
+        max_length=8, 
+        null=True, 
+        blank=True,
+        help_text="The activity code that was used for this booking"
     )
     
     class Meta:
@@ -1872,3 +2060,81 @@ def reserve_seat_with_lock(seat_id, booking_detail_id):
 # Booking.total_amount = booking_total_amount
 
 # Booking.total_amount = booking_total_amount
+
+# ============================================================
+# PRICING CONFIGURATION (SINGLETON)
+# ============================================================
+class PricingConfiguration(models.Model):
+    """
+    Singleton model to store dynamic pricing configuration.
+    Allows business teams to adjust pricing algorithm without code changes.
+    """
+    # User Factors
+    anonymous_user_factor = models.DecimalField(max_digits=5, decimal_places=2, default=1.05)
+    new_user_factor = models.DecimalField(max_digits=5, decimal_places=2, default=1.03)
+    returning_user_factor = models.DecimalField(max_digits=5, decimal_places=2, default=0.97)
+    loyal_user_factor = models.DecimalField(max_digits=5, decimal_places=2, default=0.92)
+    
+    # Demand Factors
+    search_threshold_high = models.IntegerField(default=100)
+    search_threshold_medium = models.IntegerField(default=50)
+    search_threshold_low = models.IntegerField(default=20)
+    
+    demand_factor_high = models.DecimalField(max_digits=5, decimal_places=2, default=1.15)
+    demand_factor_medium = models.DecimalField(max_digits=5, decimal_places=2, default=1.08)
+    demand_factor_low = models.DecimalField(max_digits=5, decimal_places=2, default=1.03)
+    
+    # Days Until Departure Factors
+    days_departure_critical = models.IntegerField(default=3)
+    days_departure_near = models.IntegerField(default=7)
+    days_departure_medium = models.IntegerField(default=14)
+    days_departure_far = models.IntegerField(default=60)
+    
+    days_factor_critical = models.DecimalField(max_digits=5, decimal_places=2, default=1.25)
+    days_factor_near = models.DecimalField(max_digits=5, decimal_places=2, default=1.15)
+    days_factor_medium = models.DecimalField(max_digits=5, decimal_places=2, default=1.05)
+    days_factor_far = models.DecimalField(max_digits=5, decimal_places=2, default=0.90)
+    
+    # Time Factors
+    peak_hour_factor = models.DecimalField(max_digits=5, decimal_places=2, default=1.12)
+    weekend_factor = models.DecimalField(max_digits=5, decimal_places=2, default=1.08)
+    peak_month_factor = models.DecimalField(max_digits=5, decimal_places=2, default=1.20)
+    holiday_factor = models.DecimalField(max_digits=5, decimal_places=2, default=1.30)
+    
+    # Inventory Factors
+    occupancy_high_threshold = models.DecimalField(max_digits=3, decimal_places=2, default=0.80)
+    occupancy_medium_threshold = models.DecimalField(max_digits=3, decimal_places=2, default=0.60)
+    occupancy_low_threshold = models.DecimalField(max_digits=3, decimal_places=2, default=0.20)
+    
+    occupancy_factor_high = models.DecimalField(max_digits=5, decimal_places=2, default=1.20)
+    occupancy_factor_medium = models.DecimalField(max_digits=5, decimal_places=2, default=1.10)
+    occupancy_factor_low = models.DecimalField(max_digits=5, decimal_places=2, default=0.90)
+    
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Pricing Configuration"
+        verbose_name_plural = "Pricing Configuration"
+
+    def save(self, *args, **kwargs):
+        """Ensure singleton"""
+        if not self.pk and PricingConfiguration.objects.exists():
+            return
+        super().save(*args, **kwargs)
+        # Invalidate cache on save
+        from django.core.cache import cache
+        cache.delete('pricing_config')
+
+    def __str__(self):
+        return f"Pricing Configuration (Last updated: {self.updated_at})"
+
+    @classmethod
+    def load(cls):
+        """Load configuration with caching"""
+        from django.core.cache import cache
+        config = cache.get('pricing_config')
+        if config is None:
+            obj, created = cls.objects.get_or_create(pk=1)
+            config = obj
+            cache.set('pricing_config', config, 60*60) # Cache for 1 hour
+        return config

@@ -18,7 +18,85 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue';
+import { useBookingStore } from '@/stores/booking';
+import { useUserStore } from '@/stores/user';
+import { useModalStore } from '@/stores/modal';
+import { useNotificationStore } from '@/stores/notification';
 import FlightSearch from '@/components/booking/FlightSearch.vue';
+
+const bookingStore = useBookingStore();
+const userStore = useUserStore();
+const sessionCleared = ref(false);
+
+// Clear any existing booking session when visiting home
+onMounted(async () => {
+  console.log('🏠 HomeView mounted - checking for active booking sessions...');
+  
+  // Ensure user data is loaded in store
+  await userStore.ensureUserLoaded();
+  
+  // Check if there's an active session
+  const session = bookingStore.checkSession();
+  
+  if (session.valid) {
+    console.log('⚠️ Active booking session found. Checking if reset is needed...');
+    
+    // Skip auto-reset for instructors (they might be testing/demonstrating)
+    if (userStore.isInstructor) {
+       console.log('👨‍🏫 Instructor session - skipping automatic reset');
+       return;
+    }
+
+    // Show confirmation if user has unsaved data
+    if (bookingStore.passengers.length > 0 || bookingStore.selectedOutbound) {
+      const modalStore = useModalStore();
+      const notificationStore = useNotificationStore();
+      
+      const userConfirmed = await modalStore.confirm({
+        title: 'Clear Active Session?',
+        message: 'We found an active booking session. Would you like to start a new search? Your current booking data will be cleared.',
+        confirmText: 'Start New Search',
+        cancelText: 'Continue Previous'
+      });
+      
+      if (userConfirmed) {
+        bookingStore.resetBooking();
+        sessionCleared.value = true;
+        notificationStore.info('Previous session cleared.');
+        
+        // Hide message after 5 seconds
+        setTimeout(() => {
+          sessionCleared.value = false;
+        }, 5000);
+      } else {
+        // Redirect to review if user wants to continue
+        if (bookingStore.booking_id) {
+          window.location.href = '/review/booking';
+          return;
+        }
+      }
+    } else if (!bookingStore.hasActivityCodeValidation) {
+      // Just reset silently if no real data AND no validation
+      bookingStore.resetBooking();
+    }
+  } else if (!bookingStore.hasActivityCodeValidation) {
+    // Make sure store is clean if session is invalid AND no validation
+    // But check role first - instructors don't need activity validation
+    if (!userStore.isInstructor) {
+      bookingStore.resetBooking();
+    }
+  }
+  
+  // Log status for debugging
+  console.log('📊 Current booking state after cleanup:', {
+    hasBookingId: !!bookingStore.booking_id,
+    hasPassengers: bookingStore.passengers.length,
+    hasOutbound: !!bookingStore.selectedOutbound,
+    hasReturn: !!bookingStore.selectedReturn,
+    sessionExpired: !session.valid
+  });
+});
 </script>
 
 <style scoped>

@@ -247,6 +247,7 @@
               </div>
             </div>
 
+            <!-- In your sidebar summary section -->
             <div class="price-line" v-if="totalSeats > 0">
               <span>Seat Selection Fee</span> 
               <span>₱{{ totalSeats.toLocaleString() }}</span>
@@ -481,9 +482,10 @@ onMounted(async () => {
       addonService.getAssistanceServices(airlineId)
     ]);
     
-    baggageOptions.value = bagRes.data || [];
-    mealOptions.value = mealRes.data || [];
-    assistanceOptions.value = assistRes.data || [];
+    // Handle paginated responses (response.data.results) or flat arrays (response.data)
+    baggageOptions.value = bagRes.data.results || bagRes.data || [];
+    mealOptions.value = mealRes.data.results || mealRes.data || [];
+    assistanceOptions.value = assistRes.data.results || assistRes.data || [];
 
     // Load existing selections from store if they exist
     console.log("📦 Loading existing add-ons from store...");
@@ -807,11 +809,13 @@ const totalAssistance = computed(() => {
   return total;
 });
 
+// FIXED: Calculate seat total correctly using seat_price
 const totalSeats = computed(() => {
-  const selections = Object.values(selectedAddons.seats || {});
+  const seats = Object.values(selectedAddons.seats || {});
   
-  return selections.reduce((sum, seat) => {
-    const seatPrice = parseFloat(seat.final_price) || 0;
+  return seats.reduce((sum, seat) => {
+    // Use seat_price instead of final_price
+    const seatPrice = parseFloat(seat.seat_price) || 0;
     return sum + seatPrice;
   }, 0);
 });
@@ -828,7 +832,6 @@ const saveAndContinue = () => {
   // --- DEBUG LOG START ---
   console.group("🛒 ADD-ONS PURCHASE SUMMARY");
   console.log("Trip Type:", tripTypeInfo.value);
-  console.log("Active Segment:", activeSegment.value);
   
   // Show flight info
   console.log("✈️ FLIGHT DETAILS:");
@@ -836,18 +839,43 @@ const saveAndContinue = () => {
     console.log(`  ${flight.type}: ${flight.flight} (${flight.route}) - ₱${flight.price.toLocaleString()}`);
   });
   
-  console.log("Passenger Selections:", JSON.parse(JSON.stringify(selectedAddons)));
+  // Check seat data structure
+  console.log("💺 SEAT SELECTIONS:");
+  const seats = Object.entries(selectedAddons.seats || {});
+  if (seats.length > 0) {
+    seats.forEach(([passengerKey, seat]) => {
+      console.log(`  Passenger ${passengerKey}:`, {
+        seat_code: seat.seat_code,
+        seat_price: seat.seat_price,
+        seat_total_price: seat.seat_total_price,
+        final_price: seat.final_price,
+        seat_class: seat.seat_class?.name
+      });
+      
+      // Debug price calculation
+      const basePrice = parseFloat(bookingStore.selectedOutbound?.price || 0);
+      const seatTotalPrice = parseFloat(seat.seat_total_price) || 0;
+      const seatOnlyPrice = parseFloat(seat.seat_price) || 0;
+      
+      console.log(`    Base flight price: ₱${basePrice}`);
+      console.log(`    Seat total price: ₱${seatTotalPrice}`);
+      console.log(`    Seat only price: ₱${seatOnlyPrice}`);
+      console.log(`    Difference: ₱${seatTotalPrice - basePrice}`);
+    });
+  } else {
+    console.log("  No seats selected");
+  }
   
   // Calculate individual totals
   const baggageTotal = totalBaggage.value;
   const mealsTotal = totalMeals.value;
   const assistanceTotal = totalAssistance.value;
-  const seatExtrasTotal = totalSeats.value;
+  const seatExtrasTotal = totalSeats.value; // This uses the fixed calculation
   const baseFareTotal = baseFare.value;
   
   const receipt = {
     "Base Fare": `₱${baseFareTotal.toLocaleString()}`,
-    "Seat Extras": `₱${seatExtrasTotal.toLocaleString()}`,
+    "Seat Selection": `₱${seatExtrasTotal.toLocaleString()}`,
     "Baggage": `₱${baggageTotal.toLocaleString()}`,
     "Meals": `₱${mealsTotal.toLocaleString()}`,
     "Assistance": `₱${assistanceTotal.toLocaleString()}`
@@ -862,42 +890,9 @@ const saveAndContinue = () => {
   console.log("Store Grand Total:", `₱${bookingStore.grandTotal.toLocaleString()}`);
   console.log("Calculated Grand Total:", `₱${grandTotal.value.toLocaleString()}`);
   
-  // Show passenger count
-  const payingPassengers = bookingStore.passengerCount.adults + bookingStore.passengerCount.children;
-  console.log(`Passengers (adults+children): ${payingPassengers}`);
-  
-  // Show segment breakdown for round trips
-  if (bookingStore.isRoundTrip) {
-    console.log("🔄 SEGMENT BREAKDOWN:");
-    
-    // Depart segment
-    const departBaggage = Object.values(selectedAddons.baggage.depart || {}).filter(Boolean).length;
-    const departMeals = Object.values(selectedAddons.meals.depart || {}).filter(Boolean).length;
-    const departAssistance = Object.values(selectedAddons.wheelchair.depart || {}).filter(Boolean).length;
-    
-    console.log("Depart Flight Add-ons:");
-    console.log(`  Baggage: ${departBaggage} selections`);
-    console.log(`  Meals: ${departMeals} selections`);
-    console.log(`  Assistance: ${departAssistance} selections`);
-    
-    // Return segment
-    const returnBaggage = Object.values(selectedAddons.baggage.return || {}).filter(Boolean).length;
-    const returnMeals = Object.values(selectedAddons.meals.return || {}).filter(Boolean).length;
-    const returnAssistance = Object.values(selectedAddons.wheelchair.return || {}).filter(Boolean).length;
-    
-    console.log("Return Flight Add-ons:");
-    console.log(`  Baggage: ${returnBaggage} selections`);
-    console.log(`  Meals: ${returnMeals} selections`);
-    console.log(`  Assistance: ${returnAssistance} selections`);
-  }
-  
-  // Show what's stored in Pinia
-  console.group("📦 PINIA STORAGE CHECK");
-  console.log("Baggage in Pinia:", bookingStore.addons.baggage);
-  console.log("Meals in Pinia:", bookingStore.addons.meals);
-  console.log("Assistance in Pinia:", bookingStore.addons.wheelchair);
-  console.log("Seats in Pinia:", bookingStore.addons.seats);
-  console.groupEnd();
+  // Verify seat price calculation
+  console.log("🔍 SEAT PRICE VERIFICATION:");
+  console.log("totalSeats computed value:", totalSeats.value);
   
   console.groupEnd();
   // --- DEBUG LOG END ---
@@ -908,61 +903,61 @@ const saveAndContinue = () => {
 
 
 <style scoped>
-/* Keeping your exact original styles */
+/* Updated color theme to #FF579A */
 .pal-bg { background: #f4f7f9; min-height: 100vh; padding: 40px 0; }
 .pal-layout { display: grid; grid-template-columns: 1fr 350px; gap: 30px; max-width: 1200px; margin: 0 auto; }
-.page-title { color: #003870; font-weight: 800; margin-bottom: 25px; font-size: 1.8rem; }
+.page-title { color: #FF579A; font-weight: 800; margin-bottom: 25px; font-size: 1.8rem; }
 
 .square-tabs-container { position: relative; margin-bottom: 30px; background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 .square-tabs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; position: relative; z-index: 2; }
 .square-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 15px; background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; text-align: center; min-height: 100px; }
-.square-tab.active { background: linear-gradient(135deg, #003870 0%, #002a54 100%); border-color: #003870; color: white; }
+.square-tab.active { background: linear-gradient(135deg, #FF579A 0%, #FF4081 100%); border-color: #FF579A; color: white; }
 .square-tab.seat-tab { border-style: dashed; }
 .tab-icon { font-size: 1.8rem; margin-bottom: 8px; }
 .tab-label { font-weight: 600; font-size: 0.95rem; }
-.active-tab-indicator { position: absolute; bottom: 0; left: 0; width: 25%; height: 4px; background: #d11241; border-radius: 2px; transition: left 0.4s ease; z-index: 1; }
+.active-tab-indicator { position: absolute; bottom: 0; left: 0; width: 25%; height: 4px; background: #FF579A; border-radius: 2px; transition: left 0.4s ease; z-index: 1; }
 
 .addon-workspace { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea; min-height: 400px; }
 .loading-state { display: flex; align-items: center; justify-content: center; height: 200px; color: #666; }
 
-.tab-pane h3 { color: #003870; margin-bottom: 25px; font-size: 1.3rem; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; }
+.tab-pane h3 { color: #FF579A; margin-bottom: 25px; font-size: 1.3rem; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; }
 
 /* Baggage Grid Styles */
 .option-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px; }
 .opt-card { border: 2px solid #e0e0e0; padding: 20px 15px; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s; background: white; }
-.opt-card.selected { border-color: #003870; background: #eef4ff; font-weight: bold; }
-.opt-card .weight { display: block; font-size: 1.1rem; margin-bottom: 8px; font-weight: 700; color: #003870; }
-.opt-card .price { display: block; color: #d11241; font-weight: 700; }
+.opt-card.selected { border-color: #FF579A; background: #FFF0F7; font-weight: bold; }
+.opt-card .weight { display: block; font-size: 1.1rem; margin-bottom: 8px; font-weight: 700; color: #FF579A; }
+.opt-card .price { display: block; color: #FF579A; font-weight: 700; }
 
 /* Meal Grid Styles */
 .meal-options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px; }
 .meal-card { border: 2px solid #e0e0e0; padding: 15px; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: white; display: flex; flex-direction: column; min-height: 180px; }
-.meal-card.selected { border-color: #003870; background: #eef4ff; }
+.meal-card.selected { border-color: #FF579A; background: #FFF0F7; }
 .meal-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
 .meal-icon { font-size: 2rem; text-align: center; margin-bottom: 10px; }
 .meal-details { flex: 1; }
-.meal-name { font-weight: 700; color: #003870; margin-bottom: 5px; font-size: 1rem; }
+.meal-name { font-weight: 700; color: #FF579A; margin-bottom: 5px; font-size: 1rem; }
 .meal-type { font-size: 0.85rem; color: #666; margin-bottom: 8px; font-style: italic; }
 .meal-description { font-size: 0.9rem; color: #555; margin-bottom: 8px; line-height: 1.3; }
 .meal-calories { font-size: 0.8rem; color: #888; margin-bottom: 8px; }
-.meal-price { font-weight: 700; color: #d11241; font-size: 1.1rem; margin-top: auto; }
-.meal-allergens { font-size: 0.75rem; color: #d11241; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #eee; }
+.meal-price { font-weight: 700; color: #FF579A; font-size: 1.1rem; margin-top: auto; }
+.meal-allergens { font-size: 0.75rem; color: #FF4081; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #eee; }
 
 /* Assistance Grid Styles */
 .assistance-options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px; }
 .assistance-card { border: 2px solid #e0e0e0; padding: 15px; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: white; display: flex; flex-direction: column; min-height: 200px; }
-.assistance-card.selected { border-color: #003870; background: #eef4ff; }
+.assistance-card.selected { border-color: #FF579A; background: #FFF0F7; }
 .assistance-card.free { border-color: #28a745; }
 .assistance-card.free.selected { background: #e8f5e9; }
 .assistance-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
 .assistance-icon { font-size: 2rem; text-align: center; margin-bottom: 10px; }
 .assistance-details { flex: 1; }
-.assistance-name { font-weight: 700; color: #003870; margin-bottom: 5px; font-size: 1rem; }
+.assistance-name { font-weight: 700; color: #FF579A; margin-bottom: 5px; font-size: 1rem; }
 .assistance-type { font-size: 0.85rem; color: #666; margin-bottom: 8px; font-style: italic; }
 .assistance-description { font-size: 0.9rem; color: #555; margin-bottom: 8px; line-height: 1.3; }
 .assistance-notice { font-size: 0.8rem; color: #888; margin-bottom: 8px; }
 .assistance-requirements { font-size: 0.75rem; color: #666; margin-bottom: 8px; }
-.assistance-price { font-weight: 700; color: #d11241; font-size: 1.1rem; margin-top: auto; }
+.assistance-price { font-weight: 700; color: #FF579A; font-size: 1.1rem; margin-top: auto; }
 .assistance-card.free .assistance-price { color: #28a745; }
 
 /* Common Styles */
@@ -971,15 +966,15 @@ const saveAndContinue = () => {
 
 .footer-nav { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; }
 .btn-back { padding: 15px 30px; background: #666; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
-.btn-continue { padding: 15px 40px; background: #d11241; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; }
+.btn-continue { padding: 15px 40px; background: #FF579A; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; }
 
 .summary-card { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eaeaea; }
 .sticky { position: sticky; top: 20px; }
-.summary-header { background: #003870; color: white; padding: 20px; text-align: center; font-weight: 700; border-radius: 12px 12px 0 0; }
+.summary-header { background: #FF579A; color: white; padding: 20px; text-align: center; font-weight: 700; border-radius: 12px 12px 0 0; }
 .summary-body { padding: 25px; }
 .price-line { display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed #eee; font-size: 0.95rem; }
 .total-row { display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 2px solid #eee; font-size: 1.2rem; font-weight: 700; }
-.final-amt { color: #d11241; font-size: 1.5rem; font-weight: 900; }
+.final-amt { color: #FF579A; font-size: 1.5rem; font-weight: 900; }
 
 /* Modal Styles */
 .modal-overlay {
@@ -1021,7 +1016,7 @@ const saveAndContinue = () => {
   align-items: center;
   padding: 20px;
   border-bottom: 1px solid #eee;
-  background: #003870;
+  background: #FF579A;
   color: white;
   border-radius: 12px 12px 0 0;
 }
@@ -1060,9 +1055,9 @@ const saveAndContinue = () => {
 }
 
 .modal-note.warning {
-  color: #d11241;
-  background: #ffe6e6;
-  border-left: 4px solid #d11241;
+  color: #FF4081;
+  background: #FFE6F1;
+  border-left: 4px solid #FF4081;
 }
 
 .modal-footer {
@@ -1085,7 +1080,7 @@ const saveAndContinue = () => {
 
 .modal-confirm {
   padding: 10px 20px;
-  background: #d11241;
+  background: #FF579A;
   color: white;
   border: none;
   border-radius: 6px;
@@ -1111,15 +1106,15 @@ const saveAndContinue = () => {
 }
 
 .trip-type-badge.round-trip {
-  background: #e3f2fd;
-  color: #1565c0;
-  border: 2px solid #1565c0;
+  background: #FFE6F1;
+  color: #FF579A;
+  border: 2px solid #FF579A;
 }
 
 .trip-type-badge.one-way {
-  background: #f3e5f5;
-  color: #7b1fa2;
-  border: 2px solid #7b1fa2;
+  background: #FCE4EC;
+  color: #E91E63;
+  border: 2px solid #E91E63;
 }
 
 /* Flight summary card styles */
@@ -1140,7 +1135,7 @@ const saveAndContinue = () => {
 
 .flight-summary-header h3 {
   margin: 0;
-  color: #003870;
+  color: #FF579A;
   font-size: 1.2rem;
 }
 
@@ -1162,7 +1157,7 @@ const saveAndContinue = () => {
 
 .flight-type {
   font-weight: bold;
-  color: #003870;
+  color: #FF579A;
   min-width: 80px;
 }
 
@@ -1185,7 +1180,7 @@ const saveAndContinue = () => {
 
 .flight-price {
   font-weight: bold;
-  color: #d11241;
+  color: #FF579A;
   min-width: 100px;
   text-align: right;
 }
@@ -1202,6 +1197,69 @@ const saveAndContinue = () => {
   padding: 5px 0 10px 0;
   border-bottom: 1px dashed #eee;
   margin-bottom: 10px;
+}
+
+/* Add new styles for flight segment tabs */
+.flight-segment-tabs {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 25px;
+  background: white;
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.segment-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 15px;
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.segment-tab.active {
+  background: linear-gradient(135deg, #FF579A 0%, #FF4081 100%);
+  border-color: #FF579A;
+  color: white;
+}
+
+.segment-icon {
+  font-size: 1.8rem;
+  margin-bottom: 8px;
+}
+
+.segment-label {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 5px;
+}
+
+.segment-flight {
+  font-size: 0.85rem;
+  opacity: 0.8;
+  font-family: monospace;
+}
+
+.segment-notice {
+  background: #FFE6F1;
+  padding: 12px 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-left: 4px solid #FF579A;
+}
+
+.notice-icon {
+  font-size: 1.2rem;
 }
 
 /* Responsive adjustments */
@@ -1247,93 +1305,6 @@ const saveAndContinue = () => {
   .modal-cancel, .modal-confirm {
     width: 100%;
   }
-}
-
-
-
-/* Add new styles for flight segment tabs */
-.flight-segment-tabs {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 25px;
-  background: white;
-  padding: 15px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
-
-.segment-tab {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px 15px;
-  background: #f8f9fa;
-  border: 2px solid #e9ecef;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-}
-
-.segment-tab.active {
-  background: linear-gradient(135deg, #003870 0%, #002a54 100%);
-  border-color: #003870;
-  color: white;
-}
-
-.segment-icon {
-  font-size: 1.8rem;
-  margin-bottom: 8px;
-}
-
-.segment-label {
-  font-weight: 600;
-  font-size: 1rem;
-  margin-bottom: 5px;
-}
-
-.segment-flight {
-  font-size: 0.85rem;
-  opacity: 0.8;
-  font-family: monospace;
-}
-
-.segment-notice {
-  background: #e3f2fd;
-  padding: 12px 15px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border-left: 4px solid #1565c0;
-}
-
-.notice-icon {
-  font-size: 1.2rem;
-}
-
-/* Update existing styles for better layout */
-.pal-layout { 
-  display: grid; 
-  grid-template-columns: 1fr 400px; 
-  gap: 30px; 
-  max-width: 1300px; 
-  margin: 0 auto; 
-}
-
-/* Responsive adjustments */
-@media (max-width: 1200px) {
-  .pal-layout { 
-    grid-template-columns: 1fr 350px; 
-  }
-}
-
-@media (max-width: 992px) {
-  .pal-layout { 
-    grid-template-columns: 1fr; 
-  }
   
   .flight-segment-tabs {
     flex-direction: column;
@@ -1351,6 +1322,12 @@ const saveAndContinue = () => {
   }
 }
 
+@media (max-width: 1200px) {
+  .pal-layout { 
+    grid-template-columns: 1fr 350px; 
+  }
+}
+
 @media (max-width: 768px) {
   .segment-tab {
     padding: 15px 10px;
@@ -1364,5 +1341,4 @@ const saveAndContinue = () => {
     font-size: 0.8rem;
   }
 }
-
 </style>

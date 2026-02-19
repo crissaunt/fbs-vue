@@ -60,7 +60,6 @@ class AirportSerializer(serializers.ModelSerializer):
         }
 
 
-# flightapp/serializers.py - Update ScheduleSerializer
 
 class ScheduleSerializer(serializers.ModelSerializer):
     # These "source" fields reach through the Foreign Keys
@@ -77,11 +76,29 @@ class ScheduleSerializer(serializers.ModelSerializer):
     # Helper method for duration (calls the model method)
     flight_duration = serializers.ReadOnlyField(source='duration')
     
-    # ADD THESE FIELDS FOR SEAT CLASS FILTERING
+    # Seat class fields
     available_classes = serializers.SerializerMethodField()
     seat_classes = serializers.SerializerMethodField()
     available_seats = serializers.SerializerMethodField()
     is_domestic = serializers.SerializerMethodField()
+    
+    # ============ ML PRICING FIELDS ============
+    # Override price to use ML price first
+    price = serializers.SerializerMethodField()
+    ml_base_price = serializers.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        read_only=True,
+        allow_null=True
+    )
+    ml_price_updated_at = serializers.DateTimeField(
+        read_only=True,
+        allow_null=True,
+        format='%Y-%m-%d %H:%M:%S'
+    )
+    using_ml_price = serializers.SerializerMethodField()
+    price_age_hours = serializers.SerializerMethodField()
+    # ============================================
     
     def get_available_classes(self, obj):
         """Get unique seat classes with available seats"""
@@ -116,6 +133,26 @@ class ScheduleSerializer(serializers.ModelSerializer):
     def get_is_domestic(self, obj):
         """Check if flight is domestic"""
         return obj.flight.route.is_domestic if obj.flight and obj.flight.route else False
+    
+    # ============ ML PRICING METHODS ============
+    def get_price(self, obj):
+        """Use ML price if available, otherwise fallback to regular price"""
+        if hasattr(obj, 'ml_base_price') and obj.ml_base_price is not None:
+            return obj.ml_base_price
+        return obj.price if obj.price else Decimal('0.00')
+    
+    def get_using_ml_price(self, obj):
+        """Indicate if ML price is being used"""
+        return hasattr(obj, 'ml_base_price') and obj.ml_base_price is not None
+    
+    def get_price_age_hours(self, obj):
+        """Get age of ML price in hours"""
+        if obj.ml_price_updated_at:
+            from django.utils import timezone
+            delta = timezone.now() - obj.ml_price_updated_at
+            return round(delta.total_seconds() / 3600, 1)
+        return None
+    # ============================================
 
     class Meta:
         model = Schedule
@@ -124,28 +161,95 @@ class ScheduleSerializer(serializers.ModelSerializer):
             'origin', 'origin_city', 'destination', 'destination_city',
             'departure_time', 'arrival_time', 'price', 'status', 
             'flight_duration', 'available_classes', 'seat_classes', 
-            'available_seats', 'is_domestic'  # Added new fields
+            'available_seats', 'is_domestic',
+            # ML pricing fields
+            'ml_base_price', 'ml_price_updated_at', 'using_ml_price', 'price_age_hours'
         ]
 
-class SeatClassSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SeatClass
-        fields = ['id', 'name', 'price_multiplier', 'description']
 
 class SeatSerializer(serializers.ModelSerializer):
-    # Include the calculated price and features from the model @properties
-    final_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
-    seat_class_name = serializers.CharField(source='seat_class.name', read_only=True)
+    seat_class = serializers.SerializerMethodField()
+    final_price = serializers.SerializerMethodField()
+    seat_code = serializers.SerializerMethodField()
+    features = serializers.SerializerMethodField()
+    
     class Meta:
         model = Seat
         fields = [
+<<<<<<< HEAD
             'id', 'seat_number', 'row', 'column', 'is_available', 
             'price_adjustment', 'final_price', 'seat_class', 
             'seat_class_name', 'is_window', 'is_aisle', 'has_extra_legroom',
             'is_exit_row', 'is_wheelchair_accessible', 'has_bassinet', 
             'has_nut_allergy', 'is_unaccompanied_minor', 'is_bulkhead', 
             'price_adjustment_manual'
+=======
+            'id', 'seat_code', 'seat_number', 'row', 'column',
+            'is_available', 'final_price', 'price_adjustment',
+            'has_extra_legroom', 'is_exit_row', 'is_bulkhead',
+            'is_window', 'is_aisle', 'seat_class', 'features'
+>>>>>>> origin/criss
         ]
+    
+    def get_seat_class(self, obj):
+        if obj.seat_class:
+            return {
+                'id': obj.seat_class.id,
+                'name': obj.seat_class.name,
+                'price_multiplier': float(obj.seat_class.price_multiplier)
+            }
+        return None
+    
+    def get_final_price(self, obj):
+        """Get final price using ML base price if available"""
+        try:
+            # Use the final_price property from your Seat model
+            # This will now use schedule.ml_base_price if available
+            return float(obj.final_price)
+        except:
+            # Fallback calculation with ML price first
+            if obj.schedule:
+                # Use ML base price if available, otherwise regular price
+                base_price = obj.schedule.ml_base_price or obj.schedule.price or Decimal('0.00')
+            else:
+                base_price = Decimal('0.00')
+            
+            multiplier = obj.seat_class.price_multiplier if obj.seat_class else Decimal('1.00')
+            adjustment = obj.price_adjustment if obj.price_adjustment else Decimal('0.00')
+            return float((base_price * multiplier) + adjustment)
+    
+    def get_seat_code(self, obj):
+        return f"{obj.row}{obj.column}" if obj.row and obj.column else obj.seat_number
+    
+    def get_features(self, obj):
+        # Use the seat_features property from your Seat model
+        features = []
+        if obj.has_extra_legroom:
+            features.append("Extra Legroom")
+        if obj.is_exit_row:
+            features.append("Exit Row")
+        if obj.is_bulkhead:
+            features.append("Bulkhead")
+        if obj.is_window:
+            features.append("Window")
+        if obj.is_aisle:
+            features.append("Aisle")
+        return features
+    def get_features(self, obj):
+        # Use the seat_features property from your Seat model
+        features = []
+        if obj.has_extra_legroom:
+            features.append("Extra Legroom")
+        if obj.is_exit_row:
+            features.append("Exit Row")
+        if obj.is_bulkhead:
+            features.append("Bulkhead")
+        if obj.is_window:
+            features.append("Window")
+        if obj.is_aisle:
+            features.append("Aisle")
+        return features
+
 
 
 class MealOptionSerializer(serializers.ModelSerializer):
@@ -496,7 +600,7 @@ class SelectedFlightSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     schedule_id = serializers.IntegerField(required=False)
     flight_number = serializers.CharField(max_length=20, required=False, allow_blank=True)
-    price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    price = serializers.DecimalField(max_digits=30, decimal_places=15)
     class_type = serializers.CharField(max_length=50, required=False, allow_blank=True)
     origin = serializers.CharField(max_length=10, required=False, allow_blank=True)
     destination = serializers.CharField(max_length=10, required=False, allow_blank=True)
@@ -533,7 +637,10 @@ class CreateBookingSerializer(serializers.Serializer):
     addons = AddonDataSerializer(required=False)
     return_addons = ReturnAddonDataSerializer(required=False, allow_null=True)  
     passengerCount = serializers.DictField(required=False)
-    total_amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=True)  # Make this REQUIRED
+    total_amount = serializers.DecimalField(max_digits=30, decimal_places=15, required=False)  # Changed to False
+    activity_id = serializers.IntegerField(required=False, allow_null=True)
+    activity_code = serializers.CharField(max_length=8, required=False, allow_null=True, allow_blank=True)
+    is_practice = serializers.BooleanField(required=False, default=False)
     
     def validate(self, data):
         """Custom validation for booking data"""
@@ -552,11 +659,6 @@ class CreateBookingSerializer(serializers.Serializer):
         if data.get('trip_type') == 'round_trip' and not data.get('selectedReturn'):
             raise serializers.ValidationError("Return flight is required for round trips")
         
-        # Validate total_amount is present and positive
-        total_amount = data.get('total_amount')
-        if not total_amount or total_amount <= Decimal('0.00'):
-            raise serializers.ValidationError("Total amount must be a positive number")
-        
         return data
 # ============================================================
 # PAYMENT PROCESSING SERIALIZERS
@@ -567,7 +669,7 @@ class ProcessPaymentSerializer(serializers.Serializer):
     booking_id = serializers.IntegerField()
     payment_method = serializers.CharField(max_length=50)
     transaction_id = serializers.CharField(max_length=100, required=False, allow_blank=True)
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    amount = serializers.DecimalField(max_digits=30, decimal_places=15)
     
     def validate_payment_method(self, value):
         """Validate payment method"""
@@ -661,7 +763,7 @@ class BookingResponseSerializer(serializers.Serializer):
     booking_id = serializers.IntegerField()
     booking_reference = serializers.CharField()
     status = serializers.CharField()
-    total_amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_amount = serializers.DecimalField(max_digits=30, decimal_places=15)
     message = serializers.CharField()
 
 class PaymentResponseSerializer(serializers.Serializer):

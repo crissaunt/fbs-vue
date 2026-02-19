@@ -1,4 +1,5 @@
 # flightapp/views.py
+from django.http import JsonResponse
 import requests
 from rest_framework import viewsets, generics, status, filters, permissions
 from rest_framework.decorators import action, api_view, permission_classes
@@ -11,6 +12,16 @@ from django.core.cache import cache
 from django.db import transaction
 from decimal import Decimal
 from django.contrib.auth.models import User
+from .services.email_service import EmailService
+from .services.pdf_service import BoardingPassPDFService
+from django.http import HttpResponse
+from django.shortcuts import render, get_object_or_404
+from .ml.predictor import predictor
+from .ml.dynamic_pricing import dynamic_pricing
+import hashlib
+import json
+from decimal import Decimal
+import random
 
 from app.models import (
     Airport, Route, Flight, Schedule, Seat, Country,
@@ -22,6 +33,7 @@ from app.models import (
 import json
 from .serializers import *
 from .services.paymongo_service import paymongo_service
+from .services.grading_service import grade_booking
 
 class AirlineFilterMixin:
     """Mixin to handle common airline filtering logic by ID or Code"""
@@ -53,11 +65,16 @@ class AirportViewSet(viewsets.ReadOnlyModelViewSet):
     A read-only viewset for Airports.
     """
     permission_classes = [permissions.AllowAny]
-    queryset = Airport.objects.all().select_related('country')
+    queryset = Airport.objects.all().select_related('country').order_by('code')
     serializer_class = AirportSerializer
 
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'city', 'code', 'country__name']
+
+from .ml.predictor import predictor
+from decimal import Decimal
+
+from .ml.dynamic_pricing import dynamic_pricing
 
 class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ScheduleSerializer
@@ -65,11 +82,14 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]    
     
     def get_queryset(self):
-        # select_related joins the tables so we don't hit the DB 100 times
         queryset = Schedule.objects.filter(status='Open').select_related(
             'flight__airline', 
             'flight__route__origin_airport', 
             'flight__route__destination_airport'
+        ).prefetch_related(
+            'flight__aircraft',
+            'seats',  # Prefetch seats to avoid N+1 queries
+            'seats__seat_class'
         )
         
         origin = self.request.query_params.get('origin')
@@ -82,14 +102,15 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(flight__route__destination_airport__code=destination)
         if date:
             try:
-                # Ensures that even if a full ISO string is sent, we only filter by date
-                clean_date = date.split('T')[0] 
+                clean_date = date.split('T')[0] if 'T' in date else date
                 queryset = queryset.filter(departure_time__date=clean_date)
-            except Exception:
+            except Exception as e:
+                print(f"Date filter error: {e}")
                 pass
 
-        return queryset
+        return queryset.order_by('departure_time')
 
+<<<<<<< HEAD
     @action(detail=True, methods=['post'], url_path='generate-seats')
     def generate_seats(self, request, pk=None):
         """Generate seats for this schedule based on layout config"""
@@ -180,6 +201,412 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+=======
+    @action(detail=True, methods=['get'], url_path='seats-with-info')
+    def seats_with_info(self, request, pk=None):
+        """Get seats with extra info for a specific schedule"""
+        schedule = self.get_object()
+        from .serializers import SeatSerializer
+        
+        seats = Seat.objects.filter(schedule=schedule).select_related(
+            'seat_class'
+        ).order_by('row', 'column')
+        
+        serializer = SeatSerializer(seats, many=True)
+        
+        return Response({
+            'success': True,
+            'schedule_id': schedule.id,
+            'schedule_price': float(schedule.price) if schedule.price else 0.00,
+            'aircraft_model': schedule.flight.aircraft.model if schedule.flight and schedule.flight.aircraft else "Airbus A321",
+            'aircraft_capacity': schedule.flight.aircraft.capacity if schedule.flight and schedule.flight.aircraft else 220,
+            'seats': serializer.data,
+            'total_seats': len(serializer.data),
+            'available_seats': seats.filter(is_available=True).count()
+        })
+
+    @action(detail=True, methods=['get', 'post'], url_path='repair-seats')
+    def repair_seats(self, request, pk=None):
+        """Temporary endpoint to repair bad seat data for a schedule"""
+        try:
+            schedule = self.get_object()
+            from app.models import Seat, SeatClass
+            
+            # Delete ALL seats for this schedule
+            count = Seat.objects.filter(schedule=schedule).count()
+            Seat.objects.filter(schedule=schedule).delete()
+            
+            # Get seat classes dynamically
+            def get_sc(name):
+                return SeatClass.objects.filter(name__iexact=name).first()
+            
+            sc_first = get_sc('First Class') or get_sc('Comfort') or get_sc('Premium Economy')
+            sc_business = get_sc('Business') or sc_first
+            sc_economy = get_sc('Economy')
+            
+            if not sc_economy:
+                return Response({'success': False, 'error': 'No Economy seat class found'})
+            
+            aircraft = schedule.flight.aircraft if schedule.flight else None
+            model_name = aircraft.model if aircraft else 'Airbus A321'
+            created_count = 0
+            
+            # A321 Layout (approx 180 seats for this flight)
+            if 'A321' in model_name or 'Airbus' in model_name:
+                # Premium (Rows 1-3)
+                for row in range(1, 4):
+                    cols = ['A', 'C', 'D', 'F'] if sc_first != sc_economy else ['A', 'B', 'C', 'D', 'E', 'F']
+                    for col in cols:
+                        Seat.objects.create(
+                            schedule=schedule, seat_number=f"{row}{col}",
+                            seat_class=sc_first, row=row, column=col,
+                            is_available=True, is_window=col in ['A', 'F'], is_aisle=col in ['C', 'D'],
+                            price_adjustment=500.00 if row == 1 else 0.00
+                        )
+                        created_count += 1
+                
+                # Business/Comfort (Rows 4-8)
+                for row in range(4, 9):
+                    for col in ['A', 'B', 'C', 'D', 'E', 'F']:
+                        Seat.objects.create(
+                            schedule=schedule, seat_number=f"{row}{col}",
+                            seat_class=sc_business or sc_economy, row=row, column=col,
+                            is_available=True, is_window=col in ['A', 'F'], is_aisle=col in ['C', 'D'],
+                            price_adjustment=200.00 if row == 4 else 0.00
+                        )
+                        created_count += 1
+                
+                # Economy (Rows 9-31) -> to reach ~180 seats
+                for row in range(9, 32):
+                    for col in ['A', 'B', 'C', 'D', 'E', 'F']:
+                        is_exit = row in [12, 24]
+                        Seat.objects.create(
+                            schedule=schedule, seat_number=f"{row}{col}",
+                            seat_class=sc_economy, row=row, column=col,
+                            is_available=True, is_window=col in ['A', 'F'], is_aisle=col in ['C', 'D'],
+                            is_exit_row=is_exit, has_extra_legroom=is_exit,
+                            price_adjustment=150.00 if is_exit else 0.00
+                        )
+                        created_count += 1
+            else:
+                # Fallback
+                for row in range(1, 31):
+                    for col in ['A', 'B', 'C', 'D', 'E', 'F']:
+                        Seat.objects.create(
+                            schedule=schedule, seat_number=f"{row}{col}",
+                            seat_class=sc_economy, row=row, column=col, is_available=True
+                        )
+                        created_count += 1
+
+            return Response({
+                'success': True,
+                'message': f'Successfully repaired schedule {schedule.id}. Deleted {count} and created {created_count} seats.',
+                'total_seats': Seat.objects.filter(schedule=schedule).count()
+            })
+        except Exception as e:
+            return Response({'success': False, 'error': str(e)}, status=500)
+        
+        return Response({
+            'success': True,
+            'message': 'No bad seats found for this schedule.',
+            'total_seats': Seat.objects.filter(schedule=schedule).count()
+        })
+    
+    def list(self, request, *args, **kwargs):
+        """REAL-TIME PRICING - Prices change on EVERY request!"""
+        
+        # Get session ID for price differentiation
+        session_id = request.session.session_key
+        if not session_id:
+            request.session.save()
+            session_id = request.session.session_key
+        
+        # Get user for loyalty pricing
+        user = request.user if request.user.is_authenticated else None
+        
+        # Get filtered queryset
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # ============ RESTORE PAGINATION ============
+        # Paginate the queryset BEFORE processing
+        page = self.paginate_queryset(queryset)
+        
+        # If pagination is enabled, use the paginated queryset
+        # Otherwise, fall back to the full queryset (for non-paginated requests)
+        schedules_to_process = page if page is not None else queryset
+        # ============================================
+        
+        # ============ UPDATE ML PRICES - ONLY FOR CURRENT PAGE ============
+        # Only update ML prices for schedules on this page, not the entire database
+        updated_count = 0
+        for schedule in schedules_to_process:
+            # Check if ML price is missing or stale (older than 1 hour)
+            needs_update = (
+                schedule.ml_base_price is None or
+                schedule.ml_price_updated_at is None or
+                (timezone.now() - schedule.ml_price_updated_at).total_seconds() > 3600
+            )
+            
+            if needs_update:
+                try:
+                    success, price = schedule.update_ml_price(save=True)
+                    if success:
+                        updated_count += 1
+                except Exception as e:
+                    print(f"Error updating ML price for schedule {schedule.id}: {e}")
+        
+        if updated_count > 0:
+            print(f"✅ Updated ML prices for {updated_count} schedules")
+        # ==================================================================
+        
+        # ============ SERIALIZE ONLY THE PAGINATED RESULTS ============
+        serializer = self.get_serializer(schedules_to_process, many=True)
+        data = serializer.data
+        # ==============================================================
+        
+        # ============ APPLY DYNAMIC PRICING - ONLY TO CURRENT PAGE ============
+        for i, schedule in enumerate(schedules_to_process):
+            if i < len(data):
+                try:
+                    flight_data = {
+                        'schedule_id': schedule.id,
+                        'flight_number': schedule.flight.flight_number,
+                        'airline_code': schedule.flight.airline.code,
+                        'airline_name': schedule.flight.airline.name,
+                        'origin': schedule.flight.route.origin_airport.code,
+                        'destination': schedule.flight.route.destination_airport.code,
+                        'departure_time': schedule.departure_time.isoformat(),
+                        'arrival_time': schedule.arrival_time.isoformat(),
+                        'total_stops': 0,
+                        'is_domestic': schedule.flight.route.is_domestic,
+                    }
+                    
+                    # FRESH dynamic price for this specific user/session
+                    price_data = dynamic_pricing.get_price_for_user(
+                        flight_data, 
+                        user=user,
+                        session_id=session_id
+                    )
+                    
+                    # ============ FIXED ROUNDING LOGIC ============
+                    # Round ONLY ONCE at the very end
+                    final_price = dynamic_pricing.round_price(price_data['final_price'])
+                    base_price = dynamic_pricing.round_price(price_data['base_price'])
+                    ml_base = float(schedule.ml_base_price) if schedule.ml_base_price else schedule.price
+                    rounded_ml_base = dynamic_pricing.round_price(ml_base)
+                    # ==============================================
+                    
+                    # Update response with PROPERLY rounded prices
+                    data[i]['price'] = final_price
+                    data[i]['base_price'] = base_price
+                    data[i]['ml_base_price'] = rounded_ml_base
+                    data[i]['ml_predicted'] = True
+                    data[i]['dynamic_pricing'] = price_data['factors_applied']
+                    data[i]['raw_ml_price'] = float(schedule.ml_base_price) if schedule.ml_base_price else None  # For debugging
+                    
+                    # Unique price ID for this exact moment
+                    timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
+                    price_id_input = f"{session_id}_{schedule.id}_{timestamp}_{random.randint(1, 1000)}"
+                    data[i]['price_id'] = hashlib.md5(price_id_input.encode()).hexdigest()[:8]
+                    
+                    # Add timestamp to show when price was calculated
+                    data[i]['price_calculated_at'] = datetime.now().isoformat()
+                    
+                    # ============ FIXED SEAT CLASS PRICING ============
+                    # Update seat classes with fresh dynamic prices
+                    if 'seat_classes' in data[i]:
+                        for seat_class in data[i]['seat_classes']:
+                            seat_class_name = seat_class.get('name', 'Economy')
+                            # Use ML base price from database
+                            ml_base = float(schedule.ml_base_price) if schedule.ml_base_price else schedule.price
+                            
+                            # Calculate raw seat class price
+                            raw_seat_price = ml_base * self.get_seat_class_multiplier(seat_class_name)
+                            
+                            # Round seat class prices using specialized rounding
+                            seat_class['base_price'] = dynamic_pricing.round_price(ml_base)
+                            seat_class['price'] = dynamic_pricing.round_seat_class_price(raw_seat_price)
+                            seat_class['raw_price'] = float(raw_seat_price)  # For debugging
+                    # ==============================================
+                    
+                except Exception as e:
+                    print(f"Error processing schedule {schedule.id}: {e}")
+                    continue
+        # ======================================================================
+        
+        # Track search for demand pricing (only track paginated results)
+        self.track_search_demand(request, schedules_to_process)
+        
+        # ============ RETURN PAGINATED RESPONSE ============
+        # If pagination is enabled, return paginated response
+        # Otherwise, return standard response
+        if page is not None:
+            return self.get_paginated_response(data)
+        
+        return Response(data)
+    # ===================================================================
+    
+    def get_seat_class_multiplier(self, seat_class_name):
+        """Get multiplier for seat class from database"""
+        if not seat_class_name:
+            return 1.0
+            
+        normalized = seat_class_name.strip()
+        cache_key = f"seat_multiplier_{normalized.lower().replace(' ', '_')}"
+        
+        # Check cache
+        cached_val = cache.get(cache_key)
+        if cached_val is not None:
+            return float(cached_val)
+            
+        try:
+            # 1. Exact match
+            sc = SeatClass.objects.filter(name__iexact=normalized).first()
+            if sc:
+                val = float(sc.price_multiplier)
+                cache.set(cache_key, val, 3600)
+                return val
+                
+            # 2. Try removing "Class" suffix
+            if "class" in normalized.lower():
+                base_name = normalized.lower().replace("class", "").strip()
+                sc = SeatClass.objects.filter(name__iexact=base_name).first()
+                if sc:
+                    val = float(sc.price_multiplier)
+                    cache.set(cache_key, val, 3600)
+                    return val
+                    
+        except Exception as e:
+            print(f"Error fetching seat multiplier: {e}")
+            
+        return 1.0
+    
+    def track_search_demand(self, request, queryset):
+        """Track search queries for demand-based pricing"""
+        from django.core.cache import cache
+        
+        # Track origin-destination pair demand
+        origin = request.query_params.get('origin')
+        destination = request.query_params.get('destination')
+        
+        if origin and destination:
+            route_key = f"route_demand_{origin}_{destination}"
+            searches = cache.get(route_key, 0)
+            cache.set(route_key, searches + 1, 3600)  # 1 hour expiry
+        
+        # Track specific flight demand
+        for schedule in queryset[:10]:  # Track top 10 only
+            try:
+                flight_key = f"flight_demand_{schedule.flight.flight_number}"
+                searches = cache.get(flight_key, 0)
+                cache.set(flight_key, searches + 1, 3600)
+            except Exception as e:
+                print(f"Error tracking demand: {e}")
+                continue
+# ====================================================================
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def test_dynamic_pricing(request):
+    """
+    Test endpoint to see different prices for different sessions/users
+    """
+    from .ml.dynamic_pricing import dynamic_pricing
+    import time
+    
+    # Test flight data
+    test_flight = {
+        'schedule_id': 1,
+        'flight_number': '5J 123',
+        'airline_code': '5J',
+        'airline_name': 'Cebu Pacific',
+        'origin': 'MNL',
+        'destination': 'CEB',
+        'departure_time': (datetime.now() + timedelta(days=14)).isoformat(),
+        'arrival_time': (datetime.now() + timedelta(days=14, hours=1, minutes=15)).isoformat(),
+        'total_stops': 0,
+        'is_domestic': True
+    }
+    
+    results = []
+    
+    # Simulate different users
+    for i in range(5):
+        # Create mock user
+        class MockUser:
+            def __init__(self, is_anonymous=True, id=None):
+                self.is_anonymous = is_anonymous
+                self.id = id
+        
+        if i == 0:
+            user = MockUser(is_anonymous=True)  # Anonymous
+        elif i == 1:
+            user = MockUser(is_anonymous=False, id=1)  # New user
+        elif i == 2:
+            user = MockUser(is_anonymous=False, id=2)  # Returning (1 booking)
+        elif i == 3:
+            user = MockUser(is_anonymous=False, id=3)  # Loyal (5+ bookings)
+        else:
+            user = MockUser(is_anonymous=False, id=4)  # Premium
+        
+        # Different session IDs
+        session_id = f"session_{i}_{int(time.time())}"
+        
+        price_data = dynamic_pricing.get_price_for_user(
+            test_flight, 
+            user=user,
+            session_id=session_id
+        )
+        
+        results.append({
+            'user_type': ['Anonymous', 'New', 'Returning', 'Loyal', 'Premium'][i],
+            'user_id': user.id if not user.is_anonymous else None,
+            'session_id': session_id[:10] + '...',
+            'price': price_data['final_price'],
+            'base_price': price_data['base_price'],
+            'factors': price_data['factors_applied']
+        })
+    
+    return Response({
+        'success': True,
+        'test_flight': test_flight,
+        'prices': results,
+        'note': 'Different users/sessions see different prices based on dynamic factors'
+    })
+
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def predict_flight_price(request):
+    """On-demand flight price prediction"""
+    try:
+        flight_data = request.data
+        predicted_price = predictor.predict_price(flight_data)
+        
+        # Also predict for different seat classes
+        seat_class_prices = {}
+        for seat_class in ['economy', 'premium_economy', 'business', 'first']:
+            seat_class_prices[seat_class] = predictor.predict_seat_class_price(
+                predicted_price, seat_class
+            )
+        
+        return Response({
+            'success': True,
+            'base_price': predicted_price,
+            'seat_class_prices': seat_class_prices,
+            'currency': 'PHP'
+        })
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+    
+
+# In views.py - Update the SeatViewSet class
+>>>>>>> origin/criss
 class SeatViewSet(viewsets.ReadOnlyModelViewSet):
     """
     API endpoint that allows seats to be viewed based on a schedule.
@@ -187,32 +614,76 @@ class SeatViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = SeatSerializer
     queryset = Seat.objects.all()
     permission_classes = [permissions.AllowAny]
+    pagination_class = None # Disable pagination for seat map
 
     def get_queryset(self):
-        queryset = Seat.objects.all().select_related('seat_class')
+        queryset = Seat.objects.all().select_related(
+            'seat_class', 
+            'schedule', 
+            'schedule__flight',
+            'schedule__flight__route'
+        )
         schedule_id = self.request.query_params.get('schedule')
         
         if schedule_id:
             queryset = queryset.filter(schedule_id=schedule_id)
         
-        # We order by seat_number to help the frontend 
-        # render rows correctly (e.g., 1A, 1B, 1C...)
-        return queryset.order_by('seat_number')
+        return queryset.order_by('row', 'column')
+
+    def list(self, request, *args, **kwargs):
+        # Override to add schedule price info
+        response = super().list(request, *args, **kwargs)
+        
+        schedule_id = request.query_params.get('schedule')
+        if schedule_id:
+            try:
+                schedule = Schedule.objects.get(id=schedule_id)
+                # Add schedule price to response
+                response.data = {
+                    'success': True,
+                    'schedule_id': int(schedule_id),
+                    'schedule_price': float(schedule.price) if schedule.price else 0.00,
+                    'seats': response.data,
+                    'total_seats': len(response.data),
+                    'available_seats': Seat.objects.filter(schedule_id=schedule_id, is_available=True).count()
+                }
+            except Schedule.DoesNotExist:
+                response.data = {
+                    'success': False,
+                    'error': 'Schedule not found',
+                    'seats': [],
+                    'schedule_price': 0.00,
+                    'total_seats': 0,
+                    'available_seats': 0
+                }
+        else:
+            response.data = {
+                'success': True,
+                'schedule_price': 0.00,
+                'seats': response.data,
+                'total_seats': len(response.data),
+                'available_seats': 0
+            }
+        
+        return response
 
 class MealOptionViewSet(AirlineFilterMixin, viewsets.ReadOnlyModelViewSet):
     queryset = MealOption.objects.all()
     serializer_class = MealOptionSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
 class AssistanceServiceViewSet(AirlineFilterMixin, viewsets.ReadOnlyModelViewSet):
     queryset = AssistanceService.objects.all()
     serializer_class = AssistanceServiceSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
 class BaggageOptionViewSet(AirlineFilterMixin, viewsets.ReadOnlyModelViewSet):
     queryset = BaggageOption.objects.all()
     serializer_class = BaggageOptionSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
 
 
@@ -223,27 +694,31 @@ def create_payment_intent(request):
     Create payment intent with PayMongo for a booking
     """
     try:
-        amount = request.data.get('amount')
         booking_id = request.data.get('booking_id')
         
-        if not amount:
+        if not booking_id:
             return Response({
                 'success': False,
-                'error': 'Amount is required'
+                'error': 'Booking ID is required'
             }, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            booking = Booking.objects.get(id=booking_id)
+        except Booking.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Booking not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Enforce server-side total amount as the source of truth
+        amount = float(booking.total_amount)
         
         # Prepare FLAT metadata (PayMongo does not allow nested objects or Decimals)
-        metadata = {}
-        if booking_id:
-            try:
-                booking = Booking.objects.get(id=booking_id)
-                metadata = {
-                    "booking_id": str(booking.id),  # Flat string
-                    "booking_ref": f"BK{booking.id:08d}", # Flat string
-                    "trip_type": str(booking.trip_type) # Flat string
-                }
-            except Booking.DoesNotExist:
-                metadata = {"booking_id": str(booking_id)}
+        metadata = {
+            "booking_id": str(booking.id),
+            "booking_ref": f"CSUCC{booking.id:08d}",
+            "trip_type": str(booking.trip_type)
+        }
         
         result = paymongo_service.create_payment_intent(
             amount=amount,
@@ -280,15 +755,27 @@ def create_payment_source(request):
     Create payment source for specific payment methods (GCash, GrabPay, etc.)
     """
     try:
-        amount = request.data.get('amount')
-        payment_type = request.data.get('type', 'gcash')
         booking_id = request.data.get('booking_id')
+        payment_type = request.data.get('type', 'gcash')
+        # amount = request.data.get('amount') # IGNORE frontend amount
         
-        if not amount:
+        if not booking_id:
             return Response({
                 'success': False,
-                'error': 'Amount is required'
+                'error': 'Booking ID is required'
             }, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Get booking to ensure amount is correct
+        try:
+            booking = Booking.objects.get(id=booking_id)
+        except Booking.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Booking not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+            
+        # Enforce server-side source of truth
+        amount = float(booking.total_amount)
         
         # Create payment source
         result = paymongo_service.create_payment_source(
@@ -359,7 +846,7 @@ def verify_and_process_payment(request):
             return Response({
                 'success': True,
                 'payment_id': existing_payment.id,
-                'booking_reference': f"BK{booking.id:08d}",
+                'booking_reference': f"CSUCC{booking.id:08d}",
                 'booking_status': booking.status,
                 'message': 'Payment already processed'
             })
@@ -480,6 +967,24 @@ def process_payment_from_paymongo(payment_id, payment_attrs, booking):
                     seat_count += 1
             print(f"✅ Marked {seat_count} seats as unavailable")
             
+            # 🎓 AUTO-GRADING
+            if booking.activity:
+                print(f"🎓 Triggering auto-grading for booking {booking.id}")
+                try:
+                    from .services.grading_service import grade_booking
+                    grade_booking(booking, booking.activity.id)
+                except Exception as e:
+                    print(f"⚠️ Error during auto-grading: {str(e)}")
+            
+            # 🎉 SEND BOOKING CONFIRMATION EMAIL
+            print(f"📧 Sending booking confirmation email...")
+            email_sent = EmailService.send_booking_confirmation(booking, payment)
+            
+            if email_sent:
+                print(f"✅ Booking confirmation email sent successfully!")
+            else:
+                print(f"⚠️ Failed to send booking confirmation email")
+            
             print(f"🎉 Payment processing COMPLETED!")
             
             return Response({
@@ -487,10 +992,11 @@ def process_payment_from_paymongo(payment_id, payment_attrs, booking):
                 'message': 'Payment processed successfully',
                 'payment_id': payment.id,
                 'booking_id': booking.id,
-                'booking_reference': f"BK{booking.id:08d}",
+                'booking_reference': f"CSUCC{booking.id:08d}",
                 'booking_status': 'confirmed',
                 'amount': float(amount),
-                'method': payment_method
+                'method': payment_method,
+                'email_sent': email_sent
             })
             
     except Exception as e:
@@ -548,24 +1054,36 @@ def create_checkout_session(request):
     Generate a PayMongo Checkout URL for method selection
     """
     try:
-        amount = request.data.get('amount')
         booking_id = request.data.get('booking_id')
+        # amount = request.data.get('amount') # IGNORE frontend amount
         
-        if not amount or not booking_id:
+        if not booking_id:
             return Response({
                 'success': False,
-                'error': 'Amount and booking_id are required'
+                'error': 'Booking ID is required'
             }, status=400)
+            
+        # Get booking to ensure amount is correct
+        try:
+            booking = Booking.objects.get(id=booking_id)
+        except Booking.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Booking not found'
+            }, status=404)
+            
+        # Enforce server-side source of truth
+        amount = float(booking.total_amount)
 
         # Get additional customer info
         customer_email = request.data.get('customer_email')
         customer_name = request.data.get('customer_name')
         customer_phone = request.data.get('customer_phone')
         
-        print(f"DEBUG: Creating checkout session for booking {booking_id}, amount {amount}")
+        print(f"DEBUG: Creating checkout session for booking {booking_id}, amount {amount} (backend verified)")
         
         result = paymongo_service.create_checkout_session(
-            amount=float(amount),
+            amount=amount,
             booking_id=int(booking_id),
             customer_email=customer_email,
             customer_name=customer_name,
@@ -633,6 +1151,106 @@ def attach_payment_method(request):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def validate_activity_code(request):
+    """
+    Validate an activity code for the authenticated student
+    
+    POST /api/bookings/validate-activity-code/
+    Body: {"activity_code": "ABC12345"}
+    
+    Returns:
+        - 200: Activity details if valid
+        - 400: Invalid code or student not enrolled
+    """
+    from fbs_instructor.models import Activity, SectionEnrollment
+    from app.models import Students
+    
+    activity_code = request.data.get('activity_code', '').strip().upper()
+    
+    if not activity_code:
+        return Response({
+            'success': False,
+            'error': 'Activity code is required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        # Find activity by code
+        activity = Activity.objects.get(
+            activity_code=activity_code,
+            is_code_active=True
+        )
+    except Activity.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Invalid or inactive activity code'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Get student record
+    try:
+        student = Students.objects.get(user=request.user)
+    except Students.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Student record not found'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if student is enrolled in the section
+    is_enrolled = SectionEnrollment.objects.filter(
+        student=student,
+        section=activity.section,
+        is_active=True
+    ).exists()
+    
+    if not is_enrolled:
+        return Response({
+            'success': False,
+            'error': 'You are not enrolled in the section for this activity'
+        }, status=status.HTTP_403_FORBIDDEN)
+
+    # NEW: Check if student already has a successful booking for this activity
+    from app.models import Booking
+    existing_booking = Booking.objects.filter(
+        user=request.user,
+        activity=activity,
+        status='Confirmed',
+        is_practice=False
+    ).first()
+
+    if existing_booking:
+        return Response({
+            'success': False,
+            'error': f'You have already successfully completed this activity (Booking Ref: {existing_booking.id})',
+            'booking_id': existing_booking.id,
+            'completed': True
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    # Return activity details
+    return Response({
+        'success': True,
+        'activity': {
+            'id': activity.id,
+            'title': activity.title,
+            'description': activity.description,
+            'activity_code': activity.activity_code,
+            'total_points': float(activity.total_points),
+            'due_date': activity.due_date.isoformat() if activity.due_date else None,
+            'requirements': {
+                'trip_type': activity.required_trip_type,
+                'origin': activity.required_origin,
+                'destination': activity.required_destination,
+                'travel_class': activity.required_travel_class,
+                'passengers': activity.required_passengers,
+            },
+            'section': {
+                'code': activity.section.section_code,
+                'name': activity.section.section_name
+            }
+        }
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
 @permission_classes([AllowAny])
 def create_booking(request):
     """
@@ -652,18 +1270,68 @@ def create_booking(request):
         
         data = serializer.validated_data
         
+        # Handle Activity Code Validation and Practice Mode
+        activity_code = data.get('activity_code')
+        is_practice = data.get('is_practice', False)
+        activity_to_link = None
+        
+        if activity_code and not is_practice:
+            # Validate activity code
+            from fbs_instructor.models import Activity, SectionEnrollment
+            from app.models import Students
+            
+            try:
+                activity_to_link = Activity.objects.get(
+                    activity_code=activity_code.strip().upper(),
+                    is_code_active=True
+                )
+                
+                # Check if user is a student and enrolled in the section
+                try:
+                    student = Students.objects.get(user=request.user if request.user.is_authenticated else None)
+                    is_enrolled = SectionEnrollment.objects.filter(
+                        student=student,
+                        section=activity_to_link.section,
+                        is_active=True
+                    ).exists()
+                    
+                    if not is_enrolled:
+                        return Response({
+                            'success': False,
+                            'error': 'You are not enrolled in the section for this activity'
+                        }, status=status.HTTP_403_FORBIDDEN)
+                        
+                except Students.DoesNotExist:
+                    return Response({
+                        'success': False,
+                        'error': 'Student record not found'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                    
+            except Activity.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Invalid or inactive activity code'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
         # Start transaction
         with transaction.atomic():
-            # 1. Create or get user
-            user = _get_or_create_user(data)
+            # 1. Get or create user — prefer the authenticated student's account
+            #    This is critical: if a student is logged in (has an activity code),
+            #    we MUST use their real Django user so the booking links to their
+            #    Student profile and grading can succeed.
+            if request.user and request.user.is_authenticated:
+                user = request.user
+                print(f"✅ Using authenticated user: {user.id} - {user.username}")
+            else:
+                user = _get_or_create_user(data)
+
             
-            # 2. Create main booking WITH total amount from frontend
+            # 2. Create main booking — total_amount starts at 0, backend will calculate it
+            #    SECURITY: We NEVER trust the frontend-supplied total_amount
             trip_type = data.get('trip_type', 'one_way')
-            total_amount = data.get('total_amount', Decimal('0.00'))
             
-            print(f"DEBUG: Creating booking with total amount: {total_amount}")
+            print(f"DEBUG: Creating booking (total will be backend-calculated)")
             
-            # Create booking WITH the total_amount field
             booking = Booking.objects.create(
                 user=user,
                 trip_type=trip_type,
@@ -671,10 +1339,13 @@ def create_booking(request):
                 base_fare_total=Decimal('0.00'),
                 insurance_total=Decimal('0.00'),
                 tax_total=Decimal('0.00'),
-                total_amount=total_amount  # Use the field from your model
+                total_amount=Decimal('0.00'),  # Always start at 0; _update_booking_totals sets the real value
+                is_practice=is_practice,
+                activity_code_used=activity_code.strip().upper() if activity_code else None,
+                activity=activity_to_link
             )
             
-            print(f"DEBUG: Booking created with ID: {booking.id}, Total: {booking.total_amount}")
+            print(f"DEBUG: Booking created with ID: {booking.id} (total pending backend calculation)")
             
             contact_info = data.get('contact_info', {})
             booking_contact = _create_booking_contact(booking, contact_info)
@@ -721,23 +1392,199 @@ def create_booking(request):
             print(f"DEBUG: Updating booking totals")
             _update_booking_totals(booking)
             
-            print(f"DEBUG: Booking creation successful!")
+            # NOTE: Auto-grading happens in process_payment_webhook and process_payment_with_id
+            # AFTER the payment is confirmed (status = 'Confirmed'). DO NOT grade here.
             
-            # Return the correct total amount
+            print(f"DEBUG: Booking creation successful!")
+
+            
+            # Return the correct total amount (backend source of truth)
             return Response({
                 'success': True,
                 'booking_id': booking.id,
-                'booking_reference': f"BK{booking.id:08d}",
+                'booking_reference': f"CSUCC{booking.id:08d}",
                 'status': 'pending',
-                'total_amount': float(total_amount),  # Use the total amount from frontend
+                'total_amount': float(booking.total_amount),
                 'payment_info': {
                     'needs_payment': True,
-                    'amount': float(total_amount),  # Use the total amount from frontend
+                    'amount': float(booking.total_amount),
                     'currency': 'PHP',
                     'description': f'Flight Booking {booking.id}'
                 },
                 'message': 'Booking created successfully with pending payment status'
             }, status=status.HTTP_201_CREATED)
+            
+    except Exception as e:
+        import traceback
+        print("=== ERROR TRACEBACK ===")
+        traceback.print_exc()
+        print("======================")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['PATCH', 'PUT'])
+@permission_classes([AllowAny])
+def update_booking(request, booking_id):
+    """
+    API endpoint to update an existing booking
+    """
+    try:
+        print(f"🔍 DEBUG: Updating booking ID: {booking_id}")
+        print(f"DEBUG: Request data: {request.data}")
+        
+        # First, check if booking exists
+        try:
+            booking = Booking.objects.get(id=booking_id)
+            print(f"DEBUG: Found booking {booking_id}, current status: {booking.status}")
+        except Booking.DoesNotExist:
+            print(f"DEBUG: Booking {booking_id} not found")
+            return Response({
+                'success': False,
+                'error': f'Booking {booking_id} not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Don't update if booking is already confirmed/cancelled
+        if booking.status in ['Confirmed', 'Cancelled']:
+            print(f"DEBUG: Booking {booking_id} is already {booking.status}, cannot update")
+            return Response({
+                'success': False,
+                'error': f'Cannot update booking with status: {booking.status}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate the update data
+        serializer = CreateBookingSerializer(data=request.data, partial=True)
+        if not serializer.is_valid():
+            print(f"DEBUG: Serializer errors: {serializer.errors}")
+            return Response({
+                'success': False,
+                'error': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        data = serializer.validated_data
+        print(f"DEBUG: Validated data: {data}")
+        
+        # Start transaction for the update
+        with transaction.atomic():
+            # Update booking contact info if provided
+            if 'contact_info' in data:
+                contact_info = data['contact_info']
+                print(f"DEBUG: Updating contact info: {contact_info}")
+                
+                # Create or update booking contact
+                try:
+                    booking_contact = BookingContact.objects.get(booking=booking)
+                    booking_contact.first_name = contact_info.get('firstName', booking_contact.first_name)
+                    booking_contact.last_name = contact_info.get('lastName', booking_contact.last_name)
+                    booking_contact.email = contact_info.get('email', booking_contact.email)
+                    booking_contact.phone = contact_info.get('phone', booking_contact.phone)
+                    booking_contact.title = contact_info.get('title', booking_contact.title)
+                    booking_contact.middle_name = contact_info.get('middleName', booking_contact.middle_name)
+                    booking_contact.save()
+                    print(f"DEBUG: Updated booking contact")
+                except BookingContact.DoesNotExist:
+                    # Create new contact
+                    booking_contact = BookingContact.objects.create(
+                        booking=booking,
+                        first_name=contact_info.get('firstName', ''),
+                        last_name=contact_info.get('lastName', ''),
+                        email=contact_info.get('email', ''),
+                        phone=contact_info.get('phone', ''),
+                        title=contact_info.get('title', 'MR'),
+                        middle_name=contact_info.get('middleName', '')
+                    )
+                    print(f"DEBUG: Created new booking contact")
+            
+            # Update passengers if provided
+            if 'passengers' in data:
+                passengers_data = data['passengers']
+                print(f"DEBUG: Updating {len(passengers_data)} passengers")
+                
+                # For simplicity, we'll delete existing passengers and create new ones
+                # First, delete existing booking details
+                deleted_details_count, _ = BookingDetail.objects.filter(booking=booking).delete()
+                print(f"DEBUG: Deleted {deleted_details_count} old booking details")
+                
+                # Delete existing passengers linked to this booking
+                passenger_ids = BookingDetail.objects.filter(booking=booking).values_list('passenger_id', flat=True)
+                PassengerInfo.objects.filter(id__in=passenger_ids).delete()
+                print(f"DEBUG: Deleted old passengers")
+                
+                # Create new passengers
+                new_passengers = _create_passengers(passengers_data)
+                print(f"DEBUG: Created {len(new_passengers)} new passengers")
+                
+                # Create new booking details
+                booking_details = []
+                
+                for i, passenger in enumerate(new_passengers):
+                    print(f"DEBUG: Creating booking details for passenger {i+1}")
+                    
+                    # Get passenger data
+                    passenger_data = passengers_data[i] if i < len(passengers_data) else {}
+                    
+                    # Create DEPART flight booking detail
+                    depart_detail = _create_booking_detail(
+                        booking, passenger, data, passenger_data, is_return=False
+                    )
+                    if depart_detail:
+                        booking_details.append(depart_detail)
+                        print(f"DEBUG: Created depart booking detail: {depart_detail.id}")
+                    
+                    # Create RETURN flight booking detail for round trips
+                    if booking.trip_type == 'round_trip':
+                        return_detail = _create_booking_detail(
+                            booking, passenger, data, passenger_data, is_return=True
+                        )
+                        if return_detail:
+                            booking_details.append(return_detail)
+                            print(f"DEBUG: Created return booking detail: {return_detail.id}")
+                
+                print(f"DEBUG: Created {len(booking_details)} new booking details")
+            
+            # Update flight selections if provided
+            if 'selectedOutbound' in data:
+                # Update would require more complex logic to change schedules
+                # For now, we'll log it but not change the actual schedule
+                print(f"DEBUG: Update requested for outbound flight: {data['selectedOutbound']}")
+                print(f"NOTE: Flight schedule changes not implemented in update")
+            
+            if 'selectedReturn' in data and booking.trip_type == 'round_trip':
+                print(f"DEBUG: Update requested for return flight: {data['selectedReturn']}")
+                print(f"NOTE: Flight schedule changes not implemented in update")
+            
+            # Update add-ons if provided
+            if 'addons' in data or 'return_addons' in data:
+                print(f"DEBUG: Update requested for add-ons")
+                print(f"NOTE: Add-on updates would require more complex logic")
+            
+            # Update total amount if provided
+            if 'total_amount' in data:
+                new_total = data['total_amount']
+                booking.total_amount = new_total
+                print(f"DEBUG: Updated total amount to: {new_total}")
+            
+            # Save booking
+            booking.save()
+            
+            # Recalculate taxes
+            if booking_details:
+                print(f"DEBUG: Recalculating taxes for {len(booking_details)} booking details")
+                _apply_taxes(booking, booking_details)
+                _update_booking_totals(booking)
+            
+            print(f"DEBUG: Booking update successful!")
+            
+            return Response({
+                'success': True,
+                'booking_id': booking.id,
+                'booking_reference': f"CSUCC{booking.id:08d}",
+                'status': booking.status,
+                'total_amount': float(booking.total_amount),
+                'message': 'Booking updated successfully'
+            }, status=status.HTTP_200_OK)
             
     except Exception as e:
         import traceback
@@ -829,19 +1676,20 @@ def _create_booking(data, user):
     trip_type = data.get('trip_type', 'one_way')
     is_round_trip = trip_type == 'round_trip'
     
-    # Calculate total amount from frontend data
-    total_amount = Decimal(str(data.get('total_amount', 0)))
-    print(f"DEBUG: Creating booking with total amount from frontend: {total_amount}")
+    # Calculate total amount - IGNORE frontend data for security
+    # total_amount = Decimal(str(data.get('total_amount', 0))) 
+    total_amount = Decimal('0.00') # Start with 0, let backend calculate it
+    print(f"DEBUG: Creating booking with initial total amount: {total_amount} (ignoring frontend)")
     
     # Create and save the booking immediately
     booking = Booking.objects.create(
         user=user,
         trip_type=trip_type,
         status='Pending',
-        base_fare_total=Decimal('0.00'),
         insurance_total=Decimal('0.00'),
         tax_total=Decimal('0.00'),
-        total_amount=total_amount  # Store the total amount from frontend
+        total_amount=total_amount,  # Start with 0
+        activity_id=data.get('activity_id') # Link to activity if present
     )
     
     print(f"DEBUG: Booking created. ID: {booking.id}, Total: {total_amount}")
@@ -1001,9 +1849,57 @@ def _create_booking_detail(booking, passenger, data, passenger_data=None, is_ret
                 name__icontains=fare_type
             ).first()
         
-        # Calculate base price
-        base_price = Decimal(str(selected_flight.get('price', 0)))
-        print(f"  {flight_label} base price: {base_price}")
+        # Calculate base price - DO NOT TRUST FRONTEND
+        # Get session ID and user for dynamic pricing
+        session_id = getattr(booking, 'session_id', None) or "booking_creation"
+        user = booking.user
+        
+        # Prepare flight data for dynamic pricing
+        flight_data = {
+            'schedule_id': schedule.id,
+            'flight_number': schedule.flight.flight_number,
+            'airline_code': schedule.flight.airline.code,
+            'airline_name': schedule.flight.airline.name,
+            'origin': schedule.flight.route.origin_airport.code,
+            'destination': schedule.flight.route.destination_airport.code,
+            'departure_time': schedule.departure_time.isoformat(),
+            'arrival_time': schedule.arrival_time.isoformat(),
+            'total_stops': 0,
+            'is_domestic': schedule.flight.route.is_domestic,
+        }
+        
+        # Recalculate dynamic price
+        price_data = dynamic_pricing.get_price_for_user(
+            flight_data, 
+            user=user,
+            session_id=session_id
+        )
+        
+        # Use ML base price from database for seat class multiplier logic (to match ScheduleViewSet)
+        ml_base = float(schedule.ml_base_price) if schedule.ml_base_price else schedule.price
+        
+        # Apply seat class multiplier and rounding if it's not the default Economy
+        fare_type = selected_flight.get('class_type', 'Economy')
+        
+        # Get multiplier from the ScheduleViewSet method (or replicate logic here)
+        # We'll use a local helper or import if possible, but for now we'll match logic
+        def get_multiplier(name):
+            if not name: return 1.0
+            from django.core.cache import cache
+            normalized = name.strip()
+            sc = SeatClass.objects.filter(name__iexact=normalized).first()
+            if not sc and "class" in normalized.lower():
+                base_name = normalized.lower().replace("class", "").strip()
+                sc = SeatClass.objects.filter(name__iexact=base_name).first()
+            return float(sc.price_multiplier) if sc else 1.0
+
+        multiplier = get_multiplier(fare_type)
+        raw_seat_price = Decimal(str(ml_base)) * Decimal(str(multiplier))
+        
+        # Final rounded price for this detail
+        base_price = Decimal(str(dynamic_pricing.round_seat_class_price(raw_seat_price)))
+        
+        print(f"  {flight_label} backend-calculated price: {base_price} (Frontend was: {selected_flight.get('price')})")
         
         # Create booking detail
         print(f"  Creating BookingDetail for {flight_label.lower()} flight...")
@@ -1206,7 +2102,9 @@ def _apply_taxes(booking, booking_details):
                 continue
 
 def _update_booking_totals(booking):
-    """Update booking totals after all details are created and verify against stored total"""
+    """Update booking totals after all details are created.
+    Backend is the SOLE source of truth — frontend total is ignored.
+    """
     try:
         print(f"DEBUG: In _update_booking_totals for booking {booking.id}")
         
@@ -1217,47 +2115,49 @@ def _update_booking_totals(booking):
         # Refresh booking from database
         booking.refresh_from_db()
         
-        # Recalculate totals - use direct query instead of reverse relationship
         from django.db.models import Sum
         
-        # Calculate base fare total
+        # 1. Base fare total (ML-priced per passenger per leg)
         base_fare_total = BookingDetail.objects.filter(
             booking=booking
         ).aggregate(total=Sum('price'))['total'] or Decimal('0.00')
-        
         print(f"  Base fare total: {base_fare_total}")
         
-        # Calculate insurance total (if you have insurance logic)
+        # 2. Insurance total
         insurance_total = Decimal('0.00')
-        # Add your insurance calculation here
         
-        # Calculate tax total
+        # 3. Tax total
         tax_total = BookingTax.objects.filter(
             booking=booking
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        
         print(f"  Tax total: {tax_total}")
         
-        # Calculate the total from components
-        calculated_total = base_fare_total + insurance_total + tax_total
+        # 4. ✅ Addon total — prices fetched from DB, NOT from frontend
+        #    Covers baggage, meals, seat upgrades, and any other paid addons
+        addon_total = Decimal('0.00')
+        booking_details = BookingDetail.objects.filter(booking=booking).prefetch_related('addons')
+        for detail in booking_details:
+            for addon in detail.addons.all():
+                if addon.price and not addon.included:  # Only count paid (non-included) addons
+                    addon_total += Decimal(str(addon.price))
+        print(f"  Addon total (baggage, meals, seats): {addon_total}")
         
-        # Verify the stored total matches the calculated total
-        stored_total = booking.total_amount
-        print(f"  Stored total: {stored_total}")
-        print(f"  Calculated total: {calculated_total}")
+        # 5. Grand total — backend is the source of truth
+        calculated_total = base_fare_total + insurance_total + tax_total + addon_total
         
-        # If there's a discrepancy, log it but use the stored total (from frontend)
-        if calculated_total != stored_total:
-            print(f"  ⚠️ WARNING: Total mismatch! Stored: {stored_total}, Calculated: {calculated_total}")
-            print(f"  ⚠️ Using stored total from frontend: {stored_total}")
+        # Log any discrepancy with what the frontend claimed
+        stored_frontend_total = booking.total_amount
+        if stored_frontend_total and abs(calculated_total - stored_frontend_total) > Decimal('1.00'):
+            print(f"  ⚠️ SECURITY: Total mismatch! Frontend claimed: {stored_frontend_total}, Backend calculated: {calculated_total}")
         
-        # Update booking with calculated totals
+        # Always override with backend-calculated total
+        booking.total_amount = calculated_total
         booking.base_fare_total = base_fare_total
         booking.insurance_total = insurance_total
         booking.tax_total = tax_total
         booking.save()
         
-        print(f"  Booking totals updated successfully")
+        print(f"  ✅ Booking totals saved: base={base_fare_total}, addons={addon_total}, tax={tax_total}, TOTAL={calculated_total}")
         
     except Exception as e:
         print(f"ERROR in _update_booking_totals: {str(e)}")
@@ -1321,11 +2221,17 @@ def process_payment(request):
         with transaction.atomic():
             if payment_status == 'succeeded':
                 # Create payment record
-                amount = payment_data['attributes']['amount'] / 100  # Convert from centavos
+                amount_paid = payment_data['attributes']['amount'] / 100  # Convert from centavos
+                
+                # SECURITY CHECK: Verify the amount paid against the booking total
+                if abs(Decimal(str(amount_paid)) - booking.total_amount) > Decimal('1.00'):
+                    print(f"⚠️ SECURITY ALERT: Payment amount mismatch! Paid: {amount_paid}, Booking Total: {booking.total_amount}")
+                    # We log it and record the actual amount paid, but maybe we shouldn't confirm the booking automatically?
+                    # For now, we'll record it but alert in logs.
                 
                 payment = Payment.objects.create(
                     booking=booking,
-                    amount=Decimal(str(amount)),
+                    amount=Decimal(str(amount_paid)),
                     method=payment_method,
                     transaction_id=intent_id,
                     status='Completed',
@@ -1344,12 +2250,21 @@ def process_payment(request):
                     if detail.seat:
                         detail.seat.is_available = False
                         detail.seat.save()
+
+                # 🎓 AUTO-GRADING
+                if booking.activity:
+                    print(f"🎓 Triggering auto-grading for booking {booking.id}")
+                    try:
+                        from .services.grading_service import grade_booking
+                        grade_booking(booking, booking.activity.id)
+                    except Exception as e:
+                        print(f"⚠️ Error during auto-grading: {str(e)}")
                 
                 return Response({
                     'success': True,
                     'payment_id': payment.id,
                     'booking_status': 'confirmed',
-                    'booking_reference': f"BK{booking.id:08d}",
+                    'booking_reference': f"CSUCC{booking.id:08d}",
                     'message': 'Payment processed successfully'
                 }, status=status.HTTP_200_OK)
             
@@ -1736,6 +2651,15 @@ def process_payment_webhook(payment_id, payment_attrs, booking_id):
                     seat_count += 1
             print(f"✅ Marked {seat_count} seats as unavailable")
             
+            # 🎓 AUTO-GRADING
+            if booking.activity:
+                print(f"🎓 Triggering auto-grading for booking {booking.id}")
+                try:
+                    from .services.grading_service import grade_booking
+                    grade_booking(booking, booking.activity.id)
+                except Exception as e:
+                    print(f"⚠️ Error during auto-grading: {str(e)}")
+            
             print(f"🎉 Payment processing COMPLETED for booking {booking_id}")
             
             return Response({
@@ -1744,7 +2668,7 @@ def process_payment_webhook(payment_id, payment_attrs, booking_id):
                 "payment_id": payment.id,
                 "booking_id": booking_id,
                 "booking_status": "confirmed",
-                "booking_reference": f"BK{booking.id:08d}",
+                "booking_reference": f"CSUCC{booking.id:08d}",
                 "amount": float(amount),
                 "method": payment_method
             })
@@ -1764,7 +2688,7 @@ def send_booking_confirmation_email(booking):
     # For now, just log it
     print(f"\n📧 Would send confirmation email for booking {booking.id}")
     print(f"   To: {booking.user.email if booking.user else 'No user email'}")
-    print(f"   Reference: BK{booking.id:08d}")
+    print(f"   Reference: CSUCC{booking.id:08d}")
     print(f"   Amount: {booking.total_amount}")
 
 def process_payment_with_id(payment_id, booking_id):
@@ -1828,13 +2752,22 @@ def process_payment_with_id(payment_id, booking_id):
                             detail.seat.is_available = False
                             detail.seat.save()
                     
+                    # 🎓 AUTO-GRADING
+                    if booking.activity:
+                        print(f"🎓 Triggering auto-grading for booking {booking.id}")
+                        try:
+                            from .services.grading_service import grade_booking
+                            grade_booking(booking, booking.activity.id)
+                        except Exception as e:
+                            print(f"⚠️ Error during auto-grading: {str(e)}")
+                    
                     print(f"✅ Payment processed: {payment.id}")
                     
                     return Response({
                         'success': True,
                         'payment_id': payment.id,
                         'booking_status': 'confirmed',
-                        'booking_reference': f"BK{booking.id:08d}",
+                        'booking_reference': f"CSUCC{booking.id:08d}",
                         'message': 'Payment processed successfully'
                     })
         
@@ -1943,7 +2876,7 @@ def check_payment_status(request, booking_id):
                 'paid': True,
                 'payment_id': payment.id if payment else None,
                 'booking_id': booking_id,
-                'booking_reference': f"BK{booking.id:08d}",
+                'booking_reference': f"CSUCC{booking.id:08d}",
                 'booking_status': booking.status,
                 'amount': float(payment.amount) if payment else 0,
                 'method': payment.method if payment else None,
@@ -1959,7 +2892,7 @@ def check_payment_status(request, booking_id):
                 'paid': True,
                 'payment_id': payment.id,
                 'booking_id': booking_id,
-                'booking_reference': f"BK{booking.id:08d}",
+                'booking_reference': f"CSUCC{booking.id:08d}",
                 'booking_status': booking.status,
                 'amount': float(payment.amount),
                 'method': payment.method,
@@ -2096,7 +3029,7 @@ def process_payment_immediately(payment_id, payment_attrs, booking):
                     'success': True,
                     'paid': True,
                     'payment_id': existing_payment.id,
-                    'booking_reference': f"BK{booking.id:08d}",
+                    'booking_reference': f"CSUCC{booking.id:08d}",
                     'booking_status': booking.status,
                     'message': 'Payment already processed'
                 })
@@ -2123,6 +3056,15 @@ def process_payment_immediately(payment_id, payment_attrs, booking):
                     detail.seat.is_available = False
                     detail.seat.save()
             
+            # 🎓 AUTO-GRADING
+            if booking.activity:
+                print(f"🎓 Triggering auto-grading for booking {booking.id}")
+                try:
+                    from .services.grading_service import grade_booking
+                    grade_booking(booking, booking.activity.id)
+                except Exception as e:
+                    print(f"⚠️ Error during auto-grading: {str(e)}")
+            
             print(f"✅ IMMEDIATELY processed payment: {payment.id}")
             
             return Response({
@@ -2130,7 +3072,7 @@ def process_payment_immediately(payment_id, payment_attrs, booking):
                 'paid': True,
                 'payment_id': payment.id,
                 'booking_id': booking.id,
-                'booking_reference': f"BK{booking.id:08d}",
+                'booking_reference': f"CSUCC{booking.id:08d}",
                 'booking_status': 'confirmed',
                 'amount': float(amount),
                 'method': payment_method,
@@ -2234,7 +3176,7 @@ def check_booking_payment(request, booking_id):
                 'paid': True,
                 'booking_status': 'confirmed',
                 'booking_id': booking_id,
-                'booking_reference': f"BK{booking.id:08d}",
+                'booking_reference': f"CSUCC{booking.id:08d}",
                 'payment_id': payment.id if payment else None,
                 'message': 'Booking is already confirmed'
             })
@@ -2347,7 +3289,7 @@ def check_booking_status(request, booking_id):
         return Response({
             'success': True,
             'booking_id': booking_id,
-            'booking_reference': f"BK{booking.id:08d}",
+            'booking_reference': f"CSUCC{booking.id:08d}",
             'booking_status': booking.status,
             'has_payment': payment is not None,
             'payment_id': payment.id if payment else None,
@@ -2403,3 +3345,590 @@ def get_seat_class_features(request):
             'success': True,
             'data': {}
         })
+    
+
+
+# Django views.py
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_booking_by_reference(request, reference):
+    """Get booking by reference number (CSUCC00000071)"""
+    try:
+        # Extract ID from reference
+        booking_id = int(reference.replace('CSUCC', ''))
+        booking = Booking.objects.get(id=booking_id)
+        serializer = BookingSerializer(booking)
+        return Response({
+            'success': True,
+            'booking': serializer.data
+        })
+    except (ValueError, Booking.DoesNotExist):
+        return Response({
+            'success': False,
+            'error': 'Booking not found'
+        }, status=404)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def cancel_booking(request, booking_id):
+    """Cancel a booking"""
+    try:
+        booking = Booking.objects.get(id=booking_id)
+        booking.status = 'cancelled'
+        booking.save()
+        return Response({
+            'success': True,
+            'message': 'Booking cancelled successfully'
+        })
+    except Booking.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Booking not found'
+        }, status=404)    
+    
+
+
+    # Add this function in views.py (anywhere after the imports)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_seats_with_schedule_info(request, schedule_id):
+    """
+    Get seats with schedule price information
+    """
+    try:
+        schedule = Schedule.objects.get(id=schedule_id)
+        seats = Seat.objects.filter(schedule=schedule).select_related(
+            'seat_class', 
+            'schedule', 
+            'schedule__flight',
+            'schedule__flight__route'
+        ).order_by('row', 'column')
+        
+        seat_data = []
+        for seat in seats:
+            # Calculate final price
+            try:
+                final_price = seat.final_price
+            except:
+                # Fallback calculation
+                base_price = schedule.price if schedule.price else Decimal('0.00')
+                multiplier = seat.seat_class.price_multiplier if seat.seat_class else Decimal('1.00')
+                adjustment = seat.price_adjustment if seat.price_adjustment else Decimal('0.00')
+                final_price = (base_price * multiplier) + adjustment
+            
+            seat_info = {
+                'id': seat.id,
+                'seat_code': f"{seat.row}{seat.column}" if seat.row and seat.column else seat.seat_number,
+                'seat_number': seat.seat_number,
+                'row': seat.row,
+                'column': seat.column,
+                'is_available': seat.is_available,
+                'final_price': float(final_price),
+                'price_adjustment': float(seat.price_adjustment) if seat.price_adjustment else 0.0,
+                'has_extra_legroom': seat.has_extra_legroom,
+                'is_exit_row': seat.is_exit_row,
+                'is_bulkhead': seat.is_bulkhead,
+                'is_window': seat.is_window,
+                'is_aisle': seat.is_aisle,
+                'features': [],
+            }
+            
+            # Add features
+            if seat.has_extra_legroom:
+                seat_info['features'].append("Extra Legroom")
+            if seat.is_exit_row:
+                seat_info['features'].append("Exit Row")
+            if seat.is_bulkhead:
+                seat_info['features'].append("Bulkhead")
+            if seat.is_window:
+                seat_info['features'].append("Window")
+            if seat.is_aisle:
+                seat_info['features'].append("Aisle")
+            
+            if seat.seat_class:
+                seat_info['seat_class'] = {
+                    'id': seat.seat_class.id,
+                    'name': seat.seat_class.name,
+                    'price_multiplier': float(seat.seat_class.price_multiplier)
+                }
+            
+            seat_data.append(seat_info)
+        
+        return JsonResponse({
+            'success': True,
+            'schedule_id': schedule_id,
+            'schedule_price': float(schedule.price) if schedule.price else 0.00,
+            'flight_number': schedule.flight.flight_number if schedule.flight else '',
+            'airline': schedule.flight.airline.code if schedule.flight and schedule.flight.airline else '',
+            'seats': seat_data,
+            'total_seats': len(seat_data),
+            'available_seats': seats.filter(is_available=True).count()
+        })
+        
+    except Schedule.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Schedule not found'
+        }, status=404)
+    except Exception as e:
+        print(f"Error in get_seats_with_schedule_info: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+    
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def test_seat_data(request, schedule_id):
+    """Test endpoint to see what seat data looks like"""
+    try:
+        schedule = Schedule.objects.get(id=schedule_id)
+        seats = Seat.objects.filter(schedule=schedule)[:3]
+        
+        data = {
+            'schedule': {
+                'id': schedule.id,
+                'price': float(schedule.price) if schedule.price else 0,
+                'flight_number': schedule.flight.flight_number if schedule.flight else None
+            },
+            'seat_count': Seat.objects.filter(schedule=schedule).count(),
+            'sample_seats': []
+        }
+        
+        for seat in seats:
+            seat_data = {
+                'id': seat.id,
+                'seat_code': f"{seat.row}{seat.column}" if seat.row and seat.column else seat.seat_number,
+                'row': seat.row,
+                'column': seat.column,
+                'seat_number': seat.seat_number,
+                'is_available': seat.is_available,
+                'price_adjustment': float(seat.price_adjustment) if seat.price_adjustment else 0,
+                'has_extra_legroom': seat.has_extra_legroom,
+                'is_exit_row': seat.is_exit_row,
+                'is_bulkhead': seat.is_bulkhead,
+                'is_window': seat.is_window,
+                'is_aisle': seat.is_aisle,
+            }
+            
+            if seat.seat_class:
+                seat_data['seat_class'] = {
+                    'id': seat.seat_class.id,
+                    'name': seat.seat_class.name,
+                    'price_multiplier': float(seat.seat_class.price_multiplier)
+                }
+            
+            # Calculate price
+            base_price = schedule.price if schedule.price else Decimal('0.00')
+            multiplier = seat.seat_class.price_multiplier if seat.seat_class else Decimal('1.00')
+            adjustment = seat.price_adjustment if seat.price_adjustment else Decimal('0.00')
+            calculated_price = (base_price * multiplier) + adjustment
+            
+            seat_data['calculated_price'] = float(calculated_price)
+            
+            # Try to get from property
+            try:
+                seat_data['final_price_property'] = float(seat.final_price)
+            except:
+                seat_data['final_price_property'] = 'Error accessing property'
+            
+            data['sample_seats'].append(seat_data)
+        
+        return JsonResponse(data)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)  
+
+
+def process_payment_webhook(payment_id, payment_attrs, booking_id):
+    """
+    Process payment from webhook and save to database + send confirmation email
+    """
+    from django.db import transaction
+    from app.models import Booking, Payment, BookingDetail, Seat
+    from decimal import Decimal
+    
+    try:
+        print(f"\n💾 Processing payment for booking {booking_id}")
+        print(f"Payment ID: {payment_id}")
+        print(f"Payment Status: {payment_attrs.get('status')}")
+        
+        with transaction.atomic():
+            # Get booking (with lock to prevent race conditions)
+            try:
+                booking = Booking.objects.select_for_update().get(id=booking_id)
+                print(f"Found booking: {booking.id}, Status: {booking.status}")
+            except Booking.DoesNotExist:
+                print(f"❌ Booking {booking_id} not found")
+                return Response({"error": "Booking not found"}, status=404)
+            
+            # Check if payment already exists
+            existing_payment = Payment.objects.filter(
+                transaction_id=payment_id
+            ).first()
+            
+            if existing_payment:
+                print(f"✅ Payment already exists: {existing_payment.id}")
+                
+                # Still send email if booking is confirmed but email wasn't sent
+                if booking.status == 'Confirmed':
+                    EmailService.send_booking_confirmation(booking, existing_payment)
+                
+                return Response({
+                    "success": True,
+                    "message": "Payment already processed",
+                    "payment_id": existing_payment.id,
+                    "booking_status": booking.status
+                })
+            
+            # Convert amount from centavos to PHP
+            amount = Decimal(str(payment_attrs['amount'] / 100))
+            print(f"Amount: {amount} PHP")
+            
+            # Get payment method
+            payment_method = "Unknown"
+            source = payment_attrs.get('source', {})
+            source_type = source.get('type', '')
+            
+            if source_type == 'gcash':
+                payment_method = 'GCash'
+            elif source_type == 'card':
+                payment_method = 'Credit Card'
+            elif source_type == 'grab_pay':
+                payment_method = 'Grab Pay'
+            elif source_type == 'paymaya':
+                payment_method = 'PayMaya'
+            else:
+                payment_method = source_type.capitalize() if source_type else 'Unknown'
+            
+            print(f"Payment Method: {payment_method}")
+            
+            # Create payment record
+            payment = Payment.objects.create(
+                booking=booking,
+                amount=amount,
+                method=payment_method,
+                transaction_id=payment_id,
+                status='Completed',
+                payment_date=timezone.now()
+            )
+            
+            print(f"✅ Payment saved to database: {payment.id}")
+            
+            # Update booking status
+            booking.status = 'Confirmed'
+            booking.save()
+            print(f"✅ Booking status updated to: {booking.status}")
+            
+            # Update all booking details status
+            updated_details = booking.details.all().update(status='confirmed')
+            print(f"✅ Updated {updated_details} booking details")
+            
+            # Mark seats as unavailable
+            seat_count = 0
+            for detail in booking.details.all():
+                if detail.seat:
+                    detail.seat.is_available = False
+                    detail.seat.save()
+                    seat_count += 1
+            print(f"✅ Marked {seat_count} seats as unavailable")
+            
+            # 🎉 SEND BOOKING CONFIRMATION EMAIL
+            print(f"📧 Sending booking confirmation email...")
+            email_sent = EmailService.send_booking_confirmation(booking, payment)
+            
+            if email_sent:
+                print(f"✅ Booking confirmation email sent successfully!")
+            else:
+                print(f"⚠️ Failed to send booking confirmation email - will retry via admin")
+                # Optionally: Queue for retry or notify admin
+            
+            print(f"🎉 Payment processing COMPLETED for booking {booking_id}")
+            
+            return Response({
+                "success": True,
+                "message": "Payment processed successfully",
+                "payment_id": payment.id,
+                "booking_id": booking_id,
+                "booking_status": "confirmed",
+                "booking_reference": f"CSUCC{booking.id:08d}",
+                "amount": float(amount),
+                "method": payment_method,
+                "email_sent": email_sent
+            })
+            
+    except Exception as e:
+        print(f"❌ Error in payment processing: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=400)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_seats_with_schedule_info(request, schedule_id):
+    """
+    Get seats with schedule and aircraft information
+    """
+    try:
+        schedule = Schedule.objects.select_related(
+            'flight__aircraft',
+            'flight__airline'
+        ).get(id=schedule_id)
+        
+        seats = Seat.objects.filter(schedule=schedule).select_related(
+            'seat_class', 
+            'schedule', 
+            'schedule__flight',
+            'schedule__flight__route'
+        ).order_by('row', 'column')
+        
+        # Get aircraft model
+        aircraft_model = schedule.flight.aircraft.model if schedule.flight.aircraft else "Airbus A321"
+        
+        seat_data = []
+        for seat in seats:
+            # Calculate final price
+            try:
+                final_price = seat.final_price
+            except:
+                # Fallback calculation
+                base_price = schedule.price if schedule.price else Decimal('0.00')
+                multiplier = seat.seat_class.price_multiplier if seat.seat_class else Decimal('1.00')
+                adjustment = seat.price_adjustment if seat.price_adjustment else Decimal('0.00')
+                final_price = (base_price * multiplier) + adjustment
+            
+            seat_info = {
+                'id': seat.id,
+                'seat_code': f"{seat.row}{seat.column}" if seat.row and seat.column else seat.seat_number,
+                'seat_number': seat.seat_number,
+                'row': seat.row,
+                'column': seat.column,
+                'is_available': seat.is_available,
+                'final_price': float(final_price),
+                'price_adjustment': float(seat.price_adjustment) if seat.price_adjustment else 0.0,
+                'has_extra_legroom': seat.has_extra_legroom,
+                'is_exit_row': seat.is_exit_row,
+                'is_bulkhead': seat.is_bulkhead,
+                'is_window': seat.is_window,
+                'is_aisle': seat.is_aisle,
+                'features': [],
+            }
+            
+            # Add features
+            if seat.has_extra_legroom:
+                seat_info['features'].append("Extra Legroom")
+            if seat.is_exit_row:
+                seat_info['features'].append("Exit Row")
+            if seat.is_bulkhead:
+                seat_info['features'].append("Bulkhead")
+            if seat.is_window:
+                seat_info['features'].append("Window")
+            if seat.is_aisle:
+                seat_info['features'].append("Aisle")
+            
+            if seat.seat_class:
+                seat_info['seat_class'] = {
+                    'id': seat.seat_class.id,
+                    'name': seat.seat_class.name,
+                    'price_multiplier': float(seat.seat_class.price_multiplier)
+                }
+            
+            seat_data.append(seat_info)
+        
+        return JsonResponse({
+            'success': True,
+            'schedule_id': schedule_id,
+            'schedule_price': float(schedule.price) if schedule.price else 0.00,
+            'aircraft_model': aircraft_model,  # Add aircraft model
+            'aircraft_capacity': schedule.flight.aircraft.capacity if schedule.flight.aircraft else 220,
+            'flight_number': schedule.flight.flight_number if schedule.flight else '',
+            'airline': schedule.flight.airline.code if schedule.flight and schedule.flight.airline else '',
+            'airline_name': schedule.flight.airline.name if schedule.flight and schedule.flight.airline else '',
+            'seats': seat_data,
+            'total_seats': len(seat_data),
+            'available_seats': seats.filter(is_available=True).count()
+        })
+        
+    except Schedule.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Schedule not found'
+        }, status=404)
+    except Exception as e:
+        print(f"Error in get_seats_with_schedule_info: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+    
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def download_boarding_pass(request, booking_detail_id):
+    """
+    Download boarding pass PDF for a specific booking detail
+    """
+    try:
+        response = BoardingPassPDFService.download_boarding_pass(booking_detail_id)
+        if response:
+            return response
+        else:
+            return Response({
+                'success': False,
+                'error': 'Booking detail not found'
+            }, status=404)
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def download_itinerary(request, booking_id):
+    """
+    Download full itinerary PDF for a booking
+    """
+    try:
+        response = BoardingPassPDFService.download_itinerary(booking_id)
+        if response:
+            return response
+        else:
+            return Response({
+                'success': False,
+                'error': 'Booking not found'
+            }, status=404)
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def calculate_booking_price(request):
+    """
+    Calculate the total price for a potential booking without creating it.
+    Used by the Review Booking page to show the authoritative backend price.
+    """
+    try:
+        data = request.data
+        print(f"DEBUG: Calculating price for request: {data}")
+        
+        total_price = Decimal('0.00')
+        breakdown = {
+            'base_fare': Decimal('0.00'),
+            'taxes': Decimal('0.00'),
+            'addons': Decimal('0.00'),
+            'insurance': Decimal('0.00'),
+            'grand_total': Decimal('0.00')
+        }
+        
+        # 1. Calculate Base Fare (Flight Prices)
+        trip_type = data.get('trip_type', 'one_way')
+        passenger_counts = data.get('passengerCount', {})
+        adult_count = int(passenger_counts.get('adult', 1))
+        child_count = int(passenger_counts.get('children', 0))
+        infant_count = int(passenger_counts.get('infant', 0))
+        
+        # Calculate for outbound
+        if data.get('selectedOutbound'):
+            outbound_price = Decimal(str(data['selectedOutbound'].get('price', 0)))
+            # Multiply by paying passengers (adults + children)
+            total_base = outbound_price * (adult_count + child_count)
+            # Add infant fare (usually 10-50% or flat rate, here assuming 50% for simplicity matching frontend)
+            total_base += (outbound_price * Decimal('0.5')) * infant_count
+            breakdown['base_fare'] += total_base
+            
+        # Calculate for return
+        if trip_type == 'round_trip' and data.get('selectedReturn'):
+            return_price = Decimal(str(data['selectedReturn'].get('price', 0)))
+            total_base = return_price * (adult_count + child_count)
+            total_base += (return_price * Decimal('0.5')) * infant_count
+            breakdown['base_fare'] += total_base
+
+        # 2. Calculate Taxes (simplified estimation matching _apply_taxes logic)
+        # In a real scenario, this would query TaxType models. 
+        # For now, we'll assume the frontend-passed tax or a standard estimate if not present.
+        # Ideally, we should fetch TaxType objects here based on the route.
+        # Use a standard estimate per passenger for now to be safe
+        # e.g. PH Tax ~500-1000 PHP per pax
+        tax_per_pax = Decimal('0.00') # Replace with actual tax logic if needed
+        # breakdown['taxes'] = tax_per_pax * (adult_count + child_count)
+        
+        # 3. Calculate Addons (Baggage, Meals, Seats)
+        # We need to look up prices from the DB to be secure
+        addon_ids = []
+        
+        # Extract all addon IDs from the complex structure
+        def extract_ids(source):
+            ids = []
+            if not source: return ids
+            for category in ['baggage', 'meals', 'wheelchair', 'seats']:
+                cat_data = source.get(category, {})
+                for key, val in cat_data.items():
+                    if isinstance(val, int):
+                        ids.append({'type': category, 'id': val})
+                    elif isinstance(val, dict) and val.get('id'):
+                        ids.append({'type': category, 'id': val['id']})
+            return ids
+
+        all_addons = extract_ids(data.get('addons', {}))
+        if trip_type == 'round_trip':
+            all_addons.extend(extract_ids(data.get('return_addons', {})))
+            
+        print(f"DEBUG: Found {len(all_addons)} metadata items to price")
+
+        for item in all_addons:
+            try:
+                price = Decimal('0.00')
+                if item['type'] == 'baggage':
+                    obj = BaggageOption.objects.get(id=item['id'])
+                    price = obj.price
+                elif item['type'] == 'meals':
+                    obj = MealOption.objects.get(id=item['id'])
+                    price = obj.price
+                elif item['type'] == 'seats':
+                    obj = Seat.objects.get(id=item['id'])
+                    # Seat price logic (multiplier + adjustment)
+                    if obj.seat_class:
+                         # This logic should match Seat.final_price
+                         base = obj.schedule.ml_base_price if obj.schedule else Decimal('0.00')
+                         price = (base * obj.seat_class.price_multiplier) + obj.price_adjustment
+                    else:
+                        price = obj.price_adjustment
+                
+                breakdown['addons'] += price
+                
+            except Exception as e:
+                print(f"⚠️ Could not find price for addon {item}: {e}")
+                continue
+
+        # 4. Final Total
+        total_price = breakdown['base_fare'] + breakdown['taxes'] + breakdown['addons'] + breakdown['insurance']
+        breakdown['grand_total'] = total_price
+        
+        print(f"✅ Calculated price: {total_price}")
+        
+        return Response({
+            'success': True,
+            'total_amount': float(total_price),
+            'currency': 'PHP',
+            'breakdown': {k: float(v) for k, v in breakdown.items()}
+        })
+
+    except Exception as e:
+        print(f"❌ Error calculating price: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)

@@ -15,6 +15,11 @@ router.register(r'bookings', views.BookingViewSet)
 
 urlpatterns = [
     path('api/', include(router.urls)),
+
+    # Dynamic pricing endpoints
+    path('api/test-dynamic-pricing/', views.test_dynamic_pricing, name='test-dynamic-pricing'),
+    path('api/predict-price/', views.predict_flight_price, name='predict-price'),
+
     # Payment endpoints
     path('create-payment-intent/', views.create_payment_intent, name='create_payment_intent'),
     path('create-payment-source/', views.create_payment_source, name='create_payment_source'),
@@ -22,7 +27,9 @@ urlpatterns = [
     path('verify-payment/', views.verify_payment, name='verify_payment'),
     path('attach-payment-method/', views.attach_payment_method, name='attach_payment_method'),
     # Booking endpoints
+    path('validate-activity-code/', views.validate_activity_code, name='validate_activity_code'),
     path('create-booking/', views.create_booking, name='create_booking'),
+    path('update-booking/<int:booking_id>/', views.update_booking, name='update_booking'),
     path('process-payment/', views.process_payment, name='process_payment'),
     path('process-payment-callback/', views.process_payment_callback, name='process_payment_callback'),
     path('check-payment-status/<int:booking_id>/', views.check_payment_status, name='check_payment_status'),
@@ -36,4 +43,12 @@ urlpatterns = [
     path('seat-class-features/', views.get_seat_class_features, name='seat_class_features'),
     path('api/seat-class-features/', views.get_seat_class_features, name='seat_class_features'),
 
+        # PDF download endpoints
+    path('download-boarding-pass/<int:booking_detail_id>/', views.download_boarding_pass, name='download_boarding_pass'),
+    path('download-itinerary/<int:booking_id>/', views.download_itinerary, name='download_itinerary'),
+
+    # Pricing
+    path('calculate-price/', views.calculate_booking_price, name='calculate_booking_price'),
+
 ]
+

@@ -3,6 +3,7 @@
     <div class="pal-card-header">
       <span class="user-icon">👤</span> 
       PASSENGER {{ index }} - {{ type }}
+      <span v-if="type === 'Infant'" class="infant-tag">(Sits on adult's lap)</span>
     </div>
     <div class="pal-card-body">
       <div class="form-row">
@@ -16,7 +17,7 @@
         </div>
         <div class="field col-3">
           <label>First Name</label>
-          <input v-model="form.firstName" type="text" placeholder="First Name" @input="debounceEmit">
+          <input v-model="form.firstName" type="text" placeholder="First Name" @input="debounceEmit" required>
         </div>
         <div class="field col-1">
           <label>M.I.</label>
@@ -24,33 +25,43 @@
         </div>
         <div class="field col-3">
           <label>Last Name</label>
-          <input v-model="form.lastName" type="text" placeholder="Last Name" @input="debounceEmit">
+          <input v-model="form.lastName" type="text" placeholder="Last Name" @input="debounceEmit" required>
         </div>
       </div>
 
-      <label class="section-label">Date of Birth</label>
+      <label class="section-label">Date of Birth <span class="required">*</span></label>
       <div class="form-row">
         <div class="field">
-          <select v-model="form.dobDay" @change="emitData">
+          <select v-model="form.dobDay" @change="emitData" required>
             <option value="">Day</option>
             <option v-for="d in 31" :key="d" :value="d">{{ d }}</option>
           </select>
         </div>
         <div class="field">
-          <select v-model="form.dobMonth" @change="emitData">
+          <select v-model="form.dobMonth" @change="emitData" required>
             <option value="">Month</option>
             <option v-for="(m, i) in months" :key="i" :value="i+1">{{ m }}</option>
           </select>
         </div>
         <div class="field">
-          <input v-model="form.dobYear" type="number" placeholder="Year (YYYY)" min="1900" :max="new Date().getFullYear()" @input="debounceEmit">
+          <input v-model="form.dobYear" type="number" placeholder="Year (YYYY)" min="1900" 
+                :max="new Date().getFullYear()" @input="debounceEmit" required>
         </div>
+      </div>
+
+      <!-- Age Display -->
+      <div v-if="form.dobDay && form.dobMonth && form.dobYear" class="age-display">
+        Age: {{ calculatedAge }} years old
+        <span v-if="showAgeWarning" class="age-warning">
+          ⚠️ Age indicates this should be a {{ correctPassengerType }}
+        </span>
       </div>
 
       <div class="form-row mt-3">
         <div class="field col-2">
           <label>Nationality</label>
           <select v-model="form.nationality" @change="emitData">
+            <option value="">Select Nationality</option>
             <option value="Philippines">Philippines</option>
             <option value="United States">United States</option>
             <option value="Canada">Canada</option>
@@ -66,21 +77,77 @@
           <input v-model="form.passport" type="text" placeholder="Passport No." @input="debounceEmit">
         </div>
       </div>
+
+      <!-- INFANT ONLY: Adult Seat Assignment -->
+      <div v-if="type === 'Infant'" class="infant-section">
+        <label class="section-label">Select Adult to sit with <span class="required">*</span></label>
+        <p class="section-note">This infant will sit on the selected adult's lap during the flight.</p>
+        
+        <div v-if="adultOptions && adultOptions.length > 0" class="adult-options">
+          <div 
+            v-for="adult in adultOptions" 
+            :key="adult.key"
+            :class="['adult-option', { 
+              selected: form.associatedAdult === adult.number,
+              unavailable: adult.alreadyHasInfant && adult.number !== form.associatedAdult
+            }]"
+            @click="selectAdult(adult)"
+          >
+            <div class="adult-info">
+              <div class="adult-details">
+                <div class="adult-name">{{ adult.name }}</div>
+                <div class="adult-number">Adult {{ adult.number }}</div>
+              </div>
+              <div class="adult-status">
+                <span v-if="adult.isCurrent" class="status-selected">✓ Selected</span>
+                <span v-else-if="adult.alreadyHasInfant" class="status-unavailable">
+                  ⚠️ Already has infant
+                </span>
+                <span v-else class="status-available">Available</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div v-else class="no-adults-message">
+          <span>No adult passengers found. Please complete adult information first.</span>
+        </div>
+      </div>
+
+      <!-- Validation error messages -->
+      <div v-if="showErrors" class="validation-errors">
+        <div v-if="!form.title" class="error-message">Title is required</div>
+        <div v-if="!form.firstName.trim()" class="error-message">First name is required</div>
+        <div v-if="!form.lastName.trim()" class="error-message">Last name is required</div>
+        <div v-if="!isDOBValid" class="error-message">Date of birth is required</div>
+        <div v-if="!form.nationality" class="error-message">Nationality is required</div>
+        <div v-if="type === 'Infant' && !form.associatedAdult" class="error-message">
+          Please select which adult this infant will sit with
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { reactive, onMounted, onUnmounted } from 'vue';
+import { reactive, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
+import { useBookingStore } from '@/stores/booking';
 
-const props = defineProps(['type', 'index']);
-const emit = defineEmits(['update']);
+const props = defineProps({
+  type: String,
+  index: Number,
+  showValidation: { type: Boolean, default: false },
+  adultPassengers: { type: Array, default: () => [] }
+});
+const emit = defineEmits(['update', 'validation']);
+
+const bookingStore = useBookingStore();
 
 const months = ["January", "February", "March", "April", "May", "June", 
                 "July", "August", "September", "October", "November", "December"];
 
 const form = reactive({
-    title: 'MR',
+    title: props.type === 'Infant' ? 'INF' : props.type === 'Child' ? 'CHD' : 'MR',
     firstName: '',
     middleInitial: '',
     lastName: '',
@@ -88,13 +155,208 @@ const form = reactive({
     dobMonth: '',
     dobYear: '',
     nationality: 'Philippines',
-    passport: ''
+    passport: '',
+    associatedAdult: null
+});
+
+// Computed properties
+const showErrors = computed(() => props.showValidation);
+const isDOBValid = computed(() => form.dobDay && form.dobMonth && form.dobYear);
+
+// Age calculation
+const calculatedAge = computed(() => {
+  if (!form.dobYear || !form.dobMonth || !form.dobDay) return null;
+  
+  try {
+    const birthDate = new Date(form.dobYear, form.dobMonth - 1, form.dobDay);
+    const today = new Date();
+    
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    const dayDiff = today.getDate() - birthDate.getDate();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+      age--;
+    }
+    
+    return age;
+  } catch (error) {
+    console.error('Error calculating age:', error);
+    return null;
+  }
+});
+
+// Age validation warnings
+const showAgeWarning = computed(() => {
+  if (!calculatedAge.value) return false;
+  
+  if (props.type === 'Adult' && calculatedAge.value < 12) return true;
+  if (props.type === 'Child' && (calculatedAge.value < 2 || calculatedAge.value >= 12)) return true;
+  if (props.type === 'Infant' && calculatedAge.value >= 2) return true;
+  
+  return false;
+});
+
+const correctPassengerType = computed(() => {
+  if (!calculatedAge.value) return '';
+  
+  if (calculatedAge.value >= 12) return 'Adult';
+  if (calculatedAge.value >= 2) return 'Child';
+  return 'Infant';
+});
+
+// Adult options for infant assignment
+const adultOptions = computed(() => {
+  if (!props.adultPassengers || props.adultPassengers.length === 0) return [];
+  
+  return props.adultPassengers.map(adult => {
+    const hasOtherInfant = adult.alreadyHasInfant && adult.number !== form.associatedAdult;
+    
+    return {
+      ...adult,
+      isCurrent: adult.number === form.associatedAdult,
+      isAvailable: !hasOtherInfant || adult.number === form.associatedAdult
+    };
+  });
+});
+
+const isFormValid = computed(() => {
+  const basicValid = form.title && 
+                     form.firstName.trim() && 
+                     form.lastName.trim() && 
+                     form.dobDay && 
+                     form.dobMonth && 
+                     form.dobYear &&
+                     form.nationality;
+  
+  if (props.type === 'Infant' && !form.associatedAdult) return false;
+  
+  return basicValid;
+});
+
+// Get saved passenger data for this index
+const savedPassenger = computed(() => {
+  const key = `pax_${props.index}`;
+  return bookingStore.passengers.find(p => p.key === key);
+});
+
+const shouldLoadSavedData = computed(() => {
+  if (!bookingStore.isSessionValid) return false;
+  return !!savedPassenger.value;
+});
+
+// Methods
+const selectAdult = (adult) => {
+  if (adult.alreadyHasInfant && adult.number !== form.associatedAdult) {
+    return;
+  }
+  
+  if (form.associatedAdult === adult.number) {
+    form.associatedAdult = null;
+  } else {
+    form.associatedAdult = adult.number;
+  }
+  
+  emitData();
+};
+
+// Load saved data from store
+const loadSavedData = () => {
+  if (shouldLoadSavedData.value) {
+    console.log(`📥 Loading saved data for passenger ${props.index}:`, savedPassenger.value);
+    
+    form.title = savedPassenger.value.title || (props.type === 'Infant' ? 'INF' : props.type === 'Child' ? 'CHD' : 'MR');
+    form.firstName = savedPassenger.value.firstName || '';
+    form.middleInitial = savedPassenger.value.middleName || '';
+    form.lastName = savedPassenger.value.lastName || '';
+    form.nationality = savedPassenger.value.nationality || 'Philippines';
+    form.passport = savedPassenger.value.passportNumber || '';
+    
+    // Parse date of birth - FIXED: Check for dateOfBirth field
+    if (savedPassenger.value.dateOfBirth) {
+      console.log(`📅 Found dateOfBirth in saved data: ${savedPassenger.value.dateOfBirth}`);
+      try {
+        const dob = new Date(savedPassenger.value.dateOfBirth);
+        if (!isNaN(dob.getTime())) {
+          form.dobDay = dob.getDate();
+          form.dobMonth = dob.getMonth() + 1;
+          form.dobYear = dob.getFullYear();
+          console.log(`📅 Parsed DOB: Day=${form.dobDay}, Month=${form.dobMonth}, Year=${form.dobYear}`);
+        } else {
+          console.log('❌ Invalid date format in saved data');
+        }
+      } catch (error) {
+        console.error('Error parsing date of birth:', error);
+      }
+    } else {
+      console.log('📝 No dateOfBirth found in saved data');
+    }
+    
+    // Load infant association
+    if (props.type === 'Infant' && bookingStore.infantAdultMapping) {
+      const infantKey = `pax_${props.index}`;
+      const adultKey = bookingStore.infantAdultMapping[infantKey];
+      if (adultKey) {
+        form.associatedAdult = parseInt(adultKey.replace('pax_', ''));
+        console.log(`👶 Loaded infant association: ${infantKey} -> ${adultKey}`);
+      }
+    }
+    
+    nextTick(() => {
+      emitData();
+    });
+  } else {
+    console.log(`🆕 No saved data for passenger ${props.index}, starting fresh`);
+    resetForm();
+  }
+};
+
+// Reset form to initial state
+const resetForm = () => {
+  form.title = props.type === 'Infant' ? 'INF' : props.type === 'Child' ? 'CHD' : 'MR';
+  form.firstName = '';
+  form.middleInitial = '';
+  form.lastName = '';
+  form.dobDay = '';
+  form.dobMonth = '';
+  form.dobYear = '';
+  form.nationality = 'Philippines';
+  form.passport = '';
+  form.associatedAdult = null;
+  
+  emitData();
+};
+
+// Watch for changes
+watch(savedPassenger, () => {
+  loadSavedData();
+});
+
+watch(() => props.index, () => {
+  loadSavedData();
+});
+
+watch(() => props.adultPassengers, (newAdults) => {
+  if (props.type === 'Infant' && form.associatedAdult) {
+    const currentAdult = newAdults.find(a => a.number === form.associatedAdult);
+    if (!currentAdult || currentAdult.alreadyHasInfant) {
+      form.associatedAdult = null;
+      emitData();
+    }
+  }
+}, { deep: true });
+
+watch(() => bookingStore.isSessionValid, (isValid) => {
+  if (!isValid) {
+    console.log(`Session invalid, resetting form for passenger ${props.index}`);
+    resetForm();
+  }
 });
 
 // Debounce timer
 let debounceTimer = null;
 
-// Debounced emit function for input fields
+// Debounced emit function
 const debounceEmit = () => {
   if (debounceTimer) {
     clearTimeout(debounceTimer);
@@ -102,47 +364,81 @@ const debounceEmit = () => {
   
   debounceTimer = setTimeout(() => {
     emitData();
-  }, 300); // 300ms delay
+  }, 300);
 };
 
-// In PassengerForm.vue, update emitData function:
+// FIXED: Properly construct dateOfBirth string
 const emitData = () => {
-  console.log(`📤 PassengerForm ${props.index} emitting data...`);
+  console.log(`🔄 Emitting data for passenger ${props.index}`);
+  console.log(`📅 DOB Fields: Day=${form.dobDay}, Month=${form.dobMonth}, Year=${form.dobYear}`);
   
-  // Combine date parts into YYYY-MM-DD format
+  // Validate DOB - FIXED: Proper construction
   let dateOfBirth = '';
   if (form.dobYear && form.dobMonth && form.dobDay) {
-    const month = form.dobMonth.toString().padStart(2, '0');
-    const day = form.dobDay.toString().padStart(2, '0');
-    dateOfBirth = `${form.dobYear}-${month}-${day}`;
+    try {
+      const month = form.dobMonth.toString().padStart(2, '0');
+      const day = form.dobDay.toString().padStart(2, '0');
+      const year = form.dobYear.toString();
+      
+      // Create the date string
+      dateOfBirth = `${year}-${month}-${day}`;
+      
+      // Validate date
+      const dobDate = new Date(dateOfBirth);
+      if (isNaN(dobDate.getTime())) {
+        console.log(`❌ Invalid date constructed: ${dateOfBirth}`);
+        dateOfBirth = '';
+      } else {
+        console.log(`✅ Valid date constructed: ${dateOfBirth}`);
+      }
+    } catch (error) {
+      console.error('Error formatting date of birth:', error);
+      dateOfBirth = '';
+    }
+  } else {
+    console.log('❌ Missing DOB fields');
   }
-  // REMOVED: Default date logic - now dateOfBirth will be empty if not filled
 
   const formattedData = {
     title: form.title,
-    firstName: form.firstName,
-    middleName: form.middleInitial,
-    lastName: form.lastName,
-    dateOfBirth: dateOfBirth, // Will be empty string if not filled
+    firstName: form.firstName.trim(),
+    middleName: form.middleInitial.trim(),
+    lastName: form.lastName.trim(),
+    dateOfBirth: dateOfBirth,
     nationality: form.nationality,
-    passportNumber: form.passport,
+    passportNumber: form.passport.trim(),
     type: props.type,
-    key: `pax_${props.index}`
+    key: `pax_${props.index}`,
+    isValid: isFormValid.value,
+    // Also include individual DOB fields for debugging
+    dobDay: form.dobDay,
+    dobMonth: form.dobMonth,
+    dobYear: form.dobYear
   };
+  
+  // Add infant-specific data
+  if (props.type === 'Infant') {
+    formattedData.associatedAdult = form.associatedAdult;
+  }
   
   console.log(`📤 Emitting passenger ${props.index}:`, formattedData);
   emit('update', formattedData);
+  emit('validation', { index: props.index, isValid: isFormValid.value });
 };
 
-// Initialize - REMOVED default date population
+// Lifecycle hooks
 onMounted(() => {
-  // Emit initial data after a brief delay
-  setTimeout(() => {
-    emitData();
-  }, 100);
+  console.log(`🚀 PassengerForm ${props.index} mounted`);
+  
+  const session = bookingStore.checkSession();
+  if (!session.valid) {
+    console.log('Session invalid, starting fresh');
+    resetForm();
+  } else {
+    loadSavedData();
+  }
 });
 
-// Clean up timer on unmount
 onUnmounted(() => {
   if (debounceTimer) {
     clearTimeout(debounceTimer);
@@ -154,33 +450,51 @@ onUnmounted(() => {
 .pal-card { 
   background: white; 
   border: 1px solid #ddd; 
-  border-radius: 4px; 
-  margin-bottom: 25px; 
+  border-radius: 2px; 
+  margin-bottom: 15px; 
   box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+  position: relative;
 }
 .pal-card-header { 
   background: #f0f3f5; 
   padding: 12px 20px; 
   font-weight: 800; 
-  color: #003870; 
+  color: #FF579A; 
   font-size: 0.85rem; 
   border-bottom: 1px solid #ddd; 
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.infant-tag {
+  font-size: 0.7rem;
+  font-weight: normal;
+  color: #666;
+  background: #FFF3CD;
+  padding: 2px 6px;
+  border-radius: 10px;
 }
 .pal-card-body { 
   padding: 20px; 
 }
 .form-row { 
   display: flex; 
-  gap: 15px; 
-  margin-bottom: 15px; 
+  gap: 7px; 
+  margin-bottom: 7px; 
 }
 .section-label { 
   display: block; 
   font-size: 0.75rem; 
   font-weight: 700; 
   color: #555; 
-  margin-bottom: 5px; 
+  margin-bottom: 2px; 
   text-transform: uppercase; 
+}
+.section-note {
+  font-size: 0.75rem;
+  color: #666;
+  margin: 4px 0 12px 0;
+  font-style: italic;
 }
 .field { 
   display: flex; 
@@ -197,6 +511,9 @@ label {
   margin-bottom: 4px; 
   text-transform: uppercase; 
 }
+.required {
+  color: #FF579A;
+}
 input, select { 
   border: 1px solid #ccc; 
   padding: 10px; 
@@ -205,7 +522,149 @@ input, select {
   width: 100%;
   box-sizing: border-box;
 }
+input:focus, select:focus {
+  border-color: #FF579A;
+  outline: none;
+}
+input:invalid, select:invalid {
+  border-color: #ff6b6b;
+}
 .mt-3 { 
-  margin-top: 15px; 
+  margin-top: 7px; 
+}
+
+/* Age Display */
+.age-display {
+  margin: 8px 0;
+  font-size: 0.8rem;
+  color: #666;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.age-warning {
+  color: #dc3545;
+  font-weight: 500;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Infant section */
+.infant-section {
+  margin-top: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.adult-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.adult-option {
+  padding: 12px 15px;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.adult-option:hover:not(.unavailable) {
+  border-color: #FF579A;
+  background: #fff5f7;
+}
+
+.adult-option.selected {
+  border-color: #FF579A;
+  background: #fff5f7;
+}
+
+.adult-option.unavailable {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #f8f9fa;
+}
+
+.adult-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.adult-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.adult-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.adult-number {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.adult-status {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-selected {
+  color: #10B981;
+}
+
+.status-available {
+  color: #666;
+}
+
+.status-unavailable {
+  color: #dc3545;
+}
+
+.no-adults-message {
+  padding: 12px;
+  background: #fff3cd;
+  border-radius: 6px;
+  text-align: center;
+  color: #856404;
+  font-size: 0.8rem;
+}
+
+/* Validation styles */
+.validation-errors {
+  margin-top: 15px;
+  padding: 12px;
+  background-color: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 6px;
+}
+
+.error-message {
+  color: #e53e3e;
+  font-size: 0.8rem;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.error-message:before {
+  content: "⚠️";
+  margin-right: 6px;
+  font-size: 0.7rem;
+}
+
+.error-message:last-child {
+  margin-bottom: 0;
 }
 </style>

@@ -1,41 +1,59 @@
 <template>
+  <!-- Dynamically wrap pages with the selected layout -->
   <component :is="layoutComponent">
     <router-view />
   </component>
+  
+  <!-- Global Components -->
+  <GlobalToast />
+  <GlobalModalManager />
 </template>
 
 <script setup>
-import { computed } from 'vue';
-import { useRoute } from 'vue-router';
-// Import your layouts here
-import AdminLayout from '@/views/admin/adminlayout.vue';
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 
-const route = useRoute();
+// Import layouts
+import AdminLayout from '@/views/admin/adminlayout.vue'
+import InstructorLayout from '@/views/Instructor/InstructorLayout.vue'
+import BookingLayout from '@/views/booking/layout/BookingLayout.vue'
+import GlobalToast from '@/components/common/GlobalToast.vue'
+import GlobalModalManager from '@/components/common/GlobalModalManager.vue'
 
-// Mapping the layout name from router/index.js to the imported component
-const layouts = {
-  AdminLayout
-};
+const route = useRoute()
 
 /**
- * If the route has meta: { layout: 'AdminLayout' }, it uses that component.
- * Otherwise, it defaults to a simple 'div' (no extra layout).
+ * Map layout names (from route.meta.layout)
+ * to actual Vue components
+ */
+const layouts = {
+  AdminLayout,
+  InstructorLayout,
+  BookingLayout
+}
+
+/**
+ * Choose layout:
+ * - Uses meta.layout if defined
+ * - Falls back to a plain <div> if not
  */
 const layoutComponent = computed(() => {
-  return layouts[route.meta.layout] || 'div';
-});
+  return layouts[route.meta.layout] || 'div'
+})
 </script>
 
 <style>
-/* Global styles that apply to the whole application */
+/* Global styles */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Unbounded:wght@400;700&display=swap');
 
 body {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
 }
 
+/* Shared button style */
 .btn-cancel {
   margin-left: 20px;
   background: transparent;
@@ -53,3 +71,4 @@ body {
   color: white;
 }
 </style>
+

@@ -6,8 +6,102 @@ from django.urls import reverse
 from django.db.models import Count, Sum, Avg
 from .models import *
 from .models import SeatClass, Schedule
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as DefaultUserAdmin
+from django.contrib.auth.models import User
+from .models import UserProfile  # make sure the import is correct
+
+from django.contrib import admin
+from django.contrib.auth.models import User
+from django.contrib.auth.admin import UserAdmin as DefaultUserAdmin
+from django.forms.models import BaseInlineFormSet
+from .models import UserProfile
 
 
+class UserProfileInlineFormSet(BaseInlineFormSet):
+    """
+    Prevent Django admin from trying to create a second UserProfile.
+    """
+    def save_new(self, form, commit=True):
+        # Always reuse existing profile
+        return UserProfile.objects.get(user=self.instance)
+
+
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    formset = UserProfileInlineFormSet
+    can_delete = False
+    extra = 0
+    max_num = 1
+    verbose_name_plural = "Profile"
+
+
+def get_role(obj):
+    return getattr(obj.userprofile, 'role', '—')
+
+get_role.short_description = 'Role'
+
+
+admin.site.unregister(User)
+
+
+@admin.register(User)
+class UserAdmin(DefaultUserAdmin):
+    inlines = (UserProfileInline,)
+    list_display = (
+        'username',
+        'email',
+        'first_name',
+        'last_name',
+        'is_staff',
+        get_role,
+    )
+
+# ============================================================
+# STUDENT ADMINISTRATION
+# ============================================================
+
+@admin.register(Students)
+class StudentAdmin(admin.ModelAdmin):
+    # This controls the columns visible in the table list view
+    list_display = (
+        'student_number', 
+        'first_name', 
+        'mi', 
+        'last_name', 
+        'gender',  # ✅ Added gender to list view
+        'email', 
+        'phone_number', 
+        'date_enrolled',
+        'user'
+    )
+    
+    # Adds a search bar for these specific fields
+    search_fields = ('student_number', 'first_name', 'last_name', 'email')
+    
+    # Adds a filter sidebar for the enrollment date and gender
+    list_filter = ('date_enrolled', 'gender')  # ✅ Added gender filter
+    
+    # Orders the list so the newest students appear at the top
+    ordering = ('-date_enrolled',)
+    
+    # Makes the auto-generated date field viewable but not editable
+    readonly_fields = ('date_enrolled',)
+
+    # Groups the fields nicely when you click on a student to edit them
+    fieldsets = (
+        ('Account Details', {
+            'fields': ('user', 'student_number')
+        }),
+        ('Personal Information', {
+            'fields': (('first_name', 'mi', 'last_name'), 'gender', 'email', 'phone_number')  # ✅ Added gender field
+        }),
+        ('System Information', {
+            'fields': ('date_enrolled', 'password'),
+        }),
+    )
+
+    
 @admin.register(BookingContact)
 class BookingContactAdmin(admin.ModelAdmin):
     list_display = ('booking', 'first_name', 'last_name', 'email', 'phone', 'created_at')
@@ -609,38 +703,28 @@ class BookingAdmin(admin.ModelAdmin):
 
 @admin.register(BookingDetail)
 class BookingDetailAdmin(admin.ModelAdmin):
-    list_display = ('id', 'booking_link', 'passenger', 'schedule', 'seat', 
-                    'price', 'tax_amount', 'get_insurance_cost', 'get_total_amount', 'get_has_insurance', 'status')
-    list_filter = ('seat_class', 'schedule__flight__airline', 'booking__status', 'status')
-    search_fields = ('booking__id', 'passenger__first_name', 'passenger__last_name',
-                     'seat__seat_number', 'schedule__flight__flight_number')
-    raw_id_fields = ('booking', 'passenger', 'schedule', 'seat', 'seat_class')
-    filter_horizontal = ('addons',)
-    readonly_fields = ('get_total_amount', 'get_has_insurance', 'get_insurance_policy_number', 
-                       'booking_date', 'get_insurance_cost', 'passenger_type')
+    list_display = ['id', 'schedule', 'price', 'get_pricing_factors', 'is_fiesta_period']
     
-    fieldsets = (
-        ('Booking Information', {
-            'fields': ('booking', 'passenger', 'passenger_type', 'booking_date', 'status')
-        }),
-        ('Flight Details', {
-            'fields': ('schedule', 'seat', 'seat_class')
-        }),
-        ('Financials', {
-            'fields': ('price', 'tax_amount', 'get_insurance_cost', 'get_total_amount')
-        }),
-        ('Add-ons', {
-            'fields': ('addons',)
-        }),
-        ('Insurance', {
-            'fields': ('get_has_insurance', 'get_insurance_policy_number')
-        }),
-    )
+    def get_pricing_factors(self, obj):
+        from flightapp.pricing.ph_holiday_calendar import PhilippineCalendar
+        impact = PhilippineCalendar.get_holiday_impact(obj.schedule.departure_time.date())
+        
+        badges = []
+        if impact['is_fiesta']:
+            badges.append("🎉 Fiesta")
+        if impact['is_long_weekend']:
+            badges.append("🏖️ Long Weekend")
+        if impact['is_payday']:
+            badges.append("💰 Payday")
+        
+        return " | ".join(badges) if badges else "Standard"
+    get_pricing_factors.short_description = "PH Factors"
     
-    def booking_link(self, obj):
-        url = reverse('admin:app_booking_change', args=[obj.booking.id])
-        return format_html('<a href="{}">Booking #{}</a>', url, obj.booking.id)
-    booking_link.short_description = 'Booking'
+    def is_fiesta_period(self, obj):
+        from flightapp.pricing.ph_holiday_calendar import PhilippineCalendar
+        impact = PhilippineCalendar.get_holiday_impact(obj.schedule.departure_time.date())
+        return impact['is_fiesta']
+    is_fiesta_period.boolean = True
 
 
 # ============================================================
@@ -1084,3 +1168,96 @@ class AddOnAdmin(admin.ModelAdmin):
             'fields': ('insurance_plan', 'meal_option', 'baggage_option', 'assistance_service')
         }),
     )
+
+
+
+
+
+
+# ============================================================
+# PRICING CONFIGURATION
+# ============================================================
+
+@admin.register(PricingConfiguration)
+class PricingConfigurationAdmin(admin.ModelAdmin):
+    """Admin interface for dynamic pricing configuration"""
+    
+    list_display = ('id', 'updated_at', 'anonymous_user_factor', 'loyal_user_factor')
+    readonly_fields = ('updated_at',)
+    
+    fieldsets = (
+        ('User Factors', {
+            'fields': (
+                'anonymous_user_factor',
+                'new_user_factor',
+                'returning_user_factor',
+                'loyal_user_factor',
+            ),
+            'description': 'Price multipliers based on user booking history'
+        }),
+        ('Demand Factors - Search Thresholds', {
+            'fields': (
+                'search_threshold_high',
+                'search_threshold_medium',
+                'search_threshold_low',
+            ),
+            'description': 'Search count thresholds for demand-based pricing'
+        }),
+        ('Demand Factors - Multipliers', {
+            'fields': (
+                'demand_factor_high',
+                'demand_factor_medium',
+                'demand_factor_low',
+            ),
+        }),
+        ('Days Until Departure - Thresholds', {
+            'fields': (
+                'days_departure_critical',
+                'days_departure_near',
+                'days_departure_medium',
+                'days_departure_far',
+            ),
+        }),
+        ('Days Until Departure - Multipliers', {
+            'fields': (
+                'days_factor_critical',
+                'days_factor_near',
+                'days_factor_medium',
+                'days_factor_far',
+            ),
+        }),
+        ('Time-Based Factors', {
+            'fields': (
+                'peak_hour_factor',
+                'weekend_factor',
+                'peak_month_factor',
+                'holiday_factor',
+            ),
+            'description': 'Multipliers for peak hours, weekends, and holidays'
+        }),
+        ('Inventory Factors - Occupancy Thresholds', {
+            'fields': (
+                'occupancy_high_threshold',
+                'occupancy_medium_threshold',
+                'occupancy_low_threshold',
+            ),
+        }),
+        ('Inventory Factors - Multipliers', {
+            'fields': (
+                'occupancy_factor_high',
+                'occupancy_factor_medium',
+                'occupancy_factor_low',
+            ),
+        }),
+        ('Metadata', {
+            'fields': ('updated_at',),
+        }),
+    )
+    
+    def has_add_permission(self, request):
+        """Prevent creating multiple configurations (singleton pattern)"""
+        return not PricingConfiguration.objects.exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        """Prevent deleting the configuration"""
+        return False
