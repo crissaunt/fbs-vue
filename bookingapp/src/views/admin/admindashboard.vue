@@ -14,264 +14,268 @@
       <span class="block sm:inline">{{ error }}</span>
     </div>
 
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
-      <div class="text-right">
-        <p class="text-sm text-gray-500 poppins">{{ currentDate }}</p>
+    <!-- Glassmorphism Welcome Header -->
+    <div class="relative overflow-hidden p-8 rounded-[1px] border border-white/20 shadow-2xl bg-gradient-to-br from-[#002D1E] to-[#013d29] mb-8 group">
+      <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+      <div class="absolute -right-20 -top-20 w-64 h-64 bg-[#fe3787] rounded-full blur-[100px] opacity-20 group-hover:opacity-30 transition-opacity"></div>
+      
+      <div class="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 mb-4">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span class="text-[10px] font-bold text-white uppercase tracking-[0.2em] poppins">System Live</span>
+          </div>
+          <h1 class="text-4xl font-black text-white poppins tracking-tight mb-2">
+            {{ greeting }}, <span class="text-[#fe3787] drop-shadow-sm font-black italic">Admin</span>
+          </h1>
+          <p class="text-gray-300 poppins text-sm max-w-md">Welcome to your command center. Everything looks optimized for today's operations.</p>
+        </div>
+        
+        <div class="flex items-center gap-4 bg-black/20 backdrop-blur-xl p-4 rounded-[1px] border border-white/10 shadow-inner">
+          <div class="w-12 h-12 rounded-[1px] bg-[#fe3787] flex items-center justify-center shadow-lg">
+            <i class="ph ph-calendar-check text-white text-2xl"></i>
+          </div>
+          <div>
+            <p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest poppins mb-1">Session Data</p>
+            <p class="text-lg font-black text-white poppins leading-none">{{ currentDate }}</p>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Stats Cards - Refined -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <!-- Passengers Card -->
-      <div class="bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-md transition-shadow">
-        <div class="flex items-center justify-between">
+      <div class="group bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-24 h-24 bg-blue-50/50 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
+        <div class="relative flex items-center justify-between">
           <div>
-            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins">Passengers Today</p>
-            <p class="text-3xl font-bold text-[#002D1E] poppins mt-2">{{ stats.passengersToday }}</p>
+            <p class="text-[10px] uppercase font-bold text-gray-500 tracking-[0.2em] poppins">Daily Traffic</p>
+            <p class="text-4xl font-black text-[#002D1E] poppins mt-2 tracking-tighter">{{ stats.passengersToday }}</p>
           </div>
-          <div class="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center">
-            <i class="ph ph-users text-blue-600 text-2xl"></i>
+          <div class="w-14 h-14 rounded-[1px] bg-blue-50 flex items-center justify-center border border-blue-100 shadow-inner">
+            <i class="ph ph-users-three text-blue-600 text-3xl transition-transform group-hover:rotate-12"></i>
           </div>
         </div>
-        <div class="mt-4 flex items-center text-sm">
-          <i class="ph" :class="stats.passengerGrowth >= 0 ? 'ph-trend-up text-green-500' : 'ph-trend-down text-red-500'"></i>
-          <span :class="stats.passengerGrowth >= 0 ? 'text-green-600' : 'text-red-600'" class="font-medium ml-1">
+        <div class="mt-6 flex items-center text-xs poppins">
+          <div :class="stats.passengerGrowth >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="flex items-center gap-1 px-2 py-1 rounded-full font-bold">
+            <i class="ph" :class="stats.passengerGrowth >= 0 ? 'ph-trend-up' : 'ph-trend-down'"></i>
             {{ stats.passengerGrowth >= 0 ? '+' : '' }}{{ stats.passengerGrowth }}%
-          </span>
-          <span class="text-gray-400 ml-2">vs yesterday</span>
+          </div>
+          <span class="text-gray-400 ml-2 font-medium">vs yesterday</span>
         </div>
       </div>
 
       <!-- Revenue Card -->
-      <div class="bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-md transition-shadow">
-        <div class="flex items-center justify-between">
+      <div class="group bg-[#002D1E] p-6 border border-[#002D1E] rounded-[1px] shadow-sm hover:shadow-2xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-24 h-24 bg-[#fe3787]/10 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
+        <div class="relative flex items-center justify-between text-white">
           <div>
-            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins">Total Revenue</p>
-            <p class="text-3xl font-bold text-[#fe3787] poppins mt-2">₱{{ formatNumber(stats.totalRevenue) }}</p>
+            <p class="text-[10px] uppercase font-bold text-gray-400 tracking-[0.2em] poppins">Total Revenue</p>
+            <p class="text-4xl font-black text-[#fe3787] poppins mt-2 tracking-tighter">₱{{ formatNumber(stats.totalRevenue) }}</p>
           </div>
-          <div class="w-14 h-14 rounded-full bg-pink-100 flex items-center justify-center">
-            <i class="ph ph-currency-circle-dollar text-[#fe3787] text-2xl"></i>
+          <div class="w-14 h-14 rounded-[1px] bg-white/5 flex items-center justify-center border border-white/10 shadow-inner backdrop-blur-sm">
+            <i class="ph ph-hand-coins text-[#fe3787] text-3xl transition-transform group-hover:rotate-12"></i>
           </div>
         </div>
-        <div class="mt-4 flex items-center text-sm">
-          <i class="ph" :class="stats.revenueGrowth >= 0 ? 'ph-trend-up text-green-500' : 'ph-trend-down text-red-500'"></i>
-          <span :class="stats.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'" class="font-medium ml-1">
+        <div class="mt-6 flex items-center text-xs poppins">
+          <div :class="stats.revenueGrowth >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'" class="flex items-center gap-1 px-2 py-1 rounded-full font-bold border border-white/10">
+            <i class="ph" :class="stats.revenueGrowth >= 0 ? 'ph-trend-up' : 'ph-trend-down'"></i>
             {{ stats.revenueGrowth >= 0 ? '+' : '' }}{{ stats.revenueGrowth }}%
-          </span>
-          <span class="text-gray-400 ml-2">vs last month</span>
+          </div>
+          <span class="text-gray-400 ml-2 font-medium">vs last month</span>
         </div>
       </div>
 
       <!-- Bookings Card -->
-      <div class="bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-md transition-shadow">
-        <div class="flex items-center justify-between">
+      <div class="group bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-24 h-24 bg-green-50/50 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
+        <div class="relative flex items-center justify-between text-[#002D1E]">
           <div>
-            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins">Total Bookings</p>
-            <p class="text-3xl font-bold text-[#002D1E] poppins mt-2">{{ stats.totalBookings }}</p>
+            <p class="text-[10px] uppercase font-bold text-gray-500 tracking-[0.2em] poppins">Reservations</p>
+            <p class="text-4xl font-black poppins mt-2 tracking-tighter">{{ stats.totalBookings }}</p>
           </div>
-          <div class="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
-            <i class="ph ph-check-circle text-green-600 text-2xl"></i>
+          <div class="w-14 h-14 rounded-[1px] bg-green-50 flex items-center justify-center border border-green-100 shadow-inner">
+            <i class="ph ph-ticket text-green-600 text-3xl transition-transform group-hover:rotate-12"></i>
           </div>
         </div>
-        <div class="mt-4 flex items-center text-sm">
-          <span class="text-yellow-600 font-medium">{{ stats.pendingBookings }}</span>
-          <span class="text-gray-400 ml-2">pending confirmation</span>
+        <div class="mt-6 flex items-center text-xs poppins font-bold">
+          <div v-if="loading" class="h-6 w-12 bg-gray-100 animate-pulse rounded-full"></div>
+          <span v-else class="text-[#fe3787] bg-pink-50 px-2 py-1 rounded-full border border-pink-100">{{ stats.pendingBookings }}</span>
+          <span class="text-gray-400 ml-2 font-medium uppercase tracking-wider text-[9px]">Awaiting Confirmation</span>
         </div>
       </div>
 
       <!-- Flights Card -->
-      <div class="bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-md transition-shadow">
-        <div class="flex items-center justify-between">
+      <div class="group bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-24 h-24 bg-purple-50/50 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
+        <div class="relative flex items-center justify-between text-[#002D1E]">
           <div>
-            <p class="text-[10px] uppercase font-semibold text-gray-500 tracking-widest poppins">Active Flights</p>
-            <p class="text-3xl font-bold text-[#002D1E] poppins mt-2">{{ stats.activeFlights }}</p>
+            <p class="text-[10px] uppercase font-bold text-gray-500 tracking-[0.2em] poppins">Active Ops</p>
+            <p class="text-4xl font-black poppins mt-2 tracking-tighter">{{ stats.activeFlights }}</p>
           </div>
-          <div class="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center">
-            <i class="ph ph-airplane-tilt text-purple-600 text-2xl"></i>
+          <div class="w-14 h-14 rounded-[1px] bg-purple-50 flex items-center justify-center border border-purple-100 shadow-inner">
+            <i class="ph ph-airplane text-purple-600 text-3xl transition-transform group-hover:rotate-12"></i>
           </div>
         </div>
-        <div class="mt-4 flex items-center text-sm">
-          <span class="text-purple-600 font-medium">{{ stats.scheduledFlights }}</span>
-          <span class="text-gray-400 ml-2">scheduled today</span>
+        <div class="mt-6 flex items-center text-xs poppins font-bold">
+          <div v-if="loading" class="h-6 w-12 bg-gray-100 animate-pulse rounded-full"></div>
+          <span v-else class="text-purple-600 bg-purple-50 px-2 py-1 rounded-full border border-purple-100">{{ stats.scheduledFlights }}</span>
+          <span class="text-gray-400 ml-2 font-medium uppercase tracking-wider text-[9px]">Schedules Today</span>
         </div>
       </div>
     </div>
 
-    <!-- Charts Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Ticket Sales Chart -->
-      <div class="lg:col-span-2 bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm">
-        <div class="flex items-center justify-between mb-6">
-          <h3 class="text-lg font-bold text-[#002D1E] poppins">Ticket Sales Overview</h3>
-          <select 
-            v-model="chartPeriod" 
-            @change="fetchTicketSales"
-            class="border border-gray-300 rounded-[1px] px-3 py-1 text-sm poppins focus:outline-none focus:ring-2 focus:ring-[#fe3787]"
-          >
-            <option value="7">Last 7 Days</option>
-            <option value="30">Last 30 Days</option>
-            <option value="90">Last 3 Months</option>
-          </select>
+    <!-- Enhanced Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <!-- Main Sales Chart -->
+      <div class="lg:col-span-8 bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm relative overflow-hidden group">
+        <div class="absolute top-0 left-0 w-1 h-full bg-[#fe3787] opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="flex items-center justify-between mb-8">
+          <div>
+            <h3 class="text-lg font-black text-[#002D1E] poppins tracking-tight">Revenue Stream</h3>
+            <p class="text-xs text-gray-400 poppins uppercase tracking-wider font-bold">Ticket sales performance</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <select 
+              v-model="chartPeriod" 
+              @change="fetchTicketSales"
+              class="bg-gray-50 border border-gray-200 rounded-[1px] px-4 py-2 text-xs font-bold uppercase tracking-widest poppins focus:outline-none focus:ring-2 focus:ring-[#fe3787] cursor-pointer"
+            >
+              <option value="1">Today</option>
+              <option value="7">Week</option>
+              <option value="30">Month</option>
+              <option value="365">Year</option>
+            </select>
+          </div>
         </div>
-        <div class="h-80 relative">
+        <div class="h-[340px] relative">
           <canvas ref="ticketChartRef"></canvas>
-          <div v-if="!hasTicketData" class="absolute inset-0 flex items-center justify-center bg-white/80">
-            <p class="text-gray-400 text-sm">No ticket sales data available</p>
+          <div v-if="!hasTicketData && !loading" class="absolute inset-0 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm">
+             <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                <i class="ph ph-chart-line-up text-3xl text-gray-200"></i>
+             </div>
+             <p class="text-gray-400 text-xs font-bold uppercase tracking-[0.2em]">Gathering data...</p>
           </div>
         </div>
       </div>
 
-      <!-- Revenue Breakdown -->
-      <div class="bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm">
-        <h3 class="text-lg font-bold text-[#002D1E] poppins mb-6">Revenue Breakdown</h3>
-        <div class="h-64 relative">
-          <canvas ref="revenueChartRef"></canvas>
-          <div v-if="revenueTotal === 0" class="absolute inset-0 flex items-center justify-center">
-            <p class="text-gray-400 text-sm">No revenue data</p>
+      <!-- Composition Charts Column -->
+      <div class="lg:col-span-4 space-y-6">
+        <!-- Revenue Distribution -->
+        <div class="bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm relative group overflow-hidden">
+          <div class="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
+          <h3 class="text-sm font-black text-[#002D1E] poppins uppercase tracking-widest mb-6 relative">Budget Allocation</h3>
+          <div class="h-48 relative">
+            <canvas ref="revenueChartRef"></canvas>
+          </div>
+          <div class="mt-6 space-y-2 relative">
+            <div v-for="(item, index) in revenueBreakdown" :key="index" class="flex items-center justify-between text-[11px] font-bold uppercase poppins">
+              <span class="text-gray-400">{{ item.label }}</span>
+              <span class="text-[#002D1E]">₱{{ formatNumber(item.value) }}</span>
+            </div>
           </div>
         </div>
-        <div class="mt-6 space-y-3">
-          <div v-for="(item, index) in revenueBreakdown" :key="index" class="flex items-center justify-between p-2 hover:bg-gray-50 rounded transition-colors">
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full" :style="{ backgroundColor: item.color }"></div>
-              <span class="text-sm text-gray-600 poppins">{{ item.label }}</span>
-            </div>
-            <div class="text-right">
-              <span class="text-sm font-semibold text-[#002D1E] poppins block">₱{{ formatNumber(item.value) }}</span>
-              <span v-if="revenueTotal > 0" class="text-xs text-gray-400">{{ ((item.value / revenueTotal) * 100).toFixed(1) }}%</span>
-            </div>
-          </div>
-          <div class="border-t border-gray-200 pt-3 mt-3">
-            <div class="flex items-center justify-between font-semibold">
-              <span class="text-[#002D1E] poppins">Total</span>
-              <span class="text-[#fe3787] poppins">₱{{ formatNumber(revenueTotal) }}</span>
-            </div>
-          </div>
+
+        <!-- Passenger Mix (NEW) -->
+        <div class="bg-[#fe3787] p-6 rounded-[1px] shadow-lg relative group overflow-hidden">
+           <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/brushed-alum.png')] opacity-10"></div>
+           <h3 class="text-sm font-black text-white poppins uppercase tracking-widest mb-6 relative">Crowd Profile</h3>
+           <div class="h-40 relative">
+             <canvas ref="compositionChartRef"></canvas>
+           </div>
+           <div class="mt-4 flex justify-between gap-2 relative">
+              <div v-for="(val, idx) in compositionData.data" :key="idx" class="flex flex-col items-center">
+                 <span class="text-[14px] font-black text-white poppins">{{ val }}</span>
+                 <span class="text-[8px] text-white/60 font-black uppercase tracking-widest poppins">{{ compositionData.labels[idx] }}</span>
+              </div>
+           </div>
         </div>
       </div>
     </div>
 
-    <!-- Recent Bookings & Quick Actions -->
+    <!-- Second Row: Routes & Activity -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+       <!-- Popular Routes (NEW) -->
+       <div class="lg:col-span-4 bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm">
+          <div class="flex items-center justify-between mb-8">
+             <h3 class="text-sm font-black text-[#002D1E] poppins uppercase tracking-widest">High Traffic Routes</h3>
+             <i class="ph ph-map-trifold text-[#fe3787] text-xl"></i>
+          </div>
+          <div class="h-[300px]">
+             <canvas ref="routesChartRef"></canvas>
+          </div>
+       </div>
+
+       <!-- Recent Ledger -->
+       <div class="lg:col-span-8 bg-white border border-gray-200 rounded-[1px] shadow-sm overflow-hidden flex flex-col">
+         <div class="p-6 border-b border-gray-200 flex items-center justify-between">
+           <h3 class="text-lg font-black text-[#002D1E] poppins flex items-center gap-2">
+             <i class="ph ph-clock-counter-clockwise text-[#fe3787]"></i>
+             Recent Activity
+           </h3>
+           <router-link to="/admin/booking/list" class="text-[#fe3787] hover:bg-pink-50 px-3 py-1 rounded-[1px] text-xs font-black uppercase tracking-widest poppins flex items-center gap-2 transition-all border border-transparent hover:border-pink-100">
+             View Ledger <i class="ph ph-arrow-right"></i>
+           </router-link>
+         </div>
+         
+         <div class="overflow-x-auto flex-grow">
+           <table class="w-full text-left" v-if="recentBookings.length > 0">
+             <thead class="bg-gray-50 text-gray-600 text-[10px] uppercase font-bold tracking-[0.1em]">
+               <tr>
+                 <th class="px-6 py-4 poppins">Ref #</th>
+                 <th class="px-6 py-4 poppins">Passenger</th>
+                 <th class="px-6 py-4 poppins">Flight</th>
+                 <th class="px-6 py-4 poppins">Status</th>
+               </tr>
+             </thead>
+             <tbody class="divide-y divide-gray-100">
+               <tr v-for="booking in recentBookings" :key="booking.id" class="hover:bg-gray-50/50 transition-colors group/row">
+                 <td class="px-6 py-4">
+                   <span class="font-mono text-xs font-bold text-[#fe3787]">#{{ booking.id }}</span>
+                 </td>
+                 <td class="px-6 py-4">
+                   <span class="font-bold text-[#002D1E] poppins text-xs">{{ booking.passenger }}</span>
+                 </td>
+                 <td class="px-6 py-4">
+                   <span class="text-xs text-gray-400 poppins font-mono">{{ booking.flight }}</span>
+                 </td>
+                 <td class="px-6 py-4">
+                   <span :class="statusClass(booking.status)" class="px-2 py-0.5 rounded-[1px] text-[9px] font-black uppercase poppins border">
+                     {{ booking.status }}
+                   </span>
+                 </td>
+               </tr>
+             </tbody>
+           </table>
+           <div v-else class="h-64 flex flex-col items-center justify-center text-gray-300">
+              <i class="ph ph-scroll text-4xl mb-2"></i>
+              <p class="text-[10px] uppercase font-black tracking-[0.2em] poppins">No activity found</p>
+           </div>
+         </div>
+       </div>
+    </div>
+
+    <!-- Quick Actions Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Recent Bookings -->
-      <div class="lg:col-span-2 bg-white border border-gray-200 rounded-[1px] shadow-sm overflow-hidden">
-        <div class="p-6 border-b border-gray-200 flex items-center justify-between">
-          <h3 class="text-lg font-bold text-[#002D1E] poppins">Recent Bookings</h3>
-          <router-link to="/admin/booking/list" class="text-[#fe3787] hover:text-[#fb1873] text-sm font-medium poppins flex items-center gap-1 transition-colors">
-            View All <i class="ph ph-arrow-right"></i>
-          </router-link>
-        </div>
-        
-        <div class="overflow-x-auto">
-          <table class="w-full text-left" v-if="recentBookings.length > 0">
-            <thead class="bg-gray-50 text-gray-600 text-[12px] uppercase font-semibold">
-              <tr>
-                <th class="px-6 py-4 poppins">Booking ID</th>
-                <th class="px-6 py-4 poppins">Passenger</th>
-                <th class="px-6 py-4 poppins">Flight</th>
-                <th class="px-6 py-4 poppins">Date</th>
-                <th class="px-6 py-4 poppins">Amount</th>
-                <th class="px-6 py-4 poppins">Status</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-              <tr v-for="booking in recentBookings" :key="booking.id" class="hover:bg-gray-50/50 transition-colors">
-                <td class="px-6 py-4">
-                  <span class="font-mono text-sm font-semibold text-[#002D1E]">#{{ booking.id }}</span>
-                </td>
-                <td class="px-6 py-4">
-                  <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-[#fe3787] to-[#002D1E] flex items-center justify-center text-white font-semibold text-xs">
-                      {{ getInitials(booking.passenger) }}
-                    </div>
-                    <span class="font-medium text-[#002D1E] poppins text-sm">{{ booking.passenger }}</span>
-                  </div>
-                </td>
-                <td class="px-6 py-4">
-                  <span class="text-sm text-gray-600 poppins font-mono">{{ booking.flight }}</span>
-                </td>
-                <td class="px-6 py-4">
-                  <span class="text-sm text-gray-600 poppins">{{ formatDate(booking.date) }}</span>
-                </td>
-                <td class="px-6 py-4">
-                  <span class="text-sm font-semibold text-[#fe3787] poppins">₱{{ formatNumber(booking.amount) }}</span>
-                </td>
-                <td class="px-6 py-4">
-                  <span :class="statusClass(booking.status)" class="px-3 py-1 rounded-full text-xs font-semibold uppercase poppins">
-                    {{ booking.status }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        
-        <div v-if="recentBookings.length === 0" class="p-12 text-center">
-          <i class="ph ph-ticket text-4xl text-gray-300 mb-4"></i>
-          <p class="text-gray-500 poppins">No recent bookings found</p>
-        </div>
-      </div>
-
-      <!-- Quick Actions & Alerts -->
-      <div class="space-y-6">
-        <!-- Quick Actions -->
-        <div class="bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm">
-          <h3 class="text-lg font-bold text-[#002D1E] poppins mb-4">Quick Actions</h3>
-          <div class="space-y-3">
-            <router-link to="/admin/manage-flight/schedules" class="flex items-center gap-3 p-3 rounded-[1px] hover:bg-gray-50 transition-colors group border border-transparent hover:border-gray-200">
-              <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                <i class="ph ph-calendar-plus text-blue-600"></i>
-              </div>
-              <div>
-                <p class="font-medium text-[#002D1E] poppins text-sm">Add Schedule</p>
-                <p class="text-xs text-gray-500 poppins">Create new flight schedule</p>
-              </div>
-            </router-link>
-            
-            <router-link to="/admin/passenger/list" class="flex items-center gap-3 p-3 rounded-[1px] hover:bg-gray-50 transition-colors group border border-transparent hover:border-gray-200">
-              <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                <i class="ph ph-user-plus text-green-600"></i>
-              </div>
-              <div>
-                <p class="font-medium text-[#002D1E] poppins text-sm">Add Passenger</p>
-                <p class="text-xs text-gray-500 poppins">Register new passenger</p>
-              </div>
-            </router-link>
-            
-            <router-link to="/admin/booking/list" class="flex items-center gap-3 p-3 rounded-[1px] hover:bg-gray-50 transition-colors group border border-transparent hover:border-gray-200">
-              <div class="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center group-hover:bg-pink-200 transition-colors">
-                <i class="ph ph-receipt text-[#fe3787]"></i>
-              </div>
-              <div>
-                <p class="font-medium text-[#002D1E] poppins text-sm">View Bookings</p>
-                <p class="text-xs text-gray-500 poppins">Check all reservations</p>
-              </div>
-            </router-link>
+       <!-- Action Cards (Combined from original quick actions) -->
+       <div v-for="action in quickActions" :key="action.label" class="bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-md transition-all group">
+          <div class="flex items-start justify-between">
+             <div :class="action.colorClass" class="w-12 h-12 rounded-[1px] flex items-center justify-center text-xl shadow-inner">
+                <i :class="action.icon"></i>
+             </div>
+             <router-link :to="action.link" class="text-[#fe3787] opacity-0 group-hover:opacity-100 transition-opacity">
+                <i class="ph ph-arrow-square-out text-xl"></i>
+             </router-link>
           </div>
-        </div>
-
-        <!-- System Alerts -->
-        <div class="bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm">
-          <h3 class="text-lg font-bold text-[#002D1E] poppins mb-4">System Alerts</h3>
-          <div class="space-y-3">
-            <div v-if="alerts.length === 0" class="text-center py-8 bg-gray-50 rounded-[1px]">
-              <i class="ph ph-check-circle text-3xl text-green-500 mb-2"></i>
-              <p class="text-sm text-gray-500 poppins">All systems operational</p>
-            </div>
-            <div v-for="alert in alerts" :key="alert.id" :class="['p-4 rounded-[1px] border-l-4 shadow-sm', alertTypeClass(alert.type)]">
-              <div class="flex items-start gap-3">
-                <i :class="alertIconClass(alert.type)" class="text-lg mt-0.5"></i>
-                <div>
-                  <p class="text-sm font-medium poppins">{{ alert.message }}</p>
-                  <p class="text-xs text-gray-500 mt-1">{{ formatTime(alert.time) }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+          <h4 class="mt-6 text-sm font-black text-[#002D1E] poppins uppercase tracking-wider">{{ action.label }}</h4>
+          <p class="text-[10px] text-gray-400 poppins font-medium mt-1">{{ action.description }}</p>
+       </div>
     </div>
+
   </div>
 </template>
 
@@ -288,6 +292,8 @@ const error = ref(null)
 const chartPeriod = ref('7')
 const ticketChartRef = ref(null)
 const revenueChartRef = ref(null)
+const compositionChartRef = ref(null)
+const routesChartRef = ref(null)
 
 // Stats
 const stats = ref({
@@ -309,14 +315,26 @@ const ticketSalesData = ref({
 })
 
 const revenueBreakdown = ref([
-  { label: 'Ticket Sales', value: 0, color: '#fe3787' },
-  { label: 'Add-ons', value: 0, color: '#3b82f6' },
-  { label: 'Taxes & Fees', value: 0, color: '#10b981' }
+  { label: 'Airfare', value: 0, color: '#fe3787' },
+  { label: 'Add-ons', value: 0, color: '#002D1E' },
+  { label: 'Taxes', value: 0, color: '#3b82f6' }
 ])
+
+const compositionData = ref({
+  labels: [],
+  data: []
+})
+
+const routesData = ref({
+  labels: [],
+  data: []
+})
 
 // Chart instances
 let ticketChartInstance = null
 let revenueChartInstance = null
+let compositionChartInstance = null
+let routesChartInstance = null
 
 // Computed
 const currentDate = computed(() => {
@@ -326,6 +344,13 @@ const currentDate = computed(() => {
     month: 'long',
     day: 'numeric'
   })
+})
+
+const greeting = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good Morning'
+  if (hour < 18) return 'Good Afternoon'
+  return 'Good Evening'
 })
 
 const revenueTotal = computed(() => {
@@ -374,9 +399,9 @@ const fetchDashboardData = async () => {
     if (revenueRes.value && !revenueRes.value.error && revenueRes.value.data?.breakdown) {
       const breakdown = revenueRes.value.data.breakdown
       revenueBreakdown.value = [
-        { label: 'Ticket Sales', value: breakdown.tickets || 0, color: '#fe3787' },
-        { label: 'Add-ons', value: breakdown.addons || 0, color: '#3b82f6' },
-        { label: 'Taxes & Fees', value: breakdown.taxes || 0, color: '#10b981' }
+        { label: 'Airfare', value: breakdown.tickets || 0, color: '#fe3787' },
+        { label: 'Add-ons', value: breakdown.addons || 0, color: '#002D1E' },
+        { label: 'Taxes', value: breakdown.taxes || 0, color: '#3b82f6' }
       ]
     }
 
@@ -400,6 +425,9 @@ const fetchDashboardData = async () => {
         data: ticketSalesRes.value.data.data || []
       }
     }
+
+    // Fetch Extra Data in background
+    fetchExtraStats()
 
     // Wait for DOM to update then initialize charts
     await nextTick()
@@ -427,6 +455,25 @@ const fetchTicketSales = async () => {
   } catch (err) {
     console.error('Ticket sales fetch error:', err)
   }
+}
+
+const fetchExtraStats = async () => {
+    try {
+        const [compositionRes, routesRes] = await Promise.all([
+            api.get('/dashboard/passenger_composition/'),
+            api.get('/dashboard/popular_routes/')
+        ])
+        
+        if (compositionRes.data) compositionData.value = compositionRes.data
+        if (routesRes.data) routesData.value = routesRes.data
+        
+        nextTick(() => {
+            initCompositionChart()
+            initRoutesChart()
+        })
+    } catch (err) {
+        console.error('Extra stats error:', err)
+    }
 }
 
 const initCharts = () => {
@@ -469,14 +516,18 @@ const initTicketChart = () => {
         label: 'Tickets Sold',
         data: data,
         borderColor: '#fe3787',
+        borderWidth: 3,
         backgroundColor: gradient,
-        tension: 0.4,
+        tension: 0.45,
         fill: true,
         pointBackgroundColor: '#fe3787',
         pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-        pointRadius: 4,
-        pointHoverRadius: 6
+        pointBorderWidth: 3,
+        pointRadius: 0,
+        pointHoverRadius: 6,
+        pointHoverBackgroundColor: '#fe3787',
+        pointHoverBorderColor: '#fff',
+        pointHoverBorderWidth: 3
       }]
     },
     options: {
@@ -497,7 +548,7 @@ const initTicketChart = () => {
           displayColors: false,
           callbacks: {
             label: function(context) {
-              return `${context.parsed.y} tickets sold`
+              return ` ${context.parsed.y} Tickets`
             }
           }
         }
@@ -590,19 +641,85 @@ const initRevenueChart = () => {
   })
 }
 
-// Watch for revenue changes to update chart
-watch(revenueBreakdown, () => {
-  if (revenueChartInstance) {
-    const data = revenueBreakdown.value.map(item => item.value)
-    const hasData = data.some(val => val > 0)
-    
-    revenueChartInstance.data.datasets[0].data = hasData ? data : [1, 1, 1]
-    revenueChartInstance.data.datasets[0].backgroundColor = hasData 
-      ? revenueBreakdown.value.map(i => i.color) 
-      : ['#e5e7eb', '#e5e7eb', '#e5e7eb']
-    revenueChartInstance.update()
-  }
-}, { deep: true })
+const initCompositionChart = () => {
+  if (!compositionChartRef.value) return
+  if (compositionChartInstance) compositionChartInstance.destroy()
+  
+  const ctx = compositionChartRef.value.getContext('2d')
+  compositionChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: compositionData.value.labels,
+      datasets: [{
+        data: compositionData.value.data,
+        backgroundColor: ['#fff', 'rgba(255,255,255,0.6)', 'rgba(255,255,255,0.3)'],
+        borderWidth: 0,
+        hoverOffset: 10
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '80%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#002D1E',
+          titleColor: '#fff',
+          bodyColor: '#fff',
+          callbacks: {
+            label: (ctx) => ` ${ctx.label}: ${ctx.raw}`
+          }
+        }
+      }
+    }
+  })
+}
+
+const initRoutesChart = () => {
+  if (!routesChartRef.value) return
+  if (routesChartInstance) routesChartInstance.destroy()
+  
+  const ctx = routesChartRef.value.getContext('2d')
+  routesChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: routesData.value.labels,
+      datasets: [{
+        label: 'Bookings',
+        data: routesData.value.data,
+        backgroundColor: '#002D1E',
+        borderRadius: 2,
+        barThickness: 12
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { display: false }, border: { display: false } },
+        y: { 
+          grid: { display: false }, 
+          border: { display: false },
+          ticks: { 
+            font: { family: 'Poppins', size: 10, weight: 'bold' },
+            color: '#9ca3af'
+          }
+        }
+      }
+    }
+  })
+}
+
+const quickActions = [
+  { label: 'Add Schedule', description: 'Create new flight schedule', icon: 'ph ph-calendar-plus', link: '/admin/manage-flight/schedules', colorClass: 'bg-blue-50 text-blue-600' },
+  { label: 'Add Passenger', description: 'Register new passenger', icon: 'ph ph-user-plus', link: '/admin/passenger/list', colorClass: 'bg-green-50 text-green-600' },
+  { label: 'View Bookings', description: 'Check all reservations', icon: 'ph ph-receipt', link: '/admin/booking/list', colorClass: 'bg-pink-50 text-[#fe3787]' }
+]
 
 const formatNumber = (num) => {
   if (num === null || num === undefined) return '0'
@@ -640,13 +757,13 @@ const getInitials = (name) => {
 
 const statusClass = (status) => {
   const classes = {
-    'Confirmed': 'bg-green-100 text-green-700 border border-green-200',
-    'Pending': 'bg-yellow-100 text-yellow-700 border border-yellow-200',
-    'Cancelled': 'bg-red-100 text-red-700 border border-red-200',
-    'Completed': 'bg-blue-100 text-blue-700 border border-blue-200',
-    'Paid': 'bg-purple-100 text-purple-700 border border-purple-200'
+    'Confirmed': 'bg-emerald-50 text-emerald-700 border border-emerald-100',
+    'Pending': 'bg-amber-50 text-amber-700 border border-amber-100',
+    'Cancelled': 'bg-rose-50 text-rose-700 border border-rose-100',
+    'Completed': 'bg-blue-50 text-blue-700 border border-blue-100',
+    'Paid': 'bg-purple-50 text-purple-700 border border-purple-100'
   }
-  return classes[status] || 'bg-gray-100 text-gray-600 border border-gray-200'
+  return classes[status] || 'bg-gray-50 text-gray-600 border border-gray-100'
 }
 
 const alertTypeClass = (type) => {

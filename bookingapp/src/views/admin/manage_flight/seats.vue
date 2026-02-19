@@ -55,7 +55,7 @@
                 {{ s.flight_number }} — {{ s.aircraft_name }}
               </option>
             </select>
-            <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+            <i class=" absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
           </div>
         </div>
 
@@ -943,9 +943,9 @@
                 <span class="text-[11px] text-gray-500 uppercase font-medium">Status</span>
                 <span :class="[
                   'px-2 py-1 rounded-full text-[10px] font-bold uppercase',
-                  activeSeat.is_available ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                  activeSeat.is_available ? 'bg-emerald-100 text-emerald-700' : (activeSeat.is_booked ? 'bg-indigo-100 text-indigo-700' : 'bg-red-100 text-red-700')
                 ]">
-                  {{ activeSeat.is_available ? 'Available' : 'Occupied' }}
+                  {{ activeSeat.is_available ? 'Available' : (activeSeat.is_booked ? 'Booked' : 'Blocked') }}
                 </span>
               </div>
 
@@ -982,7 +982,7 @@
                 ]"
               >
                 <i :class="activeSeat.is_available ? 'ph ph-prohibit' : 'ph ph-check-circle'"></i>
-                {{ activeSeat.is_available ? 'Block Unit' : 'Release Unit' }}
+                {{ activeSeat.is_available ? 'Block Unit' : (activeSeat.is_booked ? 'Reserved' : 'Release Unit') }}
               </button>
               
               <button 
@@ -1925,6 +1925,7 @@ const seatMapData = computed(() => {
       is_bulkhead: seat.is_bulkhead || false,
       is_window: seat.is_window || false,
       is_aisle: seat.is_aisle || false,
+      is_booked: seat.is_booked || false,
       ...seat,
       isExisting: true,
       seat_class_id: seat.seat_class,
@@ -1959,6 +1960,7 @@ const seatMapData = computed(() => {
             price_multiplier: sc?.price_multiplier || 1.0,
             color: sc?.color || '#3B82F6',
             is_available: true,
+            is_booked: false,
             isExisting: false,
             schedule: selectedScheduleId.value
           };
@@ -2157,6 +2159,9 @@ const getSeatStyle = (classId, row, col) => {
   }
   
   if (!seat.is_available) {
+    if (seat.is_booked) {
+      return 'bg-[#002D1E] text-white border-[#002D1E] cursor-not-allowed opacity-80';
+    }
     return 'bg-gray-300 text-gray-500 border-gray-300 cursor-not-allowed';
   }
 

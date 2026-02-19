@@ -1505,6 +1505,45 @@ def create_insurance_record_if_needed(sender, instance, created, **kwargs):
         instance.insurance_record.delete()
 
 
+@receiver(post_save, sender=BookingDetail)
+def update_seat_availability_on_save(sender, instance, **kwargs):
+    """Update seat availability when booking status changes"""
+    if instance.seat:
+        # Seats are unavailable if there's any active booking (confirmed or pending)
+        unavailable_statuses = ['pending', 'confirmed', 'checkin', 'boarding', 'completed']
+        if instance.status in unavailable_statuses:
+            if instance.seat.is_available:
+                instance.seat.is_available = False
+                instance.seat.save(update_fields=['is_available'])
+        else:
+            # If status is cancelled, check if another active booking exists
+            # This handles cases where a seat might be swapped or re-booked
+            other_active = BookingDetail.objects.filter(
+                seat=instance.seat,
+                status__in=unavailable_statuses
+            ).exclude(pk=instance.pk).exists()
+            
+            if not other_active:
+                if not instance.seat.is_available:
+                    instance.seat.is_available = True
+                    instance.seat.save(update_fields=['is_available'])
+
+
+@receiver(models.signals.post_delete, sender=BookingDetail)
+def update_seat_availability_on_delete(sender, instance, **kwargs):
+    """Restore seat availability when booking is deleted"""
+    if instance.seat:
+        unavailable_statuses = ['pending', 'confirmed', 'checkin', 'boarding', 'completed']
+        other_active = BookingDetail.objects.filter(
+            seat=instance.seat,
+            status__in=unavailable_statuses
+        ).exists()
+        
+        if not other_active:
+            instance.seat.is_available = True
+            instance.seat.save(update_fields=['is_available'])
+
+
 # ============================================================
 # SIGNAL — AUTO-GENERATE SEATS WHEN A NEW SCHEDULE IS CREATED
 # ============================================================

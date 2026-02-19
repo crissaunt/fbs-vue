@@ -79,6 +79,7 @@ class SeatSerializer(serializers.ModelSerializer):
     special_requirements = serializers.ReadOnlyField()
     price_breakdown = serializers.ReadOnlyField()
     seat_code = serializers.ReadOnlyField()
+    is_booked = serializers.SerializerMethodField()
     
     # Requirements relation
     requirements_detail = SeatRequirementSerializer(source='requirements', many=True, read_only=True)
@@ -94,6 +95,13 @@ class SeatSerializer(serializers.ModelSerializer):
 
     def get_final_price_display(self, obj):
         return f"₱{obj.final_price:,.2f}"
+    
+    def get_is_booked(self, obj):
+        """Check if seat is linked to an active booking (pending or confirmed)"""
+        return BookingDetail.objects.filter(
+            seat=obj,
+            status__in=['pending', 'confirmed', 'checkin', 'boarding', 'completed']
+        ).exists()
     
     def to_representation(self, instance):
         """Custom representation to include dynamic prices from database"""

@@ -1130,7 +1130,9 @@ class DashboardViewSet(viewsets.ViewSet):
                 'revenue_breakdown',
                 'ticket_sales',
                 'recent_bookings',
-                'alerts'
+                'alerts',
+                'passenger_composition',
+                'popular_routes'
             ]
         })
     
@@ -1254,7 +1256,20 @@ class DashboardViewSet(viewsets.ViewSet):
                 ).count()
                 
                 sales_data.append(count)
-                labels.append(date.strftime('%a'))
+                
+                # Dynamic labeling based on period
+                if days <= 1:
+                    labels.append(date.strftime('%d %b'))
+                elif days <= 7:
+                    labels.append(date.strftime('%a'))
+                elif days <= 31:
+                    labels.append(date.strftime('%d %b'))
+                else: 
+                    # For long periods, only label the first of each month
+                    if date.day == 1 or i == 0:
+                        labels.append(date.strftime('%b %y'))
+                    else:
+                        labels.append('')
             
             return Response({
                 'labels': labels,
@@ -1342,4 +1357,48 @@ class DashboardViewSet(viewsets.ViewSet):
         except Exception as e:
             print(f"Alerts error: {str(e)}")
             return Response([], status=200)
+
+    @action(detail=False, methods=['get'])
+    def passenger_composition(self, request):
+        """Returns the split of passenger types (Adult, Child, Infant)"""
+        try:
+            stats = PassengerInfo.objects.values('passenger_type').annotate(
+                count=Count('id')
+            )
+            # Map type codes to readable labels if necessary
+            type_map = dict(PassengerInfo.TYPE_CHOICES)
+            
+            labels = [type_map.get(s['passenger_type'], s['passenger_type']) for s in stats]
+            data = [s['count'] for s in stats]
+            
+            return Response({
+                'labels': labels,
+                'data': data
+            })
+        except Exception as e:
+            print(f"Passenger composition error: {str(e)}")
+            return Response({'labels': [], 'data': []}, status=200)
+
+    @action(detail=False, methods=['get'])
+    def popular_routes(self, request):
+        """Returns top 5 most booked flight routes"""
+        try:
+            # Group by route and count bookings
+            routes = Schedule.objects.values(
+                'flight__route__origin_airport__code',
+                'flight__route__destination_airport__code'
+            ).annotate(
+                bookings_count=Count('bookingdetail', filter=Q(bookingdetail__status__in=['confirmed', 'checkin', 'boarding', 'completed']))
+            ).order_by('-bookings_count')[:5]
+            
+            labels = [f"{r['flight__route__origin_airport__code']} → {r['flight__route__destination_airport__code']}" for r in routes]
+            data = [r['bookings_count'] for r in routes]
+            
+            return Response({
+                'labels': labels,
+                'data': data
+            })
+        except Exception as e:
+            print(f"Popular routes error: {str(e)}")
+            return Response({'labels': [], 'data': []}, status=200)
         
