@@ -1140,7 +1140,7 @@ const selectedPriceId = ref(null); // Track which flight's pricing details to sh
 
 // Timeout handling
 const fetchTimeout = ref(null);
-const timeoutCountdown = ref(5);
+const timeoutCountdown = ref(15);
 const countdownInterval = ref(null);
 
 // Search Edit Feature State
@@ -1838,7 +1838,11 @@ const extractAvailableDates = (flightsList) => {
 // Initialize 7-day date selector
 const initializeDateSelector = () => {
   const searchDate = new Date(currentSearchDate.value);
-  dateSelector.value.currentWeekStart = startOfWeek(searchDate, { weekStartsOn: 0 });
+  
+  // Only set week start if it hasn't been set by navigation yet
+  if (!dateSelector.value.currentWeekStart) {
+    dateSelector.value.currentWeekStart = startOfWeek(searchDate, { weekStartsOn: 0 });
+  }
   
   // Generate 7 days starting from week start
   dateSelector.value.weekDays = eachDayOfInterval({
@@ -1865,12 +1869,14 @@ const initializeDateSelector = () => {
 const prevWeek = () => {
   dateSelector.value.currentWeekStart = subDays(dateSelector.value.currentWeekStart, 7);
   updateWeekDays();
+  fetchFlights(); // Re-fetch for the new week
 };
 
 // Navigate to next week
 const nextWeek = () => {
   dateSelector.value.currentWeekStart = addDays(dateSelector.value.currentWeekStart, 7);
   updateWeekDays();
+  fetchFlights(); // Re-fetch for the new week
 };
 
 // Navigate to current week
@@ -1882,6 +1888,8 @@ const goToCurrentWeek = () => {
   // Also reset date filter to search date
   dateFilter.value.selectedDate = currentSearchDate.value;
   dateFilter.value.dateRange = 'exact';
+  
+  fetchFlights(); // Re-fetch original week
   applyFilters();
 };
 
@@ -2301,7 +2309,7 @@ const logCompleteBooking = () => {
 const fetchFlights = async () => {
   loading.value = true;
   showNoResults.value = false;
-  timeoutCountdown.value = 5;
+  timeoutCountdown.value = 15;
   
   // Clear any existing timeout and interval
   if (fetchTimeout.value) {
@@ -2320,7 +2328,7 @@ const fetchFlights = async () => {
     }
   }, 1000);
   
-  // Set timeout to show no results after 5 seconds
+  // Set timeout to show no results after 15 seconds
   fetchTimeout.value = setTimeout(() => {
     if (loading.value) {
       console.log('⏰ Timeout reached - showing no flights message');
@@ -2330,25 +2338,37 @@ const fetchFlights = async () => {
       filteredFlights.value = [];
       clearInterval(countdownInterval.value);
     }
-  }, 5000);
+  }, 15000);
 
   try {
     const isReturnPhase = selectionPhase.value === 'return';
+    const searchDateStr = isReturnPhase ? route.query.returnDate : route.query.departure;
+    const searchDate = new Date(searchDateStr);
+    
+    // Use currentWeekStart if it exists for the range, otherwise fallback to search date
+    // This allows re-fetching when navigating via prev/next week
+    const rangeAnchorDate = dateSelector.value.currentWeekStart || startOfWeek(searchDate, { weekStartsOn: 0 });
+    
+    const startDate = format(rangeAnchorDate, 'yyyy-MM-dd');
+    const endDate = format(addDays(rangeAnchorDate, 6), 'yyyy-MM-dd'); // Fetch full 7 days of the current view
     
     const params = {
       origin: isReturnPhase ? route.query.destination : route.query.origin,
       destination: isReturnPhase ? route.query.origin : route.query.destination,
-      departure: isReturnPhase ? route.query.returnDate : route.query.departure
+      start_date: startDate,
+      end_date: endDate
     };
 
-    console.log('📡 Fetching flights:', {
-      phase: selectionPhase.value,
-      tripType: bookingStore.tripType,
-      params: params
-    });
+    console.log('📡 Fetching flights for date range:', startDate, 'to', endDate);
 
     const response = await flightService.getSchedules(params);
     
+    console.log('📥 Raw API Response:', {
+      status: response.status,
+      data: response.data,
+      dataType: typeof response.data
+    });
+
     // Clear timeout and interval since we got a response
     clearInterval(countdownInterval.value);
     clearTimeout(fetchTimeout.value);
@@ -2361,23 +2381,8 @@ const fetchFlights = async () => {
       fetchedFlights = response.data;
     }
     
-    // ============ NEW: Enhance flights with ML predictions ============
-    if (mlPricingEnabled.value && fetchedFlights.length > 0) {
-      console.log('🧠 Enhancing flights with ML price predictions...');
-      const enhancedFlights = [];
-      
-      for (const flight of fetchedFlights) {
-        const enhancedFlight = await getMLPricePrediction(flight);
-        enhancedFlights.push(enhancedFlight);
-      }
-      
-      flights.value = enhancedFlights;
-      console.log('✅ ML price predictions applied to all flights');
-    } else {
-      flights.value = fetchedFlights;
-    }
-    // ================================================================
-    
+    // Use directly - backend now provides ML-enhanced data
+    flights.value = fetchedFlights;
     filteredFlights.value = [...flights.value];
     
     // DEBUG: Log flight data structure
@@ -2392,7 +2397,7 @@ const fetchFlights = async () => {
     }
     
     // Check if response has data
-    if (!response.data || response.data.length === 0) {
+    if (!fetchedFlights || fetchedFlights.length === 0) {
       showNoResults.value = true;
     } else {
       showNoResults.value = false;

@@ -43,7 +43,7 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
             instance.userprofile.save()
 
 class Students(models.Model):
-    # ✅ Link to User model (nullable to allow migration of existing data)
+    # ? Link to User model (nullable to allow migration of existing data)
     user = models.OneToOneField(
         User, 
         on_delete=models.CASCADE, 
@@ -90,7 +90,7 @@ class Students(models.Model):
         super().save(*args, **kwargs)
     
     def __str__(self):
-        # ✅ Handle both cases: with user and without user
+        # ? Handle both cases: with user and without user
         if self.user:
             return f"{self.user.first_name} {self.user.last_name} ({self.student_number})"
         return f"{self.first_name} {self.last_name} ({self.student_number})"
@@ -189,7 +189,7 @@ class Route(models.Model):
     base_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def __str__(self):
-        return f"{self.origin_airport.code} → {self.destination_airport.code}"
+        return f"{self.origin_airport.code} ? {self.destination_airport.code}"
 
     @property
     def is_domestic(self):
@@ -314,11 +314,11 @@ class Schedule(models.Model):
             
             # Check if model is loaded - if not, try to load it
             if not predictor.model:
-                print(f"⚠️ Schedule {self.id}: ML model not loaded, attempting to load...")
+                print(f"?? Schedule {self.id}: ML model not loaded, attempting to load...")
                 predictor.load_model()
                 
                 if not predictor.model:
-                    print(f"❌ Schedule {self.id}: Failed to load ML model")
+                    print(f"? Schedule {self.id}: Failed to load ML model")
                     return False, None
             
             flight_data = {
@@ -341,10 +341,10 @@ class Schedule(models.Model):
             if save:
                 self.save(update_fields=['ml_base_price', 'ml_price_updated_at'])
             
-            print(f"✅ Schedule {self.id}: ML price updated to ₱{predicted_price:,.2f}")
+            print(f"? Schedule {self.id}: ML price updated to ?{predicted_price:,.2f}")
             return True, predicted_price
         except Exception as e:
-            print(f"❌ Error updating ML price for schedule {self.id}: {e}")
+            print(f"? Error updating ML price for schedule {self.id}: {e}")
             import traceback
             traceback.print_exc()
             return False, None
@@ -615,7 +615,7 @@ class TravelInsurancePlan(models.Model):
 
     @property
     def formatted_price(self):
-        return f"₱{self.retail_price:,.2f}"
+        return f"?{self.retail_price:,.2f}"
     
     @property
     def coverages(self):
@@ -629,9 +629,9 @@ class TravelInsurancePlan(models.Model):
         for coverage in self.coverages:
             if coverage.amount > 0:
                 if coverage.coverage_type.unit:
-                    summary.append(f"{coverage.coverage_type.name}: ₱{coverage.amount:,.0f} {coverage.coverage_type.unit}")
+                    summary.append(f"{coverage.coverage_type.name}: ?{coverage.amount:,.0f} {coverage.coverage_type.unit}")
                 else:
-                    summary.append(f"{coverage.coverage_type.name}: ₱{coverage.amount:,.0f}")
+                    summary.append(f"{coverage.coverage_type.name}: ?{coverage.amount:,.0f}")
         return " | ".join(summary[:3])
 
     @property
@@ -707,7 +707,7 @@ class MealOption(models.Model):
         unique_together = ('airline', 'name')
     
     def __str__(self):
-        return f"{self.name} ({self.airline.code}) - ₱{self.price}"
+        return f"{self.name} ({self.airline.code}) - ?{self.price}"
     
     @property
     def dietary_info(self):
@@ -843,7 +843,7 @@ class BaggageOption(models.Model):
         unique_together = ('airline', 'weight_kg')
     
     def __str__(self):
-        return f"{self.weight_kg}kg Extra Baggage - ₱{self.price}"
+        return f"{self.weight_kg}kg Extra Baggage - ?{self.price}"
     
     @property
     def formatted_weight(self):
@@ -874,7 +874,7 @@ class PlanCoverage(models.Model):
         ordering = ['coverage_type__display_order']
 
     def __str__(self):
-        return f"{self.insurance_plan.name} - {self.coverage_type.name}: ₱{self.amount:,.2f}"
+        return f"{self.insurance_plan.name} - {self.coverage_type.name}: ?{self.amount:,.2f}"
 
 
 class BookingInsuranceRecord(models.Model):
@@ -1186,7 +1186,7 @@ class AddOn(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.name} - ₱{self.price}"
+        return f"{self.name} - ?{self.price}"
     
     @property
     def is_insurance(self):
@@ -1568,7 +1568,7 @@ class PassengerTypeTaxRate(models.Model):
         unique_together = ('tax_type', 'passenger_type')
 
     def __str__(self):
-        return f"{self.tax_type.code} - {self.passenger_type}: ₱{self.amount}"
+        return f"{self.tax_type.code} - {self.passenger_type}: ?{self.amount}"
 
 
 class BookingTax(models.Model):
@@ -1594,7 +1594,7 @@ class BookingTax(models.Model):
     )
 
     def __str__(self):
-        return f"{self.booking.id} - {self.tax_type.code}: ₱{self.amount}"
+        return f"{self.booking.id} - {self.tax_type.code}: ?{self.amount}"
 
 
 # ============================================================

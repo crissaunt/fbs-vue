@@ -11,9 +11,9 @@ from .views import (
     delete_activity,
     activity_details,
     activate_activity,
-    student_activity_details,  # ✅ ADD THIS
-    student_dashboard,         # ✅ ADD THIS
-    get_activity_submissions,  # ✅ ADD THIS
+    student_activity_details,  # ? ADD THIS
+    student_dashboard,         # ? ADD THIS
+    get_activity_submissions,  # ? ADD THIS
 )
 
 urlpatterns = [
@@ -39,22 +39,22 @@ urlpatterns = [
     path('instructor/activity/<int:activity_id>/activate/', activate_activity, name='activate_activity'),
 
     # ============================================
-    # STUDENT URLS - ✅ FIXED
+    # STUDENT URLS - ? FIXED
     # ============================================
     
     # Student Dashboard
     path('student/dashboard/data/', student_dashboard, name='student_dashboard_data'),
     
-    # ✅ FIXED: Main student activity endpoint (matches frontend)
+    # ? FIXED: Main student activity endpoint (matches frontend)
     path('student/activities/<int:activity_id>/details/', student_activity_details, name='student_activity_details'),
     
-    # ✅ REMOVED: Non-existent views (commented out - create these views later if needed)
+    # ? REMOVED: Non-existent views (commented out - create these views later if needed)
     # path('student/activities/<int:activity_id>/submit/', views.submit_activity, name='student_submit_activity'),
     # path('student/activities/<int:activity_id>/status/', views.update_activity_status, name='student_update_status'),
     # path('student/activities/<int:activity_id>/submission/', views.get_activity_submission, name='student_get_submission'),
     # path('student/activities/<int:activity_id>/draft/', views.save_draft, name='student_save_draft'),
     
-    # ✅ KEEP: Legacy URL for backward compatibility
+    # ? KEEP: Legacy URL for backward compatibility
     path('student/activity/<int:activity_id>/', student_activity_details, name='student_activity_details_legacy'),
 
 
