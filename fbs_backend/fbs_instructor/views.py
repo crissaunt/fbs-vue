@@ -44,6 +44,7 @@ from .models import (
 )
 from .serializers import LoginSerializer, UserSerializer
 from .authentication import MultiSessionTokenAuthentication  # NEW: Our custom auth
+from .permissions import IsInstructor  # NEW: Custom permission
 
 import traceback
 from django.utils import timezone
@@ -216,7 +217,7 @@ def register_view(request):
 # ==========================================
 @api_view(['GET', 'POST'])
 @authentication_classes([MultiSessionTokenAuthentication])  # NEW: Use custom auth
-@permission_classes([IsAuthenticated]) 
+@permission_classes([IsAuthenticated, IsInstructor]) 
 def instructor_dashboard(request):
     user = request.user 
     session_obj = request.session_obj  # Our UserSession object
@@ -303,7 +304,7 @@ def instructor_dashboard(request):
 
 @api_view(['GET'])
 @authentication_classes([MultiSessionTokenAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsInstructor])
 def section_details(request, section_id):
     user = request.user
     
@@ -344,7 +345,7 @@ def section_details(request, section_id):
 
 @api_view(['DELETE'])
 @authentication_classes([MultiSessionTokenAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsInstructor])
 def delete_activity(request, section_id, activity_id):
     user = request.user
     
@@ -368,7 +369,7 @@ def delete_activity(request, section_id, activity_id):
 
 class EnrollStudentView(APIView):
     authentication_classes = [MultiSessionTokenAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsInstructor]
     
     def post(self, request, section_id):
         student_num = request.data.get('student_number')
@@ -400,7 +401,7 @@ class EnrollStudentView(APIView):
 
 @api_view(['GET'])
 @authentication_classes([MultiSessionTokenAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsInstructor])
 def Enroll_Student_list(request, section_id):
     section = get_object_or_404(Section, id=section_id, instructor=request.user)
     enrollments = section.enrollments.all().select_related('student')
@@ -420,7 +421,7 @@ def Enroll_Student_list(request, section_id):
 
 @api_view(['GET', 'POST'])
 @authentication_classes([MultiSessionTokenAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsInstructor])
 def create_activity(request, section_id):
     instructor = request.user
     section = get_object_or_404(Section, id=section_id, instructor=instructor)
@@ -546,7 +547,7 @@ def create_activity(request, section_id):
 
 @api_view(['GET'])
 @authentication_classes([MultiSessionTokenAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsInstructor])
 def activity_details(request, activity_id):
     try:
         activity = get_object_or_404(
@@ -622,7 +623,7 @@ def activity_details(request, activity_id):
 
 @api_view(['POST'])
 @authentication_classes([MultiSessionTokenAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsInstructor])
 def activate_activity(request, activity_id):
     try:
         activity = get_object_or_404(
@@ -708,7 +709,7 @@ def Activity_Student_Bind(activity):
 
 @api_view(['GET'])
 @authentication_classes([MultiSessionTokenAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsInstructor])
 def get_activity_submissions(request, activity_id):
     """
     Get all student submissions for a specific activity.
@@ -800,6 +801,39 @@ def get_activity_submissions(request, activity_id):
     except Exception as e:
         traceback.print_exc()
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ==========================================
+# USER PROFILE MANAGEMENT
+# ==========================================
+@api_view(['GET', 'PATCH'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    user = request.user
+    
+    if request.method == 'GET':
+        serializer = UserSerializer(user)
+        data = serializer.data
+        # Add avatar URL manually since it's on the profile
+        if hasattr(user, 'userprofile') and user.userprofile.avatar:
+            data['avatar'] = request.build_absolute_uri(user.userprofile.avatar.url)
+        else:
+            data['avatar'] = None
+        return Response(data)
+
+    elif request.method == 'PATCH':
+        # Use our new serializer
+        from .serializers import UserProfileUpdateSerializer
+        serializer = UserProfileUpdateSerializer(user, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            # Return updated data with full avatar URL
+            response_data = serializer.data
+            if hasattr(user, 'userprofile') and user.userprofile.avatar:
+                response_data['avatar'] = request.build_absolute_uri(user.userprofile.avatar.url)
+            return Response(response_data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # ==========================================

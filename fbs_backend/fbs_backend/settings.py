@@ -231,6 +231,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Media Configuration (for user uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 
 
 # Email Configuration

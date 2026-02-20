@@ -774,7 +774,7 @@ def verify_and_process_payment(request):
             print(f"[OK] Payment already exists: {existing_payment.id}")
             return Response({
                 'success': True,
-                'payment_id': existing_payment.id,
+                'payment_id': existing_payment.transaction_id,
                 'booking_reference': f"CSUCC{booking.id:08d}",
                 'booking_status': booking.status,
                 'message': 'Payment already processed'
@@ -919,7 +919,7 @@ def process_payment_from_paymongo(payment_id, payment_attrs, booking):
             return Response({
                 'success': True,
                 'message': 'Payment processed successfully',
-                'payment_id': payment.id,
+                'payment_id': payment.transaction_id,
                 'booking_id': booking.id,
                 'booking_reference': f"CSUCC{booking.id:08d}",
                 'booking_status': 'confirmed',
@@ -2186,7 +2186,7 @@ def process_payment(request):
                 
                 return Response({
                     'success': True,
-                    'payment_id': payment.id,
+                    'payment_id': payment.transaction_id,
                     'booking_status': 'confirmed',
                     'booking_reference': f"CSUCC{booking.id:08d}",
                     'message': 'Payment processed successfully'
@@ -2519,7 +2519,7 @@ def process_payment_webhook(payment_id, payment_attrs, booking_id):
                 return Response({
                     "success": True,
                     "message": "Payment already processed",
-                    "payment_id": existing_payment.id,
+                    "payment_id": existing_payment.transaction_id,
                     "booking_status": booking.status
                 })
             
@@ -2589,7 +2589,7 @@ def process_payment_webhook(payment_id, payment_attrs, booking_id):
             return Response({
                 "success": True,
                 "message": "Payment processed successfully",
-                "payment_id": payment.id,
+                "payment_id": payment.transaction_id,
                 "booking_id": booking_id,
                 "booking_status": "confirmed",
                 "booking_reference": f"CSUCC{booking.id:08d}",
@@ -2689,7 +2689,7 @@ def process_payment_with_id(payment_id, booking_id):
                     
                     return Response({
                         'success': True,
-                        'payment_id': payment.id,
+                        'payment_id': payment.transaction_id,
                         'booking_status': 'confirmed',
                         'booking_reference': f"CSUCC{booking.id:08d}",
                         'message': 'Payment processed successfully'
@@ -2798,7 +2798,7 @@ def check_payment_status(request, booking_id):
             return Response({
                 'success': True,
                 'paid': True,
-                'payment_id': payment.id if payment else None,
+                'payment_id': payment.transaction_id if payment else None,
                 'booking_id': booking_id,
                 'booking_reference': f"CSUCC{booking.id:08d}",
                 'booking_status': booking.status,
@@ -2814,7 +2814,7 @@ def check_payment_status(request, booking_id):
             return Response({
                 'success': True,
                 'paid': True,
-                'payment_id': payment.id,
+                'payment_id': payment.transaction_id,
                 'booking_id': booking_id,
                 'booking_reference': f"CSUCC{booking.id:08d}",
                 'booking_status': booking.status,
@@ -2952,7 +2952,7 @@ def process_payment_immediately(payment_id, payment_attrs, booking):
                 return Response({
                     'success': True,
                     'paid': True,
-                    'payment_id': existing_payment.id,
+                    'payment_id': existing_payment.transaction_id,
                     'booking_reference': f"CSUCC{booking.id:08d}",
                     'booking_status': booking.status,
                     'message': 'Payment already processed'
@@ -2994,7 +2994,7 @@ def process_payment_immediately(payment_id, payment_attrs, booking):
             return Response({
                 'success': True,
                 'paid': True,
-                'payment_id': payment.id,
+                'payment_id': payment.transaction_id,
                 'booking_id': booking.id,
                 'booking_reference': f"CSUCC{booking.id:08d}",
                 'booking_status': 'confirmed',
@@ -3101,7 +3101,7 @@ def check_booking_payment(request, booking_id):
                 'booking_status': 'confirmed',
                 'booking_id': booking_id,
                 'booking_reference': f"CSUCC{booking.id:08d}",
-                'payment_id': payment.id if payment else None,
+                'payment_id': payment.transaction_id if payment else None,
                 'message': 'Booking is already confirmed'
             })
         
@@ -3216,7 +3216,7 @@ def check_booking_status(request, booking_id):
             'booking_reference': f"CSUCC{booking.id:08d}",
             'booking_status': booking.status,
             'has_payment': payment is not None,
-            'payment_id': payment.id if payment else None,
+            'payment_id': payment.transaction_id if payment else None,
             'paid': booking.status == 'Confirmed' or payment is not None,
             'message': 'Booking status checked'
         })
@@ -3505,7 +3505,7 @@ def process_payment_webhook(payment_id, payment_attrs, booking_id):
                 return Response({
                     "success": True,
                     "message": "Payment already processed",
-                    "payment_id": existing_payment.id,
+                    "payment_id": existing_payment.transaction_id,
                     "booking_status": booking.status
                 })
             
@@ -3576,7 +3576,7 @@ def process_payment_webhook(payment_id, payment_attrs, booking_id):
             return Response({
                 "success": True,
                 "message": "Payment processed successfully",
-                "payment_id": payment.id,
+                "payment_id": payment.transaction_id,
                 "booking_id": booking_id,
                 "booking_status": "confirmed",
                 "booking_reference": f"CSUCC{booking.id:08d}",

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useBookingStore } from '@/stores/booking';
+import { useNotificationStore } from '@/stores/notification';
 
 // Booking Views
 import HomeView from '@/views/booking/HomeView.vue';
@@ -7,6 +8,7 @@ import SearchResults from '@/views/booking/SearchResultsView.vue';
 import PassengerDetails from '@/views/booking/PassengerDetailsView.vue';
 import AddonsView from '@/views/booking/AddonsView.vue';
 import SeatSelection from '@/views/booking/SeatSelectionView.vue';
+import ProfileView from '@/views/Profile/ProfileView.vue';
 import ReviewBooking from '@/views/booking/ReviewBookingView.vue';
 import Payment from '@/views/booking/PaymentView.vue';
 import AirbusA321Layout from '@/components/seatmaps/AirbusA321Layout.vue';
@@ -163,6 +165,7 @@ const router = createRouter({
 // ==========================================
 router.beforeEach((to, from, next) => {
   const bookingStore = useBookingStore();
+  const notificationStore = useNotificationStore();
 
   // Set page title
   if (to.meta.title) {
@@ -199,20 +202,36 @@ router.beforeEach((to, from, next) => {
       return next('/login');
     }
 
-    // Optional: Check role if specified
-    if (to.meta.role) {
-      try {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        console.log('👤 User role:', user.role);
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      console.log('👤 User role:', user.role);
 
-        // Role-based access control (optional - can be removed if not needed)
-        // This is just a client-side check - real security is on backend
-        if (user.role && user.role !== to.meta.role) {
-          console.log('⚠️ Role mismatch - but allowing (backend will block if needed)');
+      // STRICT INSTRUCTOR RESTRICTION
+      if (user.role === 'instructor') {
+        const allowedRoutes = ['instructor_dashboard', 'SectionDetails', 'SectionPeople', 'ActivityDetails'];
+        const isAllowedPath = to.path.startsWith('/instructor/');
+
+        if (!isAllowedPath && !allowedRoutes.includes(to.name)) {
+          console.warn('⛔ Instructor attempted to access restricted page:', to.path);
+          return next('/instructor/dashboard');
         }
-      } catch (e) {
-        console.error('Error parsing user data:', e);
       }
+
+      // STRICT STUDENT RESTRICTION
+      if (user.role === 'student') {
+        // Prevent access to ANY instructor routes
+        if (to.path.startsWith('/instructor/')) {
+          console.warn('⛔ Student attempted to access instructor page:', to.path);
+          return next('/student/dashboard');
+        }
+      }
+
+      // Optional: Check role if specified
+      if (to.meta.role && user.role && user.role !== to.meta.role) {
+        console.log('⚠️ Role mismatch - but allowing (backend will block if needed)');
+      }
+    } catch (e) {
+      console.error('Error parsing user data:', e);
     }
   }
 
@@ -240,21 +259,27 @@ router.beforeEach((to, from, next) => {
       // Check if user is authenticated
       if (!token) {
         console.log('❌ User not authenticated - Redirecting to login');
-        alert('Please log in to access the booking system.');
+        notificationStore.warn('Please log in to access the booking system.');
         return next('/login');
       }
 
       // User is authenticated but hasn't validated activity code or selected practice mode
       console.log('❌ Authenticated user without activity code - Redirecting to student dashboard');
-      alert('Please enter an activity code or select practice mode from your dashboard to start booking.');
+      notificationStore.info('Please enter an activity code or select practice mode from your dashboard to start booking.');
       return next('/student/dashboard');
     }
   }
 
   // PREVENT ACCESS TO STUDENT PAGES DURING ACTIVE SESSION
   if (to.path.startsWith('/student/') && bookingStore.hasActivityCodeValidation) {
+    // Exception: Allow access to activity details even during active session
+    // This allows students to check instructions while booking
+    if (to.name === 'StudentActivityDetails') {
+      return next();
+    }
+
     console.log('⚠️ Active session detected - Blocking student page access');
-    alert('You have an active booking or practice session. Please end your activity session before returning to the dashboard or activity details.');
+    notificationStore.warn('You have an active booking or practice session. Please end your activity session before returning to the dashboard.');
     return next('/');
   }
 
@@ -269,7 +294,7 @@ router.beforeEach((to, from, next) => {
 
   if (bookingRoutes.includes(to.name)) {
     if (!bookingStore.sessionExpiry || Date.now() > bookingStore.sessionExpiry) {
-      alert("Your booking session has expired or hasn't started. Please start a new search.");
+      notificationStore.error("Your booking session has expired or hasn't started. Please start a new search.");
       bookingStore.resetBooking();
       return next('/');
     }

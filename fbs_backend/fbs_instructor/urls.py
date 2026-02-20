@@ -1,25 +1,33 @@
 from django.urls import path
 from . import views
 from .views import (
-    Login_view, 
-    instructor_dashboard, 
-    section_details, 
-    register_view, 
-    EnrollStudentView, 
+    Login_view,
+    instructor_dashboard,
+    section_details,
+    register_view,
+    EnrollStudentView,
     Enroll_Student_list,
     create_activity,
     delete_activity,
     activity_details,
     activate_activity,
-    student_activity_details,  # ? ADD THIS
-    student_dashboard,         # ? ADD THIS
-    get_activity_submissions,  # ? ADD THIS
+    student_dashboard,
+    get_activity_submissions,
+    student_activity_details,  # ADDED
+    validate_session,          # ADDED
+    list_sessions,             # ADDED
+    logout_view,
+    update_profile,
 )
 
 urlpatterns = [
     # Authentication
-    path('login/', Login_view, name='Login_view'),
-    path('register/', register_view, name='register'),
+    path('auth/register/', register_view, name='register'),
+    path('auth/login/', Login_view, name='login'),
+    path('auth/logout/', logout_view, name='logout'),
+    path('profile/update/', update_profile, name='update_profile'),
+    path('auth/validate/', validate_session, name='validate_session'),
+    path('auth/sessions/', list_sessions, name='list_sessions'),
     
     # Dashboard
     path('instructor/dashboard/', instructor_dashboard, name='instructor_dashboard'),

@@ -29,6 +29,7 @@ class UserProfile(models.Model):
         null=True, 
         blank=True
     )
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
 
     def __str__(self):
         return f"{self.user.username} ({self.role or 'No role'})"
