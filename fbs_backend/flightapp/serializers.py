@@ -632,6 +632,7 @@ class CreateBookingSerializer(serializers.Serializer):
     activity_id = serializers.IntegerField(required=False, allow_null=True)
     activity_code = serializers.CharField(max_length=8, required=False, allow_null=True, allow_blank=True)
     is_practice = serializers.BooleanField(required=False, default=False)
+    insurance_plan_id = serializers.IntegerField(required=False, allow_null=True)
     
     def validate(self, data):
         """Custom validation for booking data"""
@@ -755,7 +756,27 @@ class BookingResponseSerializer(serializers.Serializer):
     booking_reference = serializers.CharField()
     status = serializers.CharField()
     total_amount = serializers.DecimalField(max_digits=30, decimal_places=15)
-    message = serializers.CharField()
+    # Optional breakdown for display (base fare, taxes, addons, insurance)
+    breakdown = serializers.DictField(required=False)
+
+
+class TravelInsurancePlanSerializer(serializers.ModelSerializer):
+    """Serializer for travel insurance plans"""
+    provider_name = serializers.CharField(source='provider.name', read_only=True)
+
+    class Meta:
+        model = TravelInsurancePlan
+        fields = [
+            'id',
+            'name',
+            'description',
+            'retail_price',
+            'plan_type',
+            'coverage_summary',
+            'is_default',
+            'provider_name',
+        ]
+
 
 class PaymentResponseSerializer(serializers.Serializer):
     """Serializer for payment processing response"""

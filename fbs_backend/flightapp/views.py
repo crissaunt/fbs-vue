@@ -20,7 +20,6 @@ from .ml.predictor import predictor
 from .ml.dynamic_pricing import dynamic_pricing
 import hashlib
 import json
-from decimal import Decimal
 import random
 
 from app.models import (
@@ -28,9 +27,8 @@ from app.models import (
     SeatClass, PassengerInfo, Airline, Booking, BookingDetail,
     MealOption, BaggageOption, AssistanceService, AddOn, AddOnType,
     TaxType, PassengerTypeTaxRate, BookingTax, TravelInsurancePlan, 
-    BookingInsuranceRecord, Aircraft, BookingContact, SeatClass, SeatClassFeature
+    BookingInsuranceRecord, Aircraft, BookingContact, SeatClassFeature
 )
-import json
 from .serializers import *
 from .services.paymongo_service import paymongo_service
 from .services.grading_service import grade_booking
@@ -1317,6 +1315,12 @@ def create_booking(request):
             print(f"DEBUG: Applying taxes for {len(booking_details)} booking details")
             _apply_taxes(booking, booking_details)
             
+            # 5.5. Create insurance records if insurance_plan_id was provided
+            insurance_plan_id = data.get('insurance_plan_id')
+            if insurance_plan_id:
+                print(f"DEBUG: Creating insurance records for plan ID: {insurance_plan_id}")
+                _create_insurance_records(booking, booking_details, insurance_plan_id)
+            
             # 6. Save booking totals
             print(f"DEBUG: Updating booking totals")
             _update_booking_totals(booking)
@@ -1498,10 +1502,17 @@ def update_booking(request, booking_id):
             # Save booking
             booking.save()
             
-            # Recalculate taxes
+            # Recalculate taxes and insurance
             if booking_details:
                 print(f"DEBUG: Recalculating taxes for {len(booking_details)} booking details")
                 _apply_taxes(booking, booking_details)
+                
+                # Create insurance records if insurance_plan_id was provided
+                insurance_plan_id = data.get('insurance_plan_id')
+                if insurance_plan_id:
+                    print(f"DEBUG: Creating insurance records for plan ID: {insurance_plan_id}")
+                    _create_insurance_records(booking, booking_details, insurance_plan_id)
+                
                 _update_booking_totals(booking)
             
             print(f"DEBUG: Booking update successful!")
@@ -1803,18 +1814,14 @@ def _create_booking_detail(booking, passenger, data, passenger_data=None, is_ret
             user=user,
             session_id=session_id
         )
-        
-        # Use ML base price from database for seat class multiplier logic (to match ScheduleViewSet)
-        ml_base = float(schedule.ml_base_price) if schedule.ml_base_price else schedule.price
-        
-        # Apply seat class multiplier and rounding if it's not the default Economy
+
+        # Align with ScheduleViewSet pricing so frontend and backend totals match.
+        # Schedules list endpoint uses round_price(final_price) for the displayed flight price.
         fare_type = selected_flight.get('class_type', 'Economy')
-        
-        # Get multiplier from the ScheduleViewSet method (or replicate logic here)
-        # We'll use a local helper or import if possible, but for now we'll match logic
+
         def get_multiplier(name):
-            if not name: return 1.0
-            from django.core.cache import cache
+            if not name:
+                return 1.0
             normalized = name.strip()
             sc = SeatClass.objects.filter(name__iexact=normalized).first()
             if not sc and "class" in normalized.lower():
@@ -1823,10 +1830,23 @@ def _create_booking_detail(booking, passenger, data, passenger_data=None, is_ret
             return float(sc.price_multiplier) if sc else 1.0
 
         multiplier = get_multiplier(fare_type)
-        raw_seat_price = Decimal(str(ml_base)) * Decimal(str(multiplier))
-        
-        # Final rounded price for this detail
-        base_price = Decimal(str(dynamic_pricing.round_seat_class_price(raw_seat_price)))
+
+        # Economy (or anything with multiplier=1.0): use the exact dynamic final_price (rounded)
+        if multiplier == 1.0:
+            # IMPORTANT: The frontend already displays a price calculated by ScheduleViewSet.
+            # Because pricing uses session-based factors and this booking call may not share
+            # the same Django session, we prefer the frontend-displayed price for Economy
+            # to avoid checkout amount drift.
+            frontend_price = selected_flight.get('price')
+            if frontend_price is not None:
+                base_price = Decimal(str(frontend_price))
+            else:
+                base_price = Decimal(str(dynamic_pricing.round_price(price_data['final_price'])))
+        else:
+            # Non-economy: match ScheduleViewSet seat-class pricing based on ML base price
+            ml_base = float(schedule.ml_base_price) if schedule.ml_base_price else float(schedule.price)
+            raw_seat_price = Decimal(str(ml_base)) * Decimal(str(multiplier))
+            base_price = Decimal(str(dynamic_pricing.round_seat_class_price(raw_seat_price)))
         
         print(f"  {flight_label} backend-calculated price: {base_price} (Frontend was: {selected_flight.get('price')})")
         
@@ -2025,6 +2045,47 @@ def _apply_taxes(booking, booking_details):
                 print(f"Error applying tax {tax.name}: {e}")
                 continue
 
+def _create_insurance_records(booking, booking_details, insurance_plan_id):
+    """Create insurance records for all passengers in the booking."""
+    try:
+        from app.models import TravelInsurancePlan, BookingInsuranceRecord
+        
+        # Safety check - ensure we have booking details
+        if not booking_details:
+            print(f"[WARN] No booking details to attach insurance to")
+            return
+        
+        print(f"DEBUG: Looking up insurance plan {insurance_plan_id}")
+        plan = TravelInsurancePlan.objects.get(id=insurance_plan_id, is_active=True)
+        print(f"DEBUG: Found insurance plan: {plan.name} - ₱{plan.retail_price}")
+        
+        # Get the first schedule (depart flight) to identify which details get insurance
+        first_schedule = booking_details[0].schedule
+        
+        created_count = 0
+        for detail in booking_details:
+            # Only create insurance for the depart flight (not both depart and return)
+            # Insurance is per passenger, not per flight segment
+            if detail.schedule_id == first_schedule.id:
+                insurance_record = BookingInsuranceRecord.objects.create(
+                    booking_detail=detail,
+                    insurance_plan=plan,
+                    insured_amount=plan.retail_price,
+                    sale_price=plan.retail_price,
+                    status='active'
+                )
+                created_count += 1
+                print(f"DEBUG: Created insurance record {insurance_record.policy_number} for passenger {detail.passenger.get_full_name()}")
+        
+        print(f"DEBUG: Created {created_count} insurance records")
+        
+    except TravelInsurancePlan.DoesNotExist:
+        print(f"[WARN] Insurance plan {insurance_plan_id} not found or inactive")
+    except Exception as e:
+        print(f"[ERR] Error creating insurance records: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
 def _update_booking_totals(booking):
     """Update booking totals after all details are created.
     Backend is the SOLE source of truth — frontend total is ignored.
@@ -2047,8 +2108,13 @@ def _update_booking_totals(booking):
         ).aggregate(total=Sum('price'))['total'] or Decimal('0.00')
         print(f"  Base fare total: {base_fare_total}")
         
-        # 2. Insurance total
+        # 2. Insurance total - calculate from BookingInsuranceRecords
         insurance_total = Decimal('0.00')
+        booking_details = BookingDetail.objects.filter(booking=booking)
+        for detail in booking_details:
+            if hasattr(detail, 'insurance_record') and detail.insurance_record:
+                insurance_total += detail.insurance_record.sale_price
+        print(f"  Insurance total: {insurance_total}")
         
         # 3. Tax total
         tax_total = BookingTax.objects.filter(
@@ -3778,16 +3844,88 @@ def calculate_booking_price(request):
             total_base += (return_price * Decimal('0.5')) * infant_count
             breakdown['base_fare'] += total_base
 
-        # 2. Calculate Taxes (simplified estimation matching _apply_taxes logic)
-        # In a real scenario, this would query TaxType models. 
-        # For now, we'll assume the frontend-passed tax or a standard estimate if not present.
-        # Ideally, we should fetch TaxType objects here based on the route.
-        # Use a standard estimate per passenger for now to be safe
-        # e.g. PH Tax ~500-1000 PHP per pax
-        tax_per_pax = Decimal('0.00') # Replace with actual tax logic if needed
-        # breakdown['taxes'] = tax_per_pax * (adult_count + child_count)
+        # 2. Calculate Taxes (mirror simplified _apply_taxes behaviour)
+        # NOTE: This is a *preview* calculation and does not create BookingTax rows.
+        try:
+            from app.models import Route as AppRoute
+            from app.models import TaxType as AppTaxType, PassengerTypeTaxRate as AppPassengerTypeTaxRate
+        except Exception:
+            AppRoute = Route
+            AppTaxType = TaxType
+            AppPassengerTypeTaxRate = PassengerTypeTaxRate
+
+        def estimate_taxes_for_segment(schedule_data, pax_type_counts):
+            if not schedule_data:
+                return Decimal('0.00')
+
+            schedule_id = schedule_data.get('schedule_id') or schedule_data.get('id')
+            if not schedule_id:
+                return Decimal('0.00')
+
+            try:
+                schedule = Schedule.objects.select_related('flight__route').get(id=schedule_id)
+            except Schedule.DoesNotExist:
+                return Decimal('0.00')
+
+            route = schedule.flight.route
+
+            applicable_taxes = AppTaxType.objects.filter(
+                is_active=True,
+                applies_domestic=route.is_domestic,
+                applies_international=route.is_international,
+            )
+
+            total_taxes = Decimal('0.00')
+            for pax_type, count in pax_type_counts.items():
+                if count <= 0:
+                    continue
+
+                for tax in applicable_taxes:
+                    try:
+                        if tax.adult_only and pax_type != 'adult':
+                            continue
+
+                        try:
+                            rate = AppPassengerTypeTaxRate.objects.get(
+                                tax_type=tax,
+                                passenger_type=pax_type,
+                            )
+                            amount = rate.amount
+                        except AppPassengerTypeTaxRate.DoesNotExist:
+                            amount = tax.base_amount
+
+                        if not tax.per_passenger:
+                            if pax_type == 'adult':
+                                total_taxes += amount
+                            continue
+
+                        total_taxes += amount * count
+                    except Exception as e:
+                        print(f"Error estimating tax {tax.name} for pax_type={pax_type}: {e}")
+                        continue
+
+            return total_taxes
+
+        pax_type_counts = {
+            'adult': adult_count,
+            'child': child_count,
+            'infant': infant_count,
+        }
+
+        breakdown['taxes'] += estimate_taxes_for_segment(data.get('selectedOutbound'), pax_type_counts)
+        if trip_type == 'round_trip' and data.get('selectedReturn'):
+            breakdown['taxes'] += estimate_taxes_for_segment(data.get('selectedReturn'), pax_type_counts)
         
-        # 3. Calculate Addons (Baggage, Meals, Seats)
+        # 3. Calculate Insurance (preview)
+        insurance_plan_id = data.get('insurance_plan_id')
+        if insurance_plan_id:
+            try:
+                plan = TravelInsurancePlan.objects.get(id=insurance_plan_id, is_active=True)
+                breakdown['insurance'] = plan.retail_price
+            except TravelInsurancePlan.DoesNotExist:
+                print(f"[WARN] Insurance plan {insurance_plan_id} not found or inactive")
+
+        # 4. Calculate Addons (Baggage, Meals, Seats)
         # We need to look up prices from the DB to be secure
         addon_ids = []
         
@@ -3835,7 +3973,7 @@ def calculate_booking_price(request):
                 print(f"[WARN] Could not find price for addon {item}: {e}")
                 continue
 
-        # 4. Final Total
+        # 5. Final Total
         total_price = breakdown['base_fare'] + breakdown['taxes'] + breakdown['addons'] + breakdown['insurance']
         breakdown['grand_total'] = total_price
         

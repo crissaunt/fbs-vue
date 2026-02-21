@@ -325,6 +325,7 @@ const fetchBackendPrice = async () => {
       backendTotal.value = result.totalAmount;
       backendBreakdown.value = result.breakdown;
       console.log('✅ Backend price confirmed:', backendTotal.value);
+      console.log('📊 Backend breakdown:', backendBreakdown.value);
     } else {
       console.warn('⚠️ Could not get backend price, falling back to store calculation:', result.error);
     }
@@ -334,6 +335,16 @@ const fetchBackendPrice = async () => {
     isCalculatingPrice.value = false;
   }
 };
+
+const taxesLine = computed(() => {
+  if (!backendBreakdown.value) return null;
+  return backendBreakdown.value.taxes || 0;
+});
+
+const insuranceLine = computed(() => {
+  if (!backendBreakdown.value) return null;
+  return backendBreakdown.value.insurance || 0;
+});
 
 // Helper functions
 const getItemById = (list, id) => {

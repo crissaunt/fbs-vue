@@ -941,7 +941,7 @@ class BookingInsuranceRecord(models.Model):
             self.commission_rate = self.insurance_plan.commission_rate
         
         if not self.commission_amount:
-            self.commission_amount = (self.sale_price * self.commission_rate) / 100
+            self.commission_amount = (self.sale_price * Decimal(str(self.commission_rate))) / 100
         
         if not self.provider_payout:
             self.provider_payout = self.sale_price - self.commission_amount

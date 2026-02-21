@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useBookingStore } from '@/stores/booking';
 import { useNotificationStore } from '@/stores/notification';
+import AuthStorage from '@/utils/authStorage';
 
 // Booking Views
 import HomeView from '@/views/booking/HomeView.vue';
@@ -14,8 +15,8 @@ import Payment from '@/views/booking/PaymentView.vue';
 import AirbusA321Layout from '@/components/seatmaps/AirbusA321Layout.vue';
 
 // Authentication Views
-import Base_login from '@/views/Login.vue';
-import Register from '@/views/Register.vue';
+// import Base_login from '@/views/Login.vue';
+// import Register from '@/views/Register.vue';
 
 // Instructor Views
 import InstructorDashboard from '@/views/Instructor/instructor_dashboard.vue';
@@ -29,12 +30,12 @@ const routes = [
   {
     path: '/login',
     name: 'instructor_login',
-    component: Base_login
+    component: () => import('@/views/Login.vue')
   },
   {
     path: '/register',
     name: 'Register',
-    component: Register
+    component: () => import('@/views/Register.vue')
   },
   {
     path: '/instructor/dashboard',
@@ -143,9 +144,8 @@ const routes = [
   {
     path: '/payment-callback',
     name: 'PaymentCallback',
-    meta: { layout: 'BookingLayout' },
-    component: () => import('../views/booking/PaymentCallbackView.vue'),
-    meta: { requiresAuth: false }
+    meta: { layout: 'BookingLayout', requiresAuth: false },
+    component: () => import('../views/booking/PaymentCallbackView.vue')
   },
   {
     path: '/booking-success',
@@ -173,7 +173,7 @@ router.beforeEach((to, from, next) => {
   }
 
   // Check for authentication token
-  const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+  const token = AuthStorage.getToken();
 
   console.log('🛡️ Router Guard:', to.path);
   console.log('🔑 Token exists:', !!token);

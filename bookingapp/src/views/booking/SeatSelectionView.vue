@@ -248,6 +248,7 @@ import { useRouter } from 'vue-router';
 import { useBookingStore } from '@/stores/booking';
 import { seatService } from '@/services/booking/seatService';
 import { useModalStore } from '@/stores/modal';
+import { useNotificationStore } from '@/stores/notification';
 
 const router = useRouter();
 const bookingStore = useBookingStore();

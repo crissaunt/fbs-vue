@@ -212,6 +212,8 @@ export const bookingService = {
         children: parseInt(bookingStore.passengerCount?.children) || 0,
         infant: parseInt(bookingStore.passengerCount?.infants) || 0
       },
+      // Optional insurance selection (single-plan per booking)
+      insurance_plan_id: bookingStore.addons?.insurance?.selectedPlanId || null,
       // ✅ FIX: Include activity code & practice mode so the booking is linked to the activity
       activity_code: bookingStore.activityCode || null,
       is_practice: bookingStore.isPractice || false

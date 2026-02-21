@@ -526,7 +526,12 @@ const handlePassengerValidation = ({ index, isValid }) => {
 };
 
 const calculateTotal = () => {
-  return bookingStore.grandTotal;
+  // Passengers step shows base fare summary only (add-ons are selected on the next step)
+  return (
+    (bookingStore.grandTotalForAdults || 0) +
+    (bookingStore.grandTotalForChildren || 0) +
+    (bookingStore.grandTotalForInfants || 0)
+  );
 };
 
 // FIXED: Enhanced passenger completion check

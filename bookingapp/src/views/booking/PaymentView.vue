@@ -292,6 +292,22 @@ const isSessionValid = computed(() => {
   return Date.now() < bookingStore.sessionExpiry;
 });
 
+const syncBookingTotalFromBackend = async () => {
+  try {
+    if (!bookingStore.booking_id) return;
+    const res = await api.get(`flightapp/booking/${bookingStore.booking_id}/`);
+    if (res.data?.success && res.data?.booking) {
+      const backendTotal = parseFloat(res.data.booking.total_amount);
+      if (Number.isFinite(backendTotal) && backendTotal > 0) {
+        bookingStore.booking_total = backendTotal;
+        localStorage.setItem('current_booking_total', backendTotal);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to sync booking total from backend:', error.response?.data || error.message);
+  }
+};
+
 /**
  * Show toast message
  */
@@ -416,6 +432,7 @@ const handlePayMongoCheckout = async () => {
 // Lifecycle hooks
 onMounted(() => {
   restoreBookingData();
+  syncBookingTotalFromBackend();
   checkPaymentCallback();
 });
 

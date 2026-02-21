@@ -87,6 +87,63 @@
           </div>
 
           <template v-else>
+            <!-- Insurance Section (always visible above tabs content) -->
+            <div class="tab-pane insurance-pane">
+              <h3>Travel Insurance</h3>
+              <p class="insurance-intro">
+                Protect your trip with travel insurance. Covers medical emergencies, trip interruptions, and lost baggage.
+              </p>
+              <div v-if="insurancePlans && insurancePlans.length" class="insurance-grid">
+                <div
+                  v-for="plan in insurancePlans"
+                  :key="plan.id"
+                  class="insurance-card"
+                  :class="{ selected: selectedInsurancePlanId === plan.id }"
+                >
+                  <div class="insurance-header">
+                    <div>
+                      <h4>{{ plan.name }}</h4>
+                      <p class="insurance-provider">
+                        Provided by {{ plan.provider_name || 'Our Insurance Partner' }}
+                      </p>
+                    </div>
+                    <div class="insurance-price">
+                      ₱{{ parseFloat(plan.retail_price).toLocaleString() }}
+                    </div>
+                  </div>
+
+                  <p class="insurance-description">
+                    {{ plan.description || 'Recommended coverage for medical, baggage, and trip interruptions.' }}
+                  </p>
+
+                  <p v-if="plan.coverage_summary" class="insurance-coverage">
+                    {{ plan.coverage_summary }}
+                  </p>
+
+                  <div class="insurance-actions">
+                    <button
+                      v-if="selectedInsurancePlanId === plan.id"
+                      class="insurance-toggle-btn remove"
+                      @click="removeInsurance"
+                    >
+                      Remove
+                    </button>
+                    <button
+                      v-else
+                      class="insurance-toggle-btn"
+                      @click="selectInsurance(plan)"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <p v-else class="insurance-unavailable">
+                Travel insurance is not available for this itinerary.
+              </p>
+            </div>
+
             <!-- Baggage Tab - Card Layout -->
             <div v-if="currentTab === 'baggage'" class="tab-pane">
               <h3>Select Extra Baggage</h3>
@@ -268,6 +325,11 @@
               <span>₱{{ totalAssistance.toLocaleString() }}</span>
             </div>
 
+            <div class="price-line" v-if="insurancePrice > 0">
+              <span>Travel Insurance</span> 
+              <span>₱{{ insurancePrice.toLocaleString() }}</span>
+            </div>
+
             <hr>
 
             <div class="total-row">
@@ -357,6 +419,7 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { useBookingStore } from '@/stores/booking';
 import { useRouter, useRoute } from 'vue-router';
 import { addonService } from '@/services/booking/addonService';
+import api from '@/services/api/axios';
 
 const bookingStore = useBookingStore();
 const router = useRouter();
@@ -381,6 +444,7 @@ const modalData = ref({
 const baggageOptions = ref([]);
 const mealOptions = ref([]);
 const assistanceOptions = ref([]);
+const insurancePlans = ref([]);
 
 // Update selectedAddons structure to support both depart and return for round trips
 const selectedAddons = reactive({
@@ -396,7 +460,8 @@ const selectedAddons = reactive({
     depart: {},    // { passengerKey: assistanceId } for depart
     return: {}     // { passengerKey: assistanceId } for return
   },
-  seats: bookingStore.addons?.seats || {}
+  seats: bookingStore.addons?.seats || {},
+  insurance: bookingStore.addons?.insurance || { selectedPlanId: null, price: 0 }
 });
 
 // Add trip type info
@@ -469,6 +534,28 @@ const getAssistanceSelection = (passengerKey) => {
   return selectedAddons.wheelchair[activeSegment.value]?.[passengerKey] || null;
 };
 
+const selectedInsurancePlanId = computed(() => {
+  return bookingStore.addons?.insurance?.selectedPlanId || null;
+});
+
+const insurancePrice = computed(() => {
+  return bookingStore.addons?.insurance?.price || 0;
+});
+
+const selectInsurance = (plan) => {
+  if (!plan) return;
+  bookingStore.selectInsurancePlan(plan.id, plan.retail_price);
+  selectedAddons.insurance = {
+    selectedPlanId: plan.id,
+    price: parseFloat(plan.retail_price) || 0
+  };
+};
+
+const removeInsurance = () => {
+  bookingStore.clearInsurance();
+  selectedAddons.insurance = { selectedPlanId: null, price: 0 };
+};
+
 onMounted(async () => {
   try {
     // First, migrate store to new format
@@ -476,16 +563,24 @@ onMounted(async () => {
     
     const airlineId = bookingStore.selectedOutbound?.airline_id || bookingStore.selectedOutbound?.airline;
     
-    const [bagRes, mealRes, assistRes] = await Promise.all([
+    const [bagRes, mealRes, assistRes, insuranceRes] = await Promise.all([
       addonService.getBaggageOptions(airlineId),
       addonService.getMealOptions(airlineId),
-      addonService.getAssistanceServices(airlineId)
+      addonService.getAssistanceServices(airlineId),
+      api.get('/flightapp/api/insurance-plans/').catch(() => null)
     ]);
     
     // Handle paginated responses (response.data.results) or flat arrays (response.data)
     baggageOptions.value = bagRes.data.results || bagRes.data || [];
     mealOptions.value = mealRes.data.results || mealRes.data || [];
     assistanceOptions.value = assistRes.data.results || assistRes.data || [];
+
+    if (insuranceRes && insuranceRes.data) {
+      const data = insuranceRes.data;
+      insurancePlans.value = Array.isArray(data) ? data : (data?.results || []);
+    } else {
+      insurancePlans.value = [];
+    }
 
     // Load existing selections from store if they exist
     console.log("📦 Loading existing add-ons from store...");
@@ -511,6 +606,11 @@ onMounted(async () => {
       console.log("💺 Seats from store:", bookingStore.addons.seats);
       selectedAddons.seats = { ...bookingStore.addons.seats };
     }
+    
+    selectedAddons.insurance = {
+      selectedPlanId: bookingStore.addons?.insurance?.selectedPlanId || null,
+      price: bookingStore.addons?.insurance?.price || 0
+    };
     
     console.log("✅ Final selectedAddons:", selectedAddons);
   } catch (error) {
@@ -805,87 +905,122 @@ const totalAssistance = computed(() => {
       total += findPrice(assistanceOptions.value, assistanceId);
     });
   }
-  
+
   return total;
 });
 
 // FIXED: Calculate seat total correctly using seat_price
 const totalSeats = computed(() => {
-  const seats = Object.values(selectedAddons.seats || {});
-  
-  return seats.reduce((sum, seat) => {
-    // Use seat_price instead of final_price
-    const seatPrice = parseFloat(seat.seat_price) || 0;
-    return sum + seatPrice;
-  }, 0);
+  const seatsState = selectedAddons.seats || {};
+
+  // Store format is segmented: { depart: { passengerKey: seatObj }, return: { ... } }
+  const hasSegments = typeof seatsState === 'object' && (seatsState.depart || seatsState.return);
+
+  const sumSegment = (segmentSeats) => {
+    return Object.values(segmentSeats || {}).reduce((sum, seat) => {
+      if (!seat || typeof seat !== 'object') return sum;
+      const seatPrice = parseFloat(seat.seat_price) || 0;
+      return sum + seatPrice;
+    }, 0);
+  };
+
+  if (hasSegments) {
+    return sumSegment(seatsState.depart) + sumSegment(seatsState.return);
+  }
+
+  // Backward-compatible fallback: flat object { passengerKey: seatObj }
+  return sumSegment(seatsState);
 });
 
 // Use bookingStore.grandTotal for consistency
 const grandTotal = computed(() => {
-  return bookingStore.grandTotal || (baseFare.value + totalSeats.value + totalBaggage.value + totalMeals.value + totalAssistance.value);
+  const storeTotal = parseFloat(bookingStore.grandTotal) || 0;
+  if (storeTotal > 0) return storeTotal;
+
+  return (
+    (parseFloat(baseFare.value) || 0) +
+    (parseFloat(totalSeats.value) || 0) +
+    (parseFloat(totalBaggage.value) || 0) +
+    (parseFloat(totalMeals.value) || 0) +
+    (parseFloat(totalAssistance.value) || 0) +
+    (parseFloat(insurancePrice.value) || 0)
+  );
 });
 
 const saveAndContinue = () => {
-  // Save to Pinia - using the updated setAddons method
-  bookingStore.setAddons(JSON.parse(JSON.stringify(selectedAddons)));
+  // ...
 
   // --- DEBUG LOG START ---
   console.group("🛒 ADD-ONS PURCHASE SUMMARY");
   console.log("Trip Type:", tripTypeInfo.value);
-  
+
   // Show flight info
   console.log("✈️ FLIGHT DETAILS:");
   flightInfo.value.forEach(flight => {
     console.log(`  ${flight.type}: ${flight.flight} (${flight.route}) - ₱${flight.price.toLocaleString()}`);
   });
-  
+
   // Check seat data structure
   console.log("💺 SEAT SELECTIONS:");
-  const seats = Object.entries(selectedAddons.seats || {});
-  if (seats.length > 0) {
-    seats.forEach(([passengerKey, seat]) => {
-      console.log(`  Passenger ${passengerKey}:`, {
+  const seatsState = selectedAddons.seats || {};
+  const isSegmented = typeof seatsState === 'object' && (seatsState.depart || seatsState.return);
+
+  const logSeatEntries = (entries, segmentLabel) => {
+    if (!entries || entries.length === 0) return;
+    console.log(`  Segment: ${segmentLabel}`);
+    entries.forEach(([passengerKey, seat]) => {
+      if (!seat || typeof seat !== 'object') return;
+
+      console.log(`    Passenger ${passengerKey}:`, {
         seat_code: seat.seat_code,
         seat_price: seat.seat_price,
         seat_total_price: seat.seat_total_price,
         final_price: seat.final_price,
         seat_class: seat.seat_class?.name
       });
-      
-      // Debug price calculation
-      const basePrice = parseFloat(bookingStore.selectedOutbound?.price || 0);
-      const seatTotalPrice = parseFloat(seat.seat_total_price) || 0;
-      const seatOnlyPrice = parseFloat(seat.seat_price) || 0;
-      
-      console.log(`    Base flight price: ₱${basePrice}`);
-      console.log(`    Seat total price: ₱${seatTotalPrice}`);
-      console.log(`    Seat only price: ₱${seatOnlyPrice}`);
-      console.log(`    Difference: ₱${seatTotalPrice - basePrice}`);
     });
+  };
+
+  if (isSegmented) {
+    const departEntries = Object.entries(seatsState.depart || {});
+    const returnEntries = Object.entries(seatsState.return || {});
+    if (departEntries.length === 0 && returnEntries.length === 0) {
+      console.log("  No seats selected");
+    } else {
+      logSeatEntries(departEntries, 'depart');
+      logSeatEntries(returnEntries, 'return');
+    }
   } else {
-    console.log("  No seats selected");
+    const flatEntries = Object.entries(seatsState);
+    if (flatEntries.length === 0) {
+      console.log("  No seats selected");
+    } else {
+      logSeatEntries(flatEntries, 'all');
+    }
   }
-  
+
   // Calculate individual totals
   const baggageTotal = totalBaggage.value;
   const mealsTotal = totalMeals.value;
   const assistanceTotal = totalAssistance.value;
   const seatExtrasTotal = totalSeats.value; // This uses the fixed calculation
   const baseFareTotal = baseFare.value;
+  const insuranceTotal = insurancePrice.value;
   
   const receipt = {
     "Base Fare": `₱${baseFareTotal.toLocaleString()}`,
     "Seat Selection": `₱${seatExtrasTotal.toLocaleString()}`,
     "Baggage": `₱${baggageTotal.toLocaleString()}`,
     "Meals": `₱${mealsTotal.toLocaleString()}`,
-    "Assistance": `₱${assistanceTotal.toLocaleString()}`
+    "Assistance": `₱${assistanceTotal.toLocaleString()}`,
+    "Travel Insurance": `₱${insuranceTotal.toLocaleString()}`
   };
   
   console.table(receipt);
   
   // Summary of totals
   console.log("📊 TOTALS SUMMARY:");
-  console.log("Add-ons Total:", `₱${(baggageTotal + mealsTotal + assistanceTotal + seatExtrasTotal).toLocaleString()}`);
+  console.log("Add-ons Total:", `₱${(baggageTotal + mealsTotal + assistanceTotal + seatExtrasTotal + insuranceTotal).toLocaleString()}`);
   console.log("Flight Base Total:", `₱${baseFareTotal.toLocaleString()}`);
   console.log("Store Grand Total:", `₱${bookingStore.grandTotal.toLocaleString()}`);
   console.log("Calculated Grand Total:", `₱${grandTotal.value.toLocaleString()}`);
@@ -900,7 +1035,6 @@ const saveAndContinue = () => {
   router.push({ name: 'ReviewBooking' });
 };
 </script>
-
 
 <style scoped>
 /* Updated color theme to #FF579A */
@@ -921,6 +1055,102 @@ const saveAndContinue = () => {
 .loading-state { display: flex; align-items: center; justify-content: center; height: 200px; color: #666; }
 
 .tab-pane h3 { color: #FF579A; margin-bottom: 25px; font-size: 1.3rem; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; }
+
+.insurance-pane {
+  margin-bottom: 25px;
+}
+
+.insurance-intro {
+  color: #666;
+  margin-bottom: 15px;
+  line-height: 1.5;
+}
+
+.insurance-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.insurance-card {
+  border: 2px solid #e0e0e0;
+  padding: 18px;
+  border-radius: 10px;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.insurance-card.selected {
+  border-color: #FF579A;
+  background: #FFF0F7;
+}
+
+.insurance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.insurance-header h4 {
+  margin: 0;
+  color: #FF579A;
+  font-size: 1.05rem;
+}
+
+.insurance-provider {
+  margin: 6px 0 0 0;
+  color: #777;
+  font-size: 0.85rem;
+}
+
+.insurance-price {
+  font-weight: 800;
+  color: #FF579A;
+  white-space: nowrap;
+}
+
+.insurance-description {
+  color: #555;
+  margin: 10px 0;
+  line-height: 1.4;
+  font-size: 0.9rem;
+}
+
+.insurance-coverage {
+  margin: 0 0 12px 0;
+  color: #666;
+  font-size: 0.85rem;
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.insurance-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.insurance-toggle-btn {
+  padding: 10px 14px;
+  background: #FF579A;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.insurance-toggle-btn.remove {
+  background: #666;
+}
+
+.insurance-unavailable {
+  color: #888;
+  font-style: italic;
+}
 
 /* Baggage Grid Styles */
 .option-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px; }

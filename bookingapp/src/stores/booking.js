@@ -42,6 +42,11 @@ export const useBookingStore = defineStore('booking', {
       seats: {       // UPDATED: Now supports segments
         depart: {},  // { passengerKey: seatObject }
         return: {}   // { passengerKey: seatObject }
+      },
+      // Simple per-booking insurance selection
+      insurance: {
+        selectedPlanId: null,
+        price: 0
       }
     },
 
@@ -168,7 +173,10 @@ export const useBookingStore = defineStore('booking', {
         });
       });
 
-      return baseFare + addonsTotal;
+      // Include any locally-selected insurance (preview only; backend is source of truth)
+      const insurancePrice = state.addons?.insurance?.price || 0;
+
+      return baseFare + addonsTotal + insurancePrice;
     },
     isOneWay: (state) => state.tripType === 'one_way',
 
@@ -268,6 +276,12 @@ export const useBookingStore = defineStore('booking', {
           }
         });
       });
+
+      // 6. Add Insurance (single-plan per booking)
+      const insurancePrice = parseFloat(state.addons?.insurance?.price) || 0;
+      if (insurancePrice > 0) {
+        total += insurancePrice;
+      }
 
       return total;
     },
@@ -653,7 +667,8 @@ export const useBookingStore = defineStore('booking', {
         baggage: addonData.baggage || { depart: {}, return: {} },
         meals: addonData.meals || { depart: {}, return: {} },
         wheelchair: addonData.wheelchair || { depart: {}, return: {} },
-        seats: addonData.seats || { depart: {}, return: {} }
+        seats: addonData.seats || { depart: {}, return: {} },
+        insurance: addonData.insurance || { selectedPlanId: null, price: 0 }
       };
     },
 
@@ -773,7 +788,8 @@ export const useBookingStore = defineStore('booking', {
         baggage: { depart: {}, return: {} },
         meals: { depart: {}, return: {} },
         wheelchair: { depart: {}, return: {} },
-        seats: { depart: {}, return: {} }
+        seats: { depart: {}, return: {} },
+        insurance: { selectedPlanId: null, price: 0 }
       };
     },
 
@@ -790,16 +806,35 @@ export const useBookingStore = defineStore('booking', {
       this.addons.seats[segment] = {};
     },
 
+    // Insurance helpers
+    selectInsurancePlan(planId, price) {
+      this.addons.insurance.selectedPlanId = planId;
+      this.addons.insurance.price = parseFloat(price) || 0;
+    },
+
+    clearInsurance() {
+      this.addons.insurance.selectedPlanId = null;
+      this.addons.insurance.price = 0;
+    },
+
     saveBookingConfirmation(bookingData) {
       console.log('💾 Saving booking confirmation to store:', bookingData);
 
       this.booking_id = bookingData.booking_id;
       this.booking_reference = bookingData.booking_reference || `CSUCC${String(bookingData.booking_id).padStart(8, '0')}`;
       this.booking_status = bookingData.status || 'pending';
-      this.booking_total = this.grandTotal || parseFloat(bookingData.total_amount) || 0;
+      // Backend-calculated total is the source of truth for Payment.
+      // Never prefer local grandTotal over an explicit backend total_amount.
+      const backendTotal = parseFloat(bookingData.total_amount);
+      this.booking_total = Number.isFinite(backendTotal) && backendTotal > 0
+        ? backendTotal
+        : (this.grandTotal || 0);
       this.sessionExpiry = Date.now() + (30 * 60 * 1000);
 
       localStorage.setItem('current_booking_id', this.booking_id);
+      localStorage.setItem('current_booking_reference', this.booking_reference);
+      localStorage.setItem('current_booking_status', this.booking_status);
+      localStorage.setItem('current_booking_total', this.booking_total);
 
       console.log('✅ Booking confirmation saved:', {
         booking_id: this.booking_id,
@@ -861,6 +896,10 @@ export const useBookingStore = defineStore('booking', {
           seats: {
             depart: {},
             return: {}
+          },
+          insurance: {
+            selectedPlanId: null,
+            price: 0
           }
         },
         sessionExpiry: null,

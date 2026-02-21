@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { useNotificationStore } from '@/stores/notification';
 import router from '@/router';
+import AuthStorage from '@/utils/authStorage';
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/', // Use env variable with fallback
@@ -13,8 +14,7 @@ const api = axios.create({
 // Request Interceptor: Attach Auth Token
 api.interceptors.request.use(
     (config) => {
-        // Check both potential token names for compatibility
-        const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+        const token = AuthStorage.getToken();
         if (token) {
             config.headers.Authorization = `Token ${token}`;
         }
@@ -45,10 +45,7 @@ api.interceptors.response.use(
                     break;
                 case 401:
                     message = 'Session expired. Please login again.';
-                    localStorage.removeItem('auth_token');
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
-                    localStorage.removeItem('user_data');
+                    AuthStorage.clearCurrentSession();
                     if (router.currentRoute.value.path !== '/login') {
                         router.push('/login');
                     }

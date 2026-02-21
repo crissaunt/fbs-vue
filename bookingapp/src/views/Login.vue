@@ -111,13 +111,15 @@ import bgImage from '@/assets/image/bg-cthm.svg'
 import { authService } from '@/services/auth/authService'
 import { useUserStore } from '@/stores/user'
 import { useNotificationStore } from '@/stores/notification'
+import { useRouter } from 'vue-router'
 
 export default {
   name: 'LoginView',
   setup() {
     const userStore = useUserStore()
     const notificationStore = useNotificationStore()
-    return { userStore, notificationStore }
+    const router = useRouter() // Get router instance
+    return { userStore, notificationStore, router } // Expose router
   },
   data() {
     return {
@@ -157,10 +159,21 @@ export default {
         
         console.log('✅ Login successful - User Store Updated');
         this.notificationStore.success('Login successful! Redirecting...')
+        console.log('DEBUG: dashboard_route:', dashboard_route);
+        console.log('DEBUG: router instance:', this.router);
         
         // 3. Move to appropriate dashboard
         setTimeout(() => {
-          this.$router.push(dashboard_route)
+          if (dashboard_route && this.router) {
+            this.router.push(dashboard_route).catch(err => {
+              console.error('Router push failed:', err);
+              // Fallback to window location if router fails
+              window.location.href = dashboard_route;
+            });
+          } else {
+             console.error('Dashboard route or router missing');
+             this.notificationStore.error('Navigation failed');
+          }
         }, 500)
         
       } catch (err) {
