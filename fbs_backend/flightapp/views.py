@@ -643,7 +643,7 @@ def create_payment_intent(request):
         # Prepare FLAT metadata (PayMongo does not allow nested objects or Decimals)
         metadata = {
             "booking_id": str(booking.id),
-            "booking_ref": f"CSUCC{booking.id:08d}",
+            "booking_ref": booking.pnr,
             "trip_type": str(booking.trip_type)
         }
         
@@ -773,7 +773,7 @@ def verify_and_process_payment(request):
             return Response({
                 'success': True,
                 'payment_id': existing_payment.transaction_id,
-                'booking_reference': f"CSUCC{booking.id:08d}",
+                'booking_reference': booking.pnr,
                 'booking_status': booking.status,
                 'message': 'Payment already processed'
             })
@@ -919,7 +919,7 @@ def process_payment_from_paymongo(payment_id, payment_attrs, booking):
                 'message': 'Payment processed successfully',
                 'payment_id': payment.transaction_id,
                 'booking_id': booking.id,
-                'booking_reference': f"CSUCC{booking.id:08d}",
+                'booking_reference': booking.pnr,
                 'booking_status': 'confirmed',
                 'amount': float(amount),
                 'method': payment_method,
@@ -1339,7 +1339,7 @@ def create_booking(request):
             return Response({
                 'success': True,
                 'booking_id': booking.id,
-                'booking_reference': f"CSUCC{booking.id:08d}",
+                'booking_reference': booking.pnr,
                 'status': 'pending',
                 'total_amount': float(booking.total_amount),
                 'payment_info': {
@@ -1532,7 +1532,7 @@ def update_booking(request, booking_id):
             return Response({
                 'success': True,
                 'booking_id': booking.id,
-                'booking_reference': f"CSUCC{booking.id:08d}",
+                'booking_reference': booking.pnr,
                 'status': booking.status,
                 'total_amount': float(booking.total_amount),
                 'message': 'Booking updated successfully'
@@ -2280,7 +2280,7 @@ def process_payment(request):
                     'success': True,
                     'payment_id': payment.transaction_id,
                     'booking_status': 'confirmed',
-                    'booking_reference': f"CSUCC{booking.id:08d}",
+                    'booking_reference': booking.pnr,
                     'message': 'Payment processed successfully'
                 }, status=status.HTTP_200_OK)
             
@@ -2684,7 +2684,7 @@ def process_payment_webhook(payment_id, payment_attrs, booking_id):
                 "payment_id": payment.transaction_id,
                 "booking_id": booking_id,
                 "booking_status": "confirmed",
-                "booking_reference": f"CSUCC{booking.id:08d}",
+                "booking_reference": booking.pnr,
                 "amount": float(amount),
                 "method": payment_method
             })
@@ -2704,7 +2704,7 @@ def send_booking_confirmation_email(booking):
     # For now, just log it
     print(f"\n[EMAIL] Would send confirmation email for booking {booking.id}")
     print(f"   To: {booking.user.email if booking.user else 'No user email'}")
-    print(f"   Reference: CSUCC{booking.id:08d}")
+    print(f"   Reference: {booking.pnr}")
     print(f"   Amount: {booking.total_amount}")
 
 def process_payment_with_id(payment_id, booking_id):
@@ -2783,7 +2783,7 @@ def process_payment_with_id(payment_id, booking_id):
                         'success': True,
                         'payment_id': payment.transaction_id,
                         'booking_status': 'confirmed',
-                        'booking_reference': f"CSUCC{booking.id:08d}",
+                        'booking_reference': booking.pnr,
                         'message': 'Payment processed successfully'
                     })
         
@@ -2892,7 +2892,7 @@ def check_payment_status(request, booking_id):
                 'paid': True,
                 'payment_id': payment.transaction_id if payment else None,
                 'booking_id': booking_id,
-                'booking_reference': f"CSUCC{booking.id:08d}",
+                'booking_reference': booking.pnr,
                 'booking_status': booking.status,
                 'amount': float(payment.amount) if payment else 0,
                 'method': payment.method if payment else None,
@@ -2908,7 +2908,7 @@ def check_payment_status(request, booking_id):
                 'paid': True,
                 'payment_id': payment.transaction_id,
                 'booking_id': booking_id,
-                'booking_reference': f"CSUCC{booking.id:08d}",
+                'booking_reference': booking.pnr,
                 'booking_status': booking.status,
                 'amount': float(payment.amount),
                 'method': payment.method,
@@ -3045,7 +3045,7 @@ def process_payment_immediately(payment_id, payment_attrs, booking):
                     'success': True,
                     'paid': True,
                     'payment_id': existing_payment.transaction_id,
-                    'booking_reference': f"CSUCC{booking.id:08d}",
+                    'booking_reference': booking.pnr,
                     'booking_status': booking.status,
                     'message': 'Payment already processed'
                 })
@@ -3088,7 +3088,7 @@ def process_payment_immediately(payment_id, payment_attrs, booking):
                 'paid': True,
                 'payment_id': payment.transaction_id,
                 'booking_id': booking.id,
-                'booking_reference': f"CSUCC{booking.id:08d}",
+                'booking_reference': booking.pnr,
                 'booking_status': 'confirmed',
                 'amount': float(amount),
                 'method': payment_method,
@@ -3192,7 +3192,7 @@ def check_booking_payment(request, booking_id):
                 'paid': True,
                 'booking_status': 'confirmed',
                 'booking_id': booking_id,
-                'booking_reference': f"CSUCC{booking.id:08d}",
+                'booking_reference': booking.pnr,
                 'payment_id': payment.transaction_id if payment else None,
                 'message': 'Booking is already confirmed'
             })
@@ -3305,7 +3305,7 @@ def check_booking_status(request, booking_id):
         return Response({
             'success': True,
             'booking_id': booking_id,
-            'booking_reference': f"CSUCC{booking.id:08d}",
+            'booking_reference': booking.pnr,
             'booking_status': booking.status,
             'has_payment': payment is not None,
             'payment_id': payment.transaction_id if payment else None,
@@ -3368,11 +3368,16 @@ def get_seat_class_features(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_booking_by_reference(request, reference):
-    """Get booking by reference number (CSUCC00000071)"""
+    """Get booking by reference number (CSUCC00000071 or PNR)"""
     try:
-        # Extract ID from reference
-        booking_id = int(reference.replace('CSUCC', ''))
-        booking = Booking.objects.get(id=booking_id)
+        if reference.startswith('CSUCC'):
+            # Extract ID from legacy reference
+            booking_id = int(reference.replace('CSUCC', ''))
+            booking = Booking.objects.get(id=booking_id)
+        else:
+            # Search by PNR (GDS style)
+            booking = Booking.objects.get(pnr=reference)
+            
         serializer = BookingSerializer(booking)
         return Response({
             'success': True,
@@ -3671,7 +3676,7 @@ def process_payment_webhook(payment_id, payment_attrs, booking_id):
                 "payment_id": payment.transaction_id,
                 "booking_id": booking_id,
                 "booking_status": "confirmed",
-                "booking_reference": f"CSUCC{booking.id:08d}",
+                "booking_reference": booking.pnr,
                 "amount": float(amount),
                 "method": payment_method,
                 "email_sent": email_sent

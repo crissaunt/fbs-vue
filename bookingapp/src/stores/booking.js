@@ -308,7 +308,7 @@ export const useBookingStore = defineStore('booking', {
         const savedBooking = JSON.parse(localStorage.getItem('current_booking'));
         if (savedBooking) {
           this.booking_id = savedBooking.id;
-          this.booking_reference = savedBooking.reference || `CSUCC${String(savedBooking.id).padStart(8, '0')}`;
+          this.booking_reference = savedBooking.pnr || savedBooking.reference || `CSUCC${String(savedBooking.id).padStart(8, '0')}`;
           this.booking_status = savedBooking.status || 'pending';
           this.booking_total = savedBooking.total || 0;
           console.log('📥 Loaded booking from storage:', {
@@ -540,6 +540,40 @@ export const useBookingStore = defineStore('booking', {
         };
         console.log(`✅ Flight selected for segment ${index}:`, flight.flight_number);
       }
+    },
+
+    // NEW: Minimum Connecting Time (MCT) Validation
+    validateMultiCityConnection(index, flight) {
+      if (index === 0) return { valid: true }; // First segment is always valid
+
+      const previousSegment = this.multiCitySegments[index - 1];
+      if (!previousSegment || !previousSegment.selectedFlight) {
+        return { valid: true }; // No previous flight to compare against
+      }
+
+      const prevFlight = previousSegment.selectedFlight;
+
+      // Basic check that dates exist
+      if (!prevFlight.arrival_time || !flight.departure_time) {
+        return { valid: true };
+      }
+
+      const prevArrival = new Date(prevFlight.arrival_time);
+      const nextDeparture = new Date(flight.departure_time);
+
+      // Calculate difference in milliseconds, convert to hours
+      const diffMs = nextDeparture - prevArrival;
+      const diffHours = diffMs / (1000 * 60 * 60);
+
+      const isValid = diffHours >= 1.5;
+
+      return {
+        valid: isValid,
+        diffHours: diffHours,
+        message: isValid
+          ? 'Valid connection'
+          : 'Connection Too Short: You need at least 1.5 hours between flights.'
+      };
     },
 
     nextSegment() {
@@ -859,7 +893,7 @@ export const useBookingStore = defineStore('booking', {
       console.log('💾 Saving booking confirmation to store:', bookingData);
 
       this.booking_id = bookingData.booking_id;
-      this.booking_reference = bookingData.booking_reference || `CSUCC${String(bookingData.booking_id).padStart(8, '0')}`;
+      this.booking_reference = bookingData.pnr || bookingData.booking_reference || `CSUCC${String(bookingData.booking_id).padStart(8, '0')}`;
       this.booking_status = bookingData.status || 'pending';
       // Backend-calculated total is the source of truth for Payment.
       // Never prefer local grandTotal over an explicit backend total_amount.

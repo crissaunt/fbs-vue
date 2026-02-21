@@ -8,6 +8,8 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
+import random
+import string
 
 #User Profile with Roles
 from django.contrib.auth.models import User
@@ -1033,6 +1035,13 @@ class Booking(models.Model):
     )
 
     status = models.CharField(max_length=20, default="Pending")
+    pnr = models.CharField(
+        max_length=6, 
+        unique=True, 
+        null=True, 
+        blank=True,
+        help_text="6-character alphanumeric Passenger Name Record (GDS Locator)"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     
     # Price snapshots
@@ -1078,7 +1087,23 @@ class Booking(models.Model):
         ]
 
     def __str__(self):
-        return f"Booking {self.id} - {self.user.get_full_name()}"
+        return f"Booking {self.pnr or self.id} - {self.user.get_full_name()}"
+
+    def save(self, *args, **kwargs):
+        if not self.pnr:
+            self.pnr = self.generate_unique_pnr()
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def generate_unique_pnr():
+        """Generate a unique 6-character alphanumeric PNR"""
+        chars = string.ascii_uppercase + string.digits
+        # Avoid confusing characters like O vs 0 or I vs 1 if desired, 
+        # but standard GDS uses most.
+        while True:
+            pnr = ''.join(random.choices(chars, k=6))
+            if not Booking.objects.filter(pnr=pnr).exists():
+                return pnr
     
     def _calculate_base_fare_total(self):
         total = Decimal('0.00')

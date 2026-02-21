@@ -732,6 +732,7 @@
 <script setup>
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import { useBookingStore } from '@/stores/booking';
+import { useNotificationStore } from '@/stores/notification';
 import { useRoute, useRouter } from 'vue-router';
 import flightService from '@/services/booking/flightService';
 import airportService from '@/services/booking/airportService';
@@ -746,6 +747,7 @@ import SeatClassModal from '@/components/booking/SeatClassModal.vue';
 const route = useRoute();
 const router = useRouter();
 const bookingStore = useBookingStore();
+const notificationStore = useNotificationStore();
 
 const flights = ref([]);
 const filteredFlights = ref([]);
@@ -1180,6 +1182,24 @@ const showSessionExpiredModal = () => {
 
 // Handle showing seat classes for a flight
 const showSeatClasses = (flight) => {
+  // NEW: Minimum Connecting Time (MCT) Validation for Multi-City
+  if (bookingStore.isMultiCity) {
+    const validation = bookingStore.validateMultiCityConnection(
+      bookingStore.currentSegmentIndex, 
+      flight
+    );
+    
+    if (!validation.valid) {
+      console.warn('❌ MCT Validation Failed:', validation.message);
+      notificationStore.showNotification(
+        validation.message,
+        'error',
+        5000
+      );
+      return; // Stop the process, don't show the modal
+    }
+  }
+
   selectedFlightForSeats.value = flight;
   
   // Extract seat classes from flight data

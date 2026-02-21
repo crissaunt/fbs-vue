@@ -153,6 +153,12 @@
                 >
                   Start Practice Booking
                 </button>
+                <button 
+                  @click="openPracticeBookings"
+                  class="w-full mt-2 bg-white text-blue-600 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors shadow-sm"
+                >
+                  View Practice Bookings
+                </button>
               </div>
 
               <StudentSectionInfo 
@@ -203,6 +209,102 @@
       :booking="comparisonBooking"
       @close="showComparison = false"
     />
+    <!-- Practice Bookings Modal -->
+    <BaseModal 
+      :is-open="showPracticeBookings" 
+      @close="showPracticeBookings = false"
+    >
+      <div class="flex flex-col h-[500px] max-h-[80vh]">
+        <!-- Modal Header -->
+        <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50 flex-shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">📋</span>
+            <h3 class="text-lg font-bold text-gray-900">Practice Bookings History</h3>
+          </div>
+          <button 
+            @click="showPracticeBookings = false" 
+            class="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500 hover:text-gray-700"
+          >
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="p-6 overflow-y-auto flex-1 bg-white">
+          <div v-if="practiceBookings.length === 0" class="flex flex-col items-center justify-center py-20 text-center">
+            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-3xl mb-4 grayscale opacity-50">
+              ✈️
+            </div>
+            <p class="text-gray-500 font-medium">No practice bookings found.</p>
+            <p class="text-sm text-gray-400 mt-1">Start a practice booking to see your results here!</p>
+          </div>
+          
+          <ul v-else class="space-y-4">
+            <li 
+              v-for="booking in practiceBookings" 
+              :key="booking.id" 
+              class="border border-gray-100 rounded-xl p-4 hover:border-blue-200 hover:bg-blue-50/30 transition-all shadow-sm group"
+            >
+              <div class="flex justify-between items-start gap-4">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="text-xs font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded leading-none">
+                      #{{ booking.id }}
+                    </span>
+                    <span class="text-xs text-gray-400">
+                      {{ formatDate(booking.created_at) }}
+                    </span>
+                  </div>
+                  <h4 class="font-bold text-gray-900 mb-1 group-hover:text-blue-700 transition-colors">
+                    {{ booking.route_summary }}
+                  </h4>
+                  <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                    <div class="flex items-center gap-1.5 text-xs text-gray-500">
+                      <span class="opacity-70">📅</span>
+                      {{ formatDate(booking.departure_date) }}
+                    </div>
+                    <div class="flex items-center gap-1.5 text-xs text-gray-500">
+                      <span class="opacity-70">👤</span>
+                      {{ booking.passenger_count }} Passenger{{ booking.passenger_count !== 1 ? 's' : '' }}
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="flex flex-col items-end gap-2">
+                  <span 
+                    :class="[
+                      'px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm',
+                      booking.ui_status === 'success' 
+                        ? 'bg-green-100 text-green-700 border border-green-200' 
+                        : booking.ui_status === 'fail' 
+                          ? 'bg-red-100 text-red-700 border border-red-200' 
+                          : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                    ]"
+                  >
+                    {{ booking.ui_status }}
+                  </span>
+                  <div class="text-sm font-bold text-gray-900">
+                    ₱{{ parseFloat(booking.total_amount).toLocaleString() }}
+                  </div>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="px-6 py-4 bg-gray-50 border-t flex justify-end flex-shrink-0">
+          <button 
+            @click="showPracticeBookings = false"
+            class="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors shadow-sm text-sm"
+          >
+            Close History
+          </button>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>
 
@@ -212,6 +314,7 @@ import { useBookingStore } from '@/stores/booking';
 import ComparisonModal from '@/components/common/ComparisonModal.vue';
 import DashboardHeader from '@/components/Student/DashboardHeader.vue';
 import DashboardSidebar from '@/components/Student/DashboardSidebar.vue';
+import BaseModal from '@/components/common/BaseModal.vue';
 import UpcomingDeadlines from '@/components/Student/UpcomingDeadlines.vue';
 import StudentSectionInfo from '@/components/Student/StudentSectionInfo.vue';
 import ActivityCard from '@/components/Student/ActivityCard.vue';
@@ -233,6 +336,7 @@ export default {
     ComparisonModal,
     DashboardHeader,
     DashboardSidebar,
+    BaseModal,
     UpcomingDeadlines,
     StudentSectionInfo,
     ActivityCard
@@ -267,7 +371,9 @@ export default {
       comparisonActivity: null,
       comparisonBooking: null,
       isLoadingBooking: false,
-      comparisonError: null
+      comparisonError: null,
+      showPracticeBookings: false,
+      practiceBookings: []
     }
   },
   computed: {
@@ -326,7 +432,9 @@ export default {
     async loadDashboard() {
       try {
         this.loading = true;
-        this.error = null;
+          this.error = null;
+          // Ensure practice bookings are cleared on reload
+          this.practiceBookings = [];
         
         console.log('📡 Fetching student dashboard...');
         
@@ -357,6 +465,8 @@ export default {
           
           this.section = response.data.section || null;
           this.activities = response.data.activities || [];
+          // Load practice bookings after dashboard data
+          this.loadPracticeBookings();
           
           console.log('✅ Student loaded:', this.student);
           console.log('✅ Section loaded:', this.section);
@@ -439,6 +549,24 @@ export default {
       
       // Redirect to home page to start booking
       this.$router.push('/');
+    },
+
+    async loadPracticeBookings() {
+      try {
+        const resp = await studentDashboardService.getPracticeBookings();
+        this.practiceBookings = resp.data.practice_bookings || [];
+        console.log('✅ Loaded practice bookings', this.practiceBookings);
+      } catch (e) {
+        console.error('Failed to load practice bookings', e);
+        this.notificationStore.error('Could not load practice bookings');
+      }
+    },
+
+    openPracticeBookings() {
+      this.showPracticeBookings = true;
+      if (this.practiceBookings.length === 0) {
+        this.loadPracticeBookings();
+      }
     },
 
     async openComparisonModal(activity) {
