@@ -74,12 +74,12 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Departure Date</label>
-                <input v-model="editSearchForm.departure" type="date" 
+                <input v-model="editSearchForm.departure" type="date" :min="todayDateString"
                   class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent">
               </div>
               <div v-if="editSearchForm.tripType === 'round-trip'">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Return Date</label>
-                <input v-model="editSearchForm.returnDate" type="date" 
+                <input v-model="editSearchForm.returnDate" type="date" :min="editSearchForm.departure || todayDateString"
                   class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent">
               </div>
             </div>
@@ -348,17 +348,28 @@
       <!-- Header -->
       <div class="bg-white rounded-sm shadow-sm border border-gray-200 p-6 mb-8">
         <!-- Step Indicator -->
-        <div v-if="isRoundTrip" class="mb-6">
-          <div class="flex items-center space-x-4">
-            <div :class="['flex-1 text-center py-2 rounded-sm', 
-                     selectionPhase === 'outbound' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-600']">
-              <div class="font-medium">1. Select Outbound</div>
-            </div>
-            <div class="w-8 h-px bg-gray-300"></div>
-            <div :class="['flex-1 text-center py-2 rounded-sm', 
-                     selectionPhase === 'return' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-600']">
-              <div class="font-medium">2. Select Return</div>
-            </div>
+        <div v-if="isRoundTrip || isMultiCity" class="mb-6">
+          <div class="flex items-center space-x-4 overflow-x-auto pb-2">
+            <template v-if="isRoundTrip">
+              <div :class="['flex-1 text-center py-2 rounded-sm min-w-[120px]', 
+                       selectionPhase === 'outbound' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-600']">
+                <div class="font-medium">1. Select Outbound</div>
+              </div>
+              <div class="w-8 h-px bg-gray-300 shrink-0"></div>
+              <div :class="['flex-1 text-center py-2 rounded-sm min-w-[120px]', 
+                       selectionPhase === 'return' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-600']">
+                <div class="font-medium">2. Select Return</div>
+              </div>
+            </template>
+            <template v-else-if="isMultiCity">
+              <div v-for="(seg, idx) in multiSegments" :key="idx" class="flex items-center flex-1">
+                <div :class="['flex-1 text-center py-2 rounded-sm min-w-[120px]', 
+                         currentSegmentIndex === idx ? 'bg-pink-500 text-white' : (idx < currentSegmentIndex ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600')]">
+                  <div class="font-medium">{{ idx + 1 }}. {{ seg.selectedFrom?.code || seg.origin }} → {{ seg.selectedTo?.code || seg.destination }}</div>
+                </div>
+                <div v-if="idx < multiSegments.length - 1" class="w-4 h-px bg-gray-300 mx-2 shrink-0"></div>
+              </div>
+            </template>
           </div>
         </div>
         
@@ -370,11 +381,11 @@
             <div class="flex flex-wrap items-center gap-2 mb-1 text-[9px] font-semibold ">
               <span
                 class="rounded-full px-2 py-0.5 "
-                :class="isRoundTrip
-                  ? 'bg-pink-100 text-pink-700'
-                  : 'bg-green-100 text-gray-700'"
+                :class="isMultiCity 
+                  ? 'bg-blue-100 text-blue-700' 
+                  : (isRoundTrip ? 'bg-pink-100 text-pink-700' : 'bg-green-100 text-gray-700')"
               >
-                {{ isRoundTrip ? 'ROUND TRIP' : 'ONE WAY' }}
+                {{ isMultiCity ? 'MULTI CITY' : (isRoundTrip ? 'ROUND TRIP' : 'ONE WAY') }}
               </span>
 
               <span class="rounded-full bg-green-100 px-2 py-0.5  text-gray-700">
@@ -743,6 +754,10 @@ const isFiltering = ref(false); // New: for transient "jumping" feedback
 const showFilters = ref(false);
 const showNoResults = ref(false);
 
+const todayDateString = computed(() => {
+  return format(new Date(), 'yyyy-MM-dd');
+});
+
 // ============ NEW: ML PRICING STATE ============
 const mlPricingEnabled = ref(true); // Toggle ML pricing on/off
 const showPricingDetails = ref(false); // Show detailed pricing factors
@@ -777,6 +792,20 @@ const selectedToAirport = ref(null);
 
 // Multi-step selection
 const selectionPhase = ref('outbound');
+const currentSegmentIndex = ref(0);
+const multiCitySegments = ref([]);
+
+// Parse segments from query if multi-city
+onMounted(() => {
+  if (route.query.tripType === 'multi-city' && route.query.segments) {
+    try {
+      multiCitySegments.value = JSON.parse(route.query.segments);
+      console.log('🌍 Multi-city segments parsed:', multiCitySegments.value);
+    } catch (e) {
+      console.error('❌ Failed to parse segments:', e);
+    }
+  }
+});
 
 // Confirmation modal
 const showConfirmation = ref(false);
@@ -1016,6 +1045,7 @@ const updateSeatClassFilterOptions = () => {
 // Use trip type from Pinia store
 const tripType = computed(() => bookingStore.tripType || route.query.tripType);
 const isRoundTrip = computed(() => tripType.value === 'round_trip' || tripType.value === 'round-trip');
+const isMultiCity = computed(() => tripType.value === 'multi_city' || tripType.value === 'multi-city');
 
 // Check if outbound is already selected
 const hasOutboundSelected = computed(() => {
@@ -1029,7 +1059,7 @@ const hasReturnSelected = computed(() => {
 
 // Computed for current search date
 const currentSearchDate = computed(() => {
-  return selectionPhase.value === 'outbound' ? route.query.departure : route.query.returnDate;
+  return phaseRouteInfo.value.date;
 });
 
 // Initialize edit search form with current route values
@@ -1890,11 +1920,35 @@ const confirmSelection = () => {
   // Log complete booking details
   logCompleteBookingDetails();
   
-  if (isRoundTrip.value) {
+  if (isMultiCity.value) {
+    console.log(`✅ CONFIRMING FLIGHT FOR SEGMENT ${currentSegmentIndex.value + 1}`);
+    
+    // Save to store
+    bookingStore.selectSegmentFlight(currentSegmentIndex.value, selectedFlight.value);
+    
+    if (currentSegmentIndex.value < multiCitySegments.value.length - 1) {
+      console.log('🔄 Moving to next segment search...');
+      currentSegmentIndex.value++;
+      
+      // Close confirmation modal
+      showConfirmation.value = false;
+      selectedFlight.value = null;
+      
+      // Reset week start for next leg
+      dateSelector.value.currentWeekStart = null;
+      
+      // Fetch flights for next segment
+      fetchFlights();
+      window.scrollTo(0, 0);
+    } else {
+      console.log('🏁 All multi-city segments selected, proceeding...');
+      router.push({ name: 'PassengerDetails' });
+    }
+  } else if (isRoundTrip.value) {
     if (selectionPhase.value === 'outbound') {
       console.log('✅ CONFIRMING OUTBOUND FLIGHT FOR ROUND-TRIP');
       
-      // Log flight selection
+      // Log flight selection (already stored by handleSeatClassSelection)
       logFlightSelection(selectedFlight.value, 'outbound');
       
       // AUTO-SWITCH TO RETURN PHASE
@@ -2042,8 +2096,7 @@ const fetchFlights = async () => {
   }, 15000);
 
   try {
-    const isReturnPhase = selectionPhase.value === 'return';
-    const searchDateStr = isReturnPhase ? route.query.returnDate : route.query.departure;
+    const searchDateStr = phaseRouteInfo.value.date;
     const searchDate = new Date(searchDateStr);
     
     // Use currentWeekStart if it exists for the range, otherwise fallback to search date
@@ -2054,8 +2107,8 @@ const fetchFlights = async () => {
     const endDate = format(addDays(rangeAnchorDate, 6), 'yyyy-MM-dd'); // Fetch full 7 days of the current view
     
     const params = {
-      origin: isReturnPhase ? route.query.destination : route.query.origin,
-      destination: isReturnPhase ? route.query.origin : route.query.destination,
+      origin: phaseRouteInfo.value.origin,
+      destination: phaseRouteInfo.value.destination,
       start_date: startDate,
       end_date: endDate
     };
@@ -2081,6 +2134,13 @@ const fetchFlights = async () => {
     } else if (Array.isArray(response.data)) {
       fetchedFlights = response.data;
     }
+    
+    // Filter out flights that have already departed
+    const now = new Date();
+    fetchedFlights = fetchedFlights.filter(f => {
+      if (!f.departure_time) return false;
+      return new Date(f.departure_time) >= now;
+    });
     
     // Use directly - backend now provides ML-enhanced data
     flights.value = fetchedFlights;
@@ -2207,10 +2267,28 @@ const formatDuration = (minutes) => {
 const selectedFlightsSummary = computed(() => {
   const summary = [];
   
+  if (isMultiCity.value) {
+    bookingStore.multiCitySegments.forEach((seg, idx) => {
+      if (seg.selectedFlight) {
+        summary.push({
+          type: `Flight ${idx + 1}`,
+          flight: seg.selectedFlight.flight_number,
+          route: `${seg.selectedFlight.origin} → ${seg.selectedFlight.destination}`,
+          time: formatTime(seg.selectedFlight.departure_time),
+          date: formatDate(seg.selectedFlight.departure_time),
+          price: Number(seg.selectedFlight.price || 0).toLocaleString(),
+          selected_seat_class: seg.selectedFlight.selected_seat_class || seg.selectedFlight.seat_class,
+          seat_class_price: seg.selectedFlight.price,
+          base_price: seg.selectedFlight.original_price || seg.selectedFlight.base_price || seg.selectedFlight.price,
+          ml_predicted: seg.selectedFlight.ml_predicted
+        });
+      }
+    });
+    return summary;
+  }
+
   if (bookingStore.selectedOutbound) {
-    // For one-way trips, don't show "Outbound" label
     const typeLabel = isRoundTrip.value ? 'Outbound' : 'Flight';
-    
     summary.push({
       type: typeLabel,
       flight: bookingStore.selectedOutbound.flight_number,
@@ -2257,6 +2335,9 @@ const totalPrice = computed(() => {
 
 // Get modal title based on trip type and phase
 const modalTitle = computed(() => {
+  if (isMultiCity.value) {
+    return `Confirm Flight ${currentSegmentIndex.value + 1}`;
+  }
   if (isRoundTrip.value) {
     if (selectionPhase.value === 'outbound') {
       return 'Confirm Outbound Flight';
@@ -2269,6 +2350,11 @@ const modalTitle = computed(() => {
 
 // Get confirm button text
 const confirmButtonText = computed(() => {
+  if (isMultiCity.value) {
+    return currentSegmentIndex.value < multiCitySegments.value.length - 1 
+      ? 'Confirm & Next Flight' 
+      : 'Confirm & Continue';
+  }
   if (isRoundTrip.value) {
     if (selectionPhase.value === 'outbound') {
       return 'Confirm Outbound';
@@ -2281,6 +2367,11 @@ const confirmButtonText = computed(() => {
 
 // Get modal action description
 const modalActionDescription = computed(() => {
+  if (isMultiCity.value) {
+    return currentSegmentIndex.value < multiCitySegments.value.length - 1
+      ? `After confirming, you will select Flight ${currentSegmentIndex.value + 2}.`
+      : 'After confirming, click "Proceed to Passenger Details" to continue.';
+  }
   if (isRoundTrip.value && selectionPhase.value === 'outbound') {
     return 'After confirming, click "Continue to Return Flight" to select your return flight.';
   } else if (isRoundTrip.value && selectionPhase.value === 'return') {
@@ -2334,6 +2425,15 @@ const currentWeekContainsSelectedDate = computed(() => {
 
 // Get phase-specific route info
 const phaseRouteInfo = computed(() => {
+  if (isMultiCity.value && multiCitySegments.value[currentSegmentIndex.value]) {
+    const seg = multiCitySegments.value[currentSegmentIndex.value];
+    return {
+      origin: seg.origin,
+      destination: seg.destination,
+      date: seg.date
+    };
+  }
+
   if (selectionPhase.value === 'outbound') {
     return {
       origin: route.query.origin,
@@ -2351,6 +2451,9 @@ const phaseRouteInfo = computed(() => {
 
 // Get phase-specific button text
 const selectButtonText = computed(() => {
+  if (isMultiCity.value) {
+    return `Select Flight ${currentSegmentIndex.value + 1}`;
+  }
   if (isRoundTrip.value) {
     return selectionPhase.value === 'outbound' ? 'Select Outbound' : 'Select Return';
   }

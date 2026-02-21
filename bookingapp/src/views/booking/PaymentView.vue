@@ -278,9 +278,12 @@ const contactName = computed(() => {
 });
 
 const totalAmount = computed(() => {
-  return bookingStore.booking_total > 0 
-    ? bookingStore.booking_total 
-    : bookingStore.grandTotal || 0;
+  if (bookingStore.booking_total > 0) {
+    console.log('💰 PaymentView: Using Store booking_total (from backend sync):', bookingStore.booking_total);
+    return bookingStore.booking_total;
+  }
+  console.log('⚠️ PaymentView: No backend synced total, using Store grandTotal:', bookingStore.grandTotal);
+  return bookingStore.grandTotal || 0;
 });
 
 const hasFlightInfo = computed(() => {

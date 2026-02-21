@@ -1,119 +1,20 @@
 <template>
   <div class="flex flex-col h-screen bg-gray-50">
     <!-- TOP HEADER -->
-    <div class="bg-pink-500 text-white px-4 py-2.5 flex items-center justify-between shadow-md z-20">
-      <div class="flex items-center gap-3">
-        <button 
-          @click="toggleSidebar" 
-          class="p-1.5 hover:bg-pink-600/50 rounded transition-colors focus:outline-none"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
-          </svg>
-        </button>
-        
-        <div class="flex items-center gap-2">
-          <div class="w-7 h-7 bg-white rounded-full flex items-center justify-center text-base">🎓</div>
-          <div>
-            <h1 class="text-xs font-bold leading-tight">CARAGA STATE UNIVERSITY</h1>
-            <p class="text-[9px] opacity-90 leading-tight">Cabadbaran City</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="relative">
-        <button 
-          @click="toggleDropdown" 
-          class="flex items-center gap-2 hover:bg-pink-600/50 px-2 py-1 rounded transition-colors focus:outline-none"
-        >
-          <div class="w-7 h-7 bg-white rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
-            <div class="w-full h-full bg-pink-200 flex items-center justify-center text-pink-700 font-bold text-xs">
-              {{ initials }}
-            </div>
-          </div>
-        </button>
-
-        <div v-if="dropdownOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-1 z-50 border border-gray-100">
-          <div class="px-4 py-3 border-b border-gray-100">
-            <p class="text-sm font-semibold text-gray-800">{{ fullName }}</p>
-            <p class="text-xs text-gray-500">{{ student.email }}</p>
-          </div>
-          <button 
-            @click="handleLogout" 
-            class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-    </div>
+    <DashboardHeader 
+      :student="student" 
+      @toggle-sidebar="toggleSidebar" 
+      @logout="handleLogout" 
+    />
 
     <!-- MAIN CONTENT WITH SIDEBAR -->
     <div class="flex flex-1 overflow-hidden">
       <!-- LEFT SIDEBAR -->
-      <div 
-        :class="[
-          'bg-pink-500 text-white transition-all duration-300 ease-in-out flex flex-col shadow-lg overflow-hidden', 
-          sidebarOpen ? 'w-56' : 'w-0'
-        ]"
-      >
-        <div v-show="sidebarOpen" class="flex flex-col h-full overflow-y-auto">
-          <!-- Home Button -->
-          <button 
-            @click="goToHome"
-            class="flex items-center px-4 py-3 hover:bg-pink-600 transition-colors border-b border-pink-400/30"
-          >
-            <div class="w-7 h-7 flex items-center justify-center flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-              </svg>
-            </div>
-            <span class="text-sm font-medium ml-3 whitespace-nowrap">Home</span>
-          </button>
-
-          <!-- Calendar Button -->
-          <button 
-            class="flex items-center px-4 py-3 hover:bg-pink-600 transition-colors border-b border-pink-400/30"
-          >
-            <div class="w-7 h-7 flex items-center justify-center flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-              </svg>
-            </div>
-            <span class="text-sm font-medium ml-3 whitespace-nowrap">Calendar</span>
-          </button>
-
-          <!-- Tasks Button -->
-          <button 
-            class="flex items-center px-4 py-3 hover:bg-pink-600 transition-colors border-b border-pink-400/30"
-          >
-            <div class="w-7 h-7 flex items-center justify-center flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-              </svg>
-            </div>
-            <span class="text-sm font-medium ml-3 whitespace-nowrap">Tasks</span>
-          </button>
-
-          <!-- My Section (Only if enrolled) -->
-          <div 
-            v-if="section"
-            class="flex items-center px-4 py-3 bg-pink-600 border-b border-pink-400/20"
-          >
-            <div class="w-7 h-7 rounded-full bg-white text-pink-500 flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-sm">
-              {{ section.section_name.charAt(0).toUpperCase() }}
-            </div>
-            <div class="ml-3 flex-1">
-              <span class="block truncate text-sm font-medium">
-                {{ section.section_name }}
-              </span>
-              <span class="text-[10px] opacity-80">
-                {{ section.activities_count }} activities
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <DashboardSidebar 
+        :sidebar-open="sidebarOpen" 
+        :section="section" 
+        @go-home="goToHome" 
+      />
 
       <!-- RIGHT CONTENT AREA -->
       <main class="flex-1 flex flex-col bg-gray-50 overflow-y-auto">
@@ -230,35 +131,10 @@
             <div class="flex flex-col gap-4">
       
               <!-- Deadlines Card -->
-              <div class="bg-white border border-gray-300 rounded-lg p-4 text-gray-800 shadow-sm">
-                <h3 class="text-sm font-bold text-gray-800 mb-3">Upcoming Deadlines</h3>
-                <div class="flex flex-col gap-3 ">
-                  <div
-                      v-for="activity in upcomingDeadlines"
-                      :key="activity.id"
-                      class="flex justify-between items-center p-2.5 bg-white rounded-md 
-                            border border-gray-300 border-l-4 border-l-orange-500 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
-                      @click="viewActivityDetails(activity.id)"
-                    >
-                    <div class="flex-1">
-                      <p class="text-xs font-semibold text-gray-800">{{ activity.title }}</p>
-                      <small class="block text-[10px] text-orange-600 font-medium mt-0.5">
-                        Due: {{ activity.due_date || 'No due date' }}
-                      </small>
-                    </div>
-                  </div>
-                  
-                  <!-- Placeholder if no activities -->
-                  <div 
-                    v-if="upcomingDeadlines.length === 0"
-                    class="bg-white rounded-md p-4 text-center border border-dashed border-gray-300"
-                  >
-                    <p class="text-xs text-gray-500">No upcoming deadlines</p>
-                  </div>
-                </div>
-                
-                
-              </div>
+              <UpcomingDeadlines 
+                :deadlines="upcomingDeadlines" 
+                @view="viewActivityDetails" 
+              />
 
               <!-- Practice Booking Button -->
               <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-5 text-white shadow-lg hover:shadow-xl transition-all">
@@ -279,163 +155,25 @@
                 </button>
               </div>
 
-              <div class="bg-white border border-gray-300 rounded-lg p-4 text-gray-800 shadow-lg">
-                <h3 class="text-sm font-bold mb-3">My Section</h3>
-
-                <div class="space-y-2">
-                  <!-- Section Code -->
-                  <div class="rounded-md border border-gray-300 p-1">
-                    <p class="text-xs text-gray-500 mb-1">Section Code</p>
-                    <p class="text-lg font-bold text-gray-900">
-                      {{ section.section_code }}
-                    </p>
-                  </div>
-
-                  <!-- Section Name -->
-                  <div class="rounded-md border border-gray-300 p-3">
-                    <p class="text-xs text-gray-500 mb-1">Section Name</p>
-                    <p class="text-base font-semibold text-gray-900">
-                      {{ section.section_name }}
-                    </p>
-                  </div>
-
-                  <!-- Description -->
-                  <div class="rounded-md border border-gray-300 p-3">
-                    <p class="text-xs text-gray-500 mb-1">Description</p>
-                    <p class="text-sm text-gray-800">
-                      {{ section.description || 'No description' }}
-                    </p>
-                  </div>
-
-                  <!-- Total Activities -->
-                  <div class="rounded-md border border-gray-300 p-3 flex justify-between items-center">
-                    <span class="text-xs text-gray-500">Total Activities</span>
-                    <span class="text-lg font-bold text-gray-900">
-                      {{ activities.length }}
-                    </span>
-                  </div>
-
-                  <!-- Active Activities -->
-                  <div class="rounded-md border border-gray-300 p-3 flex justify-between items-center">
-                    <span class="text-xs text-gray-500">Active Activities</span>
-                    <span class="text-lg font-bold text-gray-900">
-                      {{ activeActivitiesCount }}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <StudentSectionInfo 
+                :section="section" 
+                :total-activities="activities.length" 
+                :active-activities="activeActivitiesCount" 
+              />
             </div>
             
 
             <!-- RIGHT PANEL - Activities -->
             <div class="flex flex-col gap-5">
               <!-- Activities List -->
-              <div 
+              <ActivityCard 
                 v-if="filteredActivities.length > 0"
                 v-for="activity in filteredActivities" 
                 :key="activity.id"
-                class="bg-white rounded-lg p-5 shadow-sm border border-gray-200 hover:shadow-md transition-all cursor-pointer"
-                @click="viewActivityDetails(activity.id)"
-              >
-                <div class="flex gap-3 mb-3">
-                  <div class="w-10 h-10 bg-green-800 text-white rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0">
-                    {{ activity.title.charAt(0).toUpperCase() }}
-                  </div>
-                  <div class="flex-1">
-                    <div class="flex items-start justify-between">
-                      <div>
-                        <h4 class="text-base font-bold text-gray-800 mb-1">{{ activity.title }}</h4>
-                        <p class="text-xs text-gray-500 mb-2">{{ activity.section_code }} - {{ activity.section_name }}</p>
-                      </div>
-                      <span 
-                        v-if="activity.completed"
-                        class="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-full uppercase"
-                      >
-                        ✓ Completed
-                      </span>
-                      <span 
-                        :class="[
-                          'px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase',
-                          activity.is_active 
-                            ? 'bg-green-50 text-green-700' 
-                            : 'bg-gray-100 text-gray-600'
-                        ]"
-                      >
-                        {{ activity.is_active ? 'Active' : 'Inactive' }}
-                      </span>
-                    </div>
-                    <div class="flex flex-wrap gap-1.5">
-                      <span class="px-2.5 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-full uppercase">
-                        {{ activity.activity_type }}
-                      </span>
-                      <span 
-                        :class="[
-                          'px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase',
-                          getStatusColor(activity.status)
-                        ]"
-                      >
-                        {{ activity.status }}
-                      </span>
-                      <span 
-                        v-if="activity.grade !== null"
-                        class="px-2.5 py-0.5 bg-pink-50 text-pink-700 text-[10px] font-black rounded-full uppercase border border-pink-100"
-                      >
-                        Score: {{ activity.grade }} / {{ activity.total_points }} pts
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                <p class="text-xs leading-relaxed text-gray-600 mb-4">
-                  {{ activity.description || 'No description provided.' }}
-                </p>
-
-                <div class="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100">
-                  <div class="flex flex-col gap-1">
-                    <span class="text-[11px] text-gray-600"><strong>Points:</strong> {{ activity.total_points }}</span>
-                    <span class="text-[11px] text-gray-600"><strong>Trip:</strong> {{ activity.required_trip_type }}</span>
-                    <span class="text-[11px] text-gray-600"><strong>Class:</strong> {{ activity.required_travel_class }}</span>
-                  </div>
-                  <div class="flex flex-col gap-1">
-                    <span class="text-[11px] text-gray-600">
-                      <strong>Passengers:</strong> {{ activity.required_passengers }} Adult(s)
-                    </span>
-                    <span class="text-[11px] text-gray-600">
-                      <strong>Children:</strong> {{ activity.required_children }}
-                    </span>
-                    <span class="text-[11px] text-gray-600">
-                      <strong>Infants:</strong> {{ activity.required_infants }}
-                    </span>
-                  </div>
-                </div>
-
-                <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-                  <span class="text-[11px] text-gray-500">
-                    Assigned: {{ formatDate(activity.assigned_at) }}
-                  </span>
-                  <div class="flex gap-2">
-                    <button 
-                      v-if="activity.completed"
-                      @click.stop="openComparisonModal(activity)"
-                      class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors"
-                    >
-                      View Work
-                    </button>
-                    <button 
-                      @click.stop="viewActivityDetails(activity.id)"
-                      :disabled="activity.completed"
-                      :class="[
-                        'px-4 py-2 text-white text-xs font-semibold rounded-lg transition-colors',
-                        activity.completed 
-                          ? 'bg-gray-400 cursor-not-allowed' 
-                          : 'bg-pink-500 hover:bg-pink-600'
-                      ]"
-                    >
-                      {{ activity.completed ? 'Finished' : 'View Details' }}
-                    </button>
-                  </div>
-                </div>
-              </div>
+                :activity="activity"
+                @view="viewActivityDetails"
+                @compare="openComparisonModal"
+              />
 
               <!-- No Activities State -->
               <div 
@@ -472,6 +210,11 @@
 import { studentDashboardService } from '@/services/Student/studentDashboardService.js';
 import { useBookingStore } from '@/stores/booking';
 import ComparisonModal from '@/components/common/ComparisonModal.vue';
+import DashboardHeader from '@/components/Student/DashboardHeader.vue';
+import DashboardSidebar from '@/components/Student/DashboardSidebar.vue';
+import UpcomingDeadlines from '@/components/Student/UpcomingDeadlines.vue';
+import StudentSectionInfo from '@/components/Student/StudentSectionInfo.vue';
+import ActivityCard from '@/components/Student/ActivityCard.vue';
 import { comparisonService } from '@/services/Student/comparisonService';
 import api from '@/services/api/axios';
 import { useUserStore } from '@/stores/user'
@@ -487,7 +230,12 @@ export default {
     return { userStore, modalStore, notificationStore }
   },
   components: {
-    ComparisonModal
+    ComparisonModal,
+    DashboardHeader,
+    DashboardSidebar,
+    UpcomingDeadlines,
+    StudentSectionInfo,
+    ActivityCard
   },
   data() {
     return {
@@ -621,7 +369,6 @@ export default {
           }
         } else {
           console.error("❌ Student data not found in response");
-          this.error = "Failed to load student data";
         }
       } catch (error) {
         console.error("❌ Error loading dashboard:", error);
@@ -676,6 +423,9 @@ export default {
 
       // Use the booking store
       const bookingStore = useBookingStore();
+      
+      // Ensure everything is clean before starting
+      bookingStore.resetBooking();
       
       // Enable practice mode
       bookingStore.setPracticeMode();
