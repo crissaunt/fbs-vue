@@ -14,8 +14,8 @@
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-2xl shadow-inner">🎓</div>
           <div>
-            <h1 class="text-sm font-bold uppercase tracking-tight">CABAGAN STATE UNIVERSITY</h1>
-            <p class="text-[10px] opacity-90">Cabagan City</p>
+            <h1 class="text-sm font-bold uppercase tracking-tight">CARAGA STATE UNIVERSITY</h1>
+            <p class="text-[10px] opacity-90">Cabadbaran City</p>
           </div>
         </div>
       </div>
@@ -25,7 +25,7 @@
           @click="toggleDropdown" 
           class="flex items-center gap-3 hover:bg-pink-600 p-2 rounded-lg transition-colors focus:outline-none"
         >
-          <span class="text-sm font-medium">{{ fullName }}</span>
+          <span class="text-sm font-medium">{{ userStore.userFullName || 'Instructor' }}</span>
           <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden border-2 border-pink-300">
              <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 font-bold uppercase">{{ initials }}</div>
           </div>
@@ -209,16 +209,9 @@ const form = ref({
   description: ''
 })
 
-// Computed: Full name display logic
-const fullName = computed(() => {
-  if (userStore.user.first_name && userStore.user.last_name) return `${userStore.user.first_name} ${userStore.user.last_name}`
-  if (userStore.user.first_name) return userStore.user.first_name
-  return userStore.user.username || 'Instructor'
-})
-
 // Computed: User initials for the avatar
 const initials = computed(() => {
-  const u = userStore.user?.username || 'I'
+  const u = userStore.user?.username || userStore.user?.first_name || 'I'
   return u[0].toUpperCase()
 })
 

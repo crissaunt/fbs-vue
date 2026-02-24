@@ -533,8 +533,8 @@ export default {
       return `${this.student.first_name} ${this.student.last_name}`.trim() || 'Student';
     },
     initials() {
-      const first = this.student.first_name?.charAt(0) || '';
-      const last = this.student.last_name?.charAt(0) || '';
+      const first = this.student?.first_name?.charAt(0) || '';
+      const last = this.student?.last_name?.charAt(0) || '';
       return (first + last).toUpperCase() || 'ST';
     },
     sectionDisplayName() {

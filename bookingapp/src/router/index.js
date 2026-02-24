@@ -187,10 +187,19 @@ router.beforeEach((to, from, next) => {
     console.log('👤 Authenticated user attempting to visit login/register - Redirecting...');
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      if (user.role === 'instructor') {
+      const role = localStorage.getItem('role') || user.role;
+
+      console.log('Detected role for redirection:', role);
+
+      if (role === 'instructor') {
         return next('/instructor/dashboard');
-      } else {
+      } else if (role === 'student') {
         return next('/student/dashboard');
+      } else if (role === 'admin') {
+        // Direct to home or a custom admin path if it existed, but for now / is safest if Vue admin is missing
+        return next('/');
+      } else {
+        return next('/');
       }
     } catch (e) {
       console.error('Error parsing user data for redirect:', e);

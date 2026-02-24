@@ -123,7 +123,7 @@ export default {
     return {
       username: '',
       password: '',
-      isLoading: false,
+      loading: false,
       error: null,
       successMessage: ''
     }
@@ -142,12 +142,12 @@ export default {
         return
       }
       
-      this.isLoading = true
-      this.error = null
-      this.successMessage = ''
+      this.loading = true;
+      this.error = null;
+      this.successMessage = '';
 
       try {
-        console.log('🔐 Attempting login for:', this.username)
+        console.log('🔐 Attempting login for:', this.username);
         
         // 1. Send Login Request
         const { token, user, role, dashboard_route } = await authService.login(this.username, this.password);
@@ -156,30 +156,30 @@ export default {
         this.userStore.setAuth({ token, user, role });
         
         console.log('✅ Login successful - User Store Updated');
-        this.successMessage = 'Login successful! Redirecting...'
+        this.successMessage = 'Login successful! Redirecting...';
         
         // 3. Move to appropriate dashboard
         setTimeout(() => {
-          this.$router.push(dashboard_route)
-        }, 500)
+          this.$router.push(dashboard_route || '/');
+        }, 500);
         
       } catch (err) {
-        console.error('❌ LOGIN ERROR:', err)
+        console.error('❌ LOGIN ERROR:', err);
         if (err.response) {
-          const data = err.response.data
+          const data = err.response.data;
           if (err.response?.status === 401) {
-            this.error = 'Invalid credentials'
-            this.notificationStore.error('Invalid username or password')
+            this.error = 'Invalid credentials';
+            this.notificationStore.error('Invalid username or password');
           } else {
-            this.error = data.error || data.detail || data.message || 'An error occurred during login. Please try again.'
-            this.notificationStore.error('Login failed. Please check your connection.')
+            this.error = data.error || data.detail || data.message || 'An error occurred during login. Please try again.';
+            this.notificationStore.error('Login failed.');
           }
         } else {
-          this.error = "An unexpected error occurred. Please try again."
-          this.notificationStore.error('Login failed. Please check your internet connection.')
+          this.error = "An unexpected error occurred. Please try again.";
+          this.notificationStore.error('Login failed. Connection error.');
         }
       } finally {
-        this.isLoading = false
+        this.loading = false;
       }
     }
   }
