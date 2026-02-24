@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useBookingStore } from '@/stores/booking';
+import { useNotificationStore } from '@/stores/notification';
+import AuthStorage from '@/utils/authStorage';
 
 // Booking Views
 import HomeView from '@/views/booking/HomeView.vue';
@@ -7,13 +9,14 @@ import SearchResults from '@/views/booking/SearchResultsView.vue';
 import PassengerDetails from '@/views/booking/PassengerDetailsView.vue';
 import AddonsView from '@/views/booking/AddonsView.vue';
 import SeatSelection from '@/views/booking/SeatSelectionView.vue';
+import ProfileView from '@/views/Profile/ProfileView.vue';
 import ReviewBooking from '@/views/booking/ReviewBookingView.vue';
 import Payment from '@/views/booking/PaymentView.vue';
 import AirbusA321Layout from '@/components/seatmaps/AirbusA321Layout.vue';
 
 // Authentication Views
-import Base_login from '@/views/Login.vue';
-import Register from '@/views/Register.vue';
+// import Base_login from '@/views/Login.vue';
+// import Register from '@/views/Register.vue';
 
 // Instructor Views
 import InstructorDashboard from '@/views/Instructor/instructor_dashboard.vue';
@@ -27,12 +30,14 @@ const routes = [
   {
     path: '/login',
     name: 'instructor_login',
-    component: Base_login
+    component: () => import('@/views/Login.vue'),
+    meta: { guestOnly: true }
   },
   {
     path: '/register',
     name: 'Register',
-    component: Register
+    component: () => import('@/views/Register.vue'),
+    meta: { guestOnly: true }
   },
   {
     path: '/instructor/dashboard',
@@ -59,10 +64,17 @@ const routes = [
     meta: { requiresAuth: true, role: 'instructor' }
   },
   {
+<<<<<<< HEAD
     path: '/instructor/activity/:activityId/student/:studentId/score',
     name: 'InstructorStudentScore',
     component: () => import('@/views/Instructor/Activity/instructor_students_score.vue'),
     meta: { requiresAuth: true, role: 'instructor' }
+=======
+    path: '/profile',
+    name: 'Profile',
+    component: ProfileView,
+    meta: { requiresAuth: true }
+>>>>>>> 180f93bb201c35eddd6b7c4897a717198d49311f
   },
   {
     path: '/student/dashboard',
@@ -70,15 +82,11 @@ const routes = [
     component: StudentDashboard,
     meta: { requiresAuth: true, role: 'student' }
   },
-  // ✅ FIXED: Added /student/ prefix to match navigation in Student_dashboard.vue
   {
     path: '/student/activity/:id',
     name: 'StudentActivityDetails',
     component: StudentActivityDetails,
-    meta: {
-      requiresAuth: true,
-      role: 'student'
-    },
+    meta: { requiresAuth: true, role: 'student' },
     props: true
   },
   {
@@ -93,68 +101,68 @@ const routes = [
     meta: {
       layout: 'BookingLayout',
       title: 'Book a Flight | Philippine Airlines',
-      requiresAuth: true
+      requiresAuth: true,
+      isBookingProtected: true // Needs activity code check
     }
   },
   {
     path: '/check-in',
     name: 'check-in',
-    meta: { layout: 'BookingLayout' },
+    meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true },
     component: () => import('../views/booking/CheckInView.vue')
   },
   {
     path: '/status',
     name: 'status',
-    meta: { layout: 'BookingLayout' },
+    meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true },
     component: () => import('../views/booking/FlightStatusView.vue')
   },
   {
     path: '/flights/search',
     name: 'SearchResults',
-    meta: { layout: 'BookingLayout' },
+    meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true },
     component: SearchResults
   },
   {
     path: '/booking/passengers',
     name: 'PassengerDetails',
-    meta: { layout: 'BookingLayout' },
+    meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true, requireActiveBookingSession: true },
     component: PassengerDetails
   },
   {
     path: '/addons',
     name: 'Addons',
-    meta: { layout: 'BookingLayout' },
+    meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true, requireActiveBookingSession: true },
     component: AddonsView
   },
   {
     path: '/addons/seats',
     name: 'SeatSelection',
-    meta: { layout: 'BookingLayout' },
+    meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true, requireActiveBookingSession: true },
     component: SeatSelection
   },
   {
     path: '/review/booking',
     name: 'ReviewBooking',
-    meta: { layout: 'BookingLayout' },
+    meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true, requireActiveBookingSession: true },
     component: ReviewBooking
   },
   {
     path: '/payment',
     name: 'Payment',
-    meta: { layout: 'BookingLayout' },
+    meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true, requireActiveBookingSession: true },
     component: Payment
   },
   {
     path: '/payment-callback',
     name: 'PaymentCallback',
-    meta: { layout: 'BookingLayout' },
-    component: () => import('../views/booking/PaymentCallbackView.vue'),
-    meta: { requiresAuth: false }
+    meta: { layout: 'BookingLayout', requiresAuth: false },
+    component: () => import('../views/booking/PaymentCallbackView.vue')
   },
   {
     path: '/booking-success',
     name: 'BookingSuccess',
-    meta: { layout: 'BookingLayout' },
+    meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true },
     component: () => import('@/views/booking/BookingSuccessView.vue')
   }
 ];
@@ -169,19 +177,21 @@ const router = createRouter({
 // ==========================================
 router.beforeEach((to, from, next) => {
   const bookingStore = useBookingStore();
+  const notificationStore = useNotificationStore();
 
   // Set page title
   if (to.meta.title) {
     document.title = to.meta.title;
   }
 
-  // Check for authentication token
-  const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+  const token = AuthStorage.getToken();
+  const userRole = AuthStorage.getRole();
 
   console.log('🛡️ Router Guard:', to.path);
   console.log('🔑 Token exists:', !!token);
   console.log('🔒 Requires Auth:', to.meta.requiresAuth);
 
+<<<<<<< HEAD
   // REDIRECT AUTHENTICATED USERS AWAY FROM LOGIN/REGISTER
   if ((to.name === 'instructor_login' || to.name === 'Register') && token) {
     console.log('👤 Authenticated user attempting to visit login/register - Redirecting...');
@@ -192,6 +202,13 @@ router.beforeEach((to, from, next) => {
       console.log('Detected role for redirection:', role);
 
       if (role === 'instructor') {
+=======
+  // 1. Guest Only Routes (Login/Register)
+  if (to.matched.some(record => record.meta.guestOnly)) {
+    if (token) {
+      console.log('👤 Authenticated user attempting to visit guest route - Redirecting...');
+      if (userRole === 'instructor') {
+>>>>>>> 180f93bb201c35eddd6b7c4897a717198d49311f
         return next('/instructor/dashboard');
       } else if (role === 'student') {
         return next('/student/dashboard');
@@ -201,90 +218,55 @@ router.beforeEach((to, from, next) => {
       } else {
         return next('/');
       }
-    } catch (e) {
-      console.error('Error parsing user data for redirect:', e);
-      return next('/'); // Fallback
     }
+    return next();
   }
 
-  // Authentication Check
-  if (to.meta.requiresAuth) {
+  // 2. Requires Authentication
+  if (to.matched.some(record => record.meta.requiresAuth)) {
     if (!token) {
       console.log('❌ No token - Redirecting to login');
       return next('/login');
     }
 
-    // Optional: Check role if specified
-    if (to.meta.role) {
-      try {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        console.log('👤 User role:', user.role);
-
-        // Role-based access control (optional - can be removed if not needed)
-        // This is just a client-side check - real security is on backend
-        if (user.role && user.role !== to.meta.role) {
-          console.log('⚠️ Role mismatch - but allowing (backend will block if needed)');
-        }
-      } catch (e) {
-        console.error('Error parsing user data:', e);
+    // Role-based Route Protection
+    if (to.meta.role && userRole && userRole !== to.meta.role) {
+      console.warn(`⛔ User role '${userRole}' blocked from accessing '${to.meta.role}' route`);
+      notificationStore.error('You do not have permission to access that page.');
+      if (userRole === 'instructor') {
+        return next('/instructor/dashboard');
+      } else {
+        return next('/student/dashboard');
       }
+    }
+
+    // Additional Check: Instructors cannot access booking flow
+    if (to.meta.isBookingProtected && userRole === 'instructor') {
+      console.warn('⛔ Instructor attempted to access booking flow:', to.path);
+      return next('/instructor/dashboard');
     }
   }
 
-  // Activity Code / Practice Mode Check
-  // Protect ALL booking routes - require activity code or practice mode selection
-  // Only login and register pages are unprotected
-  const protectedBookingRoutes = [
-    'Home',                 // Home page with flight search
-    'check-in',            // Check-in page
-    'status',              // Flight status page
-    'SearchResults',       // Search results
-    'PassengerDetails',    // Passenger details form
-    'Addons',              // Add-ons selection
-    'SeatSelection',       // Seat selection
-    'ReviewBooking',       // Review booking
-    'Payment',             // Payment page
-    'PaymentCallback',     // Payment callback
-    'BookingSuccess'       // Booking success page
-  ];
-
-  if (protectedBookingRoutes.includes(to.name)) {
+  // 3. Booking Protection (Activity Code / Practice Mode)
+  if (to.matched.some(record => record.meta.isBookingProtected)) {
     if (!bookingStore.hasActivityCodeValidation) {
-      console.log('❌ No activity code validation - Checking authentication status');
-
-      // Check if user is authenticated
-      if (!token) {
-        console.log('❌ User not authenticated - Redirecting to login');
-        alert('Please log in to access the booking system.');
-        return next('/login');
-      }
-
-      // User is authenticated but hasn't validated activity code or selected practice mode
-      console.log('❌ Authenticated user without activity code - Redirecting to student dashboard');
-      alert('Please enter an activity code or select practice mode from your dashboard to start booking.');
+      console.log('❌ Authenticated user without activity code in booking area');
+      notificationStore.info('Please enter an activity code or select practice mode to start booking.');
       return next('/student/dashboard');
     }
   }
 
-  // PREVENT ACCESS TO STUDENT PAGES DURING ACTIVE SESSION
-  if (to.path.startsWith('/student/') && bookingStore.hasActivityCodeValidation) {
-    console.log('⚠️ Active session detected - Blocking student page access');
-    alert('You have an active booking or practice session. Please end your activity session before returning to the dashboard or activity details.');
+  // 4. Prevent accessing Student Dashboard during active booking
+  if (to.path.startsWith('/student/dashboard') && bookingStore.hasActivityCodeValidation) {
+    console.log('⚠️ Active booking session detected - Blocking dashboard access');
+    notificationStore.warn('Please end your activity session before returning to the dashboard.');
     return next('/');
   }
 
-  // Booking flow session check
-  const bookingRoutes = [
-    'PassengerDetails',
-    'Addons',
-    'SeatSelection',
-    'ReviewBooking',
-    'Payment'
-  ];
-
-  if (bookingRoutes.includes(to.name)) {
+  // 5. Active Booking Session Expiry Check
+  if (to.matched.some(record => record.meta.requireActiveBookingSession)) {
     if (!bookingStore.sessionExpiry || Date.now() > bookingStore.sessionExpiry) {
-      alert("Your booking session has expired or hasn't started. Please start a new search.");
+      notificationStore.error("Your booking session has expired or hasn't started. Please start a new search.");
       bookingStore.resetBooking();
       return next('/');
     }

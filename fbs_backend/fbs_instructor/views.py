@@ -48,6 +48,7 @@ from .models import (
 )
 from .serializers import LoginSerializer, UserSerializer
 from .authentication import MultiSessionTokenAuthentication  # NEW: Our custom auth
+from .permissions import IsInstructor  # NEW: Custom permission
 
 import traceback
 from django.utils import timezone
@@ -221,7 +222,7 @@ def register_view(request):
 # ==========================================
 @api_view(['GET', 'POST'])
 @authentication_classes([MultiSessionTokenAuthentication])  # NEW: Use custom auth
-@permission_classes([IsAuthenticated]) 
+@permission_classes([IsAuthenticated, IsInstructor]) 
 def instructor_dashboard(request):
     user = request.user 
     session_obj = request.session_obj  # Our UserSession object
@@ -308,7 +309,7 @@ def instructor_dashboard(request):
 
 @api_view(['GET'])
 @authentication_classes([MultiSessionTokenAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsInstructor])
 def section_details(request, section_id):
     user = request.user
     
@@ -349,7 +350,7 @@ def section_details(request, section_id):
 
 @api_view(['DELETE'])
 @authentication_classes([MultiSessionTokenAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsInstructor])
 def delete_activity(request, section_id, activity_id):
     user = request.user
     
@@ -373,7 +374,7 @@ def delete_activity(request, section_id, activity_id):
 
 class EnrollStudentView(APIView):
     authentication_classes = [MultiSessionTokenAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsInstructor]
     
     def post(self, request, section_id):
         student_num = request.data.get('student_number')
@@ -425,7 +426,7 @@ class UnenrollStudentView(APIView):
 
 @api_view(['GET'])
 @authentication_classes([MultiSessionTokenAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsInstructor])
 def Enroll_Student_list(request, section_id):
     section = get_object_or_404(Section, id=section_id, instructor=request.user)
     enrollments = section.enrollments.all().select_related('student')
@@ -445,7 +446,7 @@ def Enroll_Student_list(request, section_id):
 
 @api_view(['GET', 'POST'])
 @authentication_classes([MultiSessionTokenAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsInstructor])
 def create_activity(request, section_id):
     instructor = request.user
     section = get_object_or_404(Section, id=section_id, instructor=instructor)
@@ -571,7 +572,7 @@ def create_activity(request, section_id):
 
 @api_view(['GET'])
 @authentication_classes([MultiSessionTokenAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsInstructor])
 def activity_details(request, activity_id):
     try:
         activity = get_object_or_404(
@@ -649,7 +650,7 @@ def activity_details(request, activity_id):
 
 @api_view(['POST'])
 @authentication_classes([MultiSessionTokenAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsInstructor])
 def activate_activity(request, activity_id):
     try:
         activity = get_object_or_404(
@@ -1061,7 +1062,7 @@ def Activity_Student_Bind(activity):
 
 @api_view(['GET'])
 @authentication_classes([MultiSessionTokenAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsInstructor])
 def get_activity_submissions(request, activity_id):
     """
     Get all student submissions for a specific activity.
@@ -1170,6 +1171,39 @@ def get_activity_submissions(request, activity_id):
     except Exception as e:
         traceback.print_exc()
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ==========================================
+# USER PROFILE MANAGEMENT
+# ==========================================
+@api_view(['GET', 'PATCH'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    user = request.user
+    
+    if request.method == 'GET':
+        serializer = UserSerializer(user)
+        data = serializer.data
+        # Add avatar URL manually since it's on the profile
+        if hasattr(user, 'userprofile') and user.userprofile.avatar:
+            data['avatar'] = request.build_absolute_uri(user.userprofile.avatar.url)
+        else:
+            data['avatar'] = None
+        return Response(data)
+
+    elif request.method == 'PATCH':
+        # Use our new serializer
+        from .serializers import UserProfileUpdateSerializer
+        serializer = UserProfileUpdateSerializer(user, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            # Return updated data with full avatar URL
+            response_data = serializer.data
+            if hasattr(user, 'userprofile') and user.userprofile.avatar:
+                response_data['avatar'] = request.build_absolute_uri(user.userprofile.avatar.url)
+            return Response(response_data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # ==========================================
@@ -1837,6 +1871,7 @@ def student_activity_details(request, activity_id):
             "error": "Failed to build response data.",
             "details": str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+<<<<<<< HEAD
 @api_view(['POST'])
 @authentication_classes([MultiSessionTokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -1875,8 +1910,80 @@ def submit_grade(request, activity_id, student_id):
             "message": "Grade submitted successfully",
             "grade": float(binding.grade),
             "status": binding.status
+=======
+# ============================================================
+# NEW: GET PRACTICE BOOKINGS (STUDENT)
+# ============================================================
+@api_view(['GET'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_student_practice_bookings(request):
+    """
+    Get all practice bookings for the authenticated student.
+    Returns status mapped to success/fail/pending.
+    """
+    try:
+        # Get user's practice bookings, newest first
+        bookings = Booking.objects.filter(
+            user=request.user, 
+            is_practice=True
+        ).prefetch_related(
+            'details',
+            'details__schedule__flight__route__origin_airport',
+            'details__schedule__flight__route__destination_airport'
+        ).order_by('-created_at')
+        
+        practice_bookings_data = []
+        
+        for booking in bookings:
+            # Map booking status to our UI categories
+            ui_status = 'pending'
+            if booking.status in ['Confirmed', 'Completed', 'checkin', 'boarding']:
+                ui_status = 'success'
+            elif booking.status in ['Cancelled', 'Failed']:
+                ui_status = 'fail'
+            
+            # Extract first route info as a summary
+            first_detail = booking.details.first()
+            route_summary = "Unknown Route"
+            departure_date = None
+            
+            if first_detail and first_detail.schedule and first_detail.schedule.flight:
+                origin = first_detail.schedule.flight.route.origin_airport.code
+                dest = first_detail.schedule.flight.route.destination_airport.code
+                route_summary = f"{origin} ✈ {dest}"
+                departure_date = first_detail.schedule.departure_time.isoformat()
+                
+                if booking.trip_type == 'round_trip':
+                    route_summary = f"{origin} ⇄ {dest}"
+                elif booking.trip_type == 'multi_city':
+                    route_summary += " (Multi-City)"
+
+            practice_bookings_data.append({
+                "id": booking.id,
+                "status": booking.status,
+                "ui_status": ui_status,
+                "total_amount": float(booking.total_amount),
+                "trip_type": booking.get_trip_type_display(),
+                "created_at": booking.created_at.isoformat(),
+                "activity_code_used": booking.activity_code_used,
+                "route_summary": route_summary,
+                "departure_date": departure_date,
+                "passenger_count": booking.details.count()
+            })
+            
+        return Response({
+            "practice_bookings": practice_bookings_data
+>>>>>>> 180f93bb201c35eddd6b7c4897a717198d49311f
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
         traceback.print_exc()
+<<<<<<< HEAD
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+=======
+        return Response(
+            {"error": f"Failed to load practice bookings: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+>>>>>>> 180f93bb201c35eddd6b7c4897a717198d49311f

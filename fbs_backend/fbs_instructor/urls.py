@@ -1,28 +1,42 @@
 from django.urls import path
 from . import views
 from .views import (
-    Login_view, 
-    instructor_dashboard, 
-    section_details, 
-    register_view, 
-    EnrollStudentView, 
+    Login_view,
+    instructor_dashboard,
+    section_details,
+    register_view,
+    EnrollStudentView,
     Enroll_Student_list,
     UnenrollStudentView,
     create_activity,
     delete_activity,
     activity_details,
     activate_activity,
+<<<<<<< HEAD
     student_activity_details,  # ? ADD THIS
     student_dashboard,         # ? ADD THIS
     get_activity_submissions,  # ? ADD THIS
     submit_grade,
     release_activity_grades,
+=======
+    student_dashboard,
+    get_activity_submissions,
+    student_activity_details,  # ADDED
+    validate_session,          # ADDED
+    list_sessions,             # ADDED
+    logout_view,
+    update_profile,
+>>>>>>> 180f93bb201c35eddd6b7c4897a717198d49311f
 )
 
 urlpatterns = [
     # Authentication
-    path('login/', Login_view, name='Login_view'),
-    path('register/', register_view, name='register'),
+    path('auth/register/', register_view, name='register'),
+    path('auth/login/', Login_view, name='login'),
+    path('auth/logout/', logout_view, name='logout'),
+    path('profile/update/', update_profile, name='update_profile'),
+    path('auth/validate/', validate_session, name='validate_session'),
+    path('auth/sessions/', list_sessions, name='list_sessions'),
     
     # Dashboard
     path('instructor/dashboard/', instructor_dashboard, name='instructor_dashboard'),
@@ -63,6 +77,7 @@ urlpatterns = [
     # ? KEEP: Legacy URL for backward compatibility
     path('student/activity/<int:activity_id>/', student_activity_details, name='student_activity_details_legacy'),
 
-
+    # ? NEW: Practice Bookings History
+    path('student/practice-bookings/', views.get_student_practice_bookings, name='student_practice_bookings'),
     
 ]
