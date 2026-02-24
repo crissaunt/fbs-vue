@@ -377,7 +377,13 @@
                         {{ activity.status }}
                       </span>
                       <span 
-                        v-if="activity.grade !== null"
+                        v-if="activity.status === 'graded' && activity.grade === null"
+                        class="px-2.5 py-0.5 bg-yellow-50 text-yellow-700 text-[10px] font-black rounded-full uppercase border border-yellow-100"
+                      >
+                        Score: Pending Release
+                      </span>
+                      <span 
+                        v-else-if="activity.grade !== null"
                         class="px-2.5 py-0.5 bg-pink-50 text-pink-700 text-[10px] font-black rounded-full uppercase border border-pink-100"
                       >
                         Score: {{ activity.grade }} / {{ activity.total_points }} pts

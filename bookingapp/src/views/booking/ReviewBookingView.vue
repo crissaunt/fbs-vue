@@ -81,7 +81,7 @@
               <tbody>
                 <tr v-for="p in bookingStore.passengers" :key="p.key">
                   <td>
-                    <strong>{{ p.title }} {{ p.firstName }} {{ p.lastName }}</strong>
+                    <strong>{{ formatTitle(p.title) }} {{ p.firstName }} {{ p.lastName }}</strong>
                     <div class="sub-text">{{ p.type }}</div>
                   </td>
                   <td>{{ getSeatLabel(p.key) }}</td>
@@ -111,7 +111,7 @@
               <tbody>
                 <tr v-for="p in bookingStore.passengers" :key="p.key">
                   <td>
-                    <strong>{{ p.title }} {{ p.firstName }} {{ p.lastName }}</strong>
+                    <strong>{{ formatTitle(p.title) }} {{ p.firstName }} {{ p.lastName }}</strong>
                     <div class="sub-text">{{ p.type }}</div>
                   </td>
                   <td>{{ getBaggageLabel(p.key, 'return') }}</td>
@@ -131,7 +131,7 @@
           <div class="review-card contact-grid">
             <div class="contact-item">
               <label>Full Name</label>
-              <p>{{ bookingStore.contactInfo.title }} {{ bookingStore.contactInfo.firstName }} {{ bookingStore.contactInfo.lastName }}</p>
+              <p>{{ formatTitle(bookingStore.contactInfo.title) }} {{ bookingStore.contactInfo.firstName }} {{ bookingStore.contactInfo.lastName }}</p>
             </div>
             <div class="contact-item">
               <label>Email Address</label>
@@ -399,6 +399,18 @@ const formatDate = (dateStr) => {
     console.error('Error formatting date:', error);
     return 'Invalid date';
   }
+};
+
+const formatTitle = (titleCode) => {
+  if (!titleCode) return '';
+  const map = {
+    'MR': 'Mr.',
+    'MRS': 'Mrs.',
+    'MS': 'Ms.',
+    'CHD': 'Mstr/Miss',
+    'INF': 'Infant'
+  };
+  return map[titleCode.toUpperCase()] || titleCode;
 };
 
 // Computed Properties

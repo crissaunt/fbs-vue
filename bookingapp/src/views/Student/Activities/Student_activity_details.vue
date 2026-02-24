@@ -140,6 +140,9 @@
             ]">
               {{ activity.is_active ? 'Active' : 'Inactive' }}
             </span>
+            <span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
+              {{ activity.total_points || 100 }} pts
+            </span>
           </div>
         </div>
 
@@ -361,7 +364,10 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <!-- Grade Card -->
-              <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm flex items-center gap-4">
+              <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm flex items-center gap-4 relative overflow-hidden">
+                <div v-if="activity.status === 'graded' && activity.grade === null" class="absolute top-0 right-0">
+                  <div class="bg-yellow-400 text-[8px] font-black px-2 py-0.5 uppercase tracking-tighter transform rotate-45 translate-x-4 translate-y-2 w-24 text-center">Pending Release</div>
+                </div>
                 <div class="w-12 h-12 bg-pink-50 rounded-full flex items-center justify-center text-pink-500">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
@@ -369,7 +375,11 @@
                 </div>
                 <div>
                   <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Score / Grade</p>
-                  <p class="text-2xl font-black text-gray-900">
+                  <div v-if="activity.status === 'graded' && activity.grade === null" class="flex flex-col">
+                    <span class="text-sm font-bold text-yellow-600">Pending Release</span>
+                    <span class="text-[9px] text-gray-400 italic">Scores aren't published yet</span>
+                  </div>
+                  <p v-else class="text-2xl font-black text-gray-900">
                     {{ activity.grade !== null ? activity.grade : '-' }}
                     <span class="text-xs text-gray-400 font-medium">/ {{ activity.total_points }} pts</span>
                   </p>

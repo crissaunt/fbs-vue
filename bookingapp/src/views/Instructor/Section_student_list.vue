@@ -108,7 +108,7 @@
                     <span class="text-[11px] text-gray-400 font-medium uppercase tracking-tight hidden sm:block">
                       Joined {{ student.enrolled_at }}
                     </span>
-                    <button class="text-gray-300 hover:text-red-500 transition-colors">
+                    <button @click="removeStudent(student)" title="Unenroll Student" class="text-gray-300 hover:text-red-500 transition-colors">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
@@ -208,6 +208,22 @@ const submitEnrollment = async () => {
     await fetchAllData() // Refresh student list
   } catch (error) {
     alert(error.response?.data?.error || "Failed to enroll student")
+  } finally {
+    loading.value = false
+  }
+}
+
+const removeStudent = async (student) => {
+  if (!confirm(`Are you sure you want to unenroll ${student.first_name} ${student.last_name}?`)) return
+  
+  loading.value = true
+  try {
+    const sectionId = route.params.id
+    const response = await sectionPeopleListService.unenrollStudent(sectionId, student.id)
+    alert(response.message || "Student successfully unenrolled.")
+    await fetchAllData() // Refresh student list
+  } catch (error) {
+    alert(error.response?.data?.error || "Failed to unenroll student")
   } finally {
     loading.value = false
   }

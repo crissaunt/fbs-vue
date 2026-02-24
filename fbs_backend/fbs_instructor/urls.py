@@ -7,6 +7,7 @@ from .views import (
     register_view, 
     EnrollStudentView, 
     Enroll_Student_list,
+    UnenrollStudentView,
     create_activity,
     delete_activity,
     activity_details,
@@ -14,6 +15,8 @@ from .views import (
     student_activity_details,  # ? ADD THIS
     student_dashboard,         # ? ADD THIS
     get_activity_submissions,  # ? ADD THIS
+    submit_grade,
+    release_activity_grades,
 )
 
 urlpatterns = [
@@ -28,6 +31,7 @@ urlpatterns = [
     path('instructor/sections/<int:section_id>/', section_details, name='section_details'),
     path('instructor/sections/<int:section_id>/enroll/', EnrollStudentView.as_view(), name='enroll-student'),
     path('instructor/sections/<int:section_id>/students/', Enroll_Student_list, name='Enroll_Student_list'),
+    path('instructor/sections/<int:section_id>/enroll/<int:student_id>/', UnenrollStudentView.as_view(), name='unenroll-student'),
     
     # Activity Management - Create & Delete
     path('instructor/sections/<int:section_id>/activities/create/', create_activity, name='api_create_activity'),
@@ -37,6 +41,8 @@ urlpatterns = [
     path('instructor/activities/<int:activity_id>/', activity_details, name='activity-details'),
     path('instructor/activities/<int:activity_id>/submissions/', get_activity_submissions, name='activity-submissions'),
     path('instructor/activity/<int:activity_id>/activate/', activate_activity, name='activate_activity'),
+    path('instructor/activities/<int:activity_id>/submissions/<int:student_id>/grade/', submit_grade, name='submit-grade'),
+    path('instructor/activities/<int:activity_id>/release-grades/', release_activity_grades, name='release-grades'),
 
     # ============================================
     # STUDENT URLS - ? FIXED

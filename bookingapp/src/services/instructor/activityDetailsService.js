@@ -41,5 +41,34 @@ export const activityDetailsService = {
         } catch (error) {
             throw error;
         }
+    },
+
+    /**
+     * Save a grade for a student submission
+     * @param {number} activityId - Activity ID
+     * @param {number} studentId - Student ID
+     * @param {object} data - Grade data {grade, feedback}
+     */
+    async saveGrade(activityId, studentId, data) {
+        try {
+            const response = await api.post(`api/instructor/activities/${activityId}/submissions/${studentId}/grade/`, data);
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    /**
+     * Release all scores for an activity
+     * @param {number} activityId - Activity ID
+     * @returns {Promise} Release response
+     */
+    async releaseGrades(activityId) {
+        try {
+            const response = await api.post(`api/instructor/activities/${activityId}/release-grades/`, {});
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
     }
 };

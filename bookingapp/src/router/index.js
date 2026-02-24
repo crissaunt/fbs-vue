@@ -59,6 +59,12 @@ const routes = [
     meta: { requiresAuth: true, role: 'instructor' }
   },
   {
+    path: '/instructor/activity/:activityId/student/:studentId/score',
+    name: 'InstructorStudentScore',
+    component: () => import('@/views/Instructor/Activity/instructor_students_score.vue'),
+    meta: { requiresAuth: true, role: 'instructor' }
+  },
+  {
     path: '/student/dashboard',
     name: 'StudentDashboard',
     component: StudentDashboard,

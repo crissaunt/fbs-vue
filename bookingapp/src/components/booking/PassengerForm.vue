@@ -8,10 +8,9 @@
     <div class="pal-card-body">
       <div class="form-row">
         <div class="field col-1">
-          <label>Title</label>
+          <label>Gender *</label>
           <select v-model="form.title" @change="emitData">
             <option value="MR">Mr.</option>
-            <option value="MS">Ms.</option>
             <option value="MRS">Mrs.</option>
           </select>
         </div>

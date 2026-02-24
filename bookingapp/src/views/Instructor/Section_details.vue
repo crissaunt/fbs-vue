@@ -457,8 +457,8 @@
                             <label class="block text-xs font-medium text-gray-600 mb-1">Gender *</label>
                             <select v-model="passenger.gender" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm">
                               <option value="">Select Gender</option>
-                              <option value="male">Male</option>
-                              <option value="female">Female</option>
+                              <option value="mr">Mr.</option>
+                              <option value="mrs">Mrs.</option>
                               <option value="other">Other</option>
                             </select>
                           </div>
@@ -504,8 +504,8 @@
                             <label class="block text-xs font-medium text-gray-600 mb-1">Gender *</label>
                             <select v-model="passenger.gender" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400 text-sm">
                               <option value="">Select Gender</option>
-                              <option value="male">Male</option>
-                              <option value="female">Female</option>
+                              <option value="mr">Mr.</option>
+                              <option value="mrs">Mrs.</option>
                               <option value="other">Other</option>
                             </select>
                           </div>
@@ -551,8 +551,8 @@
                             <label class="block text-xs font-medium text-gray-600 mb-1">Gender</label>
                             <select v-model="passenger.gender" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm">
                               <option value="">Select Gender</option>
-                              <option value="male">Male</option>
-                              <option value="female">Female</option>
+                              <option value="mr">Mr.</option>
+                              <option value="mrs">Mrs.</option>
                               <option value="other">Other</option>
                             </select>
                           </div>
@@ -1267,7 +1267,7 @@ const randomizeData = async () => {
     p.firstName = randomStudent.first_name || '';
     p.middleName = randomStudent.middle_name || '';
     p.lastName = randomStudent.last_name || '';
-    p.gender = randomStudent.gender || ['male', 'female'][Math.floor(Math.random() * 2)];
+    p.gender = randomStudent.gender || ['mr', 'mrs'][Math.floor(Math.random() * 2)];
     
     // ✅ HARDCODED: nationality, passport, date of birth
     p.nationality = nationalities[Math.floor(Math.random() * nationalities.length)];

@@ -622,7 +622,7 @@ export const useBookingStore = defineStore('booking', {
           firstName: passenger.firstName || '',
           lastName: passenger.lastName || '',
           middleName: passenger.middleName || '',
-          title: passenger.title || (passenger.type === 'Infant' ? 'CHD' : 'MR'),
+          title: passenger.title || (passenger.type === 'Infant' ? 'INF' : passenger.type === 'Child' ? 'CHD' : 'MR'),
           dateOfBirth: passenger.dateOfBirth || this.getDefaultDOB(passenger.type),
           nationality: passenger.nationality || 'Philippines',
           passportNumber: passenger.passportNumber || '',

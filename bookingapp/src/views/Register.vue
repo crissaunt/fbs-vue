@@ -59,9 +59,19 @@
                   </div>
                 </div>
 
-                <div>
-                  <label class="block text-gray-700 font-semibold mb-1">Email</label>
-                  <input v-model="form.email" type="email" class="w-full px-4 py-2 border rounded-lg" placeholder="email@example.com" />
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-gray-700 font-semibold mb-1">Email</label>
+                    <input v-model="form.email" type="email" class="w-full px-4 py-2 border rounded-lg" placeholder="email@example.com" />
+                  </div>
+                  <div>
+                    <label class="block text-gray-700 font-semibold mb-1">Gender</label>
+                    <select v-model="form.gender" class="w-full px-4 py-2 border rounded-lg focus:outline-none bg-white">
+                      <option value="" disabled selected>Select</option>
+                      <option value="mr">Mr.</option>
+                      <option value="mrs">Mrs.</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div>
@@ -106,6 +116,7 @@ export default {
         mi: '',
         last_name: '',
         email: '',
+        gender: '',
         password: ''
       },
       loading: false,

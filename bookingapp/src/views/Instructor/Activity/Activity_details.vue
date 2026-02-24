@@ -118,6 +118,9 @@
                       <span class="px-2 py-1 bg-green-50 text-green-600 text-[9px] font-black rounded uppercase border border-green-100">
                         {{ activity.is_code_active ? 'Active' : 'Inactive' }}
                       </span>
+                      <span class="px-2 py-1 bg-purple-50 text-purple-600 text-[9px] font-black rounded uppercase border border-purple-100">
+                        {{ activity.total_points || 100 }} pts
+                      </span>
                     </div>
                   </div>
                   <div class="text-right">
@@ -204,7 +207,7 @@
                         <!-- Gender -->
                         <div v-if="hasValue(p.gender)">
                           <label class="text-[9px] font-black text-red-500 uppercase">Gender*</label>
-                          <div class="mt-1 p-3 border border-gray-200 rounded-lg text-xs bg-gray-50/50 uppercase text-gray-700">
+                          <div class="mt-1 p-3 border border-gray-200 rounded-lg text-xs bg-gray-50/50 text-gray-700">
                             {{ p.gender }}
                           </div>
                         </div>
@@ -304,15 +307,34 @@
               <div v-else-if="activeTab === 'submissions'">
                 <div class="flex items-center justify-between mb-8">
                   <h2 class="text-2xl font-black text-gray-900 uppercase tracking-tight">Student Submissions</h2>
-                  <button 
-                    @click="fetchSubmissions" 
-                    class="text-[10px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest flex items-center gap-2"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" :class="['h-3 w-3', submissionsLoading ? 'animate-spin' : '']" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Refresh
-                  </button>
+                  <div class="flex items-center gap-4">
+                    <button 
+                      v-if="activity && !activity.grades_released"
+                      @click="handleReleaseGrades" 
+                      :disabled="releasingGrades"
+                      class="text-[10px] font-black bg-pink-500 text-white px-4 py-2 hover:bg-pink-600 uppercase tracking-widest flex items-center gap-2 rounded transition-all shadow-sm disabled:opacity-50"
+                    >
+                      <svg v-if="releasingGrades" class="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span v-else>Release All Scores</span>
+                    </button>
+                    <div v-else-if="activity?.grades_released" class="flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded border border-green-100">
+                       <span class="text-[9px] font-black uppercase tracking-widest">Scores Released</span>
+                       <span class="text-green-500 text-xs">✓</span>
+                    </div>
+
+                    <button 
+                      @click="fetchSubmissions" 
+                      class="text-[10px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest flex items-center gap-2"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" :class="['h-3 w-3', submissionsLoading ? 'animate-spin' : '']" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Refresh
+                    </button>
+                  </div>
                 </div>
 
                 <div v-if="submissionsLoading && submissions.length === 0" class="text-center py-20">
@@ -359,11 +381,12 @@
                         </td>
                         <td class="px-6 py-5 text-sm font-bold text-gray-700">
                           {{ sub.grade !== null ? sub.grade : '-' }}
+                          <span v-if="sub.grade !== null" class="text-[10px] font-normal text-gray-400">/ {{ activity?.total_points || 100 }} pts</span>
                         </td>
                         <td class="px-6 py-5">
                           <button 
                             v-if="sub.booking"
-                            @click="viewStudentDetails(sub)"
+                            @click="goToAnalysis(sub)"
                             class="text-[9px] font-black text-pink-500 hover:text-pink-700 uppercase tracking-widest border border-pink-100 px-3 py-1.5 rounded-lg hover:bg-pink-50 transition-all"
                           >
                             View Details
@@ -405,17 +428,6 @@
         <button @click="showSuccessModal = false" class="w-full bg-black text-white py-3 rounded-lg font-bold uppercase text-xs tracking-widest">Close</button>
       </div>
     </div>
-
-    <!-- Comparison Modal -->
-    <ComparisonModal
-      :is-open="showComparison"
-      :is-loading="isLoadingBooking"
-      :error-message="comparisonError"
-      :activity="activity"
-      :booking="comparisonBooking"
-      :grade="comparisonGrade"
-      @close="showComparison = false"
-    />
   </div>
 </template>
 
@@ -424,8 +436,6 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { instructorDashboardService } from '@/services/instructor/instructorDashboardService'
 import { activityDetailsService } from '@/services/instructor/activityDetailsService'
-import { bookingService } from '@/services/booking/bookingService'
-import ComparisonModal from '@/components/common/ComparisonModal.vue'
 import { useNotificationStore } from '@/stores/notification'
 
 const notificationStore = useNotificationStore()
@@ -439,7 +449,7 @@ const getStatusLabel = (status) => {
     'in_progress': 'In Progress',
     'submitted': 'Submitted',
     'graded': 'Graded',
-    'not_assigned': 'Not Enrolled'
+    'not_assigned': 'Not Taken'
   }
   return labels[status] || status
 }
@@ -464,18 +474,13 @@ const activating = ref(false)
 const errorMessage = ref('')
 const activeTab = ref('instructions') // 'instructions' or 'submissions'
 const submissionsLoading = ref(false)
+const releasingGrades = ref(false)
 
 // --- Data State ---
 const sections = ref([])
 const user = ref({ first_name: '', last_name: '', username: '' })
 const activity = ref(null)
 const submissions = ref([])
-
-const showComparison = ref(false)
-const comparisonBooking = ref(null)
-const isLoadingBooking = ref(false)
-const comparisonGrade = ref(null)
-const comparisonError = ref('')
 
 // --- Computed ---
 const fullName = computed(() => {
@@ -595,27 +600,30 @@ const handleActivation = async () => {
   }
 }
 
-const viewStudentDetails = async (sub) => {
+const goToAnalysis = (sub) => {
   if (!sub.booking) return
-  
-  showComparison.value = true
-  comparisonBooking.value = null
-  isLoadingBooking.value = true
-  comparisonGrade.value = sub.grade
-  comparisonError.value = ''
+  router.push(`/instructor/activity/${activity.value.id}/student/${sub.student_id}/score`)
+}
 
+const handleReleaseGrades = async () => {
+  if (!activity.value || releasingGrades.value) return
+  
+  if (!confirm('Are you sure you want to release scores to all students? This will make their grades visible on their dashboard.')) {
+    return
+  }
+
+  releasingGrades.value = true
   try {
-    const data = await bookingService.getBookingDetails(sub.booking.id)
-    if (data.success) {
-      comparisonBooking.value = data.booking
-    } else {
-      comparisonError.value = data.error || "Could not find booking data for this student."
-    }
+    const res = await activityDetailsService.releaseGrades(activity.value.id)
+    activity.value.grades_released = res.grades_released
+    notificationStore.success(res.message)
+    // Refresh submissions to ensure everything is in sync
+    await fetchSubmissions()
   } catch (error) {
-    console.error("Error fetching booking details:", error)
-    comparisonError.value = "Failed to load student work details. Please try again."
+    console.error("Release error:", error)
+    notificationStore.error(error.response?.data?.error || 'Failed to release grades.')
   } finally {
-    isLoadingBooking.value = false
+    releasingGrades.value = false
   }
 }
 
