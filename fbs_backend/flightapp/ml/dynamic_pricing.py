@@ -336,28 +336,26 @@ class DynamicPricingService:
                 
             days_until = max((departure - timezone.now()).total_seconds() / 86400, 0)
             
-            if config:
-                if days_until < config.days_departure_critical:
-                    factor *= float(config.days_factor_critical)
-                elif days_until < config.days_departure_near:
-                    factor *= float(config.days_factor_near)
-                elif days_until < config.days_departure_medium:
-                    factor *= float(config.days_factor_medium)
-                elif days_until > config.days_departure_far:
-                    factor *= float(config.days_factor_far)
+            # Continuous Booking Curve (exponential decay)
+            # Simulates real-world airline pricing where every single day closer to departure increases the price.
+            import math
+            
+            # Use the config's "critical" factor to scale how aggressive the daily surge gets
+            max_surge = 1.20 # default +120%
+            if config and hasattr(config, 'days_factor_critical'):
+                config_surge = float(config.days_factor_critical) - 1.0
+                # Scale up config values to be more aggressive for daily math: a configured 1.25 (25%)
+                # becomes a steep day-0 multiplier, adjusting the exponential formula.
+                max_surge = max(config_surge * 2.5, 0.50)
+                
+            if days_until <= 60:
+                # Math: e^(-0.15 * days) creates a beautifully sharp increase in the last 14 days
+                curve = 1.0 + max_surge * math.exp(-0.15 * days_until)
             else:
-                # Continuous Booking Curve (exponential decay)
-                # Every single day produces a different price:
-                #   Same-day (0d): ~×1.80   |  1 day: ~×1.55   |  2 days: ~×1.35
-                #   3 days: ~×1.25          |  5 days: ~×1.15   |  7 days: ~×1.10
-                #   14 days: ~×1.02         |  30 days: ~×1.00  |  60+ days: ~×0.90
-                import math
-                if days_until <= 60:
-                    curve = 1.0 + 1.20 * math.exp(-0.15 * days_until)
-                else:
-                    # Early bird discount — gradually increases the further out
-                    curve = 0.95 - 0.05 * min((days_until - 60) / 60, 1.0)  # floors at ×0.90
-                factor *= curve
+                # Early bird discount — gradually increases the further out (min 0.90)
+                curve = 0.95 - 0.05 * min((days_until - 60) / 60, 1.0)
+                
+            factor *= curve
         except Exception as e:
             logger.warning(f"Error calculating days-to-departure curve: {e}")
         
