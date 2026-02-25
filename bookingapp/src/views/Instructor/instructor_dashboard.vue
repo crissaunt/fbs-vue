@@ -1,5 +1,7 @@
 <template>
   <div class="flex flex-col h-screen bg-gray-50 font-sans">
+    <!-- Premium Loading Overlay -->
+    <LoadingOverlay :loading="isLoading" />
     <div class="bg-gradient-to-r from-pink-500 to-pink-400 text-white px-6 py-2.5 flex items-center justify-between shadow-sm z-20 border-b border-pink-400">
       <div class="flex items-center gap-4">
         <button 
@@ -197,6 +199,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 // Import the new API service
 import { instructorDashboardService } from '@/services/instructor/instructorDashboardService'
+import LoadingOverlay from '@/components/instructor/LoadingOverlay.vue'
 import { useUserStore } from '@/stores/user'
 import { useNotificationStore } from '@/stores/notification'
 import { useModalStore } from '@/stores/modal'
@@ -206,6 +209,7 @@ const userStore = useUserStore()
 const notificationStore = useNotificationStore()
 const modalStore = useModalStore()
 
+const isLoading = ref(false)
 const sidebarOpen = ref(false) 
 const dropdownOpen = ref(false)
 const showModal = ref(false)
@@ -251,6 +255,7 @@ const handleLogout = () => {
  * Action: Fetch data from Backend
  */
 const fetchInstructorData = async () => {
+  isLoading.value = true
   try {
     const data = await instructorDashboardService.getDashboard();
     
@@ -264,6 +269,8 @@ const fetchInstructorData = async () => {
       // If unauthorized, boot to login
       handleLogout();
     }
+  } finally {
+    isLoading.value = false
   }
 }
 

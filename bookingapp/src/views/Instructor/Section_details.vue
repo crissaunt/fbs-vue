@@ -1,5 +1,6 @@
 <template>
   <div class="flex flex-col h-screen bg-[#FDFCF7] font-sans">
+    <LoadingOverlay :loading="isFetching" />
     <div class="bg-gradient-to-r from-pink-500 to-pink-400 text-white px-6 py-2.5 flex items-center justify-between shadow-sm z-20 border-b border-pink-400">
       <div class="flex items-center gap-4">
         <button @click="toggleSidebar" class="p-1.5 hover:bg-pink-600 rounded-md transition-colors focus:outline-none">
@@ -785,6 +786,7 @@ import api from '@/services/api/axios'
 import { sectionDetailsService } from '@/services/instructor/sectionDetailsService'
 import { instructorDashboardService } from '@/services/instructor/instructorDashboardService'
 import { activityService } from '@/services/instructor/activityService'
+import LoadingOverlay from '@/components/instructor/LoadingOverlay.vue'
 import { useUserStore } from '@/stores/user'
 import { useNotificationStore } from '@/stores/notification'
 
@@ -796,6 +798,7 @@ const notificationStore = useNotificationStore()
 const section = ref(null)
 const sidebarSections = ref([])
 const userData = ref(null)
+const isFetching = ref(false)
 const sidebarOpen = ref(false)
 const dropdownOpen = ref(false)
 
@@ -1569,6 +1572,7 @@ const handleLogout = () => {
 const goToSection = (id) => { router.push(`/instructor/section/${id}`) }
 
 const fetchAllData = async () => {
+  isFetching.value = true
   try {
     const id = route.params.id;
     const detailData = await sectionDetailsService.getSectionDetails(id);
@@ -1579,8 +1583,10 @@ const fetchAllData = async () => {
     sidebarSections.value = dashData.sections || [];
     
     await userStore.ensureUserLoaded();
-  } catch (error) { 
-    console.error("Failed to load section data", error) 
+  } catch (error) {
+    console.error("Failed to load section data", error)
+  } finally {
+    isFetching.value = false
   }
 }
 

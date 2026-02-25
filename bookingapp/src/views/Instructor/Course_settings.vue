@@ -1,5 +1,6 @@
 <template>
   <div class="flex flex-col h-screen bg-[#FDFCF7] font-sans">
+    <LoadingOverlay :loading="isFetching" />
     <!-- Header -->
     <div class="bg-gradient-to-r from-pink-500 to-pink-400 text-white px-6 py-2.5 flex items-center justify-between shadow-sm z-20 border-b border-pink-400">
       <div class="flex items-center gap-4">
@@ -173,6 +174,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { sectionDetailsService } from '@/services/instructor/sectionDetailsService'
 import { instructorDashboardService } from '@/services/instructor/instructorDashboardService'
 import { sectionSettingsService } from '@/services/instructor/sectionSettingsService'
+import LoadingOverlay from '@/components/instructor/LoadingOverlay.vue'
 import { useUserStore } from '@/stores/user'
 import { useNotificationStore } from '@/stores/notification'
 
@@ -183,6 +185,7 @@ const notificationStore = useNotificationStore()
 
 const sidebarOpen = ref(false)
 const dropdownOpen = ref(false)
+const isFetching = ref(false)
 const loading = ref(false)
 const sidebarSections = ref([])
 const section = ref(null)
@@ -216,6 +219,7 @@ const handleLogout = () => {
 }
 
 const fetchData = async () => {
+  isFetching.value = true
   try {
     const sectionId = route.params.id
     const data = await sectionDetailsService.getSectionDetails(sectionId)
@@ -236,6 +240,8 @@ const fetchData = async () => {
     sidebarSections.value = dashboardData.sections
   } catch (error) {
     notificationStore.error("Failed to load section settings.")
+  } finally {
+    isFetching.value = false
   }
 }
 
