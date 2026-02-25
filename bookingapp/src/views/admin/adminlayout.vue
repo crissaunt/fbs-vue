@@ -180,6 +180,8 @@
 <script setup>
 import { ref, provide, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import AuthStorage from '@/utils/authStorage';
+import { useUserStore } from '@/stores/user';
 
 // Import child components
 import SidebarGroup from '@/components/admin/SidebarGroup.vue';
@@ -187,10 +189,15 @@ import SidebarSubLink from '@/components/admin/SidebarSubLink.vue';
 
 const collapsed = ref(false);
 const isProfileOpen = ref(false);
-const adminName = ref('Admin');
 
+const userStore = useUserStore();
 const router = useRouter();
 const route = useRoute();
+
+const adminName = computed(() => {
+  if (userStore.user?.username) return userStore.user.username;
+  return localStorage.getItem('adminUsername') || 'Admin';
+});
 
 /* -------------------------
    Sidebar
@@ -203,8 +210,15 @@ const toggleSidebar = () => {
    Logout
 -------------------------- */
 const handleLogout = () => {
+  // Clear modern session
+  AuthStorage.clearCurrentSession();
+  userStore.logout();
+
+  // Clear legacy admin flags
   localStorage.removeItem('adminLoggedIn');
+  localStorage.removeItem('adminUsername');
   localStorage.removeItem('adminName');
+
   router.push('/admin/login');
 };
 
@@ -237,11 +251,6 @@ watch(
    Lifecycle
 -------------------------- */
 onMounted(() => {
-  const storedName = localStorage.getItem('adminName');
-  if (storedName) {
-    adminName.value = storedName;
-  }
-
   window.addEventListener('click', closeDropdown);
 });
 

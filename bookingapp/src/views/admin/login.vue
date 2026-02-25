@@ -95,6 +95,8 @@
 
 <script>
 import { adminLogin } from '@/services/admin/login'
+import AuthStorage from '@/utils/authStorage'
+import { useUserStore } from '@/stores/user'
 
 import bgImage from '@/assets/admin/bg-cthm.svg'
 import headerLogo from '@/assets/admin/cthm-logo.png'
@@ -103,10 +105,13 @@ import logo2 from '@/assets/admin/logo-2.png'
 import logo3 from '@/assets/admin/logo-3.png'
 import logo4 from '@/assets/admin/logo-4.png'
 
-import AuthStorage from '@/utils/authStorage'
-
 export default {
   name: 'AdminLogin',
+
+  setup() {
+    const userStore = useUserStore()
+    return { userStore }
+  },
 
   data() {
     return {
@@ -127,7 +132,7 @@ export default {
         const result = await adminLogin(this.username, this.password)
 
         if (result.success) {
-          // 1. Initialize session using AuthStorage (Required by new Router Guard)
+          // Initialize modern session storage
           AuthStorage.clearCurrentSession()
           AuthStorage.initializeSession({
             token: result.token,
@@ -137,18 +142,26 @@ export default {
             dashboard_route: result.dashboard_route
           })
 
-          // 2. Legacy support for components reading from localStorage directly
+          // Legacy support for components reading from localStorage directly
           localStorage.setItem('adminLoggedIn', 'true')
           localStorage.setItem('adminUsername', this.username)
           localStorage.setItem('token', result.token)
           localStorage.setItem('role', result.role)
 
+          // Update user store
+          this.userStore.setAuth({
+            token: result.token,
+            user: result.user,
+            role: result.role
+          })
+
+          // Redirect to admin dashboard
           this.$router.push('/admin/dashboard')
         } else {
           alert(result.message || 'Invalid credentials or not an admin.')
         }
       } catch (error) {
-        console.error(error)
+        console.error('Admin Login Error:', error)
         const msg = error.response?.data?.message || error.message || 'Login failed'
         alert(`Login failed: ${msg}`)
       }

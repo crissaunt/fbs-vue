@@ -1,50 +1,39 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import (
-    AdminLoginView,
-    AirlineTaxViewSet, 
-    AirlineViewSet, 
-    AirportViewSet, 
-    AircraftViewSet,
-    BookingDetailViewSet,
-    BookingTaxViewSet,
-    BookingViewSet,
-    CheckInDetailViewSet,
-    DashboardViewSet,
-    PassengerInfoViewSet,
-    PassengerTypeTaxRateViewSet, 
-    SeatClassViewSet, 
-    AddOnTypeViewSet,
-    RouteViewSet,
-    FlightViewSet,
-    ScheduleViewSet,
-    SeatViewSet,
-    SeatRequirementViewSet,
-    AirportFeeViewSet,
-    TaxTypeViewSet,
-    StudentsViewSet,
-    InstructorsViewSet,
-    PaymentViewSet,
-    # --- New ---
-    CountryViewSet,
-    SeatClassFeatureViewSet,
-    InsuranceProviderViewSet,
-    InsuranceBenefitViewSet,
-    InsuranceCoverageTypeViewSet,
-    TravelInsurancePlanViewSet,
-    PlanCoverageViewSet,
-    MealCategoryViewSet,
-    MealOptionViewSet,
-    AssistanceServiceViewSet,
-    BaggageOptionViewSet,
-    PricingConfigurationViewSet,
+
+# Modular view imports
+from .api.admin_auth_views import AdminLoginView
+from .api.student_views import StudentsViewSet
+from .api.instructor_views import InstructorsViewSet
+from .api.booking_views import (
+    BookingViewSet, BookingDetailViewSet, BookingTaxViewSet, PaymentViewSet
+)
+from .api.flight_views import (
+    RouteViewSet, FlightViewSet, ScheduleViewSet, 
+    SeatViewSet, SeatRequirementViewSet
+)
+from .api.asset_views import (
+    AirlineViewSet, AirportViewSet, AircraftViewSet, 
+    SeatClassViewSet, AddOnTypeViewSet, TaxTypeViewSet, 
+    AirportFeeViewSet, AirlineTaxViewSet, PassengerTypeTaxRateViewSet
+)
+from .api.dashboard_views import DashboardViewSet
+from .api.checkin_views import CheckInDetailViewSet
+from .api.passenger_views import PassengerInfoViewSet
+from .api.extra_services_views import (
+    CountryViewSet, SeatClassFeatureViewSet, InsuranceProviderViewSet,
+    InsuranceBenefitViewSet, InsuranceCoverageTypeViewSet,
+    TravelInsurancePlanViewSet, PlanCoverageViewSet,
+    MealCategoryViewSet, MealOptionViewSet, AssistanceServiceViewSet,
+    BaggageOptionViewSet, PricingConfigurationViewSet
 )
 
 # Create a router and register our viewsets
 router = DefaultRouter()
 
-# ... (rest of the router registrations)
-router.register(r'seat-requirements', SeatRequirementViewSet, basename='seatrequirement')
+# ==========================================
+# USERS & ROLES
+# ==========================================
 router.register(r'students', StudentsViewSet, basename='student')
 router.register(r'instructors', InstructorsViewSet, basename='instructor')
 
@@ -60,6 +49,8 @@ router.register(r'routes', RouteViewSet, basename='route')
 router.register(r'flights', FlightViewSet, basename='flight')
 router.register(r'schedules', ScheduleViewSet, basename='schedule')
 router.register(r'seats', SeatViewSet, basename='seat')
+router.register(r'seat-requirements', SeatRequirementViewSet, basename='seatrequirement')
+
 # ==========================================
 # ASSETS
 # ==========================================
@@ -70,12 +61,15 @@ router.register(r'seat-classes', SeatClassViewSet, basename='seatclass')
 router.register(r'add-ons', AddOnTypeViewSet, basename='addon')
 
 # ==========================================
-# BOOKING
+# BOOKING & PAYMENTS
 # ==========================================
+router.register(r'bookings', BookingViewSet, basename='booking')
 router.register(r'booking-details', BookingDetailViewSet, basename='bookingdetail')
+router.register(r'booking-taxes', BookingTaxViewSet, basename='bookingtax')
+router.register(r'payments', PaymentViewSet, basename='payment')
 
 # ==========================================
-# PASSENGER
+# PASSENGER & CHECK-IN
 # ==========================================
 router.register(r'passengers', PassengerInfoViewSet, basename='passenger')
 router.register(r'checkins', CheckInDetailViewSet, basename='checkin')
@@ -87,12 +81,9 @@ router.register(r'airport-fees', AirportFeeViewSet, basename='airportfee')
 router.register(r'tax-types', TaxTypeViewSet, basename='taxtype')
 router.register(r'airline-taxes', AirlineTaxViewSet, basename='airlinetax')
 router.register(r'passenger-tax-rates', PassengerTypeTaxRateViewSet, basename='passengertaxrate')
-router.register(r'booking-taxes', BookingTaxViewSet, basename='bookingtax')
-router.register(r'bookings', BookingViewSet, basename='booking')
-router.register(r'payments', PaymentViewSet, basename='payment')
 
 # ==========================================
-# NEWLY ADDED
+# NEWLY ADDED (Extra Services)
 # ==========================================
 router.register(r'countries', CountryViewSet, basename='country')
 router.register(r'seat-class-features', SeatClassFeatureViewSet, basename='seatclassfeature')
