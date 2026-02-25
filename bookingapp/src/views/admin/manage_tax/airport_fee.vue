@@ -117,7 +117,13 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
-          <tr v-for="fee in paginatedFees" :key="fee.id" class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium">
+          <tr 
+            v-for="fee in paginatedFees" 
+            :key="fee.id" 
+            :id="`airportfee-row-${fee.id}`"
+            :class="{'highlight-active': highlightedId === fee.id}"
+            class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium"
+          >
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-[#fe3787] flex items-center justify-center">
@@ -366,10 +372,12 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import api from '@/services/admin/api'
 import { useModalStore } from '@/stores/modal'
 
 const modalStore = useModalStore()
+const route = useRoute()
 
 // State
 const fees = ref([])
@@ -381,6 +389,7 @@ const showDetailsModal = ref(false)
 const selectedFee = ref(null)
 const isEditing = ref(false)
 const currentId = ref(null)
+const highlightedId = ref(null)
 
 // Filters
 const searchQuery = ref('')
@@ -486,6 +495,27 @@ const fetchData = async () => {
     taxTypes.value = allTaxTypes.filter(t => t.category === 'airport')
     
     calculateStats()
+
+    if (route.query.page) {
+        currentPage.value = parseInt(route.query.page);
+    }
+
+    if (route.query.highlight) {
+        const hId = parseInt(route.query.highlight);
+        highlightedId.value = hId;
+
+        // Auto-navigate to the correct page for this ID
+        const index = fees.value.findIndex(f => f.id === hId);
+        if (index !== -1) {
+            currentPage.value = Math.floor(index / itemsPerPage) + 1;
+        }
+
+        setTimeout(() => {
+            const el = document.getElementById(`airportfee-row-${hId}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { highlightedId.value = null; }, 3000);
+        }, 500);
+    }
   } catch (err) {
     console.error('Fetch error:', err)
     alert('Failed to load data')

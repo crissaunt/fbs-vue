@@ -23,9 +23,18 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
-          <tr v-for="airport in airports" :key="airport.id" class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium">
+          <tr 
+            v-for="airport in paginatedAirports" 
+            :key="airport.id" 
+            :id="`airport-row-${airport.id}`"
+            :class="{'highlight-active': highlightedId === airport.id}"
+            class="hover:bg-gray-50/50 transition-all text-[12px] font-medium"
+          >
             <td class="px-6 py-4">
-              <span class="font-bold text-[#fe3787] poppins text-sm">{{ airport.code }}</span>
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-[#fe3787] poppins text-sm block">{{ airport.code }}</span>
+                <div class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" title="System Connected"></div>
+              </div>
             </td>
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
@@ -65,6 +74,44 @@
           </tr>
         </tbody>
       </table>
+
+      <!-- Pagination Section -->
+      <div v-if="airports.length > itemsPerPage" class="px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+        <div class="flex items-center justify-between">
+          <div class="text-[11px] font-bold text-gray-400 uppercase tracking-widest poppins">
+            Showing {{ startIndex + 1 }} - {{ endIndex }} of {{ airports.length }}
+          </div>
+          <div class="flex gap-1">
+            <button 
+              @click="prevPage" 
+              :disabled="currentPage === 1"
+              class="px-4 py-2 bg-white border border-gray-200 rounded-[1px] text-xs font-bold uppercase hover:bg-gray-50 disabled:opacity-50 poppins transition-all shadow-sm"
+            >
+              Prev
+            </button>
+            <button 
+              v-for="page in visiblePages" 
+              :key="page"
+              @click="goToPage(page)"
+              :disabled="page === '...'"
+              :class="[
+                'px-4 py-2 border rounded-[1px] text-xs font-bold uppercase poppins transition-all shadow-sm',
+                page === '...' ? 'bg-white border-gray-200 text-gray-400' : 
+                currentPage === page ? 'bg-[#fe3787] text-white border-[#fe3787]' : 'bg-white border-gray-200 text-[#002D1E] hover:bg-gray-50'
+              ]"
+            >
+              {{ page }}
+            </button>
+            <button 
+              @click="nextPage" 
+              :disabled="currentPage === totalPages"
+              class="px-4 py-2 bg-white border border-gray-200 rounded-[1px] text-xs font-bold uppercase hover:bg-gray-50 disabled:opacity-50 poppins transition-all shadow-sm"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Modal Section -->
@@ -122,7 +169,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
+import { useRoute } from 'vue-router';
 import api from '@/services/admin/api';
 import { useModalStore } from '@/stores/modal';
 
@@ -133,6 +181,12 @@ const airports = ref([]);
 const isModalOpen = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
+const highlightedId = ref(null);
+const route = useRoute();
+
+// Pagination State
+const currentPage = ref(1);
+const itemsPerPage = 10;
 
 const form = ref({
   name: '',
@@ -142,11 +196,61 @@ const form = ref({
   airport_type: 'domestic'
 });
 
+// Pagination Logic
+const totalPages = computed(() => Math.ceil(airports.value.length / itemsPerPage));
+const paginatedAirports = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  return airports.value.slice(start, start + itemsPerPage);
+});
+const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage);
+const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, airports.value.length));
+
+const visiblePages = computed(() => {
+  const pages = [];
+  const t = totalPages.value;
+  const c = currentPage.value;
+  if (t <= 5) {
+    for (let i = 1; i <= t; i++) pages.push(i);
+  } else {
+    if (c <= 3) {
+      for (let i = 1; i <= 4; i++) pages.push(i);
+      pages.push('...', t);
+    } else if (c >= t - 2) {
+      pages.push(1, '...');
+      for (let i = t - 3; i <= t; i++) pages.push(i);
+    } else {
+      pages.push(1, '...', c - 1, c, c + 1, '...', t);
+    }
+  }
+  return pages;
+});
+
 // Fetch Data
 const fetchAirports = async () => {
   try {
     const res = await api.get('/airports/');
     airports.value = res.data.results || res.data;
+
+    if (route.query.page) {
+        currentPage.value = parseInt(route.query.page);
+    }
+
+    if (route.query.highlight) {
+        const hId = parseInt(route.query.highlight);
+        highlightedId.value = hId;
+
+        // Auto-navigate to the correct page for this ID
+        const index = airports.value.findIndex(a => a.id === hId);
+        if (index !== -1) {
+            currentPage.value = Math.floor(index / itemsPerPage) + 1;
+        }
+
+        setTimeout(() => {
+            const el = document.getElementById(`airport-row-${hId}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { highlightedId.value = null; }, 3000);
+        }, 500);
+    }
   } catch (err) {
     console.error("Fetch Error:", err.response?.data || err.message);
   }
@@ -192,7 +296,10 @@ const deleteAirport = async (id) => {
   }
 };
 
-// UI Logic
+const prevPage = () => { if (currentPage.value > 1) currentPage.value--; };
+const nextPage = () => { if (currentPage.value < totalPages.value) currentPage.value++; };
+const goToPage = (p) => { if (p !== '...') currentPage.value = p; };
+
 const openModal = (airport = null) => {
   if (airport) {
     isEditing.value = true;
@@ -217,6 +324,18 @@ onMounted(fetchAirports);
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+
+@keyframes pulse-highlight {
+  0% { background-color: rgba(254, 55, 135, 0.05); }
+  50% { background-color: rgba(254, 55, 135, 0.2); }
+  100% { background-color: rgba(254, 55, 135, 0.05); }
+}
+
+.highlight-active {
+  animation: pulse-highlight 1.5s ease-in-out infinite;
+  border-left: 4px solid #fe3787 !important;
+  box-shadow: inset 0 0 20px rgba(254, 55, 135, 0.1);
+}
 
 .poppins {
   font-family: 'Poppins', sans-serif;

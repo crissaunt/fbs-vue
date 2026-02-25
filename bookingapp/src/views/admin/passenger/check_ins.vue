@@ -4,7 +4,7 @@
     <div class="flex items-center mb-6">
       <div class="flex items-center gap-2">
         <button @click="showTodayCheckIns" class="bg-white border border-gray-200 text-gray-700 px-4 py-2 flex items-center gap-2 hover:bg-gray-50 font-semibold poppins text-[14px] rounded-[1px] shadow-sm transition-all">
-          <i class="ph ph-calendar-check"></i> Today's Registry
+          <i class="ph ph-calendar-check"></i> Training Registry
         </button>
         <button @click="refreshData" class="bg-white border border-gray-200 text-gray-700 px-4 py-2 flex items-center gap-2 hover:bg-gray-50 font-semibold poppins text-[14px] rounded-[1px] shadow-sm transition-all">
           <i class="ph ph-arrows-clockwise"></i> Refresh
@@ -42,7 +42,7 @@
           <input 
             v-model="searchQuery" 
             type="text" 
-            placeholder="Search by passenger or flight..." 
+            placeholder="Search by trainee or simulation ID..." 
             class="pl-10 pr-4 py-2 border border-gray-200 rounded-[1px] w-full outline-none focus:border-[#fe3787] transition-all poppins text-sm"
             @input="debounceSearch"
           />
@@ -83,8 +83,8 @@
       <table class="w-full text-left">
         <thead class="bg-gray-50 text-gray-600 text-[14px] uppercase font-semibold border-b border-gray-200">
           <tr>
-            <th class="px-6 py-4 poppins">Passenger</th>
-            <th class="px-6 py-4 poppins">Flight Route</th>
+            <th class="px-6 py-4 poppins">Trainee</th>
+            <th class="px-6 py-4 poppins">Simulation Route</th>
             <th class="px-6 py-4 poppins text-center">Identity / Baggage</th>
             <th class="px-6 py-4 poppins">Boarding Token</th>
             <th class="px-6 py-4 poppins text-center">Status</th>
@@ -92,7 +92,13 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
-          <tr v-for="checkIn in paginatedCheckIns" :key="checkIn.id" class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium">
+          <tr 
+            v-for="checkIn in paginatedCheckIns" 
+            :key="checkIn.id" 
+            :id="`checkin-row-${checkIn.id}`"
+            :class="{'highlight-active': highlightedId === checkIn.id}"
+            class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium"
+          >
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600 poppins">
@@ -105,7 +111,14 @@
               </div>
             </td>
             <td class="px-6 py-4">
-              <div class="font-bold text-[#002D1E] poppins uppercase">{{ checkIn.flight_number }}</div>
+              <router-link 
+                :to="{ name: 'ManageFlights', query: { highlight: checkIn.booking_detail?.schedule?.flight?.id } }"
+                class="font-bold text-[#002D1E] poppins uppercase hover:text-[#fe3787] transition-all flex items-center gap-1 group"
+                title="View Flight Details"
+              >
+                {{ checkIn.flight_number }}
+                <i class="ph ph-link-simple text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"></i>
+              </router-link>
               <div class="text-[10px] text-gray-400 poppins">{{ formatRoute(checkIn.route) }}</div>
               <div class="text-[10px] text-gray-400 poppins uppercase">{{ formatTime(checkIn.departure_time) }}</div>
             </td>
@@ -269,7 +282,10 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import api from '@/services/admin/api'
+
+const route = useRoute()
 
 // Reactive state
 const checkIns = ref([])
@@ -277,6 +293,7 @@ const loading = ref(false)
 const showCheckInModal = ref(false)
 const showBoardingModal = ref(false)
 const selectedCheckIn = ref(null)
+const highlightedId = ref(null);
 
 // Filters and pagination
 const searchQuery = ref('')
@@ -375,6 +392,27 @@ const fetchCheckIns = async () => {
       seat_number: c.booking_detail?.seat?.seat_number || '',
       status: c.status || 'pending'
     }))
+
+    if (route.query.page) {
+        currentPage.value = parseInt(route.query.page);
+    }
+
+    if (route.query.highlight) {
+        const hId = parseInt(route.query.highlight);
+        highlightedId.value = hId;
+
+        // Auto-navigate to the correct page for this ID
+        const index = checkIns.value.findIndex(c => c.id === hId);
+        if (index !== -1) {
+            currentPage.value = Math.floor(index / itemsPerPage) + 1;
+        }
+
+        setTimeout(() => {
+            const el = document.getElementById(`checkin-row-${hId}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { highlightedId.value = null; }, 3000);
+        }, 500);
+    }
   } catch (err) { console.error(err) } finally { loading.value = false }
 }
 
@@ -453,7 +491,18 @@ onMounted(fetchCheckIns)
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+@keyframes pulse-highlight {
+  0% { background-color: rgba(254, 55, 135, 0.05); }
+  50% { background-color: rgba(254, 55, 135, 0.2); }
+  100% { background-color: rgba(254, 55, 135, 0.05); }
+}
+
+.highlight-active {
+  animation: pulse-highlight 1.5s ease-in-out infinite;
+  border-left: 4px solid #fe3787 !important;
+  box-shadow: inset 0 0 20px rgba(254, 55, 135, 0.1);
+}
+
 .poppins { font-family: 'Poppins', sans-serif; }
 @media print { .no-print { display: none; } }
 </style>

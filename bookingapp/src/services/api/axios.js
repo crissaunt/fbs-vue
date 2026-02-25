@@ -15,6 +15,11 @@ const api = axios.create({
 // Request Interceptor: Attach Auth Token
 api.interceptors.request.use(
     (config) => {
+        // Do not attach token for authentication endpoints
+        if (config.url && (config.url.includes('auth/login') || config.url.includes('admin/login'))) {
+            return config;
+        }
+
         const token = AuthStorage.getToken();
         if (token) {
             config.headers.Authorization = `Token ${token}`;
@@ -31,7 +36,8 @@ api.interceptors.response.use(
         // Skip global error handling for authentication and enrollment endpoints 
         // because the login component handles its own error feedback using the notification store.
         if (error.config && error.config.url && (
-            error.config.url.includes('auth/login') || 
+            error.config.url.includes('auth/login') ||
+            error.config.url.includes('admin/login') ||
             error.config.url.includes('student/dashboard')
         )) {
             return Promise.reject(error);

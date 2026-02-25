@@ -40,7 +40,8 @@ class UserProfile(models.Model):
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
     if created:
-        UserProfile.objects.create(user=instance)
+        role = 'admin' if (instance.is_superuser or instance.is_staff) else None
+        UserProfile.objects.create(user=instance, role=role)
     else:
         if hasattr(instance, 'userprofile'):
             instance.userprofile.save()
@@ -301,6 +302,7 @@ class Flight(models.Model):
     airline = models.ForeignKey(Airline, on_delete=models.CASCADE, related_name="flights")
     aircraft = models.ForeignKey(Aircraft, on_delete=models.CASCADE, related_name="flights")
     route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name="flights")
+    total_stops = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return f"{self.flight_number} ({self.airline.code})"
@@ -421,7 +423,7 @@ class Schedule(models.Model):
                 'destination': self.flight.route.destination_airport.code,
                 'departure_time': self.departure_time.isoformat(),
                 'arrival_time': self.arrival_time.isoformat(),
-                'total_stops': 0,
+                'total_stops': self.flight.total_stops,
                 'is_domestic': self.flight.route.is_domestic,
             }
             

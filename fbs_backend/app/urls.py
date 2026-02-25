@@ -24,7 +24,20 @@ from .views import (
     TaxTypeViewSet,
     StudentsViewSet,
     InstructorsViewSet,
-    PaymentViewSet
+    PaymentViewSet,
+    # --- New ---
+    CountryViewSet,
+    SeatClassFeatureViewSet,
+    InsuranceProviderViewSet,
+    InsuranceBenefitViewSet,
+    InsuranceCoverageTypeViewSet,
+    TravelInsurancePlanViewSet,
+    PlanCoverageViewSet,
+    MealCategoryViewSet,
+    MealOptionViewSet,
+    AssistanceServiceViewSet,
+    BaggageOptionViewSet,
+    PricingConfigurationViewSet,
 )
 
 # Create a router and register our viewsets
@@ -77,6 +90,22 @@ router.register(r'passenger-tax-rates', PassengerTypeTaxRateViewSet, basename='p
 router.register(r'booking-taxes', BookingTaxViewSet, basename='bookingtax')
 router.register(r'bookings', BookingViewSet, basename='booking')
 router.register(r'payments', PaymentViewSet, basename='payment')
+
+# ==========================================
+# NEWLY ADDED
+# ==========================================
+router.register(r'countries', CountryViewSet, basename='country')
+router.register(r'seat-class-features', SeatClassFeatureViewSet, basename='seatclassfeature')
+router.register(r'insurance-providers', InsuranceProviderViewSet, basename='insuranceprovider')
+router.register(r'insurance-benefits', InsuranceBenefitViewSet, basename='insurancebenefit')
+router.register(r'insurance-coverage-types', InsuranceCoverageTypeViewSet, basename='insurancecoveragetype')
+router.register(r'insurance-plans', TravelInsurancePlanViewSet, basename='insuranceplan')
+router.register(r'plan-coverages', PlanCoverageViewSet, basename='plancoverage')
+router.register(r'meal-categories', MealCategoryViewSet, basename='mealcategory')
+router.register(r'meal-options', MealOptionViewSet, basename='mealoption')
+router.register(r'assistance-services', AssistanceServiceViewSet, basename='assistanceservice')
+router.register(r'baggage-options', BaggageOptionViewSet, basename='baggageoption')
+router.register(r'pricing-config', PricingConfigurationViewSet, basename='pricingconfig')
 
 urlpatterns = [
     # Manual path for login

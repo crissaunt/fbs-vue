@@ -98,7 +98,7 @@
       <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
         <div class="flex items-center gap-2">
           <i class="ph ph-clock-counter-clockwise text-[#fe3787] text-xl"></i>
-          <h3 class="text-[14px] font-bold text-[#002D1E] uppercase tracking-wider poppins">Live Activity Feed</h3>
+          <h3 class="text-[14px] font-bold text-[#002D1E] uppercase tracking-wider poppins">Live Audit Activity</h3>
         </div>
         <div class="flex items-center gap-3">
           <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest poppins">Auto-refresh</span>
@@ -123,7 +123,8 @@
         <div 
           v-for="(log, index) in paginatedLogs" 
           :key="log.id" 
-          class="p-4 hover:bg-gray-50/50 transition-colors group"
+          :id="`log-row-${log.id}`"
+          :class="[{'highlight-active': highlightedId === log.id}, 'p-4 hover:bg-gray-50/50 transition-colors group text-[12px] font-medium']"
         >
           <div class="flex items-start gap-4">
             <div class="flex-shrink-0 relative">
@@ -289,7 +290,7 @@
             </div>
           </div>
           <div v-if="actionBreakdown.length === 0" class="text-center text-gray-300 py-8 poppins text-sm uppercase font-bold tracking-widest">
-            Audit Stream Empty
+            Audit Log Stream Empty
           </div>
         </div>
       </div>
@@ -299,12 +300,16 @@
 
 <script setup>
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 import api from '@/services/admin/api'
+
+const route = useRoute()
 
 // Reactive state
 const logs = ref([])
 const loading = ref(false)
 const autoRefresh = ref(false)
+const highlightedId = ref(null)
 let refreshInterval = null
 
 // Filters
@@ -370,6 +375,27 @@ const fetchLogs = async () => {
     const response = await api.get('/tracklogs/')
     logs.value = response.data
     calculateStats(); extractUniqueUsers(); calculateTopUsers(); calculateActionBreakdown()
+
+    if (route.query.page) {
+        currentPage.value = parseInt(route.query.page);
+    }
+
+    if (route.query.highlight) {
+        const hId = parseInt(route.query.highlight);
+        highlightedId.value = hId;
+
+        // Auto-navigate to the correct page for this ID
+        const index = logs.value.findIndex(l => l.id === hId);
+        if (index !== -1) {
+            currentPage.value = Math.floor(index / itemsPerPage) + 1;
+        }
+
+        setTimeout(() => {
+            const el = document.getElementById(`log-row-${hId}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { highlightedId.value = null; }, 3000);
+        }, 500);
+    }
   } catch (err) { console.error(err); logs.value = [] } finally { loading.value = false }
 }
 
@@ -447,7 +473,7 @@ const timeAgo = (t) => {
 const truncateAction = (a) => a ? (a.length > 40 ? a.substring(0, 40) + '...' : a) : ''
 
 const deleteLog = async (id) => {
-  if (confirm('Permanently purge this audit record?')) {
+  if (confirm('Permanently purge this activity record?')) {
     try {
       await api.delete(`/tracklogs/${id}/`)
       logs.value = logs.value.filter(l => l.id !== id); calculateStats()
@@ -456,7 +482,7 @@ const deleteLog = async (id) => {
 }
 
 const clearAllLogs = async () => {
-  if (confirm('DANGER: This action will PERMANENTLY ERASE all audit history. Continue?')) {
+  if (confirm('DANGER: This action will PERMANENTLY ERASE all activity history. Continue?')) {
     try {
       await api.delete('/tracklogs/clear-all/')
       logs.value = []; calculateStats(); topUsers.value = []; actionBreakdown.value = []

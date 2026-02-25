@@ -1,11 +1,16 @@
-import axios from 'axios'
+import api from '@/services/api/axios'
 
 export async function adminLogin(username, password) {
-  const response = await axios.post(
-    'http://127.0.0.1:8000/api/admin/login/',
-    { username, password },
-    { withCredentials: true }
-  )
-
-  return response.data
+  try {
+    const response = await api.post(
+      'api/admin/login/',
+      { username, password }
+    )
+    return response.data
+  } catch (error) {
+    if (error.response && error.response.data) {
+      return error.response.data
+    }
+    throw error
+  }
 }

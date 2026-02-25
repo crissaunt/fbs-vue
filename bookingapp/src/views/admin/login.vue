@@ -103,6 +103,8 @@ import logo2 from '@/assets/admin/logo-2.png'
 import logo3 from '@/assets/admin/logo-3.png'
 import logo4 from '@/assets/admin/logo-4.png'
 
+import AuthStorage from '@/utils/authStorage'
+
 export default {
   name: 'AdminLogin',
 
@@ -125,16 +127,30 @@ export default {
         const result = await adminLogin(this.username, this.password)
 
         if (result.success) {
+          // 1. Initialize session using AuthStorage (Required by new Router Guard)
+          AuthStorage.clearCurrentSession()
+          AuthStorage.initializeSession({
+            token: result.token,
+            session_id: result.session_id,
+            role: result.role,
+            user: result.user,
+            dashboard_route: result.dashboard_route
+          })
+
+          // 2. Legacy support for components reading from localStorage directly
           localStorage.setItem('adminLoggedIn', 'true')
           localStorage.setItem('adminUsername', this.username)
+          localStorage.setItem('token', result.token)
+          localStorage.setItem('role', result.role)
 
           this.$router.push('/admin/dashboard')
         } else {
-          alert('Invalid credentials or not an admin.')
+          alert(result.message || 'Invalid credentials or not an admin.')
         }
       } catch (error) {
         console.error(error)
-        alert('Login failed. Please try again.')
+        const msg = error.response?.data?.message || error.message || 'Login failed'
+        alert(`Login failed: ${msg}`)
       }
     }
   }

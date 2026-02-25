@@ -13,6 +13,14 @@
                      flight.is_domestic ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700']">
             {{ flight.is_domestic ? 'Domestic' : 'International' }}
           </div>
+          <div v-if="(flight.total_stops || 0) === 0" 
+            class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+            Non-stop
+          </div>
+          <div v-else 
+            class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+            {{ flight.total_stops }} {{ flight.total_stops === 1 ? 'Stop' : 'Stops' }}
+          </div>
         </div>
         
         <div class="text-center">

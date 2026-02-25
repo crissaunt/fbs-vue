@@ -13,11 +13,12 @@ from .views import (
     activate_activity,
     student_dashboard,
     get_activity_submissions,
-    student_activity_details,  # ADDED
-    validate_session,          # ADDED
-    list_sessions,             # ADDED
+    student_activity_details,
+    validate_session,
+    list_sessions,
     logout_view,
     update_profile,
+    admin_lms_overview,
 )
 
 urlpatterns = [
@@ -67,5 +68,7 @@ urlpatterns = [
 
     # ? NEW: Practice Bookings History
     path('student/practice-bookings/', views.get_student_practice_bookings, name='student_practice_bookings'),
-    
+
+    # Admin LMS Overview
+    path('admin/lms-overview/', admin_lms_overview, name='admin_lms_overview'),
 ]

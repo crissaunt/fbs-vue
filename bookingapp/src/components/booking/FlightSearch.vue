@@ -17,6 +17,7 @@ const showActivityCodeModal = ref(false);
 
 // --- 1. TRIP TYPE STATE ---
 const tripType = ref('round-trip');
+const stopPreference = ref('all'); // 'all', 'nonstop', 'direct', 'connecting'
 
 // Watch for trip type changes to clear return date when switching to one-way
 watch(tripType, (newType) => {
@@ -236,6 +237,7 @@ const handleSearch = () => {
 
   bookingStore.setPassengerCount(passengers.value);
   bookingStore.setTripType(tripType.value);
+  bookingStore.setStopPreference(stopPreference.value);
   bookingStore.startSession();
 
   if (isMulti) {
@@ -256,7 +258,8 @@ const handleSearch = () => {
         }))),
         adults: passengers.value.adult,
         children: passengers.value.children,
-        infants: passengers.value.infant
+        infants: passengers.value.infant,
+        stops: stopPreference.value
       }
     });
   } else {
@@ -270,7 +273,8 @@ const handleSearch = () => {
         tripType: tripType.value,
         adults: passengers.value.adult,
         children: passengers.value.children,
-        infants: passengers.value.infant
+        infants: passengers.value.infant,
+        stops: stopPreference.value
       }
     });
   }
@@ -292,19 +296,36 @@ const handleActivityCodeContinue = () => {
 
   <div class="mx-auto my-5 rounded-[5px] bg-white p-6 text-gray-800 shadow-[0_10px_30px_rgba(0,0,0,0.15)]">
 
-    <!-- Trip Type Tabs -->
-    <div class="mb-5 flex gap-2 border-b border-gray-200">
-      <button
-        v-for="t in ['one-way', 'round-trip', 'multi-city']"
-        :key="t"
-        @click="tripType = t"
-        class="cursor-pointer border-b-4 px-4 py-2 text-xs font-bold uppercase tracking-wide text-gray-500 transition"
-        :class="tripType === t
-          ? 'border-[#d11241] text-[#003870]'
-          : 'border-transparent hover:text-[#003870]'"
-      >
-        {{ t.replace('-', ' ') }}
-      </button>
+    <!-- Trip Type & Stop Preference Container -->
+    <div class="mb-5 flex flex-wrap items-center justify-between gap-4 border-b border-gray-200">
+      <!-- Trip Type Tabs -->
+      <div class="flex gap-2">
+        <button
+          v-for="t in ['one-way', 'round-trip', 'multi-city']"
+          :key="t"
+          @click="tripType = t"
+          class="cursor-pointer border-b-4 px-4 py-2 text-xs font-bold uppercase tracking-wide text-gray-500 transition"
+          :class="tripType === t
+            ? 'border-[#d11241] text-[#003870]'
+            : 'border-transparent hover:text-[#003870]'"
+        >
+          {{ t.replace('-', ' ') }}
+        </button>
+      </div>
+
+      <!-- Stop Preference Selector -->
+      <div class="flex items-center gap-2 pb-2">
+        <span class="text-[0.65rem] font-bold uppercase tracking-wider text-gray-400">Flight Category:</span>
+        <select 
+          v-model="stopPreference"
+          class="cursor-pointer border-none bg-transparent py-1 text-xs font-bold text-[#003870] focus:ring-0"
+        >
+          <option value="all">Any Stops</option>
+          <option value="nonstop">Non-stop</option>
+          <option value="direct">Direct</option>
+          <option value="connecting">Connecting</option>
+        </select>
+      </div>
     </div>
 
     <!-- Search Grid (One-Way & Round-Trip) -->

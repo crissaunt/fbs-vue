@@ -118,6 +118,37 @@
         </label>
       </div>
       
+      <!-- Stops -->
+      <div class="mb-3">
+        <h3 class="text-sm font-semibold text-gray-800 mb-3">Stops</h3>
+        <div class="space-y-1">
+          <label class="flex items-center space-x-3 cursor-pointer">
+            <input type="radio" value="all" :checked="filters.stops === 'all'"
+              @change="$emit('update:filters', { ...filters, stops: 'all' })"
+              class="h-4 w-4 text-pink-500 focus:ring-pink-500 border-gray-300">
+            <span class="text-sm text-gray-700">All Flights</span>
+          </label>
+          <label class="flex items-center space-x-3 cursor-pointer">
+            <input type="radio" value="nonstop" :checked="filters.stops === 'nonstop'"
+              @change="$emit('update:filters', { ...filters, stops: 'nonstop' })"
+              class="h-4 w-4 text-pink-500 focus:ring-pink-500 border-gray-300">
+            <span class="text-sm text-gray-700">Non-stop</span>
+          </label>
+          <label class="flex items-center space-x-3 cursor-pointer">
+            <input type="radio" value="direct" :checked="filters.stops === 'direct'"
+              @change="$emit('update:filters', { ...filters, stops: 'direct' })"
+              class="h-4 w-4 text-pink-500 focus:ring-pink-500 border-gray-300">
+            <span class="text-sm text-gray-700">Direct</span>
+          </label>
+          <label class="flex items-center space-x-3 cursor-pointer">
+            <input type="radio" value="connecting" :checked="filters.stops === 'connecting'"
+              @change="$emit('update:filters', { ...filters, stops: 'connecting' })"
+              class="h-4 w-4 text-pink-500 focus:ring-pink-500 border-gray-300">
+            <span class="text-sm text-gray-700">Connecting</span>
+          </label>
+        </div>
+      </div>
+      
       <!-- Date Filter -->
       <div class="mb-3">
         <h3 class="text-xs font-semibold text-gray-800 mb-3">Date Filter</h3>
@@ -166,6 +197,10 @@
           <span v-if="filters.flightType !== 'all'" 
             class="inline-flex items-center px-3 py-1 rounded-full text-[9px] font-medium bg-pink-100 text-pink-700">
             {{ getOptionLabel(filterOptions.flightTypes, filters.flightType) }}
+          </span>
+          <span v-if="filters.stops !== 'all'" 
+            class="inline-flex items-center px-3 py-1 rounded-full text-[9px] font-medium bg-pink-100 text-pink-700">
+            Stops: {{ filters.stops === 'nonstop' ? 'Non-stop' : filters.stops }}
           </span>
           <span v-if="filters.airline !== 'all'" 
             class="inline-flex items-center px-3 py-1 rounded-full text-[9px] font-medium bg-pink-100 text-pink-700">

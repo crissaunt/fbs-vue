@@ -29,7 +29,7 @@ const adminRoutes = [
         path: 'manage-flight/flights',
         name: 'ManageFlights',
         component: () => import('@/views/admin/manage_flight/flights.vue'),
-        meta: { title: 'Flight Management' }
+        meta: { title: 'Flight Profiles' }
       },
       {
         path: 'manage-flight/schedules',
@@ -42,6 +42,12 @@ const adminRoutes = [
         name: 'ManageSeats',
         component: () => import('@/views/admin/manage_flight/seats.vue'),
         meta: { title: 'Seat Maps' }
+      },
+      {
+        path: 'manage-flight/live-monitor',
+        name: 'LiveMonitor',
+        component: () => import('@/views/admin/manage_flight/live_monitor.vue'),
+        meta: { title: 'Live Operations' }
       },
 
       // --- Assets ---
@@ -127,7 +133,13 @@ const adminRoutes = [
         path: 'student-info/track-log',
         name: 'AdminTrackLog',
         component: () => import('@/views/admin/student_info/track_log.vue'),
-        meta: { title: 'Track Log' }
+        meta: { title: 'Audit Logs' }
+      },
+      {
+        path: 'student-info/lms-overview',
+        name: 'AdminLmsOverview',
+        component: () => import('@/views/admin/student_info/lms_overview.vue'),
+        meta: { title: 'LMS Overview' }
       },
 
       // --- Instructor Info ---
@@ -168,6 +180,56 @@ const adminRoutes = [
         name: 'AdminBookingTax',
         component: () => import('@/views/admin/manage_tax/booking_tax.vue'),
         meta: { title: 'Booking Tax' }
+      },
+
+      // --- Countries ---
+      {
+        path: 'assets/countries',
+        name: 'AdminCountries',
+        component: () => import('@/views/admin/assets/countries.vue'),
+        meta: { title: 'Countries' }
+      },
+
+      // --- Insurance ---
+      {
+        path: 'insurance/providers',
+        name: 'AdminInsuranceProviders',
+        component: () => import('@/views/admin/insurance/providers.vue'),
+        meta: { title: 'Insurance Providers' }
+      },
+      {
+        path: 'insurance/plans',
+        name: 'AdminInsurancePlans',
+        component: () => import('@/views/admin/insurance/plans.vue'),
+        meta: { title: 'Insurance Plans' }
+      },
+
+      // --- Add-on Details ---
+      {
+        path: 'addons/meal-options',
+        name: 'AdminMealOptions',
+        component: () => import('@/views/admin/addons/meal_options.vue'),
+        meta: { title: 'Meal Options' }
+      },
+      {
+        path: 'addons/assistance',
+        name: 'AdminAssistanceServices',
+        component: () => import('@/views/admin/addons/assistance_services.vue'),
+        meta: { title: 'Assistance Services' }
+      },
+      {
+        path: 'addons/baggage',
+        name: 'AdminBaggageOptions',
+        component: () => import('@/views/admin/addons/baggage_options.vue'),
+        meta: { title: 'Baggage Options' }
+      },
+
+      // --- Pricing Config ---
+      {
+        path: 'pricing-config',
+        name: 'AdminPricingConfig',
+        component: () => import('@/views/admin/pricing_config.vue'),
+        meta: { title: 'Pricing Configuration' }
       }
     ]
   }

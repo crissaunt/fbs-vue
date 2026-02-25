@@ -22,19 +22,35 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
-          <tr v-for="plane in aircraftList" :key="plane.id" class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium">
+          <tr 
+            v-for="plane in paginatedAircraft" 
+            :key="plane.id" 
+            :id="`aircraft-row-${plane.id}`"
+            :class="{'highlight-active': highlightedId === plane.id}"
+            class="hover:bg-gray-50/50 transition-all text-[12px] font-medium"
+          >
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
                   <i class="ph ph-airplane text-blue-600"></i>
                 </div>
-                <span class="font-bold text-[#002D1E] poppins">{{ plane.model }}</span>
+                <div>
+                  <span class="font-bold text-[#002D1E] poppins block">{{ plane.model }}</span>
+                  <div class="flex items-center gap-1 mt-1">
+                    <span class="text-[9px] text-gray-400 font-bold uppercase poppins">Fleet ID: {{ plane.id }}</span>
+                    <div class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></div>
+                  </div>
+                </div>
               </div>
             </td>
             <td class="px-6 py-4">
-               <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-[1px] text-[10px] font-bold uppercase poppins">
+               <router-link 
+                 :to="{ name: 'AdminAirlines', query: { highlight: plane.airline } }"
+                 class="bg-gray-100 text-gray-600 px-3 py-1 rounded-[1px] text-[10px] font-bold uppercase poppins hover:bg-[#fe3787] hover:text-white transition-all inline-block"
+                 title="View Airline Connection"
+               >
                  {{ plane.airline_name || 'Unassigned' }}
-               </span>
+               </router-link>
             </td>
             <td class="px-6 py-4 text-center">
               <span class="font-bold text-[#fe3787] poppins">{{ plane.capacity }} seats</span>
@@ -55,6 +71,44 @@
           </tr>
         </tbody>
       </table>
+
+      <!-- Pagination Section -->
+      <div v-if="aircraftList.length > itemsPerPage" class="px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+        <div class="flex items-center justify-between">
+          <div class="text-[11px] font-bold text-gray-400 uppercase tracking-widest poppins">
+            Showing {{ startIndex + 1 }} - {{ endIndex }} of {{ aircraftList.length }}
+          </div>
+          <div class="flex gap-1">
+            <button 
+              @click="prevPage" 
+              :disabled="currentPage === 1"
+              class="px-4 py-2 bg-white border border-gray-200 rounded-[1px] text-xs font-bold uppercase hover:bg-gray-50 disabled:opacity-50 poppins transition-all shadow-sm"
+            >
+              Prev
+            </button>
+            <button 
+              v-for="page in visiblePages" 
+              :key="page"
+              @click="goToPage(page)"
+              :disabled="page === '...'"
+              :class="[
+                'px-4 py-2 border rounded-[1px] text-xs font-bold uppercase poppins transition-all shadow-sm',
+                page === '...' ? 'bg-white border-gray-200 text-gray-400' : 
+                currentPage === page ? 'bg-[#fe3787] text-white border-[#fe3787]' : 'bg-white border-gray-200 text-[#002D1E] hover:bg-gray-50'
+              ]"
+            >
+              {{ page }}
+            </button>
+            <button 
+              @click="nextPage" 
+              :disabled="currentPage === totalPages"
+              class="px-4 py-2 bg-white border border-gray-200 rounded-[1px] text-xs font-bold uppercase hover:bg-gray-50 disabled:opacity-50 poppins transition-all shadow-sm"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Modal Section -->
@@ -97,7 +151,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
+import { useRoute } from 'vue-router';
 import api from '@/services/admin/api';
 import { useModalStore } from '@/stores/modal';
 
@@ -108,7 +163,43 @@ const airlines = ref([]);
 const isModalOpen = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
+const highlightedId = ref(null);
+const route = useRoute();
+
+// Pagination State
+const currentPage = ref(1);
+const itemsPerPage = 10;
+
 const form = ref({ model: '', capacity: 0, airline: '' });
+
+// Pagination Logic
+const totalPages = computed(() => Math.ceil(aircraftList.value.length / itemsPerPage));
+const paginatedAircraft = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  return aircraftList.value.slice(start, start + itemsPerPage);
+});
+const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage);
+const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, aircraftList.value.length));
+
+const visiblePages = computed(() => {
+  const pages = [];
+  const t = totalPages.value;
+  const c = currentPage.value;
+  if (t <= 5) {
+    for (let i = 1; i <= t; i++) pages.push(i);
+  } else {
+    if (c <= 3) {
+      for (let i = 1; i <= 4; i++) pages.push(i);
+      pages.push('...', t);
+    } else if (c >= t - 2) {
+      pages.push(1, '...');
+      for (let i = t - 3; i <= t; i++) pages.push(i);
+    } else {
+      pages.push(1, '...', c - 1, c, c + 1, '...', t);
+    }
+  }
+  return pages;
+});
 
 const fetchData = async () => {
   try {
@@ -118,6 +209,27 @@ const fetchData = async () => {
     ]);
     aircraftList.value = planeRes.data.results || planeRes.data;
     airlines.value = airlineRes.data.results || airlineRes.data;
+
+    if (route.query.page) {
+        currentPage.value = parseInt(route.query.page);
+    }
+
+    if (route.query.highlight) {
+        const hId = parseInt(route.query.highlight);
+        highlightedId.value = hId;
+
+        // Auto-navigate to the correct page for this ID
+        const index = aircraftList.value.findIndex(a => a.id === hId);
+        if (index !== -1) {
+            currentPage.value = Math.floor(index / itemsPerPage) + 1;
+        }
+
+        setTimeout(() => {
+            const el = document.getElementById(`aircraft-row-${hId}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { highlightedId.value = null; }, 3000);
+        }, 500);
+    }
   } catch (err) { 
     console.error("Fetch Error:", err); 
   }
@@ -157,6 +269,10 @@ const deleteAircraft = async (id) => {
   }
 };
 
+const prevPage = () => { if (currentPage.value > 1) currentPage.value--; };
+const nextPage = () => { if (currentPage.value < totalPages.value) currentPage.value++; };
+const goToPage = (p) => { if (p !== '...') currentPage.value = p; };
+
 const openModal = (plane = null) => {
   isEditing.value = !!plane;
   currentId.value = plane?.id || null;
@@ -169,6 +285,18 @@ onMounted(fetchData);
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+
+@keyframes pulse-highlight {
+  0% { background-color: rgba(254, 55, 135, 0.05); }
+  50% { background-color: rgba(254, 55, 135, 0.2); }
+  100% { background-color: rgba(254, 55, 135, 0.05); }
+}
+
+.highlight-active {
+  animation: pulse-highlight 1.5s ease-in-out infinite;
+  border-left: 4px solid #fe3787 !important;
+  box-shadow: inset 0 0 20px rgba(254, 55, 135, 0.1);
+}
 
 .poppins {
   font-family: 'Poppins', sans-serif;
