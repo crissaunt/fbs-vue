@@ -11,7 +11,6 @@
           <select v-model="form.title" @change="emitData" required :class="{ 'error-border': showErrors && !form.title }">
             <option value="">Title</option>
             <option value="MR">Mr.</option>
-            <option value="MS">Ms.</option>
             <option value="MRS">Mrs.</option>
           </select>
           <span v-if="showErrors && !form.title" class="small-error">Title is required</span>

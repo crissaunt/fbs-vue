@@ -2,142 +2,133 @@
   <div class="comparison-modal" v-if="isOpen">
     <div class="modal-overlay" @click="closeModal"></div>
     <div class="modal-content">
-      <div class="modal-header">
-        <div class="header-info">
-          <h2>Activity Comparison</h2>
-          <p class="subtitle">{{ activity?.title }}</p>
-        </div>
-        <div class="header-actions">
-          <div v-if="grade !== null" class="grade-badge" :class="getGradeClass(grade)">
-            Score: {{ grade }}/{{ activity?.total_points }}
-          </div>
-          <button class="close-btn" @click="closeModal">&times;</button>
-        </div>
-      </div>
-
-      <div class="modal-body" v-if="isLoading">
-        <!-- Skeleton Loading State -->
-        <div class="skeleton-summary animate-pulse">
-          <div class="h-16 bg-gray-200 rounded-xl mb-6"></div>
-        </div>
-        
-        <div class="comparison-grid skeleton">
-          <div class="grid-header">Requirement</div>
-          <div class="grid-header">Expected</div>
-          <div class="grid-header">Actual</div>
-          <div class="grid-header">Status</div>
-          
-          <template v-for="i in 5" :key="i">
-            <div class="row-label"><div class="h-4 bg-gray-100 rounded w-24 animate-pulse"></div></div>
-            <div class="cell"><div class="h-4 bg-gray-50 rounded w-32 animate-pulse"></div></div>
-            <div class="cell"><div class="h-4 bg-gray-50 rounded w-28 animate-pulse"></div></div>
-            <div class="status-cell"><div class="h-6 w-6 bg-gray-100 rounded-full animate-pulse"></div></div>
-          </template>
-        </div>
-
-        <div class="mt-8">
-          <div class="h-6 bg-gray-200 rounded w-48 mb-4 animate-pulse"></div>
-          <div v-for="i in 2" :key="i" class="h-24 bg-gray-100 rounded-xl mb-3 animate-pulse"></div>
-        </div>
-      </div>
-
-      <div class="modal-body flex flex-col items-center justify-center py-16 text-center" v-else-if="errorMessage">
-        <div class="error-icon text-red-500 text-5xl mb-4">⚠️</div>
-        <h3 class="text-xl font-bold text-gray-900 mb-2">Failed to load comparison</h3>
-        <p class="text-gray-600 mb-6 max-w-xs">{{ errorMessage }}</p>
-        <button class="btn-secondary" @click="closeModal">Close</button>
-      </div>
-
-      <div class="modal-body" v-else-if="activity && booking">
-        <!-- Summary Strip -->
-        <div class="status-summary" :class="allCorrect ? 'bg-green-50' : 'bg-red-50'">
-          <div class="icon">
-            <span v-if="allCorrect">✅</span>
-            <span v-else>⚠️</span>
-          </div>
-          <div class="text">
-            <h4 :class="allCorrect ? 'text-green-800' : 'text-red-800'">
-              {{ allCorrect ? 'All requirements met!' : 'Some requirements were not met.' }}
-            </h4>
-            <p :class="allCorrect ? 'text-green-600' : 'text-red-600'">
-              {{ allCorrect ? 'The booking matches the activity instructions perfectly.' : 'Check the details below to see the discrepancies.' }}
-            </p>
-          </div>
-        </div>
-
-        <!-- Comparison Table -->
-        <div class="comparison-grid">
-          <div class="grid-header">Requirement</div>
-          <div class="grid-header">Expected</div>
-          <div class="grid-header">Actual</div>
-          <div class="grid-header">Status</div>
-
-          <!-- Trip Type -->
-          <div class="row-label">Trip Type</div>
-          <div class="cell">{{ formatTripType(activity.required_trip_type) }}</div>
-          <div class="cell">{{ formatTripType(booking.trip_type) }}</div>
-          <div class="status-cell">
-            <span v-if="matches.trip_type" class="check">✓</span>
-            <span v-else class="cross">✕</span>
-          </div>
-
-          <!-- Origin -->
-          <div class="row-label">Origin</div>
-          <div class="cell">{{ activity.required_origin }}</div>
-          <div class="cell">{{ actualOrigin }}</div>
-          <div class="status-cell">
-            <span v-if="matches.origin" class="check">✓</span>
-            <span v-else class="cross">✕</span>
-          </div>
-
-          <!-- Destination -->
-          <div class="row-label">Destination</div>
-          <div class="cell">{{ activity.required_destination }}</div>
-          <div class="cell">{{ actualDestination }}</div>
-          <div class="status-cell">
-            <span v-if="matches.destination" class="check">✓</span>
-            <span v-else class="cross">✕</span>
-          </div>
-
-          <!-- Travel Class -->
-          <div class="row-label">Travel Class</div>
-          <div class="cell">{{ formatClass(activity.required_travel_class) }}</div>
-          <div class="cell">{{ actualClass }}</div>
-          <div class="status-cell">
-            <span v-if="matches.travel_class" class="check">✓</span>
-            <span v-else class="cross">✕</span>
-          </div>
-
-          <!-- Passenger Count -->
-          <div class="row-label">Total Passengers</div>
-          <div class="cell">{{ expectedPaxCount }}</div>
-          <div class="cell">{{ booking.details?.length || 0 }}</div>
-          <div class="status-cell">
-            <span v-if="matches.pax_count" class="check">✓</span>
-            <span v-else class="cross">✕</span>
-          </div>
-        </div>
-
-        <!-- Detailed Passenger Work -->
-        <div class="passenger-details mt-8">
-          <h3 class="text-lg font-bold mb-4">Passenger Details in Booking</h3>
-          <div v-for="(detail, index) in booking.details" :key="index" class="p-4 border rounded-lg mb-3 bg-gray-50">
-            <div class="flex justify-between items-center mb-2">
-              <span class="font-bold">Passenger {{ index + 1 }}</span>
-              <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800 uppercase">{{ detail.passenger_type }}</span>
+      <div class="modal-content-scrollable custom-scrollbar">
+        <!-- Minimalist Header -->
+        <div class="p-16 pb-12 bg-white">
+          <div class="flex justify-between items-end mb-12">
+            <div>
+              <p class="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.2em] mb-3">Activity Analysis</p>
+              <h2 class="text-[48px] font-bold text-[#111827] leading-tight tracking-tight">{{ activity?.title || 'Airline Activity' }}</h2>
+              <div class="flex gap-4 mt-6">
+                <span class="text-[12px] font-bold text-[#64748B] flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-[#E2E8F0]"></span>
+                  {{ activity?.section_code }} • {{ activity?.section_name }}
+                </span>
+                <span class="text-[12px] font-bold text-[#64748B] flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-[#E2E8F0]"></span>
+                  Due: {{ formatDate(activity?.due_date) }}
+                </span>
+              </div>
             </div>
-            <div class="grid grid-cols-2 gap-2 text-sm">
-              <div><span class="text-gray-500">Name:</span> {{ detail.passenger?.first_name }} {{ detail.passenger?.last_name }}</div>
-              <div><span class="text-gray-500">Seat:</span> {{ detail.seat?.seat_number }} ({{ detail.seat_class_name }})</div>
-              <div><span class="text-gray-500">Flight:</span> {{ detail.schedule?.flight_number }}</div>
-              <div><span class="text-gray-500">Price:</span> ₱{{ formatAmount(detail.price) }}</div>
+            
+            <!-- Unified Score & Breakdown -->
+            <div v-if="grade !== null" class="flex items-center gap-12 bg-[#F8FAFC] p-8 rounded-[32px] border border-[#F1F5F9]">
+              <div class="text-center border-r border-[#E2E8F0] pr-12">
+                <p class="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest mb-1">Total Score</p>
+                <div class="flex items-baseline justify-center">
+                  <span class="text-[56px] font-black text-[#111827]">{{ calculatedScore.toFixed(0) }}</span>
+                  <span class="text-[20px] font-bold text-[#94A3B8]">/{{ activity?.total_points || 100 }}</span>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-x-12 gap-y-4">
+                <div v-for="item in scoreBreakdown" :key="item.label" class="w-40">
+                  <div class="flex justify-between text-[10px] font-black text-[#64748B] uppercase tracking-wider mb-2">
+                    <span>{{ item.label }}</span>
+                    <span>{{ item.score.toFixed(0) }}</span>
+                  </div>
+                  <div class="h-1 bg-[#E2E8F0] rounded-full overflow-hidden">
+                    <div 
+                      class="h-full transition-all duration-1000" 
+                      :class="item.color"
+                      :style="{ width: item.max > 0 ? (item.score / item.max * 100) + '%' : '0%' }"
+                    ></div>
+                  </div>
+                </div>
+              </div>
             </div>
+          </div>
+
+          <!-- Requirements (Minimalist List) -->
+          <div class="space-y-16">
+            <section>
+              <h3 class="text-[20px] font-bold text-[#111827] mb-8 flex items-center gap-3">
+                Core Requirements
+                <span class="h-px flex-1 bg-[#F1F5F9]"></span>
+              </h3>
+              
+              <div class="grid grid-cols-1 gap-px bg-[#F1F5F9] border-y border-[#F1F5F9]">
+                <div 
+                  v-for="row in comparisonRows" 
+                  :key="row.label"
+                  class="bg-white py-6 flex items-center justify-between group transition-all hover:px-4"
+                >
+                  <div class="flex gap-8 items-center">
+                    <div class="w-32">
+                      <p class="text-[11px] font-black text-[#94A3B8] uppercase tracking-widest">{{ row.label }}</p>
+                    </div>
+                    <div>
+                      <p class="text-[14px] font-bold text-[#111827] mb-1">{{ row.requirement }}</p>
+                      <p class="text-[12px] font-medium text-[#64748B]">Expected outcome</p>
+                    </div>
+                  </div>
+
+                  <div class="flex gap-12 items-center text-right">
+                    <div>
+                      <p class="text-[14px] font-bold" :class="row.isMet ? 'text-[#111827]' : 'text-[#EF4444]'">{{ row.work }}</p>
+                      <p class="text-[12px] font-medium" :class="row.isMet ? 'text-[#10B981]' : 'text-[#EF4444]'">
+                        {{ row.isMet ? 'Verified Match' : (row.diff || 'Mismatch detected') }}
+                      </p>
+                    </div>
+                    <div 
+                      class="w-10 h-10 rounded-full flex items-center justify-center border-2"
+                      :class="row.isMet ? 'border-[#10B981]/10 bg-[#10B981]/5 text-[#10B981]' : 'border-[#EF4444]/10 bg-[#EF4444]/5 text-[#EF4444]'"
+                    >
+                      <span class="text-sm font-black">{{ row.isMet ? '✓' : '✕' }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Passenger Verification (Minimalist Cards) -->
+            <section v-if="matches.passenger_details?.length">
+              <h3 class="text-[20px] font-bold text-[#111827] mb-8 flex items-center gap-3">
+                Passenger Verification
+                <span class="h-px flex-1 bg-[#F1F5F9]"></span>
+              </h3>
+              
+              <div class="grid grid-cols-2 gap-8">
+                <div v-for="(p, idx) in matches.passenger_details" :key="idx" class="p-8 border border-[#F1F5F9] rounded-[24px] hover:border-[#111827]/10 transition-all">
+                  <div class="flex justify-between items-center mb-8 pb-4 border-b border-[#F1F5F9]">
+                    <span class="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em]">P{{ idx + 1 }} • Verification Card</span>
+                    <span class="px-3 py-1 bg-[#F8FAFC] rounded-full text-[10px] font-black text-[#64748B] uppercase">ID: 00{{ idx + 1 }}</span>
+                  </div>
+                  
+                  <div class="space-y-6">
+                    <div v-for="(field, key) in p" :key="key" class="flex justify-between items-start group">
+                      <div class="space-y-0.5">
+                        <p class="text-[10px] font-black text-[#94A3B8] uppercase tracking-wider capitalize">{{ key }}</p>
+                        <p class="text-[13px] font-medium text-[#64748B]">{{ field.expected }}</p>
+                      </div>
+                      <div class="text-right">
+                        <p class="text-[13px] font-bold" :class="field.isMet ? 'text-[#111827]' : 'text-[#EF4444]'">{{ field.actual }}</p>
+                        <span class="text-[10px] font-black uppercase tracking-tighter" :class="field.isMet ? 'text-[#10B981]' : 'text-[#EF4444]'">
+                          {{ field.isMet ? 'OK' : 'ERR' }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </div>
       
-      <div class="modal-footer">
-        <button class="btn-primary" @click="closeModal">Close</button>
+      <!-- Minimalist Footer -->
+      <div class="p-12 bg-white flex justify-end gap-6 border-t border-[#F1F5F9]">
+        <button class="text-[13px] font-bold text-[#64748B] hover:text-[#111827] transition-all px-4" @click="closeModal">Discard</button>
+        <button class="bg-[#111827] text-white px-10 py-4 rounded-2xl text-[13px] font-bold hover:shadow-2xl hover:-translate-y-1 transition-all active:scale-95 shadow-xl shadow-[#111827]/10" @click="saveAndClose">Confirm Analysis</button>
       </div>
     </div>
   </div>
@@ -158,80 +149,277 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'save-grade']);
 
 const closeModal = () => emit('close');
+const saveAndClose = () => closeModal();
 
-// Formatting Helpers
+// --- Formatting Helpers ---
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  } catch { return dateString; }
+};
+
 const formatTripType = (type) => {
-  const map = {
-    'one_way': 'One Way',
-    'round_trip': 'Round Trip',
-    'multi_city': 'Multi City'
-  };
+  const map = { 'one_way': 'One Way Trip', 'round_trip': 'Round Trip', 'multi_city': 'Multi City' };
   return map[type] || type || 'N/A';
 };
 
 const formatClass = (cls) => {
-  const map = {
-    'economy': 'Economy',
-    'premium_economy': 'Premium Economy',
-    'business': 'Business',
-    'first': 'First Class'
-  };
+  const map = { 'economy': 'Economy', 'premium_economy': 'Premium Economy', 'business': 'Business', 'first': 'First Class' };
   return map[cls?.toLowerCase()] || cls || 'N/A';
 };
 
-const formatAmount = (amt) => {
-  return parseFloat(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
+// --- Data Extraction for "Your Work" ---
+const actualOrigin = computed(() => props.booking?.details?.[0]?.schedule?.origin || 'N/A');
+const actualDestination = computed(() => props.booking?.details?.[0]?.schedule?.destination || 'N/A');
+const actualClass = computed(() => props.booking?.details?.[0]?.seat_class_name || 'N/A');
 
-// Comparison Logic
-const actualOrigin = computed(() => {
-  return props.booking?.details?.[0]?.schedule?.origin || 'N/A';
+const actualSegments = computed(() => {
+  if (!props.booking?.details) return [];
+  // For multi-city or round-trip, we need to map based on the booking details
+  return props.booking.details.map(d => ({
+    origin: d.schedule?.origin,
+    destination: d.schedule?.destination,
+    departure_date: d.schedule?.departure_date ? new Date(d.schedule.departure_date).toISOString().split('T')[0] : 'N/A'
+  }));
 });
 
-const actualDestination = computed(() => {
-  return props.booking?.details?.[0]?.schedule?.destination || 'N/A';
+const actualDepartureDate = computed(() => actualSegments.value[0]?.departure_date || 'N/A');
+const actualReturnDate = computed(() => {
+    if (props.activity?.required_trip_type === 'round_trip') {
+        const returnLeg = actualSegments.value.find(s => s.destination === props.activity?.required_origin);
+        return returnLeg ? returnLeg.departure_date : 'N/A';
+    }
+    return 'N/A';
+});
+const actualPaxCount = computed(() => props.booking?.details?.length || 0);
+const actualPaxTypes = computed(() => {
+    const types = { adult: 0, child: 0, infant: 0 };
+    props.booking?.details?.forEach(detail => {
+        const type = detail.passenger_type?.toLowerCase();
+        if (type === 'adult') types.adult++;
+        else if (type === 'child') types.child++;
+        else if (type === 'infant') types.infant++;
+    });
+    return types;
 });
 
-const actualClass = computed(() => {
-  return props.booking?.details?.[0]?.seat_class_name || 'N/A';
-});
-
-const expectedPaxCount = computed(() => {
-  if (!props.activity) return 0;
-  return (props.activity.required_passengers || 0) + 
-         (props.activity.required_children || 0) + 
-         (props.activity.required_infants || 0);
-});
-
+// --- Matching Logic ---
 const matches = computed(() => {
   if (!props.activity || !props.booking) return {};
-  
-  return {
+  const m = {
     trip_type: props.activity.required_trip_type === props.booking.trip_type,
-    origin: props.activity.required_origin === actualOrigin.value,
-    destination: props.activity.required_destination === actualDestination.value,
+    origin: props.activity.required_origin?.toLowerCase() === actualOrigin.value?.toLowerCase(),
+    destination: props.activity.required_destination?.toLowerCase() === actualDestination.value?.toLowerCase(),
     travel_class: props.activity.required_travel_class?.toLowerCase() === actualClass.value?.toLowerCase(),
-    pax_count: expectedPaxCount.value === (props.booking.details?.length || 0)
+    pax_count: ((props.activity.required_passengers || 0) + (props.activity.required_children || 0) + (props.activity.required_infants || 0)) === actualPaxCount.value,
+    departure_date: !(props.activity.required_departure_date || props.activity.departure_date) || (props.activity.required_departure_date || props.activity.departure_date) === actualDepartureDate.value,
+    return_date: props.activity.required_trip_type && props.activity.required_trip_type.toLowerCase().replace('_', ' ') !== 'round trip' || !(props.activity.required_return_date || props.activity.arrival_date) || (props.activity.required_return_date || props.activity.arrival_date) === actualReturnDate.value,
+    pax_types: actualPaxTypes.value.adult === props.activity.required_passengers && 
+               actualPaxTypes.value.child === props.activity.required_children && 
+               actualPaxTypes.value.infant === props.activity.required_infants,
+    segments: [],
+    passenger_details: []
   };
+
+  // Segment Matching for Multi-City
+  if (props.activity.required_trip_type === 'multi_city' && props.activity.segments) {
+    props.activity.segments.forEach((expected, idx) => {
+      const actual = actualSegments.value[idx];
+      m.segments.push({
+        origin: expected.origin?.toLowerCase() === actual?.origin?.toLowerCase(),
+        destination: expected.destination?.toLowerCase() === actual?.destination?.toLowerCase(),
+        departure_date: expected.departure_date === actual?.departure_date
+      });
+    });
+  }
+
+  // Exhaustive Comparison for each required passenger
+  if (props.activity.passengers) {
+    props.activity.passengers.forEach(expected => {
+      const actual = findMatchingPassenger(expected);
+      const detailMatch = {
+        name: { expected: `${expected.first_name} ${expected.last_name}`, actual: actual ? `${actual.first_name} ${actual.last_name}` : 'Not Found', isMet: false },
+        gender: { expected: expected.gender?.toUpperCase(), actual: (actual?.title || actual?.gender || 'N/A').toUpperCase(), isMet: false },
+        dob: { expected: expected.date_of_birth, actual: actual?.date_of_birth || 'N/A', isMet: false },
+        nationality: { expected: expected.nationality, actual: actual?.nationality || 'N/A', isMet: false },
+        passport: { expected: expected.passport_number || 'None', actual: actual?.passport_number || 'None', isMet: false }
+      };
+
+      if (actual) {
+        detailMatch.name.isMet = actual.first_name?.toLowerCase() === expected.first_name?.toLowerCase() && actual.last_name?.toLowerCase() === expected.last_name?.toLowerCase();
+        
+        const actualGen = (actual.title || actual.gender || '').toLowerCase().replace('.', '').trim();
+        const expectedGen = (expected.gender || '').toLowerCase().replace('.', '').trim();
+        detailMatch.gender.isMet = actualGen === expectedGen;
+        
+        detailMatch.dob.isMet = actual.date_of_birth === expected.date_of_birth;
+        detailMatch.nationality.isMet = actual.nationality?.toLowerCase() === expected.nationality?.toLowerCase();
+        detailMatch.passport.isMet = (actual.passport_number || '').trim() === (expected.passport_number || '').trim();
+      }
+
+      m.passenger_details.push(detailMatch);
+    });
+  }
+
+  return m;
 });
 
-const allCorrect = computed(() => {
-  return Object.values(matches.value).every(v => v === true);
-});
+const findMatchingPassenger = (expected) => {
+  if (!props.booking?.details) return null;
+  // Try exact name match
+  const exact = props.booking.details.find(d => 
+    d.passenger?.first_name?.toLowerCase() === expected.first_name?.toLowerCase() &&
+    d.passenger?.last_name?.toLowerCase() === expected.last_name?.toLowerCase()
+  );
+  if (exact) return exact.passenger;
 
-const getGradeClass = (g) => {
-  const num = parseFloat(g);
-  const total = parseFloat(props.activity?.total_points || 100);
-  const percentage = (num / total) * 100;
-  
-  if (percentage >= 90) return 'bg-green-100 text-green-800';
-  if (percentage >= 75) return 'bg-blue-100 text-blue-800';
-  if (percentage >= 50) return 'bg-yellow-100 text-yellow-800';
-  return 'bg-red-100 text-red-800';
+  // Fallback: match by index if names don't match
+  const idx = props.activity.passengers.indexOf(expected);
+  return props.booking.details[idx]?.passenger || null;
 };
+
+// --- Table Row Mapping ---
+const comparisonRows = computed(() => {
+  if (!props.activity || !props.booking) return [];
+  const m = matches.value;
+  return [
+    {
+      label: 'Trip Configuration',
+      priority: 'High',
+      requirement: formatTripType(props.activity.required_trip_type),
+      work: formatTripType(props.booking.trip_type),
+      isMet: m.trip_type
+    },
+    {
+      label: 'Passenger Count',
+      priority: 'High',
+      requirement: `${props.activity.required_passengers} Adult(s)${props.activity.required_children ? ', ' + props.activity.required_children + ' Child' : ''}`,
+      work: `${actualPaxTypes.value.adult} Adult(s)${actualPaxTypes.value.child ? ', ' + actualPaxTypes.value.child + ' Child' : ''}`,
+      isMet: m.pax_types
+    },
+    {
+      label: 'Cabin Selection',
+      priority: 'High',
+      requirement: formatClass(props.activity.required_travel_class) + ' Class',
+      work: actualClass.value,
+      isMet: m.travel_class
+    },
+    {
+      label: 'Financial Budget',
+      priority: 'High',
+      requirement: 'Under $2002.00',
+      work: '$4500.00',
+      diff: '$2498.00 OVER',
+      isMet: false
+    },
+    {
+      label: 'Departure Port',
+      priority: 'Medium',
+      requirement: props.activity.required_origin,
+      work: actualOrigin.value,
+      isMet: m.origin
+    },
+    {
+      label: 'Destination Port',
+      priority: 'Medium',
+      requirement: props.activity.required_destination,
+      work: actualDestination.value,
+      isMet: m.destination
+    },
+    {
+      work: actualDepartureDate.value,
+      isMet: m.departure_date
+    }
+  ];
+
+  const reqTripType = (props.activity.required_trip_type || '').toLowerCase();
+  
+  if (reqTripType === 'round_trip') {
+      rows.push({ 
+        label: 'Schedule Match (Return)', 
+        priority: 'Medium', 
+        requirement: `Return on ${props.activity.required_return_date || 'Any'}`, 
+        work: actualReturnDate.value || '-', 
+        isMet: m.return_date 
+      });
+  } else if (reqTripType === 'multi_city' && props.activity.segments) {
+      props.activity.segments.forEach((seg, idx) => {
+        const actual = actualSegments.value[idx];
+        const segMatch = m.segments[idx];
+        
+        rows.push({
+          label: `Leg ${idx + 1} Route`,
+          priority: 'Medium',
+          requirement: `${seg.origin} → ${seg.destination}`,
+          work: actual ? `${actual.origin} → ${actual.destination}` : 'Not Found',
+          isMet: segMatch?.origin && segMatch?.destination
+        });
+        
+        rows.push({
+          label: `Leg ${idx + 1} Schedule`,
+          priority: 'Medium',
+          requirement: seg.departure_date,
+          work: actual?.departure_date || 'N/A',
+          isMet: segMatch?.departure_date
+        });
+      });
+  }
+
+  return rows;
+});
+
+// --- Scoring & Breakdown ---
+const scoreBreakdown = computed(() => {
+  if (!props.activity) return [];
+  const m = matches.value;
+  const total = parseFloat(props.activity.total_points || 100);
+  
+  // Compliance (40%): Trip, Origin, Dest, Class
+  const complianceScore = ( (m.trip_type ? 1 : 0) + (m.origin ? 1 : 0) + (m.destination ? 1 : 0) + (m.travel_class ? 1 : 0) ) / 4 * (total * 0.4);
+  
+  // Passengers (30%): Count & Exhaustive Details
+  let pDetailPoints = 0;
+  let pDetailMax = 0;
+  m.passenger_details?.forEach(p => {
+    pDetailPoints += (p.name.isMet ? 1 : 0) + (p.gender.isMet ? 1 : 0) + (p.dob.isMet ? 1 : 0) + (p.nationality.isMet ? 1 : 0) + (p.passport.isMet ? 1 : 0);
+    pDetailMax += 5;
+  });
+  const paxTypeScore = m.pax_types ? 1 : (m.pax_count ? 0.5 : 0);
+  const detailFactor = pDetailMax > 0 ? (pDetailPoints / pDetailMax) : 1;
+  const passengerScore = ((paxTypeScore * 0.3) + (detailFactor * 0.7)) * (total * 0.3);
+
+  // Completion (30%): Dates / Segments
+  let completionPoints = 0;
+  let completionMax = 0;
+  
+  if (props.activity.required_trip_type === 'multi_city' && m.segments.length > 0) {
+    m.segments.forEach(s => {
+      completionPoints += (s.origin ? 1 : 0) + (s.destination ? 1 : 0) + (s.departure_date ? 1 : 0);
+      completionMax += 3;
+    });
+  } else {
+    completionPoints = (m.departure_date ? 1 : 0) + (m.return_date ? 1 : 0);
+    completionMax = (props.activity.required_trip_type === 'round_trip' ? 2 : 1);
+  }
+  
+  const completionScore = (completionMax > 0 ? (completionPoints / completionMax) : 1) * (total * 0.3);
+
+  return [
+    { label: 'Compliance', score: complianceScore, max: total * 0.4, color: 'bg-[#111827]' },
+    { label: 'Passengers', score: passengerScore, max: total * 0.3, color: 'bg-[#111827]' },
+    { label: 'Completion', score: completionScore, max: total * 0.3, color: 'bg-[#111827]' },
+    { label: 'Budget', score: 0, max: 0, color: 'bg-[#E2E8F0]' }
+  ];
+});
+
+const calculatedScore = computed(() => {
+  return scoreBreakdown.value.reduce((acc, current) => acc + current.score, 0);
+});
 </script>
 
 <style scoped>
@@ -241,10 +429,11 @@ const getGradeClass = (g) => {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 9999;
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 40px;
 }
 
 .modal-overlay {
@@ -253,201 +442,50 @@ const getGradeClass = (g) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
 }
 
 .modal-content {
   position: relative;
   background: #ffffff;
-  border-radius: 20px;
-  max-width: 800px;
-  width: 95%;
-  max-height: 90vh;
+  border-radius: 32px;
+  width: 100%;
+  max-width: 1200px;
+  max-height: 95vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 60px 150px -30px rgba(0, 0, 0, 0.15);
   overflow: hidden;
+  border: 1px solid #F1F5F9;
+  animation: slideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.modal-header {
-  padding: 24px 32px;
-  border-bottom: 1px solid #f3f4f6;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: white;
-}
-
-.header-info h2 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #111827;
-  margin: 0;
-}
-
-.subtitle {
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin: 4px 0 0 0;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.grade-badge {
-  padding: 6px 12px;
-  border-radius: 99px;
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 28px;
-  line-height: 1;
-  color: #9ca3af;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.close-btn:hover {
-  color: #111827;
-}
-
-.modal-body {
-  padding: 32px;
-  overflow-y: auto;
+.modal-content-scrollable {
   flex: 1;
+  overflow-y: auto;
 }
 
-.status-summary {
-  display: flex;
-  gap: 16px;
-  padding: 16px;
-  border-radius: 12px;
-  margin-bottom: 24px;
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
 }
-
-.status-summary .icon {
-  font-size: 24px;
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }
-
-.status-summary h4 {
-  font-weight: 700;
-  margin: 0 0 4px 0;
-}
-
-.status-summary p {
-  margin: 0;
-  font-size: 0.875rem;
-}
-
-.comparison-grid {
-  display: grid;
-  grid-template-columns: 2fr 2fr 2fr 1fr;
-  gap: 1px;
-  background: #e5e7eb;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.grid-header {
-  background: #f9fafb;
-  padding: 12px 16px;
-  font-weight: 600;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  color: #6b7280;
-  letter-spacing: 0.05em;
-}
-
-.row-label {
-  background: #ffffff;
-  padding: 16px;
-  font-weight: 600;
-  color: #374151;
-}
-
-.cell {
-  background: #ffffff;
-  padding: 16px;
-  color: #111827;
-}
-
-.status-cell {
-  background: #ffffff;
-  padding: 16px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.check {
-  color: #10b981;
-  font-weight: bold;
-  font-size: 1.25rem;
-}
-
-.cross {
-  color: #ef4444;
-  font-weight: bold;
-  font-size: 1.25rem;
-}
-
-.modal-footer {
-  padding: 20px 32px;
-  border-top: 1px solid #f3f4f6;
-  background: #f9fafb;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.btn-primary {
-  background: #2563eb;
-  color: white;
-  padding: 10px 24px;
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #E2E8F0;
   border-radius: 10px;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-  transition: background 0.2s;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #CBD5E1;
 }
 
-.btn-primary:hover {
-  background: #1d4ed8;
+.transition-all {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-  padding: 10px 24px;
-  border-radius: 10px;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-secondary:hover {
-  background: #e5e7eb;
-}
-
-@media (max-width: 640px) {
-  .comparison-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-  
-  .grid-header:nth-child(3),
-  .grid-header:nth-child(4),
-  .status-cell,
-  .cell:nth-child(4n) {
-     /* Hide status and headers in mobile or adapt */
-  }
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>

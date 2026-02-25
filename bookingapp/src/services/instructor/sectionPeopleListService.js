@@ -4,5 +4,9 @@ export const sectionPeopleListService = {
     async getEnrolledStudents(sectionId) {
         const response = await api.get(`api/instructor/sections/${sectionId}/students/`);
         return response.data;
+    },
+    async unenrollStudent(sectionId, studentId) {
+        const response = await api.delete(`api/instructor/sections/${sectionId}/enroll/${studentId}/`);
+        return response.data;
     }
 };

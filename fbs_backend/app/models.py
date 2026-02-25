@@ -67,9 +67,8 @@ class Students(models.Model):
     
     # Add this new field
     GENDER_CHOICES = [
-        ('male', 'Male'),
-        ('female', 'Female'),
-        ('other', 'Other'),
+        ('mr', 'Mr.'),
+        ('mrs', 'Mrs.'),
     ]
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True, null=True)
     

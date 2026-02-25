@@ -135,7 +135,7 @@ export default {
       this.loading = true
 
       try {
-        console.log('🔐 Attempting login for:', this.username)
+        console.log('🔐 Attempting login for:', this.username);
         
         // 1. Send Login Request
         const { token, user, role, dashboard_route } = await authService.login(this.username, this.password);
@@ -163,22 +163,23 @@ export default {
         }, 500)
         
       } catch (err) {
+        console.error('❌ LOGIN ERROR:', err);
         if (err.response) {
-          const data = err.response.data
+          const data = err.response.data;
           if (err.response?.status === 401 || err.response?.status === 400) {
-            const errorMsg = data.non_field_errors?.[0] || data.error || data.detail || 'Invalid username or password'
-            this.notificationStore.error(errorMsg)
+            const errorMsg = data.non_field_errors?.[0] || data.error || data.detail || 'Invalid username or password';
+            this.notificationStore.error(errorMsg);
           } else {
-            const msg = data.error || data.detail || data.message || 'An error occurred during login.'
-            this.notificationStore.error(msg)
+            const msg = data.error || data.detail || data.message || 'An error occurred during login.';
+            this.notificationStore.error(msg);
           }
         } else if (err.message === 'NOT_ENROLLED') {
-          this.notificationStore.error('You are not enrolled. Please contact your instructor or administrator.')
+          this.notificationStore.error('You are not enrolled. Please contact your instructor or administrator.');
         } else {
-          this.notificationStore.error('Login failed. Please check your internet connection.')
+          this.notificationStore.error('Login failed. Please check your internet connection.');
         }
       } finally {
-        this.loading = false
+        this.loading = false;
       }
     }
   }

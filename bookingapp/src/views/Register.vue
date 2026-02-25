@@ -15,14 +15,15 @@
 
       <div class="container mx-auto px-6 py-12">
         <div class="grid lg:grid-cols-3 gap-8 items-start">
-          <div class="lg:col-span-1"></div> 
-          
+          <div class="lg:col-span-1"></div>
+
           <div class="lg:col-span-1">
             <div class="rounded-lg shadow-2xl p-8" style="background-color: #F9FAFB;">
               <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center">Create Account</h2>
               <p class="text-gray-500 text-sm text-center mb-6">Register to access the platform.</p>
 
               <div class="space-y-4">
+                <!-- Role Selector -->
                 <div>
                   <label class="block text-gray-700 font-semibold mb-1">I am a:</label>
                   <select v-model="form.role" class="w-full px-4 py-2 border rounded-lg focus:outline-none bg-white">
@@ -31,6 +32,7 @@
                   </select>
                 </div>
 
+                <!-- Username + ID -->
                 <div class="grid grid-cols-2 gap-2">
                   <div>
                     <label class="block text-gray-700 font-semibold mb-1">Username</label>
@@ -44,6 +46,7 @@
                   </div>
                 </div>
 
+                <!-- Name Fields -->
                 <div class="grid grid-cols-3 gap-2">
                   <div class="col-span-1">
                     <label class="block text-gray-700 font-semibold mb-1">First Name</label>
@@ -59,23 +62,44 @@
                   </div>
                 </div>
 
-                <div>
-                  <label class="block text-gray-700 font-semibold mb-1">Email</label>
-                  <input v-model="form.email" type="email" class="w-full px-4 py-2 border rounded-lg" placeholder="email@example.com" />
+                <!-- Email + Gender -->
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-gray-700 font-semibold mb-1">Email</label>
+                    <input v-model="form.email" type="email" class="w-full px-4 py-2 border rounded-lg" placeholder="email@example.com" />
+                  </div>
+                  <div>
+                    <label class="block text-gray-700 font-semibold mb-1">Gender</label>
+                    <select v-model="form.gender" class="w-full px-4 py-2 border rounded-lg focus:outline-none bg-white">
+                      <option value="" disabled>Select</option>
+                      <option value="mr">Mr.</option>
+                      <option value="mrs">Mrs.</option>
+                    </select>
+                  </div>
                 </div>
 
+                <!-- Password -->
                 <div>
                   <label class="block text-gray-700 font-semibold mb-1">Password</label>
                   <input v-model="form.password" type="password" class="w-full px-4 py-2 border rounded-lg" placeholder="••••••••" />
                 </div>
 
-                <button @click="handleRegister" :disabled="loading" class="w-full font-bold py-3 rounded-lg mt-4 transition-all hover:opacity-90" style="background-color: #FF579A; color: #F9FAFB;">
+                <!-- Inline Error -->
+                <p v-if="error" class="text-red-600 text-sm text-center font-medium bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {{ error }}
+                </p>
+
+                <!-- Submit Button -->
+                <button
+                  @click="handleRegister"
+                  :disabled="loading"
+                  class="w-full font-bold py-3 rounded-lg mt-2 transition-all hover:opacity-90 disabled:opacity-60"
+                  style="background-color: #FF579A; color: #F9FAFB;"
+                >
                   <span v-if="loading">Processing Registration...</span>
                   <span v-else>Register as {{ form.role.charAt(0).toUpperCase() + form.role.slice(1) }}</span>
                 </button>
 
-                <p v-if="error" class="text-red-500 text-sm text-center mt-4 font-medium">{{ error }}</p>
-                
                 <div class="text-center mt-4">
                   <router-link to="/login" class="text-sm font-semibold" style="color: #0E8028;">
                     Already have an account? Login here
@@ -111,6 +135,7 @@ export default {
         mi: '',
         last_name: '',
         email: '',
+        gender: '',
         password: ''
       },
       loading: false,
@@ -124,30 +149,67 @@ export default {
   },
   methods: {
     async handleRegister() {
-      // Basic validation
-      if (!this.form.username || !this.form.password || !this.form.id_number) {
-        this.notificationStore.warn("Please fill in all required fields.");
-        return;
+      // Clear previous error
+      this.error = null
+
+      // ---- Validate all required fields ----
+      if (!this.form.username.trim()) {
+        this.error = 'Username is required.'
+        return
+      }
+      if (!this.form.id_number.trim()) {
+        this.error = `${this.form.role === 'student' ? 'Student' : 'Instructor'} ID is required.`
+        return
+      }
+      if (!this.form.first_name.trim() || !this.form.last_name.trim()) {
+        this.error = 'First name and last name are required.'
+        return
+      }
+      if (!this.form.email.trim()) {
+        this.error = 'Email is required.'
+        return
+      }
+      if (!this.form.password.trim()) {
+        this.error = 'Password is required.'
+        return
       }
 
-      this.loading = true;
-      this.error = null;
+      this.loading = true
 
       try {
-        // This hits your fbs_instructor/views.py register_view
-        await authService.register(this.form);
-        
-        this.notificationStore.success("Account Created Successfully! Redirecting to login...");
+        await authService.register(this.form)
+
+        this.notificationStore.success('Account created successfully! Redirecting to login...')
         setTimeout(() => {
-             this.$router.push('/login');
-        }, 1500);
-       
+          this.$router.push('/login')
+        }, 1500)
+
       } catch (err) {
-        // Capture the error from Django (e.g., "Username already taken")
-        const msg = err.response?.data?.error || "Registration failed. Try a different username/ID.";
-        this.notificationStore.error(msg);
+        console.error('Registration error:', err)
+        console.error('Response data:', err.response?.data)
+        console.error('Response status:', err.response?.status)
+
+        let msg
+        if (!err.response) {
+          // Network error - backend not running or CORS issue
+          msg = 'Cannot connect to server. Please make sure the server is running.'
+        } else {
+          // Try multiple error formats from Django/DRF
+          const data = err.response.data
+          msg = data?.error
+            || data?.detail
+            || data?.non_field_errors?.[0]
+            || data?.username?.[0]
+            || data?.email?.[0]
+            || data?.id_number?.[0]
+            || (typeof data === 'string' ? data : null)
+            || `Registration failed (${err.response.status}). Please try again.`
+        }
+
+        this.error = msg
+        this.notificationStore.error(msg)
       } finally {
-        this.loading = false;
+        this.loading = false
       }
     }
   }

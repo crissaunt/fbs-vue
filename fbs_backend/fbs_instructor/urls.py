@@ -7,17 +7,20 @@ from .views import (
     register_view,
     EnrollStudentView,
     Enroll_Student_list,
+    UnenrollStudentView,
     create_activity,
     delete_activity,
     activity_details,
     activate_activity,
-    student_dashboard,
-    get_activity_submissions,
     student_activity_details,
+    submit_grade,
+    release_activity_grades,
     validate_session,
     list_sessions,
     logout_view,
+    get_activity_submissions,
     update_profile,
+    update_section,
     admin_lms_overview,
 )
 
@@ -35,8 +38,10 @@ urlpatterns = [
 
     # Section Management
     path('instructor/sections/<int:section_id>/', section_details, name='section_details'),
+    path('instructor/sections/<int:section_id>/update/', update_section, name='update_section'),
     path('instructor/sections/<int:section_id>/enroll/', EnrollStudentView.as_view(), name='enroll-student'),
     path('instructor/sections/<int:section_id>/students/', Enroll_Student_list, name='Enroll_Student_list'),
+    path('instructor/sections/<int:section_id>/enroll/<int:student_id>/', UnenrollStudentView.as_view(), name='unenroll-student'),
     
     # Activity Management - Create & Delete
     path('instructor/sections/<int:section_id>/activities/create/', create_activity, name='api_create_activity'),
@@ -46,6 +51,8 @@ urlpatterns = [
     path('instructor/activities/<int:activity_id>/', activity_details, name='activity-details'),
     path('instructor/activities/<int:activity_id>/submissions/', get_activity_submissions, name='activity-submissions'),
     path('instructor/activity/<int:activity_id>/activate/', activate_activity, name='activate_activity'),
+    path('instructor/activities/<int:activity_id>/submissions/<int:student_id>/grade/', submit_grade, name='submit-grade'),
+    path('instructor/activities/<int:activity_id>/release-grades/', release_activity_grades, name='release-grades'),
 
     # ============================================
     # STUDENT URLS - ? FIXED

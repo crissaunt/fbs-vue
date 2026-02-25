@@ -25,6 +25,7 @@ import AirbusA321Layout from '@/components/seatmaps/AirbusA321Layout.vue';
 // Instructor Views
 import InstructorDashboard from '@/views/Instructor/instructor_dashboard.vue';
 import Activity_details from '@/views/Instructor/Activity/Activity_details.vue';
+import InstructorStudentScore from '@/views/Instructor/Activity/instructor_students_score.vue';
 
 // Student Views
 import StudentDashboard from '@/views/Student/Student_dashboard.vue';
@@ -59,15 +60,27 @@ const routes = [
     meta: { requiresAuth: true, role: 'instructor' }
   },
   {
-    path: '/instructor/section/:id/people',
-    name: 'SectionPeople',
+    path: '/instructor/section/:id/student',
+    name: 'SectionStudent',
     component: () => import('@/views/Instructor/Section_student_list.vue'),
+    meta: { requiresAuth: true, role: 'instructor' }
+  },
+  {
+    path: '/instructor/section/:id/settings',
+    name: 'CourseSettings',
+    component: () => import('@/views/Instructor/Course_settings.vue'),
     meta: { requiresAuth: true, role: 'instructor' }
   },
   {
     path: '/instructor/activity/:activityId',
     name: 'ActivityDetails',
     component: Activity_details,
+    meta: { requiresAuth: true, role: 'instructor' }
+  },
+  {
+    path: '/instructor/activity/:activityId/student/:studentId/score',
+    name: 'InstructorStudentScore',
+    component: InstructorStudentScore,
     meta: { requiresAuth: true, role: 'instructor' }
   },
   {
@@ -186,23 +199,33 @@ router.beforeEach((to, from, next) => {
 
   const token = AuthStorage.getToken();
   const userRole = AuthStorage.getRole();
+  // Full check: requires token + sessionId + role to be a valid active session
+  const isFullyAuthenticated = AuthStorage.isAuthenticated();
 
   console.log('🛡️ Router Guard:', to.path);
   console.log('🔑 Token exists:', !!token);
+  console.log('✅ Fully authenticated:', isFullyAuthenticated);
   console.log('🔒 Requires Auth:', to.meta.requiresAuth);
 
   // 1. Guest Only Routes (Login/Register)
   if (to.matched.some(record => record.meta.guestOnly)) {
-    if (token) {
+    // Only redirect if there's a REAL active session (token + sessionId + role)
+    if (isFullyAuthenticated) {
       console.log('👤 Authenticated user attempting to visit guest route - Redirecting...');
       if (userRole === 'instructor') {
         return next('/instructor/dashboard');
-      } else {
+      } else if (userRole === 'student') {
         return next('/student/dashboard');
+      } else {
+        // Admin or unknown roles: clear stale session and let them through
+        AuthStorage.clearCurrentSession();
+        return next();
       }
     }
+    // No valid session — allow access to login/register
     return next();
   }
+
 
   // 2. Requires Authentication
   if (to.matched.some(record => record.meta.requiresAuth)) {
@@ -217,8 +240,11 @@ router.beforeEach((to, from, next) => {
       notificationStore.error('You do not have permission to access that page.');
       if (userRole === 'instructor') {
         return next('/instructor/dashboard');
-      } else {
+      } else if (userRole === 'student') {
         return next('/student/dashboard');
+      } else {
+        // Admin or unknown role: no dedicated route in this app
+        return next('/login');
       }
     }
 
@@ -241,8 +267,16 @@ router.beforeEach((to, from, next) => {
   if (to.matched.some(record => record.meta.isBookingProtected)) {
     if (!bookingStore.hasActivityCodeValidation) {
       console.log('❌ Authenticated user without activity code in booking area');
-      notificationStore.info('Please enter an activity code or select practice mode to start booking.');
-      return next('/student/dashboard');
+      // Only students use the booking flow; redirect others appropriately
+      if (userRole === 'instructor') {
+        return next('/instructor/dashboard');
+      } else if (userRole === 'student') {
+        notificationStore.info('Please enter an activity code or select practice mode to start booking.');
+        return next('/student/dashboard');
+      } else {
+        // Admin or unknown: no booking flow access
+        return next('/login');
+      }
     }
   }
 

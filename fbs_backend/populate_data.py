@@ -1267,7 +1267,7 @@ def create_instructor_and_students(users):
                 'first_name': student_user.first_name,
                 'last_name': student_user.last_name,
                 'email': student_user.email,
-                'gender': 'male' if i % 2 == 0 else 'female'
+                'gender': 'mr' if i % 2 == 0 else 'mrs'
             }
         )
         students.append(student)

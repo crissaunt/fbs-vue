@@ -39,6 +39,9 @@ class Section(models.Model):
     schedule = models.CharField(max_length=100, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     
+    is_locked = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    
     instructor = models.ForeignKey(
         User, 
         on_delete=models.CASCADE, 
@@ -110,6 +113,7 @@ class Activity(models.Model):
     code_generated_at = models.DateTimeField(null=True, blank=True)
     
     status = models.CharField(max_length=20, choices=[('draft', 'Draft'), ('published', 'Published'), ('closed', 'Closed')], default='draft')
+    grades_released = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -120,13 +124,26 @@ class Activity(models.Model):
     def __str__(self):
         return self.title
 
+class ActivitySegment(models.Model):
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='segments')
+    origin = models.CharField(max_length=100)
+    destination = models.CharField(max_length=100)
+    departure_date = models.DateField()
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return f"{self.activity.title} - Leg {self.order + 1}: {self.origin} to {self.destination}"
+
 class ActivityPassenger(models.Model):
     activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='passengers')
     first_name = models.CharField(max_length=100)
     middle_name = models.CharField(max_length=100, blank=True, null=True)
     last_name = models.CharField(max_length=100)
     passenger_type = models.CharField(max_length=10, choices=[('adult', 'Adult'), ('child', 'Child'), ('infant', 'Infant')], default='adult')
-    gender = models.CharField(max_length=10, choices=[('male', 'Male'), ('female', 'Female'), ('other', 'Other')])
+    gender = models.CharField(max_length=10, choices=[('mr', 'Mr.'), ('mrs', 'Mrs.')])
     date_of_birth = models.DateField()
     passport_number = models.CharField(max_length=50, blank=True, null=True)
     nationality = models.CharField(max_length=100)

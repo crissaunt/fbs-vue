@@ -1,50 +1,58 @@
 <template>
   <div class="flex flex-col h-screen bg-gray-50 font-sans">
     <!-- Header -->
-    <div class="bg-gradient-to-r from-pink-500 to-pink-400 text-white px-6 py-4 flex items-center justify-between shadow-md z-20">
+    <div class="bg-gradient-to-r from-pink-500 to-pink-400 text-white px-6 py-2.5 flex items-center justify-between shadow-sm z-20 border-b border-pink-400">
       <div class="flex items-center gap-4">
-        <button @click="toggleSidebar" class="p-2 hover:bg-pink-600 rounded-lg transition-colors focus:outline-none">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <button @click="toggleSidebar" class="p-1.5 hover:bg-pink-600 rounded-md transition-colors focus:outline-none">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
           </svg>
         </button>
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-2xl shadow-inner">🎓</div>
+          <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-xl shadow-inner">🎓</div>
           <div>
-            <h1 class="text-sm font-bold uppercase tracking-tight">CABAGAN STATE UNIVERSITY</h1>
-            <p class="text-[10px] opacity-90">Cabagan City</p>
+            <h1 class="text-[10px] font-bold uppercase tracking-widest text-white/90">Cabagan State University</h1>
+            <p class="text-[9px] uppercase tracking-tighter opacity-60">Faculty Portal</p>
           </div>
         </div>
       </div>
 
       <div class="relative">
-        <button @click="toggleDropdown" class="flex items-center gap-3 hover:bg-pink-600 p-2 rounded-lg transition-colors focus:outline-none">
-          <span class="text-sm font-medium">{{ fullName }}</span>
-          <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden border-2 border-pink-300">
-            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 font-bold uppercase">{{ initials }}</div>
+        <button @click="toggleDropdown" class="flex items-center gap-2 hover:bg-slate-800 p-1.5 rounded-md transition-colors focus:outline-none">
+          <span class="text-xs font-medium">{{ fullName || 'Instructor' }}</span>
+          <div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center overflow-hidden border border-slate-600">
+             <div class="w-full h-full bg-slate-600 rounded-full flex items-center justify-center text-white text-xs font-bold uppercase">{{ initials }}</div>
           </div>
         </button>
         <div v-if="dropdownOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-100">
-          <button @click="handleLogout" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Logout</button>
+          <button @click="handleLogout" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">Logout</button>
         </div>
       </div>
     </div>
 
     <div class="flex flex-1 overflow-hidden">
       <!-- Sidebar -->
-      <div :class="['bg-gradient-to-b from-pink-500 to-pink-400 text-white transition-all duration-300 ease-in-out flex flex-col z-10 shadow-lg', sidebarOpen ? 'w-64' : 'w-20']">
+      <div :class="['bg-gradient-to-b from-pink-500 to-pink-400 text-white transition-all duration-300 ease-in-out flex flex-col z-10 shadow-lg border-r border-pink-400/20', sidebarOpen ? 'w-56' : 'w-16']">
         <div class="flex flex-col h-full overflow-y-auto">
-          <button @click="router.push('/instructor/dashboard')" class="flex items-center py-4 hover:bg-pink-600 transition-colors border-b border-pink-400 justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <button @click="router.push('/instructor/dashboard')" class="flex items-center py-3 hover:bg-pink-600 transition-colors border-b border-pink-400/20 justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
-            <span v-show="sidebarOpen" class="text-lg font-medium ml-3">Home</span>
+            <span v-show="sidebarOpen" class="text-sm font-medium ml-3">Home</span>
           </button>
-          <div v-for="section in sections" :key="section.id" @click="goToSection(section.id)" class="flex items-center py-3 px-6 hover:bg-pink-600 cursor-pointer transition-colors border-b border-pink-400/20">
-            <div class="w-8 h-8 rounded-full bg-white text-pink-500 flex items-center justify-center font-black text-xs flex-shrink-0 shadow-sm uppercase">
+          <div 
+            v-for="section in sections" 
+            :key="section.id" 
+            @click="goToSection(section.id)" 
+            :class="[
+              'flex items-center py-2.5 hover:bg-pink-600 cursor-pointer transition-colors border-b border-pink-400/10',
+              sidebarOpen ? 'px-5' : 'justify-center'
+            ]"
+          >
+            <div class="w-7 h-7 rounded-full bg-white text-pink-500 flex items-center justify-center font-bold text-[10px] flex-shrink-0 shadow-sm uppercase">
               {{ section.section_name ? section.section_name.charAt(0) : 'S' }}
             </div>
-            <span v-show="sidebarOpen" class="ml-3 truncate text-sm font-bold tracking-wide uppercase">{{ section.section_name }}</span>
+            <span v-show="sidebarOpen" class="ml-3 truncate text-[11px] font-bold tracking-wider uppercase text-white">{{ section.section_name }}</span>
           </div>
         </div>
       </div>
@@ -109,25 +117,28 @@
               <div v-if="activeTab === 'instructions'">
                 <div class="flex justify-between items-start mb-8">
                   <div>
-                    <h1 class="text-4xl font-serif font-bold text-gray-900">{{ activity.title || 'Untitled Activity' }}</h1>
-                    <p class="text-sm text-gray-400 font-bold mt-2 uppercase">
+                    <h1 class="text-4xl font-light text-gray-900 tracking-wide">{{ activity.title || 'Untitled Activity' }}</h1>
+                    <p class="text-xs text-gray-400 font-bold mt-2 uppercase tracking-widest">
                       {{ activity.section_code }} - {{ activity.section_name }}
                     </p>
                     <div class="flex gap-2 mt-3">
-                      <span class="px-2 py-1 bg-blue-50 text-blue-600 text-[9px] font-black rounded uppercase border border-blue-100">Flight Booking</span>
-                      <span class="px-2 py-1 bg-green-50 text-green-600 text-[9px] font-black rounded uppercase border border-green-100">
+                      <span class="px-2 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded uppercase border border-blue-100">Flight Booking</span>
+                      <span class="px-2 py-1 bg-green-50 text-green-600 text-xs font-bold rounded uppercase border border-green-100">
                         {{ activity.is_code_active ? 'Active' : 'Inactive' }}
+                      </span>
+                      <span class="px-2 py-1 bg-purple-50 text-purple-600 text-xs font-bold rounded uppercase border border-purple-100">
+                        {{ activity.total_points || 100 }} pts
                       </span>
                     </div>
                   </div>
                   <div class="text-right">
-                    <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase">
+                    <p class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">
                       Due: {{ activity.due_date || 'No due date' }}
                     </p>
-                    <div v-if="activity.is_code_active" class="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-xs font-black border border-green-200">
+                    <div v-if="activity.is_code_active" class="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-xs font-bold border border-green-200">
                       Active Code: {{ activity.activity_code }}
                     </div>
-                    <div v-else class="bg-gray-100 text-gray-400 px-4 py-2 rounded-lg text-xs font-black">
+                    <div v-else class="bg-gray-100 text-gray-400 px-4 py-2 rounded-lg text-xs font-bold">
                       Activity code: Not yet Activated
                     </div>
                   </div>
@@ -147,36 +158,36 @@
                 <div class="mb-10">
                   <h3 class="text-sm font-bold mb-4 text-gray-800">Flight Requirements</h3>
                   <div class="flex gap-2 mb-6">
-                    <span class="bg-[#FFC145] px-6 py-1.5 rounded-full text-[10px] font-black uppercase">
+                    <span class="bg-[#FFC145] px-6 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
                       {{ activity.required_trip_type || 'N/A' }}
                     </span>
-                    <span class="bg-[#0D3111] text-white px-6 py-1.5 rounded-full text-[10px] font-black uppercase">
+                    <span class="bg-[#0D3111] text-white px-6 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
                       {{ activity.required_travel_class || 'N/A' }}
                     </span>
                   </div>
 
                   <div class="border border-yellow-200 rounded-3xl py-6 px-10 flex items-center justify-between bg-white relative overflow-hidden">
                     <div class="text-center">
-                      <p class="text-[9px] text-gray-400 uppercase font-bold tracking-widest">From</p>
-                      <p class="text-xl font-black text-gray-900">{{ activity.required_origin || '-' }}</p>
+                      <p class="text-xs text-gray-400 uppercase font-bold tracking-widest">From</p>
+                      <p class="text-xl font-bold text-gray-900">{{ activity.required_origin || '-' }}</p>
                     </div>
                     <div class="text-center">
-                      <p class="text-[9px] text-gray-400 uppercase font-bold tracking-widest">To</p>
-                      <p class="text-xl font-black text-gray-900">{{ activity.required_destination || '-' }}</p>
+                      <p class="text-xs text-gray-400 uppercase font-bold tracking-widest">To</p>
+                      <p class="text-xl font-bold text-gray-900">{{ activity.required_destination || '-' }}</p>
                     </div>
                     <div class="h-10 w-[1px] bg-gray-200 mx-2"></div>
                     <div class="text-center">
-                      <p class="text-[9px] text-gray-400 uppercase font-bold tracking-widest">Depart</p>
+                      <p class="text-xs text-gray-400 uppercase font-bold tracking-widest">Depart</p>
                       <p class="text-sm font-bold text-gray-800">{{ activity.required_departure_date || 'N/A' }}</p>
                     </div>
                     <div class="text-center">
-                      <p class="text-[9px] text-gray-400 uppercase font-bold tracking-widest">Return</p>
+                      <p class="text-xs text-gray-400 uppercase font-bold tracking-widest">Return</p>
                       <p class="text-sm font-bold text-gray-800">{{ activity.required_return_date || 'N/A' }}</p>
                     </div>
                     <div class="h-10 w-[1px] bg-gray-200 mx-2"></div>
                     <div class="text-center">
-                      <p class="text-[9px] text-gray-400 uppercase font-bold tracking-widest">Passenger</p>
-                      <p class="text-[10px] text-gray-700">
+                      <p class="text-xs text-gray-400 uppercase font-bold tracking-widest">Passenger</p>
+                      <p class="text-xs text-gray-700">
                         Adult: <b>{{ activity.required_passengers || 0 }}</b> 
                         child: <b>{{ activity.required_children || 0 }}</b> 
                         infant: <b>{{ activity.required_infants || 0 }}</b>
@@ -194,7 +205,7 @@
                         <h4 class="font-black text-sm text-gray-900 uppercase tracking-tight">
                           Passenger {{ index + 1 }} ({{ p.type || 'Adult' }})
                         </h4>
-                        <span v-if="p.seat_preference" class="text-[10px] font-bold uppercase tracking-widest text-gray-800">
+                        <span v-if="p.seat_preference" class="text-xs font-bold uppercase tracking-widest text-gray-800">
                           seat preference: <span class="text-gray-400">{{ p.seat_preference }}</span>
                         </span>
                       </div>
@@ -203,8 +214,8 @@
                       <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <!-- Gender -->
                         <div v-if="hasValue(p.gender)">
-                          <label class="text-[9px] font-black text-red-500 uppercase">Gender*</label>
-                          <div class="mt-1 p-3 border border-gray-200 rounded-lg text-xs bg-gray-50/50 uppercase text-gray-700">
+                          <label class="text-xs font-bold text-red-500 uppercase tracking-tight">Gender*</label>
+                          <div class="mt-1 p-3 border border-gray-200 rounded-lg text-xs bg-gray-50/50 text-gray-700">
                             {{ p.gender }}
                           </div>
                         </div>
@@ -293,7 +304,7 @@
                   <button 
                     @click="handleActivation"
                     :disabled="activity.is_code_active || activating"
-                    class="w-full max-w-lg bg-[#FFC145] hover:bg-yellow-500 disabled:bg-gray-200 disabled:text-gray-400 py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all shadow-md active:scale-95 disabled:cursor-not-allowed"
+                    class="w-full max-w-lg bg-[#FFC145] hover:bg-yellow-500 disabled:bg-gray-200 disabled:text-gray-400 py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-all shadow-md active:scale-95 disabled:cursor-not-allowed"
                   >
                     {{ activating ? 'Activating...' : (activity.is_code_active ? 'Already Activated' : 'Activate') }}
                   </button>
@@ -304,15 +315,34 @@
               <div v-else-if="activeTab === 'submissions'">
                 <div class="flex items-center justify-between mb-8">
                   <h2 class="text-2xl font-black text-gray-900 uppercase tracking-tight">Student Submissions</h2>
-                  <button 
-                    @click="fetchSubmissions" 
-                    class="text-[10px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest flex items-center gap-2"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" :class="['h-3 w-3', submissionsLoading ? 'animate-spin' : '']" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Refresh
-                  </button>
+                  <div class="flex items-center gap-4">
+                    <button 
+                      v-if="activity && !activity.grades_released"
+                      @click="handleReleaseGrades" 
+                      :disabled="releasingGrades"
+                      class="text-xs font-bold bg-pink-500 text-white px-4 py-2 hover:bg-pink-600 uppercase tracking-widest flex items-center gap-2 rounded transition-all shadow-sm disabled:opacity-50"
+                    >
+                      <svg v-if="releasingGrades" class="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span v-else>Release All Scores</span>
+                    </button>
+                    <div v-else-if="activity?.grades_released" class="flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded border border-green-100">
+                       <span class="text-[9px] font-black uppercase tracking-widest">Scores Released</span>
+                       <span class="text-green-500 text-xs">✓</span>
+                    </div>
+
+                    <button 
+                      @click="fetchSubmissions" 
+                      class="text-[10px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest flex items-center gap-2"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" :class="['h-3 w-3', submissionsLoading ? 'animate-spin' : '']" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Refresh
+                    </button>
+                  </div>
                 </div>
 
                 <div v-if="submissionsLoading && submissions.length === 0" class="text-center py-20">
@@ -354,16 +384,20 @@
                             <div class="text-[9px] text-gray-400">
                               {{ sub.booking.status }} • ₱{{ sub.booking.total_amount.toLocaleString() }}
                             </div>
+                            <div class="text-[10px] font-bold text-pink-600 mt-1">
+                              {{ getBookingRoute(sub.booking) }}
+                            </div>
                           </div>
                           <div v-else class="text-[9px] text-gray-400 italic">No booking found</div>
                         </td>
                         <td class="px-6 py-5 text-sm font-bold text-gray-700">
-                          {{ sub.grade !== null ? sub.grade : '-' }}
+                          {{ sub.grade !== null ? sub.grade.toFixed(1) : '-' }}
+                          <span v-if="sub.grade !== null" class="text-[10px] font-normal text-gray-400">/ {{ activity?.total_points || 100 }} pts</span>
                         </td>
                         <td class="px-6 py-5">
                           <button 
                             v-if="sub.booking"
-                            @click="viewStudentDetails(sub)"
+                            @click="goToAnalysis(sub)"
                             class="text-[9px] font-black text-pink-500 hover:text-pink-700 uppercase tracking-widest border border-pink-100 px-3 py-1.5 rounded-lg hover:bg-pink-50 transition-all"
                           >
                             View Details
@@ -405,17 +439,6 @@
         <button @click="showSuccessModal = false" class="w-full bg-black text-white py-3 rounded-lg font-bold uppercase text-xs tracking-widest">Close</button>
       </div>
     </div>
-
-    <!-- Comparison Modal -->
-    <ComparisonModal
-      :is-open="showComparison"
-      :is-loading="isLoadingBooking"
-      :error-message="comparisonError"
-      :activity="activity"
-      :booking="comparisonBooking"
-      :grade="comparisonGrade"
-      @close="showComparison = false"
-    />
   </div>
 </template>
 
@@ -424,8 +447,6 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { instructorDashboardService } from '@/services/instructor/instructorDashboardService'
 import { activityDetailsService } from '@/services/instructor/activityDetailsService'
-import { bookingService } from '@/services/booking/bookingService'
-import ComparisonModal from '@/components/common/ComparisonModal.vue'
 import { useNotificationStore } from '@/stores/notification'
 
 const notificationStore = useNotificationStore()
@@ -439,7 +460,7 @@ const getStatusLabel = (status) => {
     'in_progress': 'In Progress',
     'submitted': 'Submitted',
     'graded': 'Graded',
-    'not_assigned': 'Not Enrolled'
+    'not_assigned': 'Not Taken'
   }
   return labels[status] || status
 }
@@ -464,18 +485,13 @@ const activating = ref(false)
 const errorMessage = ref('')
 const activeTab = ref('instructions') // 'instructions' or 'submissions'
 const submissionsLoading = ref(false)
+const releasingGrades = ref(false)
 
 // --- Data State ---
 const sections = ref([])
 const user = ref({ first_name: '', last_name: '', username: '' })
 const activity = ref(null)
 const submissions = ref([])
-
-const showComparison = ref(false)
-const comparisonBooking = ref(null)
-const isLoadingBooking = ref(false)
-const comparisonGrade = ref(null)
-const comparisonError = ref('')
 
 // --- Computed ---
 const fullName = computed(() => {
@@ -570,6 +586,24 @@ const fetchSubmissions = async () => {
   }
 }
 
+const getBookingRoute = (booking) => {
+  if (!booking || !booking.details || booking.details.length === 0) return '-';
+  
+  const segments = booking.details;
+  if (segments.length === 1) {
+    return `${segments[0].origin} → ${segments[0].destination}`;
+  }
+  
+  // For multi-city or round trip, show the sequence
+  const cities = [segments[0].origin];
+  segments.forEach(seg => {
+    if (cities[cities.length - 1] !== seg.destination) {
+      cities.push(seg.destination);
+    }
+  });
+  return cities.join(' → ');
+};
+
 const handleActivation = async () => {
   if (!activity.value || activating.value) return
   
@@ -595,27 +629,30 @@ const handleActivation = async () => {
   }
 }
 
-const viewStudentDetails = async (sub) => {
+const goToAnalysis = (sub) => {
   if (!sub.booking) return
-  
-  showComparison.value = true
-  comparisonBooking.value = null
-  isLoadingBooking.value = true
-  comparisonGrade.value = sub.grade
-  comparisonError.value = ''
+  router.push(`/instructor/activity/${activity.value.id}/student/${sub.student_id}/score`)
+}
 
+const handleReleaseGrades = async () => {
+  if (!activity.value || releasingGrades.value) return
+  
+  if (!confirm('Are you sure you want to release scores to all students? This will make their grades visible on their dashboard.')) {
+    return
+  }
+
+  releasingGrades.value = true
   try {
-    const data = await bookingService.getBookingDetails(sub.booking.id)
-    if (data.success) {
-      comparisonBooking.value = data.booking
-    } else {
-      comparisonError.value = data.error || "Could not find booking data for this student."
-    }
+    const res = await activityDetailsService.releaseGrades(activity.value.id)
+    activity.value.grades_released = res.grades_released
+    notificationStore.success(res.message)
+    // Refresh submissions to ensure everything is in sync
+    await fetchSubmissions()
   } catch (error) {
-    console.error("Error fetching booking details:", error)
-    comparisonError.value = "Failed to load student work details. Please try again."
+    console.error("Release error:", error)
+    notificationStore.error(error.response?.data?.error || 'Failed to release grades.')
   } finally {
-    isLoadingBooking.value = false
+    releasingGrades.value = false
   }
 }
 
