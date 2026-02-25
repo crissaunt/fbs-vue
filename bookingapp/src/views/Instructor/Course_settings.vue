@@ -128,17 +128,52 @@
                   </div>
 
                   <!-- Administrative Controls -->
-                  <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100">
-                    <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Administrative Controls</h3>
-                    <div class="flex items-center justify-between">
-                      <div class="pr-8">
-                        <h4 class="text-sm font-bold text-gray-800">Lock Section</h4>
-                        <p class="text-xs text-gray-500 mt-1">Preventing new students from enrolling in this section. Existing students are unaffected.</p>
+                  <div class="space-y-4">
+                    <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100">
+                      <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Administrative Controls</h3>
+                      <div class="space-y-6">
+                        <!-- Lock Section -->
+                        <div class="flex items-center justify-between">
+                          <div class="pr-8">
+                            <h4 class="text-sm font-bold text-gray-800">Lock Section</h4>
+                            <p class="text-xs text-gray-500 mt-1">Preventing new students from enrolling in this section. Existing students are unaffected.</p>
+                          </div>
+                          <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" v-model="form.is_locked" class="sr-only peer">
+                            <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-pink-500"></div>
+                          </label>
+                        </div>
+
+                        <!-- Disable Section -->
+                        <div class="flex items-center justify-between pt-6 border-t border-gray-200/50">
+                          <div class="pr-8">
+                            <h4 class="text-sm font-bold text-gray-800">Disable Section</h4>
+                            <p class="text-xs text-gray-500 mt-1">If disabled, students will no longer see this section on their dashboard. Use this for past or inactive courses.</p>
+                          </div>
+                          <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" v-model="form.is_active" :true-value="false" :false-value="true" class="sr-only peer">
+                            <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-pink-500"></div>
+                          </label>
+                        </div>
                       </div>
-                      <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" v-model="form.is_locked" class="sr-only peer">
-                        <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-pink-500"></div>
-                      </label>
+                    </div>
+
+                    <!-- Danger Zone -->
+                    <div class="bg-red-50/50 rounded-2xl p-6 border border-red-100 mt-8">
+                      <h3 class="text-xs font-black text-red-400 uppercase tracking-widest mb-6">Danger Zone</h3>
+                      <div class="flex items-center justify-between">
+                        <div class="pr-8">
+                          <h4 class="text-sm font-bold text-red-800">Delete Course</h4>
+                          <p class="text-xs text-red-500 mt-1">Permanently delete this section and all its associated data. Enrolled students will be unenrolled automatically.</p>
+                        </div>
+                        <button 
+                          type="button" 
+                          @click="confirmDelete"
+                          class="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-md transition-all active:scale-95"
+                        >
+                          Delete Section
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -177,11 +212,13 @@ import { sectionSettingsService } from '@/services/instructor/sectionSettingsSer
 import LoadingOverlay from '@/components/instructor/LoadingOverlay.vue'
 import { useUserStore } from '@/stores/user'
 import { useNotificationStore } from '@/stores/notification'
+import { useModalStore } from '@/stores/modal'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const notificationStore = useNotificationStore()
+const modalStore = useModalStore()
 
 const sidebarOpen = ref(false)
 const dropdownOpen = ref(false)
@@ -197,7 +234,8 @@ const form = ref({
   academic_year: '',
   schedule: '',
   description: '',
-  is_locked: false
+  is_locked: false,
+  is_active: true
 })
 
 const userFullName = computed(() => userStore.userFullName || 'Instructor')
@@ -233,7 +271,8 @@ const fetchData = async () => {
       academic_year: data.academic_year || '',
       schedule: data.schedule || '',
       description: data.description || '',
-      is_locked: data.is_locked || false
+      is_locked: data.is_locked || false,
+      is_active: data.is_active !== false // Default to true if not present
     }
 
     const dashboardData = await instructorDashboardService.getDashboard()
@@ -256,6 +295,28 @@ const saveSettings = async () => {
     notificationStore.error(msg)
   } finally {
     loading.value = false
+  }
+}
+
+const confirmDelete = async () => {
+  const confirmed = await modalStore.confirm({
+    title: 'Delete Section?',
+    message: `Are you sure you want to delete "${section.value?.section_name}"? This action is permanent and will unenroll all students and delete all activities.`,
+    confirmText: 'Delete Forever',
+    cancelText: 'Cancel'
+  })
+
+  if (confirmed) {
+    loading.value = true
+    try {
+      await instructorDashboardService.deleteSection(route.params.id)
+      notificationStore.success("Section deleted successfully.")
+      router.push('/instructor/dashboard')
+    } catch (error) {
+      notificationStore.error("Failed to delete section.")
+    } finally {
+      loading.value = false
+    }
   }
 }
 

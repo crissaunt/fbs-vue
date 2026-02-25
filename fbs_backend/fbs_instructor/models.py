@@ -40,6 +40,7 @@ class Section(models.Model):
     description = models.TextField(blank=True, null=True)
     
     is_locked = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
     
     instructor = models.ForeignKey(
         User, 

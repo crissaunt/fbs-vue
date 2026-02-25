@@ -60,9 +60,19 @@
       <div class="flex-1 overflow-auto bg-[#FDFCF7]">
         <div class="p-8">
           <div>
-            <h2 class="text-2xl font-light text-gray-900 tracking-wide">
-              Course Section: {{ section?.section_code }} — {{ section?.section_name }}
-            </h2><br>
+            <div class="flex items-center flex-wrap gap-3">
+              <h2 class="text-2xl font-light text-gray-900 tracking-wide">
+                Course Section: {{ section?.section_code }} — {{ section?.section_name }}
+              </h2>
+              <div class="flex gap-2">
+                <span v-if="section?.is_active === false" class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border border-red-200 shadow-sm animate-pulse">Disabled</span>
+                <span v-if="section?.is_locked" class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-200 shadow-sm flex items-center gap-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  Locked
+                </span>
+              </div>
+            </div>
+<br>
           </div>
           
           <div class="flex items-center gap-8 border-b border-gray-300 mb-8 px-2 relative">

@@ -94,9 +94,12 @@
             <template v-if="sections && sections.length > 0">
               <div v-for="section in sections" :key="section.id" @click="goToSection(section.id)" class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow border border-gray-100 flex flex-col min-h-[220px] cursor-pointer group/card">
                   <div class="bg-[#e93d82] text-white px-4 py-3 flex justify-between items-center group-hover/card:bg-pink-600 transition-colors">
-                    <h3 class="font-bold tracking-wide uppercase text-sm text-white">
-                      {{ section.section_code }}
-                    </h3>
+                      <div class="flex items-center gap-2">
+                        <span v-if="section.is_active === false" class="bg-red-500/20 text-red-100 text-[10px] px-2 py-0.5 rounded border border-red-500/30 font-black uppercase tracking-tighter">Disabled</span>
+                        <h3 class="font-bold tracking-wide uppercase text-sm text-white">
+                          {{ section.section_code }}
+                        </h3>
+                      </div>
                     
                     <div class="relative group">
                       <button @click.stop class="text-white/100 hover:text-white p-1">⋮</button>

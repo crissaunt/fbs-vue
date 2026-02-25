@@ -282,7 +282,7 @@ def instructor_dashboard(request):
     
     # 3. Handling the GET (Fetching data)
     sections = Section.objects.filter(instructor=user).values(
-        'id', 'section_name', 'section_code', 'semester', 'academic_year', 'schedule', 'description'
+        'id', 'section_name', 'section_code', 'semester', 'academic_year', 'schedule', 'description', 'is_active'
     ).order_by('-id') 
     
     print(f"? Found {sections.count()} sections for instructor")
@@ -342,6 +342,7 @@ def section_details(request, section_id):
             'schedule': section.schedule,
             'description': section.description,
             'is_locked': section.is_locked,
+            'is_active': section.is_active,
             'created_at': section.created_at,
             'activities': activities_data
         }, status=status.HTTP_200_OK)
@@ -384,6 +385,8 @@ def update_section(request, section_id):
         section.description = data['description']
     if 'is_locked' in data:
         section.is_locked = data['is_locked']
+    if 'is_active' in data:
+        section.is_active = data['is_active']
         
     try:
         section.save()
@@ -393,7 +396,8 @@ def update_section(request, section_id):
                 "id": section.id,
                 "section_name": section.section_name,
                 "section_code": section.section_code,
-                "is_locked": section.is_locked
+                "is_locked": section.is_locked,
+                "is_active": section.is_active
             }
         }, status=status.HTTP_200_OK)
     except Exception as e:
@@ -1470,10 +1474,11 @@ def student_dashboard(request):
     print(f"? Student record: {student.first_name} {student.last_name} (#{student.student_number})")
     
     # 3. Get enrolled section
-    enrollment = SectionEnrollment.objects.filter(student=student).select_related('section').first()
+    enrollment = SectionEnrollment.objects.filter(student=student, is_active=True).select_related('section').first()
     
-    if not enrollment:
-        print("?? Student not enrolled in any section")
+    # Check if enrollment exists AND section is active
+    if not enrollment or not enrollment.section.is_active:
+        print("?? Student not enrolled in any session or section is disabled")
         return Response({
             'user': {
                 'username': user.username,
