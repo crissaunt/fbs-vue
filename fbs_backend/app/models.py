@@ -123,20 +123,19 @@ class Airline(models.Model):
 
 class SeatClass(models.Model):
     name = models.CharField(max_length=50)
-    price_multiplier = models.DecimalField(
-        max_digits=5, 
-        decimal_places=2,
-        default=1.00
-    )
+    price_multiplier = models.DecimalField(max_digits=5, decimal_places=2, default=1.00)
     airline = models.ForeignKey(Airline, on_delete=models.CASCADE, related_name="seat_classes", null=True, blank=True)
     description = models.TextField(blank=True, null=True)
-    is_active = models.BooleanField(default=True)  # Add this line
+    is_active = models.BooleanField(default=True)
+    color = models.CharField(max_length=20, blank=True, null=True)  # Add this line
+    
 
     class Meta:
         unique_together = ("airline", "name")
 
     def __str__(self):
         return f"{self.name} (x{self.price_multiplier}) - {self.airline.code if self.airline else ''}"
+
 
 
 class Aircraft(models.Model):
@@ -146,6 +145,70 @@ class Aircraft(models.Model):
 
     def __str__(self):
         return f"{self.model} ({self.airline.code})"
+    
+    layout_config = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='{"seat_classes": [{"class_id": 1, "rows": 10, "columns": 6}, ...]}'
+    )
+
+    def __str__(self):
+        return f"{self.model} ({self.airline.code})"
+    
+    def save_layout(self, config_data):
+        """Save seat layout configuration"""
+        self.layout_config = {
+            'seat_classes': config_data.get('seat_classes', []),
+            'total_seats': config_data.get('total_seats', 0),
+            'updated_at': timezone.now().isoformat()
+        }
+        self.save()
+    
+    def get_layout_config(self):
+        """Get layout config or generate default"""
+        if self.layout_config and self.layout_config.get('seat_classes'):
+            return self.layout_config
+        
+        # Auto-generate default layout based on capacity
+        return self._generate_default_layout()
+    
+    def _generate_default_layout(self):
+        """Generate a default layout"""
+        seat_classes = SeatClass.objects.filter(
+            models.Q(airline=self.airline) | models.Q(airline__isnull=True)
+        ).order_by('-price_multiplier')
+        
+        if not seat_classes.exists():
+            return {'seat_classes': [], 'total_seats': 0}
+        
+        classes = list(seat_classes)
+        num_classes = len(classes)
+        base_seats = self.capacity // num_classes
+        remainder = self.capacity % num_classes
+        
+        seat_classes_config = []
+        current_row = 1
+        
+        for i, sc in enumerate(classes):
+            class_capacity = base_seats + (1 if i < remainder else 0)
+            columns = 4 if i == 0 and num_classes > 1 else 6
+            rows = (class_capacity + columns - 1) // columns
+            
+            seat_classes_config.append({
+                'class_id': sc.id,
+                'name': sc.name,
+                'rows': rows,
+                'columns': columns,
+                'start_row': current_row,
+                'color': sc.color or '#3B82F6',
+                'price_multiplier': float(sc.price_multiplier)
+            })
+            current_row += rows
+        
+        return {
+            'seat_classes': seat_classes_config,
+            'total_seats': sum(c['rows'] * c['columns'] for c in seat_classes_config)
+        }
 
 
 # ============================================================
@@ -163,7 +226,11 @@ class Airport(models.Model):
     city = models.CharField(max_length=100, blank=True, null=True)
     country = models.ForeignKey(Country, on_delete=models.SET_NULL, null=True, blank=True, related_name="airports")
     location = models.CharField(max_length=150, null=True, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     airport_type = models.CharField(max_length=20, choices=AIRPORT_TYPE_CHOICES, default='domestic')
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
 
     def __str__(self):
         return f"{self.code} - {self.name} ({self.get_airport_type_display()})"
@@ -241,6 +308,11 @@ class Flight(models.Model):
 
 
 
+from django.db import models
+from django.utils import timezone
+from django.core.exceptions import ValidationError
+from datetime import timedelta
+
 class Schedule(models.Model):
     STATUS_CHOICES = [
         ('Open', 'Open for Booking'),
@@ -249,7 +321,7 @@ class Schedule(models.Model):
         ('Arrived', 'Arrived'),
     ]
 
-    flight = models.ForeignKey(Flight, on_delete=models.CASCADE, related_name="schedules")
+    flight = models.ForeignKey('Flight', on_delete=models.CASCADE, related_name="schedules")
     departure_time = models.DateTimeField()
     arrival_time = models.DateTimeField()
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -279,10 +351,35 @@ class Schedule(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.flight.flight_number} {self.departure_time}"
+        return f"{self.flight.flight_number} | {self.departure_time.strftime('%Y-%m-%d %H:%M')}"
+
+    # --- AUTOMATIC LOGIC ---
+
+    @property
+    def automatic_status(self):
+        """Calculates status in real-time based on the clock."""
+        now = timezone.now()
+        
+        if now >= self.arrival_time:
+            return "Arrived"
+        elif self.departure_time <= now < self.arrival_time:
+            return "On Flight"
+        elif (self.departure_time - timedelta(minutes=30)) <= now < self.departure_time:
+            return "Closed"
+        else:
+            return "Open"
+
+    def update_status_in_db(self):
+        """Updates the database field to match the automatic logic."""
+        new_status = self.automatic_status
+        if self.status != new_status:
+            self.status = new_status
+            self.save(update_fields=['status'])
+
+    # --- HELPER METHODS ---
 
     def duration(self):
-        """Calculate flight duration safely handling None values"""
+        """Calculate flight duration safely."""
         if not self.departure_time or not self.arrival_time:
             return "N/A"
         
@@ -295,20 +392,92 @@ class Schedule(models.Model):
             return f"{hours}h {minutes}m (+{days}d)"
         return f"{hours}h {minutes}m"
 
-    def clean(self):
-        """Validate schedule times"""
-        if self.arrival_time <= self.departure_time:
-            raise ValidationError("Arrival time must be after departure time")
-        
-        # Don't allow schedules in the past
-        if self.departure_time < timezone.now():
-            raise ValidationError("Cannot create schedule in the past")
-
     @property
     def is_open(self):
-        return self.status == "Open"
+        return self.automatic_status == "Open"
     
     
+    def update_ml_price(self, save=True):
+        """Update the ML predicted price for this schedule"""
+        try:
+            # Import inside the method to avoid circular imports
+            from flightapp.ml.predictor import predictor
+            
+            # Check if model is loaded - if not, try to load it
+            if not predictor.model:
+                print(f"⚠️ Schedule {self.id}: ML model not loaded, attempting to load...")
+                predictor.load_model()
+                
+                if not predictor.model:
+                    print(f"❌ Schedule {self.id}: Failed to load ML model")
+                    return False, None
+            
+            flight_data = {
+                'schedule_id': self.id,
+                'flight_number': self.flight.flight_number,
+                'airline_code': self.flight.airline.code,
+                'airline_name': self.flight.airline.name,
+                'origin': self.flight.route.origin_airport.code,
+                'destination': self.flight.route.destination_airport.code,
+                'departure_time': self.departure_time.isoformat(),
+                'arrival_time': self.arrival_time.isoformat(),
+                'total_stops': 0,
+                'is_domestic': self.flight.route.is_domestic,
+            }
+            
+            predicted_price = Decimal(str(predictor.predict_price(flight_data)))
+            self.ml_base_price = predicted_price
+            self.ml_price_updated_at = timezone.now()
+            
+            if save:
+                self.save(update_fields=['ml_base_price', 'ml_price_updated_at'])
+            
+            print(f"✅ Schedule {self.id}: ML price updated to ₱{predicted_price:,.2f}")
+            return True, predicted_price
+        except Exception as e:
+            print(f"❌ Error updating ML price for schedule {self.id}: {e}")
+            import traceback
+            traceback.print_exc()
+            return False, None
+    # --- VALIDATION ---
+
+    def clean(self):
+        """Enforces time rules and prevents airport conflicts."""
+        if self.arrival_time <= self.departure_time:
+            raise ValidationError("Arrival time must be after departure time.")
+        
+        if not self.pk and self.departure_time < timezone.now():
+            raise ValidationError("Cannot create a schedule in the past.")
+
+        # 15-minute conflict allowance
+        allowance = timedelta(minutes=15)
+        
+        # Check for departure conflicts at the same origin airport
+        origin_conflicts = Schedule.objects.filter(
+            flight__route__origin_airport=self.flight.route.origin_airport,
+            departure_time__range=(self.departure_time - allowance, self.departure_time + allowance)
+        )
+
+        # Check for arrival conflicts at the same destination airport
+        dest_conflicts = Schedule.objects.filter(
+            flight__route__destination_airport=self.flight.route.destination_airport,
+            arrival_time__range=(self.arrival_time - allowance, self.arrival_time + allowance)
+        )
+
+        if self.pk:
+            origin_conflicts = origin_conflicts.exclude(pk=self.pk)
+            dest_conflicts = dest_conflicts.exclude(pk=self.pk)
+
+        if origin_conflicts.exists():
+            raise ValidationError("Runway Conflict: Another flight is departing from this airport within 15 minutes.")
+        
+        if dest_conflicts.exists():
+            raise ValidationError("Runway Conflict: Another flight is arriving at the destination within 15 minutes.")
+
+    def save(self, *args, **kwargs):
+        self.status = self.automatic_status  # Ensure status is correct before saving
+        super().save(*args, **kwargs)
+
     def update_ml_price(self, save=True):
         """Update the ML predicted price for this schedule"""
         try:
@@ -351,32 +520,59 @@ class Schedule(models.Model):
             import traceback
             traceback.print_exc()
             return False, None
-        # ===================================================
+
+# ============================================================
+# SEAT REQUIREMENT MODEL (Prices for special seats)
+# ============================================================
+class SeatRequirement(models.Model):
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=50, unique=True) # e.g., 'is_exit_row'
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    icon = models.CharField(max_length=50, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.name} (₱{self.price})"
 
 
-# Add this to your existing Seat model or update it
 class Seat(models.Model):
-    schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE, related_name="seats" , null=True)
-    seat_class = models.ForeignKey(SeatClass, on_delete=models.CASCADE, related_name="seats" , null=True)
+    schedule = models.ForeignKey('Schedule', on_delete=models.CASCADE, related_name="seats", null=True)
+    seat_class = models.ForeignKey('SeatClass', on_delete=models.CASCADE, related_name="seats", null=True)
     seat_number = models.CharField(max_length=10)
     is_available = models.BooleanField(default=True)
     
-    # Add row and column for easier mapping
+    # Row and column for mapping
     row = models.PositiveIntegerField(null=True)
-    column = models.CharField(max_length=1, null=True)  # A, B, C, D, E, F
+    column = models.CharField(max_length=1, null=True)
     
-    # Add seat features
+    # Seat features (Booleans for backward compatibility and fast lookup)
     has_extra_legroom = models.BooleanField(default=False)
     is_exit_row = models.BooleanField(default=False)
     is_bulkhead = models.BooleanField(default=False)
     is_window = models.BooleanField(default=False)
     is_aisle = models.BooleanField(default=False)
     
-    price_adjustment = models.DecimalField(
+    # Special requirements (Keep booleans for now)
+    is_wheelchair_accessible = models.BooleanField(default=False)
+    has_bassinet = models.BooleanField(default=False)
+    has_nut_allergy = models.BooleanField(default=False)
+    is_unaccompanied_minor = models.BooleanField(default=False)
+    
+    # Many-to-Many link for dynamic requirements
+    requirements = models.ManyToManyField(SeatRequirement, blank=True)
+    
+    # Price adjustments
+    price_adjustment_auto = models.DecimalField(
         max_digits=10, 
         decimal_places=2, 
-        default=0.00,
-        help_text="Additional price for premium seats"
+        default=Decimal('0.00'),
+        help_text="Automatic price adjustment based on seat features"
+    )
+    price_adjustment_manual = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=Decimal('0.00'),
+        help_text="Manual price adjustment by admin"
     )
 
     class Meta:
@@ -384,10 +580,6 @@ class Seat(models.Model):
             models.UniqueConstraint(
                 fields=['schedule', 'seat_number'],
                 name='unique_seat_per_schedule'
-            ),
-            models.UniqueConstraint(
-                fields=['schedule', 'row', 'column'],
-                name='unique_position_per_schedule'
             )
         ]
         indexes = [
@@ -397,42 +589,196 @@ class Seat(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.seat_number} - {self.seat_class.name}"
+        special_features = [req.name for req in self.requirements.all()]
+        
+        # Complement with legacy booleans if not redundant
+        if self.is_exit_row and "Exit" not in "".join(special_features):
+            special_features.append("Exit Row")
+        
+        features_str = f" ({', '.join(special_features)})" if special_features else ""
+        return f"{self.seat_number} - {self.seat_class.name if self.seat_class else 'N/A'}{features_str}"
+
+    # LEGACY FALLBACK ADJUSTMENTS
+    @classmethod
+    def get_price_adjustments(cls):
+        """Return dictionary of fallback price adjustments"""
+        return {
+            'is_exit_row': 150.00,
+            'is_wheelchair_accessible': 0.00,
+            'has_bassinet': 200.00,
+            'has_nut_allergy': 0.00,
+            'is_unaccompanied_minor': 300.00,
+            'has_extra_legroom': 500.00,
+            'is_bulkhead': 400.00,
+            'is_window': 100.00,
+            'is_aisle': 120.00,
+        }
+
+    def calculate_auto_adjustment(self):
+        """Calculate automatic price adjustment based on seat features and dynamic requirements"""
+        adjustment = Decimal('0.00')
+        
+        # 1. Total from dynamic requirements
+        if self.pk:
+            for req in self.requirements.all():
+                adjustment += req.price
+        
+        # 2. Fallback for booleans (only if not already mapped via code)
+        # This helps during migration from booleans to ManyToMany requirements
+        fallbacks = self.get_price_adjustments()
+        codes_present = set(self.requirements.values_list('code', flat=True)) if self.pk else set()
+        
+        boolean_fields = [
+            ('is_exit_row', self.is_exit_row),
+            ('is_wheelchair_accessible', self.is_wheelchair_accessible),
+            ('has_bassinet', self.has_bassinet),
+            ('has_nut_allergy', self.has_nut_allergy),
+            ('is_unaccompanied_minor', self.is_unaccompanied_minor),
+            ('has_extra_legroom', self.has_extra_legroom),
+            ('is_bulkhead', self.is_bulkhead),
+            ('is_window', self.is_window),
+            ('is_aisle', self.is_aisle),
+        ]
+        
+        for field, value in boolean_fields:
+            if value and field not in codes_present:
+                adjustment += Decimal(str(fallbacks.get(field, 0.00)))
+                
+        return adjustment
 
     @property
-    def seat_code(self):
-        """Return seat code like '1A'"""
-        return f"{self.row}{self.column}"
+    def total_price_adjustment(self):
+        """Total of automatic + manual adjustments"""
+        return self.calculate_auto_adjustment() + Decimal(str(self.price_adjustment_manual))
 
     @property
     def final_price(self):
-        """Calculate final price including adjustments"""
+        """Calculate final price including all adjustments"""
         if self.schedule:
             # Use ML base price if available, otherwise fallback to regular price
             base_price = self.schedule.ml_base_price or self.schedule.price or Decimal('0.00')
         else:
             base_price = Decimal('0.00')
-        
+            
         multiplier = self.seat_class.price_multiplier if self.seat_class else Decimal('1.00')
-        adjustment = self.price_adjustment or Decimal('0.00')
         
-        return (base_price * multiplier) + adjustment
+        return (base_price * multiplier) + self.total_price_adjustment
+
+    @property
+    def price_breakdown(self):
+        """Get detailed price breakdown"""
+        if self.schedule:
+            base_price = float(self.schedule.ml_base_price or self.schedule.price or 0.0)
+        else:
+            base_price = 0.0
+            
+        multiplier = float(self.seat_class.price_multiplier) if self.seat_class else 1.0
+        calculated_base = base_price * multiplier
+        
+        auto_adjustment = float(self.calculate_auto_adjustment())
+        
+        return {
+            'base_price': base_price,
+            'seat_class_multiplier': multiplier,
+            'calculated_base': calculated_base,
+            'auto_adjustment': {
+                'amount': auto_adjustment,
+                'details': self.get_adjustment_details()
+            },
+            'manual_adjustment': float(self.price_adjustment_manual),
+            'total_adjustment': auto_adjustment + float(self.price_adjustment_manual),
+            'final_price': float(self.final_price)
+        }
+
+    def get_adjustment_details(self):
+        """Get details of what features contribute to price adjustment"""
+        details = []
+        
+        # 1. From requirements
+        if self.pk:
+            for req in self.requirements.all():
+                details.append({
+                    'feature': req.name,
+                    'adjustment': float(req.price),
+                    'type': 'requirement'
+                })
+        
+        # 2. From booleans (fallback/legacy)
+        fallbacks = self.get_price_adjustments()
+        codes_present = set(self.requirements.values_list('code', flat=True)) if self.pk else set()
+        
+        boolean_fields = [
+            ('is_exit_row', 'Exit Row Seat'),
+            ('is_wheelchair_accessible', 'Wheelchair Accessible'),
+            ('has_bassinet', 'Bassinet Position'),
+            ('has_nut_allergy', 'Nut Allergy Zone'),
+            ('is_unaccompanied_minor', 'Unaccompanied Minor'),
+            ('has_extra_legroom', 'Extra Legroom'),
+            ('is_bulkhead', 'Bulkhead Seat'),
+            ('is_window', 'Window Seat'),
+            ('is_aisle', 'Aisle Seat'),
+        ]
+        
+        for field, name in boolean_fields:
+            if getattr(self, field) and field not in codes_present:
+                details.append({
+                    'feature': f"{name} (Legacy)",
+                    'adjustment': float(fallbacks.get(field, 0.00)),
+                    'type': 'legacy'
+                })
+        
+        return details
 
     @property
     def seat_features(self):
-        """Return list of seat features"""
+        """Return list of seat features with pricing info"""
         features = []
-        if self.has_extra_legroom:
-            features.append("Extra Legroom")
-        if self.is_exit_row:
-            features.append("Exit Row")
-        if self.is_bulkhead:
-            features.append("Bulkhead")
-        if self.is_window:
-            features.append("Window")
-        if self.is_aisle:
-            features.append("Aisle")
+        
+        # 1. Dynamic requirements
+        if self.pk:
+            for req in self.requirements.all():
+                features.append({
+                    'name': req.name,
+                    'price': float(req.price),
+                    'code': req.code,
+                    'icon': req.icon or 'ph-star',
+                    'description': req.description
+                })
+        
+        # 2. Legacy booleans if not redundant
+        codes_present = set(self.requirements.values_list('code', flat=True)) if self.pk else set()
+        
+        legacy_features = [
+            ('is_exit_row', 'Exit Row', 'ph-exit'),
+            ('is_wheelchair_accessible', 'Wheelchair', 'ph-wheelchair'),
+            ('has_bassinet', 'Bassinet', 'ph-baby'),
+            ('has_nut_allergy', 'Nut Allergy', 'ph-nut'),
+            ('is_unaccompanied_minor', 'Minor', 'ph-user'),
+        ]
+        
+        for field, name, icon in legacy_features:
+            if getattr(self, field) and field not in codes_present:
+                features.append({
+                    'name': name,
+                    'is_legacy': True,
+                    'icon': icon
+                })
+                
         return features
+
+    @property
+    def special_requirements(self):
+        """Simplified list of special requirements for frontend"""
+        return self.seat_features
+
+
+    def save(self, *args, **kwargs):
+        """Override save to auto-calculate price adjustments"""
+        # Calculate automatic adjustment before saving
+        self.price_adjustment_auto = self.calculate_auto_adjustment()
+        
+        # Call the parent save method
+        super().save(*args, **kwargs)
 
 
 class SeatClassFeature(models.Model):
@@ -449,6 +795,7 @@ class SeatClassFeature(models.Model):
     
     def __str__(self):
         return f"{self.seat_class.name} - {self.feature}"
+    
 
 # ============================================================
 # TRAVEL INSURANCE SYSTEM
@@ -1387,7 +1734,7 @@ def create_insurance_record_if_needed(sender, instance, created, **kwargs):
         return
     
     # Check if insurance was selected via addons
-    insurance_addons = instance.addons.filter(is_insurance=True)
+    insurance_addons = instance.addons.filter(insurance_plan__isnull=False)
     
     # If insurance addon exists and no insurance record yet
     if insurance_addons.exists() and not instance.has_insurance:
@@ -1407,58 +1754,98 @@ def create_insurance_record_if_needed(sender, instance, created, **kwargs):
         instance.insurance_record.delete()
 
 
+@receiver(post_save, sender=BookingDetail)
+def update_seat_availability_on_save(sender, instance, **kwargs):
+    """Update seat availability when booking status changes"""
+    if instance.seat:
+        # Seats are unavailable if there's any active booking (confirmed or pending)
+        unavailable_statuses = ['pending', 'confirmed', 'checkin', 'boarding', 'completed']
+        if instance.status in unavailable_statuses:
+            if instance.seat.is_available:
+                instance.seat.is_available = False
+                instance.seat.save(update_fields=['is_available'])
+        else:
+            # If status is cancelled, check if another active booking exists
+            # This handles cases where a seat might be swapped or re-booked
+            other_active = BookingDetail.objects.filter(
+                seat=instance.seat,
+                status__in=unavailable_statuses
+            ).exclude(pk=instance.pk).exists()
+            
+            if not other_active:
+                if not instance.seat.is_available:
+                    instance.seat.is_available = True
+                    instance.seat.save(update_fields=['is_available'])
+
+
+@receiver(models.signals.post_delete, sender=BookingDetail)
+def update_seat_availability_on_delete(sender, instance, **kwargs):
+    """Restore seat availability when booking is deleted"""
+    if instance.seat:
+        unavailable_statuses = ['pending', 'confirmed', 'checkin', 'boarding', 'completed']
+        other_active = BookingDetail.objects.filter(
+            seat=instance.seat,
+            status__in=unavailable_statuses
+        ).exists()
+        
+        if not other_active:
+            instance.seat.is_available = True
+            instance.seat.save(update_fields=['is_available'])
+
+
 # ============================================================
 # SIGNAL — AUTO-GENERATE SEATS WHEN A NEW SCHEDULE IS CREATED
 # ============================================================
+# models.py - Update the signal
+
 @receiver(post_save, sender=Schedule)
 def create_seats_for_schedule(sender, instance, created, **kwargs):
-    """
-    Auto-generate seats when a new schedule is created.
-    """
-    if created:
-        from django.db import transaction
+    """Auto-generate seats when schedule is created using aircraft's layout"""
+    if not created:
+        return
+    
+    if not instance.flight or not instance.flight.aircraft:
+        print(f"No aircraft for schedule {instance.id}, skipping seat generation")
+        return
+    
+    aircraft = instance.flight.aircraft
+    layout = aircraft.get_layout_config()
+    seat_classes_config = layout.get('seat_classes', [])
+    
+    if not seat_classes_config:
+        print(f"No layout config for aircraft {aircraft.id}, skipping")
+        return
+    
+    from django.db import transaction
+    
+    with transaction.atomic():
+        seats_to_create = []
         
-        # Import the models directly instead of using apps.get_model
-        from .models import SeatClass, Seat
-        
-        aircraft = instance.flight.aircraft
-        
-        with transaction.atomic():
-            # Get airline's seat classes or default classes
-            seat_classes = SeatClass.objects.filter(
-                airline=instance.flight.airline
-            ).order_by('price_multiplier')
+        for sc_config in seat_classes_config:
+            class_id = sc_config['class_id']
+            rows = sc_config['rows']
+            columns = sc_config['columns']
+            start_row = sc_config.get('start_row', 1)
             
-            if not seat_classes.exists():
-                # Fallback to default seat classes
-                seat_classes = SeatClass.objects.filter(airline__isnull=True)
-            
-            if seat_classes.exists():
-                # Distribute seats across classes
-                total_capacity = aircraft.capacity
-                seats_per_class = total_capacity // seat_classes.count()
-                remaining_seats = total_capacity % seat_classes.count()
-                
-                seat_number = 1
-                seats_to_create = []
-                
-                for i, seat_class in enumerate(seat_classes):
-                    # Add extra seats to first class if uneven distribution
-                    class_capacity = seats_per_class + (1 if i < remaining_seats else 0)
+            for row_idx in range(rows):
+                for col_idx in range(columns):
+                    global_row = start_row + row_idx
+                    col_letter = chr(65 + col_idx)  # 0->A, 1->B, etc.
                     
-                    for j in range(class_capacity):
-                        seats_to_create.append(Seat(
-                            schedule=instance,
-                            seat_class=seat_class,
-                            seat_number=f"{seat_number:03d}",
-                            row=None,  # Add required fields
-                            column=None,
-                            is_available=True
-                        ))
-                        seat_number += 1
-                
-                Seat.objects.bulk_create(seats_to_create)
-
+                    seats_to_create.append(Seat(
+                        schedule=instance,
+                        seat_class_id=class_id,
+                        seat_number=f"{global_row}{col_letter}",
+                        row=global_row,
+                        column=col_letter,
+                        is_available=True,
+                        is_window=(col_idx == 0 or col_idx == columns - 1),
+                        is_aisle=(col_idx == columns // 2 - 1 or col_idx == columns // 2) if columns > 2 else False,
+                    ))
+        
+        if seats_to_create:
+            Seat.objects.bulk_create(seats_to_create)
+            print(f"Created {len(seats_to_create)} seats for schedule {instance.id} from aircraft template")
 
 # ============================================================
 # TAX SYSTEM FOR FLIGHT BOOKINGS (Models only, no calculation)
@@ -1597,11 +1984,11 @@ class PassengerTypeTaxRate(models.Model):
         return f"{self.tax_type.code} - {self.passenger_type}: ?{self.amount}"
 
 
-class BookingTax(models.Model):
-    """
-    Snapshot of applied taxes at time of booking.
-    """
+from django.utils import timezone
 
+class BookingTax(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)  # Use default, not auto_now_add
+    
     booking = models.ForeignKey(
         'Booking',
         on_delete=models.CASCADE,
@@ -1611,7 +1998,6 @@ class BookingTax(models.Model):
         TaxType,
         on_delete=models.PROTECT
     )
-
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     passenger_type = models.CharField(
         max_length=10,
@@ -1619,9 +2005,11 @@ class BookingTax(models.Model):
         null=True
     )
 
+    class Meta:
+        ordering = ['-created_at']
+
     def __str__(self):
         return f"{self.booking.id} - {self.tax_type.code}: ?{self.amount}"
-
 
 # ============================================================
 # PAYMENT

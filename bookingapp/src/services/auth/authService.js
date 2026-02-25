@@ -10,8 +10,9 @@ export const authService = {
      */
     async login(username, password) {
         try {
-            const loginResponse = await api.post('api/auth/login/', { username, password });
-            const data = loginResponse.data;
+            // 1. Get Token and User Data from Custom Login Endpoint
+            const response = await api.post('api/auth/login/', { username, password });
+            const data = response.data;
             const token = data.token;
             const session_id = data.session_id;
 

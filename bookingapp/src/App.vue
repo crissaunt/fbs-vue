@@ -13,15 +13,12 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
-// ❌ Admin layout commented out (file does not exist)
-// import AdminLayout from '@/views/admin/adminlayout.vue'
-
-// ✅ Instructor layout still active
+// Import layouts
+import AdminLayout from '@/views/admin/adminlayout.vue'
 import InstructorLayout from '@/views/Instructor/InstructorLayout.vue'
-import BookingLayout from '@/views/booking/layout/BookingLayout.vue'  // ✅ add this
+import BookingLayout from '@/views/booking/layout/BookingLayout.vue'
 import GlobalToast from '@/components/common/GlobalToast.vue'
 import GlobalModalManager from '@/components/common/GlobalModalManager.vue'
-
 
 const route = useRoute()
 
@@ -30,7 +27,7 @@ const route = useRoute()
  * to actual Vue components
  */
 const layouts = {
-  // AdminLayout, // ❌ disabled for now
+  AdminLayout,
   InstructorLayout,
   BookingLayout
 }
@@ -44,7 +41,6 @@ const layoutComponent = computed(() => {
   return layouts[route.meta.layout] || 'div'
 })
 </script>
-
 
 <style>
 /* Global styles */
@@ -75,3 +71,4 @@ body {
   color: white;
 }
 </style>
+
