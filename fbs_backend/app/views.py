@@ -19,7 +19,10 @@ from .models import (
     AirlineTax, Booking, BookingDetail, BookingTax, CheckInDetail, 
     PassengerTypeTaxRate, Route, TrackLog, AirportFee, TaxType,
     Airline, Airport, Aircraft, SeatClass, AddOnType, Flight, Schedule, 
-    Seat, PassengerInfo, SeatRequirement, Students, Payment
+    Seat, PassengerInfo, SeatRequirement, Students, Payment, UserProfile,
+    Country, SeatClassFeature, InsuranceProvider, InsuranceBenefit,
+    InsuranceCoverageType, TravelInsurancePlan, PlanCoverage,
+    MealCategory, MealOption, AssistanceService, BaggageOption, PricingConfiguration
 )
 from fbs_instructor.models import Instructor
 from .serializers import (
@@ -30,8 +33,25 @@ from .serializers import (
     SeatSerializer, PassengerInfoSerializer, TrackLogSerializer,
     AirportFeeSerializer, TaxTypeSerializer, PassengerTypeTaxRateSerializer,
     BookingSerializer, SeatRequirementSerializer, StudentsSerializer, InstructorsSerializer,
-    PaymentSerializer
+    PaymentSerializer, CountrySerializer, SeatClassFeatureSerializer,
+    InsuranceProviderSerializer, InsuranceBenefitSerializer, InsuranceCoverageTypeSerializer,
+    TravelInsurancePlanSerializer, PlanCoverageSerializer,
+    MealCategorySerializer, MealOptionSerializer, AssistanceServiceSerializer,
+    BaggageOptionSerializer, PricingConfigurationSerializer
 )
+
+
+# ==========================================
+# HELPER: Get Client IP
+# ==========================================
+def get_client_ip(request):
+    """Get the client's IP address from the request"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
 
 
 # ==========================================
@@ -39,53 +59,62 @@ from .serializers import (
 # ==========================================
 class AdminLoginView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def post(self, request):
-        username = request.data.get('username')
-        password = request.data.get('password')
-        
-        user = authenticate(username=username, password=password)
-        
-        if user and user.is_staff:
-            # 1. Get or create DRF token (for legacy support)
-            token, _ = Token.objects.get_or_create(user=user)
+        try:
+            username = request.data.get('username')
+            password = request.data.get('password')
             
-            # 2. Get UserProfile for role
-            try:
-                profile = UserProfile.objects.get(user=user)
-                role = profile.role
-            except UserProfile.DoesNotExist:
-                role = 'admin' # Fallback
+            user = authenticate(username=username, password=password)
+            
+            if user and user.is_staff:
+                # 1. Get UserProfile for role
+                try:
+                    profile = UserProfile.objects.get(user=user)
+                    role = profile.role or ('admin' if user.is_staff else None)
+                    if role is None:
+                        role = 'admin' # Ultimate fallback
+                except UserProfile.DoesNotExist:
+                    role = 'admin' # Fallback for users without a profile
+                    
+                # 2. Create a UserSession (Multi-session support)
+                from fbs_instructor.models import UserSession
                 
-            # 3. Create a UserSession (Multi-session support)
-            from fbs_instructor.models import UserSession
-            from fbs_instructor.views import get_client_ip
-            
-            session = UserSession.objects.create(
-                user=user,
-                session_token=UserSession.generate_token(),
-                role=role,
-                ip_address=get_client_ip(request),
-                user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
-                is_active=True
-            )
-            
+                session = UserSession.objects.create(
+                    user=user,
+                    session_token=UserSession.generate_token(),
+                    role=role,
+                    ip_address=get_client_ip(request),
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+                    is_active=True
+                )
+                
+                return Response({
+                    'success': True,
+                    'token': session.session_token,
+                    'session_id': session.id,
+                    'role': role,
+                    'dashboard_route': '/admin/dashboard',
+                    'user': {
+                        'username': user.username,
+                        'email': user.email
+                    }
+                }, status=status.HTTP_200_OK)
+                
             return Response({
-                'success': True,
-                'token': session.session_token,
-                'session_id': session.id,
-                'role': role,
-                'dashboard_route': '/admin/dashboard',
-                'user': {
-                    'username': user.username,
-                    'email': user.email
-                }
-            }, status=status.HTTP_200_OK)
+                'success': False, 
+                'message': 'Invalid admin credentials or account not authorized for admin access.'
+            }, status=status.HTTP_401_UNAUTHORIZED)
             
-        return Response({
-            'success': False, 
-            'message': 'Invalid admin credentials'
-        }, status=status.HTTP_401_UNAUTHORIZED)
+        except Exception as e:
+            import traceback
+            print("❌ Admin Login View Error:")
+            traceback.print_exc()
+            return Response({
+                'success': False,
+                'message': f'Server Error: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ==========================================
@@ -95,30 +124,39 @@ class RouteViewSet(viewsets.ModelViewSet):
     queryset = Route.objects.all()
     serializer_class = RouteSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
 
 
 class FlightViewSet(viewsets.ModelViewSet):
     queryset = Flight.objects.all()
     serializer_class = FlightSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
 
 
 class SeatRequirementViewSet(viewsets.ModelViewSet):
     queryset = SeatRequirement.objects.all()
     serializer_class = SeatRequirementSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
 
 
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.all().order_by('-payment_date')
     serializer_class = PaymentSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
 
 
 class ScheduleViewSet(viewsets.ModelViewSet):
-    queryset = Schedule.objects.all()
+    queryset = Schedule.objects.all().select_related(
+        'flight', 'flight__airline', 'flight__aircraft', 
+        'flight__route', 'flight__route__origin_airport', 
+        'flight__route__destination_airport'
+    ).order_by('-departure_time')
     serializer_class = ScheduleSerializer
     permission_classes = [AllowAny]
+    pagination_class = None  # Disable pagination so frontend sees ALL schedules
 
     @action(detail=False, methods=['get'])
     def stats(self, request):
@@ -360,12 +398,14 @@ class AirlineViewSet(viewsets.ModelViewSet):
     queryset = Airline.objects.all()
     serializer_class = AirlineSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
 
 
 class AirportViewSet(viewsets.ModelViewSet):
     queryset = Airport.objects.all()
     serializer_class = AirportSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
 
 
 # views.py
@@ -374,6 +414,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
     queryset = Aircraft.objects.all()
     serializer_class = AircraftSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
 
     @action(detail=True, methods=['post'], url_path='save-layout')
     def save_layout(self, request, pk=None):
@@ -429,12 +470,14 @@ class SeatClassViewSet(viewsets.ModelViewSet):
     queryset = SeatClass.objects.all()
     serializer_class = SeatClassSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
 
 
 class AddOnTypeViewSet(viewsets.ModelViewSet):
     queryset = AddOnType.objects.all()
     serializer_class = AddOnTypeSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
 
 
 # ==========================================
@@ -447,6 +490,7 @@ class BookingDetailViewSet(viewsets.ModelViewSet):
     queryset = BookingDetail.objects.all()
     serializer_class = BookingDetailSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
 
     def get_queryset(self):
         queryset = super().get_queryset().select_related(
@@ -537,6 +581,7 @@ class PassengerInfoViewSet(viewsets.ModelViewSet):
     queryset = PassengerInfo.objects.all()
     serializer_class = PassengerInfoSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -626,6 +671,7 @@ class StudentsViewSet(viewsets.ModelViewSet):
     queryset = Students.objects.all().order_by('id')
     serializer_class = StudentsSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -645,6 +691,32 @@ class StudentsViewSet(viewsets.ModelViewSet):
             
         return queryset
 
+    @action(detail=True, methods=['post'], url_path='reset-password')
+    def reset_password(self, request, pk=None):
+        """Reset student password to default: Gwapoko123"""
+        student = self.get_object()
+        if not student.user:
+            return Response(
+                {"error": "This student record is not linked to a user account."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        default_password = "Gwapoko123"
+        student.user.set_password(default_password)
+        student.user.save()
+        
+        # Log the action
+        if request.user and request.user.is_authenticated:
+            TrackLog.objects.create(
+                user=request.user,
+                action=f"Reset password for student: {student.student_number}"
+            )
+        
+        return Response({
+            "success": True, 
+            "message": f"Password for {student.user.username} has been reset to default (Gwapoko123)."
+        })
+
 
 
 # ==========================================
@@ -657,6 +729,7 @@ class InstructorsViewSet(viewsets.ModelViewSet):
     queryset = Instructor.objects.all().order_by('id')
     serializer_class = InstructorsSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -689,6 +762,7 @@ class CheckInDetailViewSet(viewsets.ModelViewSet):
     ).all()
     
     serializer_class = CheckInDetailSerializer
+    pagination_class = None
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'flight_number', 'check_in_counter']
     search_fields = [
@@ -978,6 +1052,7 @@ class TrackLogViewSet(viewsets.ModelViewSet):
     queryset = TrackLog.objects.select_related('user').all()
     serializer_class = TrackLogSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
     
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -1052,12 +1127,14 @@ class TaxTypeViewSet(viewsets.ModelViewSet):
     queryset = TaxType.objects.all()
     serializer_class = TaxTypeSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
 
 
 class AirportFeeViewSet(viewsets.ModelViewSet):
     queryset = AirportFee.objects.select_related('airport', 'tax_type').all()
     serializer_class = AirportFeeSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
     
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -1077,6 +1154,7 @@ class AirlineTaxViewSet(viewsets.ModelViewSet):
     queryset = AirlineTax.objects.select_related('airline', 'tax_type').all()
     serializer_class = AirlineTaxSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
     
     def create(self, request, *args, **kwargs):
         try:
@@ -1092,6 +1170,7 @@ class PassengerTypeTaxRateViewSet(viewsets.ModelViewSet):
     queryset = PassengerTypeTaxRate.objects.select_related('tax_type').all()
     serializer_class = PassengerTypeTaxRateSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
     
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -1111,6 +1190,7 @@ class BookingTaxViewSet(viewsets.ModelViewSet):
     queryset = BookingTax.objects.select_related('booking', 'tax_type').all()
     serializer_class = BookingTaxSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
     
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -1162,6 +1242,7 @@ class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.select_related('user').prefetch_related('details')
     serializer_class = BookingSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
 
     def get_queryset(self):
         queryset = Booking.objects.select_related('user').prefetch_related('details')
@@ -1262,19 +1343,21 @@ class DashboardViewSet(viewsets.ViewSet):
             if passengers_yesterday > 0:
                 passenger_growth = round(((passengers_today - passengers_yesterday) / passengers_yesterday) * 100, 1)
             
-            # Revenue
+            # Revenue - Include both 'Completed' and 'confirmed' (lowercase/uppercase)
+            revenue_query = Q(status__iexact='Completed') | Q(status__iexact='confirmed') | Q(status__iexact='Paid')
+            
             total_revenue = Booking.objects.filter(
-                status='Completed'
+                revenue_query
             ).aggregate(total=Sum('total_amount'))['total'] or 0
             
             last_month_revenue = Booking.objects.filter(
-                status='Completed',
+                revenue_query,
                 created_at__gte=last_month
             ).aggregate(total=Sum('total_amount'))['total'] or 0
             
             previous_month_start = last_month - timedelta(days=30)
             previous_month_revenue = Booking.objects.filter(
-                status='Completed',
+                revenue_query,
                 created_at__gte=previous_month_start,
                 created_at__lt=last_month
             ).aggregate(total=Sum('total_amount'))['total'] or 0
@@ -1284,7 +1367,7 @@ class DashboardViewSet(viewsets.ViewSet):
                 revenue_growth = round(((last_month_revenue - previous_month_revenue) / previous_month_revenue) * 100, 1)
             
             total_bookings = Booking.objects.count()
-            pending_bookings = Booking.objects.filter(status='Pending').count()
+            pending_bookings = Booking.objects.filter(Q(status__iexact='Pending') | Q(status='pending')).count()
             
             now = timezone.now()
             active_flights = Schedule.objects.filter(
@@ -1323,7 +1406,8 @@ class DashboardViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def revenue_breakdown(self, request):
         try:
-            completed_bookings = Booking.objects.filter(status='Completed')
+            revenue_query = Q(status__iexact='Completed') | Q(status__iexact='confirmed') | Q(status__iexact='Paid')
+            completed_bookings = Booking.objects.filter(revenue_query)
             
             total = completed_bookings.aggregate(sum=Sum('total_amount'))['sum'] or 0
             tickets = completed_bookings.aggregate(sum=Sum('base_fare_total'))['sum'] or 0
@@ -1496,27 +1580,26 @@ class DashboardViewSet(viewsets.ViewSet):
             from app.models import BookingDetail, SeatClass
             from django.db.models import Count, Sum
 
-            # Aggregate by seat class
+            # Aggregate by seat class - include confirmed bookings
+            # Fallback to 'Unknown' if seat_class is missing
             distribution = (
                 BookingDetail.objects
-                .filter(seat_class__isnull=False)
-                .values('seat_class__name', 'seat_class__color')
-                .annotate(
-                    count=Count('id'),
-                    revenue=Sum('price')
-                )
-                .order_by('-count')
-            )
+                .filter(booking__status__iexact='confirmed') | BookingDetail.objects.filter(booking__status__iexact='Completed')
+            ).values('seat_class__name', 'seat_class__color').annotate(
+                count=Count('id'),
+                revenue=Sum('price')
+            ).order_by('-count')
 
             total = sum(item['count'] for item in distribution)
 
             data = []
             palette = ['#fe3787', '#002D1E', '#6366f1', '#f59e0b', '#22c55e', '#0ea5e9', '#ec4899', '#84cc16']
             for i, item in enumerate(distribution):
+                name = item['seat_class__name'] or 'Unassigned'
                 count = item['count']
                 color = item['seat_class__color'] or palette[i % len(palette)]
                 data.append({
-                    'label': item['seat_class__name'],
+                    'label': name,
                     'count': count,
                     'revenue': float(item['revenue'] or 0),
                     'percentage': round((count / total * 100), 1) if total else 0,
@@ -1678,3 +1761,143 @@ class DashboardViewSet(viewsets.ViewSet):
         except Exception as e:
             return Response({'labels': [], 'data': []}, status=200)
         
+
+
+# ==========================================
+# COUNTRY
+# ==========================================
+class CountryViewSet(viewsets.ModelViewSet):
+    queryset = Country.objects.all().order_by('name')
+    serializer_class = CountrySerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+
+# ==========================================
+# SEAT CLASS FEATURE
+# ==========================================
+class SeatClassFeatureViewSet(viewsets.ModelViewSet):
+    serializer_class = SeatClassFeatureSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+    def get_queryset(self):
+        qs = SeatClassFeature.objects.all().select_related('seat_class').order_by('seat_class', 'display_order')
+        sc = self.request.query_params.get('seat_class')
+        if sc:
+            qs = qs.filter(seat_class_id=sc)
+        return qs
+
+
+# ==========================================
+# INSURANCE
+# ==========================================
+class InsuranceProviderViewSet(viewsets.ModelViewSet):
+    queryset = InsuranceProvider.objects.all().order_by('name')
+    serializer_class = InsuranceProviderSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+class InsuranceBenefitViewSet(viewsets.ModelViewSet):
+    queryset = InsuranceBenefit.objects.all().order_by('display_order', 'name')
+    serializer_class = InsuranceBenefitSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+class InsuranceCoverageTypeViewSet(viewsets.ModelViewSet):
+    queryset = InsuranceCoverageType.objects.all().order_by('display_order', 'name')
+    serializer_class = InsuranceCoverageTypeSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+class TravelInsurancePlanViewSet(viewsets.ModelViewSet):
+    queryset = TravelInsurancePlan.objects.all().select_related('provider').order_by('display_order')
+    serializer_class = TravelInsurancePlanSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+class PlanCoverageViewSet(viewsets.ModelViewSet):
+    serializer_class = PlanCoverageSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+    def get_queryset(self):
+        qs = PlanCoverage.objects.all().select_related('insurance_plan', 'coverage_type')
+        plan = self.request.query_params.get('insurance_plan')
+        if plan:
+            qs = qs.filter(insurance_plan_id=plan)
+        return qs
+
+
+# ==========================================
+# MEALS
+# ==========================================
+class MealCategoryViewSet(viewsets.ModelViewSet):
+    queryset = MealCategory.objects.all().order_by('display_order', 'name')
+    serializer_class = MealCategorySerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+class MealOptionViewSet(viewsets.ModelViewSet):
+    serializer_class = MealOptionSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+    def get_queryset(self):
+        qs = MealOption.objects.all().select_related('airline').order_by('display_order')
+        airline = self.request.query_params.get('airline')
+        if airline:
+            qs = qs.filter(airline_id=airline)
+        return qs
+
+
+# ==========================================
+# ASSISTANCE
+# ==========================================
+class AssistanceServiceViewSet(viewsets.ModelViewSet):
+    serializer_class = AssistanceServiceSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+    def get_queryset(self):
+        qs = AssistanceService.objects.all().select_related('airline').order_by('display_order')
+        airline = self.request.query_params.get('airline')
+        if airline:
+            qs = qs.filter(airline_id=airline)
+        return qs
+
+
+# ==========================================
+# BAGGAGE
+# ==========================================
+class BaggageOptionViewSet(viewsets.ModelViewSet):
+    serializer_class = BaggageOptionSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+    def get_queryset(self):
+        qs = BaggageOption.objects.all().select_related('airline').order_by('display_order')
+        airline = self.request.query_params.get('airline')
+        if airline:
+            qs = qs.filter(airline_id=airline)
+        return qs
+
+
+# ==========================================
+# PRICING CONFIGURATION
+# ==========================================
+class PricingConfigurationViewSet(viewsets.ModelViewSet):
+    permission_classes = [AllowAny]
+    serializer_class = PricingConfigurationSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return PricingConfiguration.objects.all()
+
+    def update(self, request, *args, **kwargs):
+        # Always update the singleton
+        config = PricingConfiguration.load()
+        serializer = self.get_serializer(config, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)

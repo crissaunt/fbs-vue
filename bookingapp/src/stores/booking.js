@@ -49,6 +49,8 @@ export const useBookingStore = defineStore('booking', {
     isPractice: false,            // Whether this is a practice booking
     hasActivityCodeValidation: false, // Whether student has completed activity code step
 
+    nonStopOnly: false,
+    stopPreference: 'all', // 'all', 'nonstop', 'direct', 'connecting'
     sessionExpiry: null,
     isFreshSession: true,
   }),
@@ -509,6 +511,12 @@ export const useBookingStore = defineStore('booking', {
         this.selectedOutbound = null;
         this.selectedReturn = null;
       }
+    },
+
+    setStopPreference(pref) {
+      console.log('🛑 Setting stop preference in Pinia:', pref);
+      this.stopPreference = pref;
+      this.nonStopOnly = (pref === 'nonstop');
     },
 
     setMultiCitySegments(segments) {

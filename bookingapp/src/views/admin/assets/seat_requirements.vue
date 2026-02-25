@@ -23,7 +23,13 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
-          <tr v-for="req in requirements" :key="req.id" class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium">
+          <tr 
+            v-for="req in paginatedRequirements" 
+            :key="req.id" 
+            :id="`requirement-row-${req.id}`"
+            :class="{'highlight-active': highlightedId === req.id}"
+            class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium"
+          >
             <td class="px-6 py-4">
               <div class="w-10 h-10 bg-gray-50 border border-gray-100 rounded-[1px] flex items-center justify-center">
                 <i :class="[formatIcon(req.icon), 'text-[#fe3787] text-xl']"></i>
@@ -59,6 +65,44 @@
           </tr>
         </tbody>
       </table>
+
+      <!-- Pagination Section -->
+      <div v-if="requirements.length > itemsPerPage" class="px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+        <div class="flex items-center justify-between">
+          <div class="text-[11px] font-bold text-gray-400 uppercase tracking-widest poppins">
+            Showing {{ startIndex + 1 }} - {{ endIndex }} of {{ requirements.length }}
+          </div>
+          <div class="flex gap-1">
+            <button 
+              @click="prevPage" 
+              :disabled="currentPage === 1"
+              class="px-4 py-2 bg-white border border-gray-200 rounded-[1px] text-xs font-bold uppercase hover:bg-gray-50 disabled:opacity-50 poppins transition-all shadow-sm"
+            >
+              Prev
+            </button>
+            <button 
+              v-for="page in visiblePages" 
+              :key="page"
+              @click="goToPage(page)"
+              :disabled="page === '...'"
+              :class="[
+                'px-4 py-2 border rounded-[1px] text-xs font-bold uppercase poppins transition-all shadow-sm',
+                page === '...' ? 'bg-white border-gray-200 text-gray-400' : 
+                currentPage === page ? 'bg-[#fe3787] text-white border-[#fe3787]' : 'bg-white border-gray-200 text-[#002D1E] hover:bg-gray-50'
+              ]"
+            >
+              {{ page }}
+            </button>
+            <button 
+              @click="nextPage" 
+              :disabled="currentPage === totalPages"
+              class="px-4 py-2 bg-white border border-gray-200 rounded-[1px] text-xs font-bold uppercase hover:bg-gray-50 disabled:opacity-50 poppins transition-all shadow-sm"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Modal Section -->
@@ -118,17 +162,24 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
+import { useRoute } from 'vue-router';
 import api from '@/services/admin/api';
 import { useModalStore } from '@/stores/modal';
 
 const modalStore = useModalStore();
 
-// Requirements state
+// State
 const requirements = ref([]);
 const isModalOpen = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
+const highlightedId = ref(null);
+const route = useRoute();
+
+// Pagination State
+const currentPage = ref(1);
+const itemsPerPage = 10;
 const form = ref({
   name: '',
   code: '',
@@ -137,10 +188,60 @@ const form = ref({
   description: ''
 });
 
+// Pagination Logic
+const totalPages = computed(() => Math.ceil(requirements.value.length / itemsPerPage));
+const paginatedRequirements = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  return requirements.value.slice(start, start + itemsPerPage);
+});
+const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage);
+const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, requirements.value.length));
+
+const visiblePages = computed(() => {
+  const pages = [];
+  const t = totalPages.value;
+  const c = currentPage.value;
+  if (t <= 5) {
+    for (let i = 1; i <= t; i++) pages.push(i);
+  } else {
+    if (c <= 3) {
+      for (let i = 1; i <= 4; i++) pages.push(i);
+      pages.push('...', t);
+    } else if (c >= t - 2) {
+      pages.push(1, '...');
+      for (let i = t - 3; i <= t; i++) pages.push(i);
+    } else {
+      pages.push(1, '...', c - 1, c, c + 1, '...', t);
+    }
+  }
+  return pages;
+});
+
 const fetchRequirements = async () => {
   try {
     const res = await api.get('/seat-requirements/');
     requirements.value = res.data.results || res.data || [];
+
+    if (route.query.page) {
+        currentPage.value = parseInt(route.query.page);
+    }
+
+    if (route.query.highlight) {
+        const hId = parseInt(route.query.highlight);
+        highlightedId.value = hId;
+
+        // Auto-navigate to the correct page for this ID
+        const index = requirements.value.findIndex(r => r.id === hId);
+        if (index !== -1) {
+            currentPage.value = Math.floor(index / itemsPerPage) + 1;
+        }
+
+        setTimeout(() => {
+            const el = document.getElementById(`requirement-row-${hId}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { highlightedId.value = null; }, 3000);
+        }, 500);
+    }
   } catch (err) {
     console.error('Failed to fetch requirements:', err);
   }
@@ -196,6 +297,10 @@ const openModal = (req = null) => {
   };
   isModalOpen.value = true;
 };
+
+const prevPage = () => { if (currentPage.value > 1) currentPage.value--; };
+const nextPage = () => { if (currentPage.value < totalPages.value) currentPage.value++; };
+const goToPage = (p) => { if (p !== '...') currentPage.value = p; };
 
 const formatPrice = (price) => {
   return parseFloat(price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });

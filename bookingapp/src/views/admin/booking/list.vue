@@ -38,12 +38,18 @@
 
         <tbody class="divide-y divide-gray-100">
           <tr
-            v-for="booking in bookings"
+            v-for="booking in paginatedBookings"
             :key="booking.id"
-            class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium"
+            :id="`booking-row-${booking.id}`"
+            :class="{'highlight-active': highlightedId === booking.id}"
+            class="hover:bg-gray-50/50 transition-all text-[12px] font-medium"
           >
-            <td class="px-6 py-4 font-bold text-[#fe3787] poppins">
-              #{{ booking.id }}
+            <td class="px-6 py-4">
+              <span class="font-bold text-[#fe3787] poppins block">#{{ booking.id }}</span>
+              <div class="flex items-center gap-1 mt-1">
+                <span class="text-[9px] text-gray-400 font-bold uppercase poppins">Recorded</span>
+                <div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+              </div>
             </td>
 
             <td class="px-6 py-4">
@@ -88,15 +94,60 @@
           </tr>
         </tbody>
       </table>
+
+      <!-- Pagination Section -->
+      <div v-if="bookings.length > itemsPerPage" class="px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+        <div class="flex items-center justify-between">
+          <div class="text-[11px] font-bold text-gray-400 uppercase tracking-widest poppins">
+            Showing {{ startIndex + 1 }} - {{ endIndex }} of {{ bookings.length }}
+          </div>
+          <div class="flex gap-1">
+            <button 
+              @click="prevPage" 
+              :disabled="currentPage === 1"
+              class="px-4 py-2 bg-white border border-gray-200 rounded-[1px] text-xs font-bold uppercase hover:bg-gray-50 disabled:opacity-50 poppins transition-all shadow-sm"
+            >
+              Prev
+            </button>
+            <button 
+              v-for="page in visiblePages" 
+              :key="page"
+              @click="goToPage(page)"
+              :disabled="page === '...'"
+              :class="[
+                'px-4 py-2 border rounded-[1px] text-xs font-bold uppercase poppins transition-all shadow-sm',
+                page === '...' ? 'bg-white border-gray-200 text-gray-400' : 
+                currentPage === page ? 'bg-[#fe3787] text-white border-[#fe3787]' : 'bg-white border-gray-200 text-[#002D1E] hover:bg-gray-50'
+              ]"
+            >
+              {{ page }}
+            </button>
+            <button 
+              @click="nextPage" 
+              :disabled="currentPage === totalPages"
+              class="px-4 py-2 bg-white border border-gray-200 rounded-[1px] text-xs font-bold uppercase hover:bg-gray-50 disabled:opacity-50 poppins transition-all shadow-sm"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from "vue"
+import { useRoute } from "vue-router"
 import api from "@/services/admin/api"
 
 const bookings = ref([])
+const highlightedId = ref(null);
+const route = useRoute();
+
+// Pagination State
+const currentPage = ref(1);
+const itemsPerPage = 10;
 
 const statsItems = computed(() => {
   return {
@@ -105,6 +156,35 @@ const statsItems = computed(() => {
     'Pending': bookings.value.filter(b => b.status?.toLowerCase() === 'pending').length,
     'Cancelled': bookings.value.filter(b => b.status?.toLowerCase() === 'cancelled').length,
   };
+});
+
+// Pagination Logic
+const totalPages = computed(() => Math.ceil(bookings.value.length / itemsPerPage));
+const paginatedBookings = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  return bookings.value.slice(start, start + itemsPerPage);
+});
+const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage);
+const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, bookings.value.length));
+
+const visiblePages = computed(() => {
+  const pages = [];
+  const t = totalPages.value;
+  const c = currentPage.value;
+  if (t <= 5) {
+    for (let i = 1; i <= t; i++) pages.push(i);
+  } else {
+    if (c <= 3) {
+      for (let i = 1; i <= 4; i++) pages.push(i);
+      pages.push('...', t);
+    } else if (c >= t - 2) {
+      pages.push(1, '...');
+      for (let i = t - 3; i <= t; i++) pages.push(i);
+    } else {
+      pages.push(1, '...', c - 1, c, c + 1, '...', t);
+    }
+  }
+  return pages;
 });
 
 const statIcon = (label) => {
@@ -125,6 +205,27 @@ const fetchBookings = async () => {
   try {
     const res = await api.get("/bookings/")
     bookings.value = res.data.results || res.data
+
+    if (route.query.page) {
+        currentPage.value = parseInt(route.query.page);
+    }
+
+    if (route.query.highlight) {
+        const hId = parseInt(route.query.highlight);
+        highlightedId.value = hId;
+
+        // Auto-navigate to the correct page for this ID
+        const index = bookings.value.findIndex(b => b.id === hId);
+        if (index !== -1) {
+            currentPage.value = Math.floor(index / itemsPerPage) + 1;
+        }
+
+        setTimeout(() => {
+            const el = document.getElementById(`booking-row-${hId}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { highlightedId.value = null; }, 3000);
+        }, 500);
+    }
   } catch (err) {
     console.error("Fetch failed", err);
   }
@@ -146,11 +247,27 @@ const statusBadge = (status) => {
   }
 }
 
+const prevPage = () => { if (currentPage.value > 1) currentPage.value--; };
+const nextPage = () => { if (currentPage.value < totalPages.value) currentPage.value++; };
+const goToPage = (p) => { if (p !== '...') currentPage.value = p; };
+
 onMounted(fetchBookings)
 </script>
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+
+@keyframes pulse-highlight {
+  0% { background-color: rgba(254, 55, 135, 0.05); }
+  50% { background-color: rgba(254, 55, 135, 0.2); }
+  100% { background-color: rgba(254, 55, 135, 0.05); }
+}
+
+.highlight-active {
+  animation: pulse-highlight 1.5s ease-in-out infinite;
+  border-left: 4px solid #fe3787 !important;
+  box-shadow: inset 0 0 20px rgba(254, 55, 135, 0.1);
+}
 
 .poppins {
   font-family: 'Poppins', sans-serif;

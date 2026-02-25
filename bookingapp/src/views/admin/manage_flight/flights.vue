@@ -39,32 +39,76 @@
             <th class="px-6 py-4 poppins">Airline</th>
             <th class="px-6 py-4 poppins">Aircraft</th>
             <th class="px-6 py-4 poppins">Route</th>
+            <th class="px-6 py-4 poppins">Stops</th>
             <th class="px-6 py-4 poppins text-right">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
-          <tr v-for="f in flights" :key="f.id" class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium">
+          <tr 
+            v-for="f in paginatedFlights" 
+            :key="f.id" 
+            :id="`flight-row-${f.id}`"
+            :class="{'highlight-active': highlightedId === f.id}"
+            class="hover:bg-gray-50/50 transition-all text-[12px] font-medium"
+          >
             <td class="px-6 py-4">
-              <span class="font-bold text-[#fe3787] poppins text-sm">{{ f.flight_number }}</span>
+              <div class="flex flex-col gap-1">
+                <router-link 
+                  :to="{ name: 'ManageRoutes', query: { highlight: f.route } }" 
+                  class="font-bold text-[#fe3787] poppins text-sm hover:underline hover:text-[#fb1873] transition-all flex items-center gap-1 group"
+                  title="View Route Connection"
+                >
+                  {{ f.flight_number }}
+                  <i class="ph ph-link-simple text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                </router-link>
+                <div class="flex items-center gap-1 mt-1">
+                  <span class="text-[9px] text-gray-400 font-bold uppercase tracking-tighter poppins">Internal ID: {{ f.id }}</span>
+                  <div class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" title="Connected to Backend"></div>
+                </div>
+              </div>
             </td>
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
                   <i class="ph ph-buildings text-blue-600"></i>
                 </div>
-                <span class="font-bold text-[#002D1E] poppins">{{ f.airline_display || 'N/A' }}</span>
+                <router-link 
+                  :to="{ name: 'AdminAirlines', query: { highlight: f.airline } }"
+                  class="font-bold text-[#002D1E] poppins hover:text-[#fe3787] transition-all"
+                  title="View Airline Connection"
+                >
+                  {{ f.airline_display }}
+                </router-link>
               </div>
             </td>
             <td class="px-6 py-4">
               <div class="flex items-center gap-2">
-                <i class="ph ph-airplane-tilt text-gray-400"></i>
-                <span class="text-gray-700 poppins">{{ f.aircraft_display || 'N/A' }}</span>
+                <i class="ph ph-airplane-tilt text-purple-600"></i>
+                <router-link 
+                  :to="{ name: 'AdminAircraft', query: { highlight: f.aircraft } }"
+                  class="text-gray-700 poppins hover:text-[#fe3787] transition-all font-medium"
+                  title="View Aircraft Connection"
+                >
+                  {{ f.aircraft_display }}
+                </router-link>
               </div>
             </td>
             <td class="px-6 py-4">
-               <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-[1px] text-[10px] font-bold uppercase poppins tracking-tight">
-                 {{ f.route_display || 'No Route' }}
-               </span>
+              <router-link 
+                :to="{ name: 'ManageRoutes', query: { highlight: f.route } }"
+                class="bg-purple-100 text-purple-700 px-3 py-1 rounded-[1px] text-[10px] font-bold uppercase poppins tracking-tight hover:bg-[#fe3787] hover:text-white transition-all inline-block"
+                title="View Route Details"
+              >
+                {{ f.route_display || 'No Route' }}
+              </router-link>
+            </td>
+            <td class="px-6 py-4">
+              <span 
+                :class="f.total_stops === 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'"
+                class="px-3 py-1 rounded-[1px] text-[10px] font-bold uppercase poppins"
+              >
+                {{ f.total_stops === 0 ? 'Non-stop' : `${f.total_stops} ${f.total_stops === 1 ? 'Stop' : 'Stops'}` }}
+              </span>
             </td>
             <td class="px-6 py-4 text-right">
               <div class="flex justify-end gap-2">
@@ -82,6 +126,44 @@
           </tr>
         </tbody>
       </table>
+
+      <!-- Pagination Section -->
+      <div v-if="flights.length > itemsPerPage" class="px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+        <div class="flex items-center justify-between">
+          <div class="text-[11px] font-bold text-gray-400 uppercase tracking-widest poppins">
+            Showing {{ startIndex + 1 }} - {{ endIndex }} of {{ flights.length }}
+          </div>
+          <div class="flex gap-1">
+            <button 
+              @click="prevPage" 
+              :disabled="currentPage === 1"
+              class="px-4 py-2 bg-white border border-gray-200 rounded-[1px] text-xs font-bold uppercase hover:bg-gray-50 disabled:opacity-50 poppins transition-all shadow-sm"
+            >
+              Prev
+            </button>
+            <button 
+              v-for="page in visiblePages" 
+              :key="page"
+              @click="goToPage(page)"
+              :disabled="page === '...'"
+              :class="[
+                'px-4 py-2 border rounded-[1px] text-xs font-bold uppercase poppins transition-all shadow-sm',
+                page === '...' ? 'bg-white border-gray-200 text-gray-400' : 
+                currentPage === page ? 'bg-[#fe3787] text-white border-[#fe3787]' : 'bg-white border-gray-200 text-[#002D1E] hover:bg-gray-50'
+              ]"
+            >
+              {{ page }}
+            </button>
+            <button 
+              @click="nextPage" 
+              :disabled="currentPage === totalPages"
+              class="px-4 py-2 bg-white border border-gray-200 rounded-[1px] text-xs font-bold uppercase hover:bg-gray-50 disabled:opacity-50 poppins transition-all shadow-sm"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Modal Section -->
@@ -130,6 +212,11 @@
             </select>
           </div>
 
+          <div>
+            <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Total Stops</label>
+            <input v-model="form.total_stops" type="number" min="0" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px]" placeholder="0 for non-stop" required>
+          </div>
+
           <div class="flex justify-end gap-3 pt-6 border-t mt-4">
             <button type="button" @click="isModalOpen = false" class="text-sm text-gray-500 font-medium hover:text-gray-700 poppins">Cancel</button>
             <button type="submit" class="bg-[#fe3787] text-white px-6 py-2 text-sm font-bold shadow-md hover:bg-[#e6327a] transition-all rounded-[1px] poppins">
@@ -144,6 +231,7 @@
 
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue';
+import { useRoute } from 'vue-router';
 import api from '@/services/admin/api';
 import { useModalStore } from '@/stores/modal';
 
@@ -162,8 +250,13 @@ const form = ref({
   flight_number: '',
   airline: '',
   aircraft: '',
-  route: ''
+  route: '',
+  total_stops: 0
 });
+
+// Pagination State
+const currentPage = ref(1);
+const itemsPerPage = 10;
 
 // --- Computed Stats ---
 const statsItems = computed(() => {
@@ -172,6 +265,35 @@ const statsItems = computed(() => {
     'Active Airlines': new Set(flights.value.map(f => f.airline)).size,
     'Operational Aircraft': new Set(flights.value.map(f => f.aircraft)).size,
   };
+});
+
+// Pagination Logic
+const totalPages = computed(() => Math.ceil(flights.value.length / itemsPerPage));
+const paginatedFlights = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  return flights.value.slice(start, start + itemsPerPage);
+});
+const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage);
+const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, flights.value.length));
+
+const visiblePages = computed(() => {
+  const pages = [];
+  const t = totalPages.value;
+  const c = currentPage.value;
+  if (t <= 5) {
+    for (let i = 1; i <= t; i++) pages.push(i);
+  } else {
+    if (c <= 3) {
+      for (let i = 1; i <= 4; i++) pages.push(i);
+      pages.push('...', t);
+    } else if (c >= t - 2) {
+      pages.push(1, '...');
+      for (let i = t - 3; i <= t; i++) pages.push(i);
+    } else {
+      pages.push(1, '...', c - 1, c, c + 1, '...', t);
+    }
+  }
+  return pages;
 });
 
 const statIcon = (label) => {
@@ -186,6 +308,9 @@ const statIconClass = (label) => {
   return 'bg-purple-100 text-purple-600';
 };
 
+const highlightedId = ref(null);
+const route = useRoute();
+
 const fetchData = async () => {
   try {
     const [resF, resA, resAc, resR] = await Promise.all([
@@ -199,6 +324,30 @@ const fetchData = async () => {
     airlines.value = resA.data.results || resA.data;
     allAircrafts.value = resAc.data.results || resAc.data;
     routes.value = resR.data.results || resR.data;
+
+    if (route.query.page) {
+        currentPage.value = parseInt(route.query.page);
+    }
+
+    // Handle highlighted record from query params
+    if (route.query.highlight) {
+        const hId = parseInt(route.query.highlight);
+        highlightedId.value = hId;
+
+        // Auto-navigate to the correct page for this ID
+        const index = flights.value.findIndex(f => f.id === hId);
+        if (index !== -1) {
+            currentPage.value = Math.floor(index / itemsPerPage) + 1;
+        }
+
+        setTimeout(() => {
+            const el = document.getElementById(`flight-row-${hId}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Clear highlight after 3 seconds
+            setTimeout(() => { highlightedId.value = null; }, 3000);
+        }, 500);
+    }
   } catch (err) {
     console.error("Data fetch failed:", err.response?.data || err.message);
   }
@@ -258,6 +407,10 @@ const deleteFlight = async (id) => {
   }
 };
 
+const prevPage = () => { if (currentPage.value > 1) currentPage.value--; };
+const nextPage = () => { if (currentPage.value < totalPages.value) currentPage.value++; };
+const goToPage = (p) => { if (p !== '...') currentPage.value = p; };
+
 const openModal = (flight = null) => {
   isEditing.value = !!flight;
   currentId.value = flight?.id || null;
@@ -267,10 +420,11 @@ const openModal = (flight = null) => {
       flight_number: flight.flight_number,
       airline: flight.airline, 
       aircraft: flight.aircraft, 
-      route: flight.route 
+      route: flight.route,
+      total_stops: flight.total_stops
     };
   } else {
-    form.value = { flight_number: '', airline: '', aircraft: '', route: '' };
+    form.value = { flight_number: '', airline: '', aircraft: '', route: '', total_stops: 0 };
   }
   isModalOpen.value = true;
 };
@@ -280,6 +434,18 @@ onMounted(fetchData);
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+
+@keyframes pulse-highlight {
+  0% { background-color: rgba(254, 55, 135, 0.05); }
+  50% { background-color: rgba(254, 55, 135, 0.2); }
+  100% { background-color: rgba(254, 55, 135, 0.05); }
+}
+
+.highlight-active {
+  animation: pulse-highlight 1.5s ease-in-out infinite;
+  border-left: 4px solid #fe3787 !important;
+  box-shadow: inset 0 0 20px rgba(254, 55, 135, 0.1);
+}
 
 .poppins {
   font-family: 'Poppins', sans-serif;

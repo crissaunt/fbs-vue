@@ -381,7 +381,7 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
                     'destination': s.flight.route.destination_airport.code,
                     'departure_time': s.departure_time.isoformat(),
                     'arrival_time': s.arrival_time.isoformat(),
-                    'total_stops': 0,
+                    'total_stops': s.flight.total_stops,
                     'is_domestic': s.flight.route.is_domestic,
                 })
             
@@ -1902,7 +1902,7 @@ def _create_booking_detail(booking, passenger, segment, passenger_data=None, seg
             'destination': schedule.flight.route.destination_airport.code,
             'departure_time': schedule.departure_time.isoformat(),
             'arrival_time': schedule.arrival_time.isoformat(),
-            'total_stops': 0,
+            'total_stops': schedule.flight.total_stops,
             'is_domestic': schedule.flight.route.is_domestic,
         }
         

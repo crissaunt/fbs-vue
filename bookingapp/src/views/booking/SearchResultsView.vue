@@ -834,6 +834,7 @@ const filters = ref({
   sortBy: 'departure_time',
   hasAvailableSeats: false,
   seatClass: 'all',
+  stops: 'all',
 });
 
 // Date filter state
@@ -1514,6 +1515,14 @@ onMounted(() => {
   console.log('Has Outbound Selected:', hasOutboundSelected.value);
   console.log('Has Return Selected:', hasReturnSelected.value);
   
+  // Set stop preference if requested from home
+  if (bookingStore.stopPreference !== 'all') {
+    console.log('🛑 Stop preference active:', bookingStore.stopPreference);
+    filters.value.stops = bookingStore.stopPreference;
+  } else if (route.query.stops) {
+    filters.value.stops = route.query.stops;
+  }
+  
   // AUTO-SWITCH TO RETURN PHASE IF OUTBOUND IS ALREADY SELECTED
   if (isRoundTrip.value && hasOutboundSelected.value && !hasReturnSelected.value) {
     console.log('🔄 Outbound already selected, auto-switching to return phase');
@@ -1761,6 +1770,15 @@ const applyFilters = () => {
     });
   }
   
+  // Stops filter
+  if (filters.value.stops !== 'all') {
+    if (filters.value.stops === 'nonstop' || filters.value.stops === 'direct') {
+      result = result.filter(f => (f.total_stops || 0) === 0);
+    } else if (filters.value.stops === 'connecting') {
+      result = result.filter(f => (f.total_stops || 0) > 0);
+    }
+  }
+  
   // Sort flights
   result.sort((a, b) => {
     switch (filters.value.sortBy) {
@@ -1790,6 +1808,7 @@ const resetFilters = () => {
     sortBy: 'departure_time',
     hasAvailableSeats: false,
     seatClass: 'all',
+    stops: 'all',
   };
   
   dateFilter.value = {

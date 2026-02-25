@@ -117,7 +117,13 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
-          <tr v-for="tax in paginatedTaxes" :key="tax.id" class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium">
+          <tr 
+            v-for="tax in paginatedTaxes" 
+            :key="tax.id" 
+            :id="`airlinetax-row-${tax.id}`"
+            :class="{'highlight-active': highlightedId === tax.id}"
+            class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium"
+          >
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
@@ -416,10 +422,12 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import api from '@/services/admin/api'
 import { useModalStore } from '@/stores/modal'
 
 const modalStore = useModalStore()
+const route = useRoute()
 
 // State
 const taxes = ref([])
@@ -431,6 +439,7 @@ const showDetailsModal = ref(false)
 const selectedTax = ref(null)
 const isEditing = ref(false)
 const currentId = ref(null)
+const highlightedId = ref(null)
 
 // Filters
 const searchQuery = ref('')
@@ -539,6 +548,27 @@ const fetchData = async () => {
     
     calculateStats()
     calculateBreakdowns()
+
+    if (route.query.page) {
+        currentPage.value = parseInt(route.query.page);
+    }
+
+    if (route.query.highlight) {
+        const hId = parseInt(route.query.highlight);
+        highlightedId.value = hId;
+
+        // Auto-navigate to the correct page for this ID
+        const index = taxes.value.findIndex(t => t.id === hId);
+        if (index !== -1) {
+            currentPage.value = Math.floor(index / itemsPerPage) + 1;
+        }
+
+        setTimeout(() => {
+            const el = document.getElementById(`airlinetax-row-${hId}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { highlightedId.value = null; }, 3000);
+        }, 500);
+    }
   } catch (err) {
     console.error('Fetch error:', err)
     alert('Failed to load data')

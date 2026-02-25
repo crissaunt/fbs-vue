@@ -1,6 +1,14 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import AirlineTax, AirportFee, Booking, BookingDetail, BookingTax, CheckInDetail, PassengerInfo, Students, PassengerTypeTaxRate, Route, Airline, SeatClass, Aircraft, Airport, AddOnType, Flight, Schedule, Seat, TaxType, TrackLog, SeatRequirement, Payment
+from .models import (
+    AirlineTax, AirportFee, Booking, BookingDetail, BookingTax, CheckInDetail,
+    PassengerInfo, Students, PassengerTypeTaxRate, Route, Airline, SeatClass,
+    Aircraft, Airport, AddOnType, Flight, Schedule, Seat, TaxType, TrackLog,
+    SeatRequirement, Payment, Country, SeatClassFeature,
+    InsuranceProvider, InsuranceBenefit, InsuranceCoverageType, TravelInsurancePlan,
+    PlanCoverage, MealCategory, MealOption, AssistanceService, BaggageOption,
+    PricingConfiguration
+)
 from fbs_instructor.models import Instructor
 
 # ==========================================
@@ -83,7 +91,7 @@ class FlightSerializer(serializers.ModelSerializer):
     class Meta:
         model = Flight
         fields = ['id', 'flight_number', 'airline', 'airline_display', 
-                  'aircraft', 'aircraft_display', 'route', 'route_display']
+                  'aircraft', 'aircraft_display', 'route', 'route_display', 'total_stops']
 
 class ScheduleSerializer(serializers.ModelSerializer):
     flight_number = serializers.ReadOnlyField(source='flight.flight_number')
@@ -119,7 +127,6 @@ class ScheduleSerializer(serializers.ModelSerializer):
             'status_display', 
             'duration_display'
         ]
-        depth = 2  # This will auto-nest related objects 2 levels deep
 
 
 class SeatRequirementSerializer(serializers.ModelSerializer):
@@ -227,6 +234,102 @@ class AddOnTypeSerializer(serializers.ModelSerializer):
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
+        fields = '__all__'
+
+
+# ==========================================
+# COUNTRY
+# ==========================================
+class CountrySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Country
+        fields = ['id', 'name', 'code', 'currency']
+
+
+# ==========================================
+# SEAT CLASS FEATURE
+# ==========================================
+class SeatClassFeatureSerializer(serializers.ModelSerializer):
+    seat_class_name = serializers.ReadOnlyField(source='seat_class.name')
+    class Meta:
+        model = SeatClassFeature
+        fields = ['id', 'seat_class', 'seat_class_name', 'feature', 'icon', 'display_order', 'is_active']
+
+
+# ==========================================
+# INSURANCE
+# ==========================================
+class InsuranceProviderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InsuranceProvider
+        fields = ['id', 'name', 'code', 'is_active', 'created_at']
+        read_only_fields = ['created_at']
+
+class InsuranceBenefitSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InsuranceBenefit
+        fields = ['id', 'name', 'description', 'icon_class', 'display_order', 'is_active']
+
+class InsuranceCoverageTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InsuranceCoverageType
+        fields = ['id', 'name', 'code', 'icon_class', 'display_order', 'is_active']
+
+class TravelInsurancePlanSerializer(serializers.ModelSerializer):
+    provider_name = serializers.ReadOnlyField(source='provider.name')
+    class Meta:
+        model = TravelInsurancePlan
+        fields = ['id', 'name', 'provider', 'provider_name', 'retail_price', 'is_active', 'display_order']
+
+class PlanCoverageSerializer(serializers.ModelSerializer):
+    plan_name = serializers.ReadOnlyField(source='insurance_plan.name')
+    coverage_type_name = serializers.ReadOnlyField(source='coverage_type.name')
+    class Meta:
+        model = PlanCoverage
+        fields = ['id', 'insurance_plan', 'plan_name', 'coverage_type', 'coverage_type_name', 'amount', 'description']
+
+
+# ==========================================
+# MEALS
+# ==========================================
+class MealCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MealCategory
+        fields = ['id', 'name', 'description', 'display_order']
+
+class MealOptionSerializer(serializers.ModelSerializer):
+    airline_name = serializers.ReadOnlyField(source='airline.name')
+    class Meta:
+        model = MealOption
+        fields = ['id', 'name', 'meal_type', 'airline', 'airline_name', 'price', 'is_available', 'display_order']
+
+
+# ==========================================
+# ASSISTANCE
+# ==========================================
+class AssistanceServiceSerializer(serializers.ModelSerializer):
+    airline_name = serializers.ReadOnlyField(source='airline.name')
+    class Meta:
+        model = AssistanceService
+        fields = ['id', 'name', 'service_type', 'airline', 'airline_name', 'price', 'is_available', 'display_order']
+
+
+# ==========================================
+# BAGGAGE
+# ==========================================
+class BaggageOptionSerializer(serializers.ModelSerializer):
+    airline_name = serializers.ReadOnlyField(source='airline.name')
+    class Meta:
+        model = BaggageOption
+        fields = ['id', 'weight_kg', 'airline', 'airline_name', 'price', 'is_available', 'display_order']
+
+
+# ==========================================
+# PRICING CONFIGURATION
+# ==========================================
+class PricingConfigurationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PricingConfiguration
         fields = '__all__'
 
 

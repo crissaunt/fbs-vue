@@ -84,7 +84,13 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
-          <tr v-for="student in paginatedStudents" :key="student.id" class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium">
+          <tr 
+            v-for="student in paginatedStudents" 
+            :key="student.id" 
+            :id="`student-row-${student.id}`"
+            :class="{'highlight-active': highlightedId === student.id}"
+            class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium"
+          >
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
@@ -119,6 +125,9 @@
                 </button>
                 <button @click="editStudent(student)" class="text-green-600 hover:text-green-400 p-2 transition-colors">
                   <i class="ph ph-pencil-simple text-lg"></i>
+                </button>
+                <button @click="resetPassword(student)" class="text-orange-600 hover:text-orange-400 p-2 transition-colors" title="Reset Password">
+                  <i class="ph ph-key text-lg"></i>
                 </button>
                 <button @click="deleteStudent(student.id)" class="text-red-600 hover:text-red-400 p-2 transition-colors">
                   <i class="ph ph-trash text-lg"></i>
@@ -339,10 +348,12 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import api from '@/services/admin/api'
 import { useModalStore } from '@/stores/modal'
 
 const modalStore = useModalStore()
+const route = useRoute()
 
 // Reactive state
 const students = ref([])
@@ -352,6 +363,7 @@ const showDetailsModal = ref(false)
 const selectedStudent = ref(null)
 const isEditing = ref(false)
 const currentId = ref(null)
+const highlightedId = ref(null)
 
 // Filters and pagination
 const searchQuery = ref('')
@@ -433,6 +445,27 @@ const fetchStudents = async () => {
     const response = await api.get('/students/', { params })
     students.value = (response.data.results || response.data)
     calculateStats()
+
+    if (route.query.page) {
+        currentPage.value = parseInt(route.query.page);
+    }
+
+    if (route.query.highlight) {
+        const hId = parseInt(route.query.highlight);
+        highlightedId.value = hId;
+
+        // Auto-navigate to the correct page for this ID
+        const index = students.value.findIndex(s => s.id === hId);
+        if (index !== -1) {
+            currentPage.value = Math.floor(index / itemsPerPage) + 1;
+        }
+
+        setTimeout(() => {
+            const el = document.getElementById(`student-row-${hId}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { highlightedId.value = null; }, 3000);
+        }, 500);
+    }
   } catch (err) { console.error(err) } finally { loading.value = false }
 }
 
@@ -497,6 +530,29 @@ const saveStudent = async () => {
     formError.value = err.response?.data?.error || 'Failed to save. Please check the details and try again.'
   } finally {
     saving.value = false
+  }
+}
+
+const resetPassword = async (s) => {
+  const confirmed = await modalStore.confirm({
+    title: 'Security Override: Reset Password?',
+    message: `Are you sure you want to reset the password for ${s.full_name} to the default value: Gwapoko123?`,
+    variant: 'warning',
+    confirmText: 'Reset Password',
+    loadingText: 'Resetting...'
+  });
+
+  if (confirmed) {
+    modalStore.setLoader(true);
+    try {
+      const res = await api.post(`/students/${s.id}/reset-password/`)
+      alert(res.data.message || 'Password has been reset to Gwapoko123')
+      modalStore.close(true);
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.error || 'Failed to reset password. Ensure this student is linked to a user account.')
+      modalStore.setLoader(false);
+    }
   }
 }
 

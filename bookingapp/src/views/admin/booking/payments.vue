@@ -42,9 +42,10 @@
 
         <tbody class="divide-y divide-gray-100">
           <tr
-            v-for="payment in payments"
+            v-for="payment in paginatedPayments"
             :key="payment.id"
-            class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium"
+            :id="`payment-row-${payment.id}`"
+            :class="[{'highlight-active': highlightedId === payment.id}, 'hover:bg-gray-50/50 transition-colors text-[12px] font-medium']"
           >
             <!-- Payment ID -->
             <td class="px-6 py-4 font-bold text-[#fe3787] poppins">
@@ -98,15 +99,61 @@
           </tr>
         </tbody>
       </table>
+
+      <!-- Pagination -->
+      <div v-if="payments.length > itemsPerPage" class="px-6 py-4 border-t border-gray-200">
+        <div class="flex items-center justify-between">
+          <div class="text-[12px] text-gray-500 poppins">
+            Showing {{ startIndex + 1 }} to {{ endIndex }} of {{ payments.length }} payments
+          </div>
+          <div class="flex gap-1">
+            <button 
+              @click="prevPage" 
+              :disabled="currentPage === 1"
+              class="px-3 py-1 border border-gray-300 rounded-[1px] text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed poppins"
+            >
+              Prev
+            </button>
+            <button 
+              v-for="page in visiblePages" 
+              :key="page"
+              @click="goToPage(page)"
+              :disabled="page === '...'"
+              :class="[
+                'px-3 py-1 border rounded-[1px] text-sm poppins',
+                page === '...' ? 'border-gray-300 cursor-default' : '',
+                currentPage === page ? 'bg-[#fe3787] text-white border-[#fe3787]' : 'border-gray-300 hover:bg-gray-50'
+              ]"
+            >
+              {{ page }}
+            </button>
+            <button 
+              @click="nextPage" 
+              :disabled="currentPage === totalPages"
+              class="px-3 py-1 border border-gray-300 rounded-[1px] text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed poppins"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from "vue"
+import { useRoute } from 'vue-router'
 import api from "@/services/admin/api"
 
+const route = useRoute()
+
 const payments = ref([])
+const highlightedId = ref(null)
+
+// Pagination State
+const currentPage = ref(1)
+const itemsPerPage = 10
 
 const statsItems = computed(() => {
   const completed = payments.value.filter(p => p.status === 'Completed');
@@ -133,10 +180,56 @@ const fetchPayments = async () => {
   try {
     const res = await api.get("/payments/")
     payments.value = res.data.results || res.data
+
+    if (route.query.page) {
+        currentPage.value = parseInt(route.query.page);
+    }
+
+    if (route.query.highlight) {
+        const hId = parseInt(route.query.highlight);
+        highlightedId.value = hId;
+
+        // Auto-navigate to the correct page for this ID
+        const index = payments.value.findIndex(p => p.id === hId);
+        if (index !== -1) {
+            currentPage.value = Math.floor(index / itemsPerPage) + 1;
+        }
+
+        setTimeout(() => {
+            const el = document.getElementById(`payment-row-${hId}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { highlightedId.value = null; }, 3000);
+        }, 500);
+    }
   } catch (err) {
     console.error("Failed to load payments", err)
   }
 }
+
+// Pagination Computed
+const totalPages = computed(() => Math.ceil(payments.value.length / itemsPerPage))
+const paginatedPayments = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return payments.value.slice(start, start + itemsPerPage)
+})
+const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage)
+const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, payments.value.length))
+
+const visiblePages = computed(() => {
+  const pages = []
+  const t = totalPages.value; const c = currentPage.value;
+  if (t <= 5) for (let i = 1; i <= t; i++) pages.push(i)
+  else {
+    if (c <= 3) { for (let i = 1; i <= 4; i++) pages.push(i); pages.push('...', t) }
+    else if (c >= t - 2) { pages.push(1, '...'); for (let i = t - 3; i <= t; i++) pages.push(i) }
+    else pages.push(1, '...', c - 1, c, c + 1, '...', t)
+  }
+  return pages
+})
+
+const prevPage = () => { if (currentPage.value > 1) currentPage.value-- }
+const nextPage = () => { if (currentPage.value < totalPages.value) currentPage.value++ }
+const goToPage = (p) => { if (p !== '...') currentPage.value = p }
 
 const formatDate = (date) =>
   new Date(date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })

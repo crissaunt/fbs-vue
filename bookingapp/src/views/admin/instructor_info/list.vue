@@ -76,7 +76,13 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
-          <tr v-for="instructor in paginatedInstructors" :key="instructor.id" class="hover:bg-gray-50/50 transition-colors group">
+          <tr 
+            v-for="instructor in paginatedInstructors" 
+            :key="instructor.id" 
+            :id="`instructor-row-${instructor.id}`"
+            :class="{'highlight-active': highlightedId === instructor.id}"
+            class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium"
+          >
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-[#002D1E] flex items-center justify-center shadow-inner">
@@ -319,10 +325,12 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import api from '@/services/admin/api'
 import { useModalStore } from '@/stores/modal'
 
 const modalStore = useModalStore()
+const route = useRoute()
 
 // Reactive state
 const instructors = ref([])
@@ -332,6 +340,7 @@ const showDetailsModal = ref(false)
 const selectedInstructor = ref(null)
 const isEditing = ref(false)
 const currentId = ref(null)
+const highlightedId = ref(null)
 
 // Filters and pagination
 const searchQuery = ref('')
@@ -396,8 +405,29 @@ const fetchInstructors = async () => {
     const params = {}
     if (searchQuery.value) params.search = searchQuery.value
     const response = await api.get('/instructors/', { params })
-    instructors.value = response.data.results || response.data
+    instructors.value = (response.data.results || response.data)
     calculateStats()
+
+    if (route.query.page) {
+        currentPage.value = parseInt(route.query.page);
+    }
+
+    if (route.query.highlight) {
+        const hId = parseInt(route.query.highlight);
+        highlightedId.value = hId;
+
+        // Auto-navigate to the correct page for this ID
+        const index = instructors.value.findIndex(i => i.id === hId);
+        if (index !== -1) {
+            currentPage.value = Math.floor(index / itemsPerPage) + 1;
+        }
+
+        setTimeout(() => {
+            const el = document.getElementById(`instructor-row-${hId}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { highlightedId.value = null; }, 3000);
+        }, 500);
+    }
   } catch (err) { console.error(err) } finally { loading.value = false }
 }
 

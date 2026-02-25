@@ -10,7 +10,7 @@
           <i class="ph ph-arrows-clockwise"></i> Refresh
         </button>
         <button @click="openAddModal" class="bg-[#fe3787] text-white px-6 py-2 flex items-center gap-2 hover:bg-[#e6327a] font-bold poppins text-[14px] rounded-[1px] shadow-md transition-all ml-auto">
-          <i class="ph ph-plus-circle"></i> Add Passenger
+          <i class="ph ph-plus-circle"></i> Enroll Trainee
         </button>
       </div>
     </div>
@@ -73,7 +73,7 @@
       <table class="w-full text-left">
         <thead class="bg-gray-50 text-gray-600 text-[14px] uppercase font-semibold border-b border-gray-200">
           <tr>
-            <th class="px-6 py-4 poppins">Passenger</th>
+            <th class="px-6 py-4 poppins">Trainee Name</th>
             <th class="px-6 py-4 poppins">Identification</th>
             <th class="px-6 py-4 poppins text-center">Type</th>
             <th class="px-6 py-4 poppins">Birth Date</th>
@@ -82,7 +82,13 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
-          <tr v-for="passenger in paginatedPassengers" :key="passenger.id" class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium">
+          <tr 
+            v-for="passenger in paginatedPassengers" 
+            :key="passenger.id" 
+            :id="`passenger-row-${passenger.id}`"
+            :class="{'highlight-active': highlightedId === passenger.id}"
+            class="hover:bg-gray-50/50 transition-colors text-[12px] font-medium"
+          >
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
@@ -90,7 +96,7 @@
                 </div>
                 <div>
                   <span class="font-bold text-[#002D1E] block poppins">{{ passenger.first_name }} {{ passenger.last_name }}</span>
-                  <span class="text-[10px] text-gray-400 poppins uppercase tracking-wider">ID #{{ passenger.id }}</span>
+                  <span class="text-[10px] text-gray-400 poppins uppercase tracking-wider">Trainee ID #{{ passenger.id }}</span>
                 </div>
               </div>
             </td>
@@ -257,10 +263,12 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import api from '@/services/admin/api'
 import { useModalStore } from '@/stores/modal'
 
 const modalStore = useModalStore()
+const route = useRoute()
 
 // Reactive state
 const passengers = ref([])
@@ -271,6 +279,7 @@ const showEditModal = ref(false)
 const selectedPassenger = ref(null)
 const isEditing = ref(false)
 const currentId = ref(null)
+const highlightedId = ref(null);
 
 // Filters and pagination
 const searchQuery = ref('')
@@ -416,6 +425,27 @@ const fetchPassengers = async () => {
       ...p,
       age: calculateAge(p.date_of_birth)
     }))
+
+    if (route.query.page) {
+        currentPage.value = parseInt(route.query.page);
+    }
+
+    if (route.query.highlight) {
+        const hId = parseInt(route.query.highlight);
+        highlightedId.value = hId;
+
+        // Auto-navigate to the correct page for this ID
+        const index = passengers.value.findIndex(p => p.id === hId);
+        if (index !== -1) {
+            currentPage.value = Math.floor(index / itemsPerPage) + 1;
+        }
+
+        setTimeout(() => {
+            const el = document.getElementById(`passenger-row-${hId}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { highlightedId.value = null; }, 3000);
+        }, 500);
+    }
   } catch (err) {
     console.error('Fetch error:', err)
   } finally {
@@ -601,7 +631,17 @@ onMounted(fetchPassengers)
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+@keyframes pulse-highlight {
+  0% { background-color: rgba(254, 55, 135, 0.05); }
+  50% { background-color: rgba(254, 55, 135, 0.2); }
+  100% { background-color: rgba(254, 55, 135, 0.05); }
+}
+
+.highlight-active {
+  animation: pulse-highlight 1.5s ease-in-out infinite;
+  border-left: 4px solid #fe3787 !important;
+  box-shadow: inset 0 0 20px rgba(254, 55, 135, 0.1);
+}
 
 .poppins {
   font-family: 'Poppins', sans-serif;
