@@ -1,3 +1,7 @@
 ./fbs_backend/.env
 **/__pycache__/
 *.pyc
+node_modules/
+.vite/
+venv/
+.env
