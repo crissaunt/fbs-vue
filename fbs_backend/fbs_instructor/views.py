@@ -112,8 +112,9 @@ def Login_view(request):
         print(f"? New session created: {session.session_token[:16]}... (Role: {session.role})")
     except Exception as e:
         print(f"? Session creation failed: {str(e)}")
+        import traceback
         traceback.print_exc()
-        return Response({"error": "Failed to create session"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"error": f"Failed to create session: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     # 5. Determine Route based on role
     dashboard_route = '/'
@@ -1015,12 +1016,13 @@ def student_dashboard(request):
         print("? FATAL: Could not find Students record!")
         return Response({
             "error": "Student record not found. Please contact your administrator.",
+            "not_enrolled": True,
             "debug_info": {
                 "user_id": user.id,
                 "user_email": user.email,
                 "username": user.username
             }
-        }, status=status.HTTP_404_NOT_FOUND)
+        }, status=status.HTTP_403_FORBIDDEN)
     
     print(f"? Student record: {student.first_name} {student.last_name} (#{student.student_number})")
     
@@ -1030,6 +1032,8 @@ def student_dashboard(request):
     if not enrollment:
         print("?? Student not enrolled in any section")
         return Response({
+            'error': 'You are not enrolled in any section. Please contact your administrator.',
+            'not_enrolled': True,
             'user': {
                 'username': user.username,
                 'first_name': user.first_name,
@@ -1042,12 +1046,7 @@ def student_dashboard(request):
             'section': None,
             'activities': [],
             'total_activities': 0,
-            'session_info': {
-                'session_id': session_obj.id,
-                'role': session_obj.role,
-                'last_activity': session_obj.last_activity.isoformat()
-            }
-        }, status=status.HTTP_200_OK)
+        }, status=status.HTTP_403_FORBIDDEN)
     
     section = enrollment.section
     print(f"? Enrolled in: {section.section_name} ({section.section_code})")

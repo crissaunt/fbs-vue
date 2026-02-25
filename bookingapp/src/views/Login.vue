@@ -115,7 +115,7 @@ export default {
     return {
       username: '',
       password: '',
-      isLoading: false
+      loading: false
     }
   },
   computed: {
@@ -132,7 +132,7 @@ export default {
         return
       }
       
-      this.isLoading = true
+      this.loading = true
 
       try {
         console.log('🔐 Attempting login for:', this.username)
@@ -163,20 +163,22 @@ export default {
         }, 500)
         
       } catch (err) {
-        console.error('❌ LOGIN ERROR:', err)
         if (err.response) {
           const data = err.response.data
-          if (err.response?.status === 401) {
-            this.notificationStore.error('Invalid username or password')
+          if (err.response?.status === 401 || err.response?.status === 400) {
+            const errorMsg = data.non_field_errors?.[0] || data.error || data.detail || 'Invalid username or password'
+            this.notificationStore.error(errorMsg)
           } else {
             const msg = data.error || data.detail || data.message || 'An error occurred during login.'
             this.notificationStore.error(msg)
           }
+        } else if (err.message === 'NOT_ENROLLED') {
+          this.notificationStore.error('You are not enrolled. Please contact your instructor or administrator.')
         } else {
           this.notificationStore.error('Login failed. Please check your internet connection.')
         }
       } finally {
-        this.isLoading = false
+        this.loading = false
       }
     }
   }

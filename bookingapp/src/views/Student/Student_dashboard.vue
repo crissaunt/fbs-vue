@@ -114,7 +114,7 @@
             </div>
           </div>
 
-          <!-- No Section Enrolled State -->
+          <!-- No Section Enrolled (has section but null) -->
           <div v-else-if="!section" class="flex items-center justify-center h-full">
             <div class="bg-white border-2 border-dashed border-gray-300 rounded-lg p-16 text-center max-w-md">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -449,6 +449,16 @@ export default {
         
         console.log('✅ Response received:', response.data);
         
+        // Check if not enrolled - redirect to login
+        if (response.data?.not_enrolled) {
+          this.userStore.logout();
+          this.$router.push('/login');
+          return;
+        }
+        
+        // Student is enrolled
+        this.userStore.setEnrolled(true);
+        
         if (response.data && response.data.user) {
           this.student = {
             first_name: response.data.user.first_name || '',
@@ -492,7 +502,7 @@ export default {
           } else if (error.response.status === 403) {
             this.error = error.response.data.error || "Access denied. You must be a student to access this page.";
           } else if (error.response.status === 401) {
-            this.error = "Your session has expired. Please login again.";
+            this.error = "Successfully logout";
             localStorage.removeItem('token');
             localStorage.removeItem('auth_token');
             localStorage.removeItem('student_data');
@@ -602,7 +612,7 @@ export default {
     },
     handleLogout() {
       console.log('👋 User manually logging out');
-      localStorage.clear();
+      this.userStore.logout();
       this.$router.push('/login');
     },
     goToHome() {

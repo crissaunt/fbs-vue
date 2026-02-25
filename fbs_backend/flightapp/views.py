@@ -1,6 +1,9 @@
 # flightapp/views.py
+import logging
 from django.http import JsonResponse
 import requests
+
+logger = logging.getLogger(__name__)
 from rest_framework import viewsets, generics, status, filters, permissions
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
@@ -230,6 +233,11 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
     
     def list(self, request, *args, **kwargs):
         """REAL-TIME PRICING - Optimized with Batch Processing"""
+        # 0. Track search for demand pricing immediately (affects pricing factors for this request)
+        # Get base queryset early to pass to demand tracker
+        queryset = self.filter_queryset(self.get_queryset())
+        self.track_search_demand(request, queryset)
+
         # 1. Pre-fetch context data once
         user = request.user if request.user.is_authenticated else None
         session_id = request.session.session_key
@@ -240,9 +248,6 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
         # Load pricing config once
         from app.models import PricingConfiguration
         config = PricingConfiguration.load()
-        
-        # Get base queryset
-        queryset = self.filter_queryset(self.get_queryset())
         
         # Apply pagination
         page = self.paginate_queryset(queryset)
@@ -268,7 +273,7 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
         for s in schedules:
             if (s.ml_base_price is None or 
                 s.ml_price_updated_at is None or 
-                (timezone.now() - s.ml_price_updated_at).total_seconds() > 3600):
+                (timezone.now() - s.ml_price_updated_at).total_seconds() > 300): # 5 min refresh
                 stale_schedules.append(s)
         
         if stale_schedules:
@@ -292,6 +297,10 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             # Bulk update in DB (minimal hits)
             now = timezone.now()
             for s, price in zip(stale_schedules, new_prices):
+                # If ML prediction returns 0, use fallback
+                if price <= 0:
+                    print(f"[WARN] ML returned 0 for {s.flight.flight_number}, using fallback")
+                    price = 5000  # Fallback price
                 s.ml_base_price = Decimal(str(price))
                 s.ml_price_updated_at = now
             
@@ -307,14 +316,19 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
                 'schedule_id': schedule.id,
                 'flight_number': schedule.flight.flight_number,
                 'departure_time': schedule.departure_time.isoformat(),
+                'origin': schedule.flight.route.origin_airport.code,
+                'destination': schedule.flight.route.destination_airport.code,
             }
+            
+            # Get base price - use ml_base_price or fallback
+            base_price = float(schedule.ml_base_price) if schedule.ml_base_price else 5000.0
             
             # Prepare context for "Turbo" pricing (no DB hits inside)
             pricing_context = {
                 'config': config,
                 'user_factor': user_factor,
                 'occupancy_factor': self._get_occ_factor(occupancy_map.get(schedule.id, 1.0), config),
-                'base_price': float(schedule.ml_base_price)
+                'base_price': base_price
             }
             
             pricing_result = dynamic_pricing.get_price_for_user(
@@ -324,7 +338,7 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             # ============ ROUNDING LOGIC ============
             final_price = dynamic_pricing.round_price(pricing_result['final_price'])
             base_price = dynamic_pricing.round_price(pricing_result['base_price'])
-            ml_base = float(schedule.ml_base_price)
+            ml_base = float(schedule.ml_base_price) if schedule.ml_base_price else 5000.0
             rounded_ml_base = dynamic_pricing.round_price(ml_base)
             
             # Inject dynamic results
@@ -336,10 +350,10 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             flight_item['raw_ml_price'] = ml_base
             
             # Price ID and Timestamp (per search consistency)
-            timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
+            timestamp = timezone.now().strftime('%Y%m%d%H%M%S%f')
             price_id_input = f"{session_id}_{schedule.id}_{timestamp}_{random.randint(1, 1000)}"
             flight_item['price_id'] = hashlib.md5(price_id_input.encode()).hexdigest()[:8]
-            flight_item['price_calculated_at'] = datetime.now().isoformat()
+            flight_item['price_calculated_at'] = timezone.now().isoformat()
             
             # ============ SEAT CLASS PRICING ============
             if 'seat_classes' in flight_item:
@@ -350,9 +364,6 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
                     seat_class['base_price'] = rounded_ml_base
                     seat_class['price'] = dynamic_pricing.round_seat_class_price(raw_seat_price)
                     seat_class['raw_price'] = float(raw_seat_price)
-
-        # Track search for demand pricing
-        self.track_search_demand(request, schedules)
         
         if page is not None:
             return self.get_paginated_response(data)
@@ -368,9 +379,9 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             elif occupancy_rate < float(config.occupancy_low_threshold):
                 return float(config.occupancy_factor_low)
         else:
-            if occupancy_rate > 0.8: return 1.20
-            elif occupancy_rate > 0.6: return 1.10
-            elif occupancy_rate < 0.2: return 0.90
+            if occupancy_rate > 0.8: return 1.30
+            elif occupancy_rate > 0.6: return 1.15
+            elif occupancy_rate < 0.2: return 0.85
         return 1.0
     # ===================================================================
     
@@ -419,17 +430,21 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
         
         if origin and destination:
             route_key = f"route_demand_{origin}_{destination}"
-            searches = cache.get(route_key, 0)
-            cache.set(route_key, searches + 1, 3600)  # 1 hour expiry
+            try:
+                cache.incr(route_key)
+            except ValueError:
+                cache.set(route_key, 1, 3600)
         
         # Track specific flight demand
         for schedule in queryset[:10]:  # Track top 10 only
             try:
                 flight_key = f"flight_demand_{schedule.flight.flight_number}"
-                searches = cache.get(flight_key, 0)
-                cache.set(flight_key, searches + 1, 3600)
+                try:
+                    cache.incr(flight_key)
+                except ValueError:
+                    cache.set(flight_key, 1, 3600)
             except Exception as e:
-                print(f"Error tracking demand: {e}")
+                logger.warning(f"Error tracking demand: {e}")
                 continue
 # ====================================================================
 
@@ -510,7 +525,10 @@ def predict_flight_price(request):
     """On-demand flight price prediction"""
     try:
         flight_data = request.data
+        print(f"[API] Received flight data: {flight_data}")
+        
         predicted_price = predictor.predict_price(flight_data)
+        print(f"[API] Predicted price: {predicted_price}")
         
         # Also predict for different seat classes
         seat_class_prices = {}
@@ -527,6 +545,7 @@ def predict_flight_price(request):
         })
         
     except Exception as e:
+        print(f"[API ERROR] {e}")
         return Response({
             'success': False,
             'error': str(e)
@@ -4028,3 +4047,85 @@ def calculate_booking_price(request):
             'success': False,
             'error': str(e)
         }, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def price_trend_report(request):
+    """
+    Debug endpoint to visualize price fluctuations over 60 days.
+    """
+    flight_number = request.query_params.get('flight_number', 'AP-TREND-101')
+    
+    # Get schedules for the next 60 days
+    schedules = Schedule.objects.filter(
+        flight__flight_number=flight_number,
+        departure_time__gte=timezone.now()
+    ).select_related(
+        'flight__airline', 
+        'flight__route__origin_airport', 
+        'flight__route__destination_airport'
+    ).order_by('departure_time')[:60]
+    
+    if not schedules:
+        return Response({
+            "error": "No schedules found for this flight. Run 'python manage.py generate_price_trend_data' first.",
+            "flight_number": flight_number
+        }, status=404)
+    
+    report_data = []
+    
+    # Pre-calculate common context
+    session_id = "trend_analysis_session"
+    user = None # Anonymous
+    
+    # Bulk fetch occupancy for ALL schedules
+    occupancy_data = Seat.objects.filter(schedule__in=schedules).values('schedule_id').annotate(
+        available=Count('id', filter=Q(is_available=True)),
+        total=Count('id')
+    )
+    occupancy_map = {item['schedule_id']: (1 - (item['available'] / item['total'])) if item['total'] > 0 else 0.0 
+                    for item in occupancy_data}
+
+    # Load config
+    from app.models import PricingConfiguration
+    config = PricingConfiguration.load()
+
+    for s in schedules:
+        f_data = {
+            'schedule_id': s.id,
+            'flight_number': s.flight.flight_number,
+            'departure_time': s.departure_time.isoformat(),
+            'origin': s.flight.route.origin_airport.code,
+            'destination': s.flight.route.destination_airport.code,
+        }
+        
+        occ_rate = occupancy_map.get(s.id, 0.0)
+        
+        # Prepare context
+        pricing_context = {
+            'config': config,
+            'user_factor': 1.0,
+            'occupancy_factor': None, # Service will calculate from rate
+            'base_price': float(s.ml_base_price) if s.ml_base_price else 2500.0,
+            'occupancy_rate': occ_rate # Inject rate for factor calculation
+        }
+        
+        pricing_result = dynamic_pricing.get_price_for_user(
+            f_data, user, session_id, context=pricing_context
+        )
+        
+        report_data.append({
+            'date': s.departure_time.date().isoformat(),
+            'day_of_week': s.departure_time.strftime('%A'),
+            'final_price': dynamic_pricing.round_price(pricing_result['final_price']),
+            'base_price': dynamic_pricing.round_price(pricing_result['base_price']),
+            'load_factor': f"{occ_rate:.1%}",
+            'is_weekend': s.departure_time.weekday() >= 5,
+            'factors': pricing_result['factors_applied']
+        })
+        
+    return Response({
+        'flight_number': flight_number,
+        'route': f"{schedules[0].flight.route}",
+        'data': report_data
+    })

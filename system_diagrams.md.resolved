@@ -1,0 +1,104 @@
+# System Data Flow & Process Flowcharts
+
+This document provides a high-level overview of the data flow and process logic for the Flight Booking System, covering Instructor management, Student activities, and the core Booking Engine.
+
+## 1. System Data Flow Diagram (DFD - Level 1)
+
+This diagram illustrates how data moves between stakeholders, processes, and the database.
+
+```mermaid
+graph TD
+    %% Entities
+    Student["Student"]
+    Instructor["Instructor"]
+    PayMongo["PayMongo API"]
+    EmailSvc["Email Service"]
+    
+    %% Processes
+    AuthProc["Authentication & Profile Management"]
+    SectProc["Section & Activity Management"]
+    BookProc["GDS Booking Engine"]
+    GradProc["Automated Grading Engine"]
+    
+    %% Data Stores
+    DB[(System Database)]
+    
+    %% Flows - Instructor
+    Instructor -- "Login/Update Profile" --> AuthProc
+    Instructor -- "Create Section/Activity" --> SectProc
+    SectProc -- "Store Activity Details" --> DB
+    DB -- "Submissions/Grades" --> SectProc
+    SectProc -- "View Feedback" --> Instructor
+    
+    %% Flows - Student
+    Student -- "Login/View Dashboard" --> AuthProc
+    AuthProc -- "Profile Data" --> Student
+    DB -- "Assigned Activities" --> Student
+    Student -- "Perform Booking" --> BookProc
+    BookProc -- "Search/Select Flights" --> DB
+    BookProc -- "Payment Processing" --> PayMongo
+    PayMongo -- "Transaction Success" --> BookProc
+    
+    %% Flows - System Interconnect
+    BookProc -- "Create Booking & PNR" --> DB
+    DB -- "Trigger Notification" --> EmailSvc
+    EmailSvc -- "Send E-Ticket" --> Student
+    
+    %% Flows - Grading
+    DB -- "Booking Data" --> GradProc
+    GradProc -- "Apply Requirements Logic" --> DB
+    DB -- "Update Score & Feedback" --> Student
+```
+
+---
+
+## 2. Booking Process Flowchart
+
+A step-by-step visualization of the Student's journey from selecting an activity to receiving an E-Ticket.
+
+```mermaid
+flowchart TD
+    Start([Start]) --> Login[Student Login]
+    Login --> Dashboard[View Activity Dashboard]
+    Dashboard --> SelectAct[Select Activity & View Requirements]
+    SelectAct --> InitBooking[Initialize Practice Booking]
+    
+    subgraph Booking_Engine ["GDS Booking Engine"]
+        Search[Search Flights: Origin/Dest/Date] --> Select[Select Outbound & Return Schedules]
+        Select --> Passenger[Enter Passenger Information]
+        Passenger --> Addons[Select Add-ons: Seats, Meals, Insurance]
+        Addons --> Checkout[Review Itinerary & Total fare]
+        Checkout --> Payment[Payment via PayMongo]
+    end
+    
+    Payment -- "Payment Verified" --> Finalize[Finalize Booking & Generate PNR]
+    Finalize --> Ticket[Generate PDF E-Ticket]
+    Ticket --> Grading[Trigger Auto-Grading Engine]
+    
+    subgraph Grading_Engine ["Grading & Feedback"]
+        Compare[Compare Booking with Activity Requirements] --> Calculate[Calculate Score based on weights]
+        Calculate --> feedback[Generate Itemized Feedback]
+    end
+    
+    Grading --> Finish([End: View Grade & Download Ticket])
+```
+
+---
+
+## 3. Instructor Workflow
+
+The administrative process for managing students and curriculum tasks.
+
+```mermaid
+flowchart LR
+    Start([Instructor Login]) --> CreateSect[Create Section]
+    CreateSect --> Enroll[Enroll Students via CSV or List]
+    Enroll --> CreateAct[Create Activity/Assignment]
+    
+    subgraph Activity_Config ["Activity Configuration"]
+        Reqs[Set Requirements: Trip Type, Route, Class, Pax Count] --> Points[Assign Total Points & Weights]
+        Points --> Activate[Activate Activity for Section]
+    end
+    
+    Activate --> Monitor[Monitor Submissions & Automated Grades]
+```

@@ -62,23 +62,34 @@ class FlightPricePredictor:
         """Load the trained XGBoost model from the correct path"""
         try:
             # Construct path relative to this file's parent or BASE_DIR
-            # The model is usually in the fbs_backend root
+            # Try enhanced model first, then fall back to original
             base_dir = Path(__file__).resolve().parent.parent.parent
-            model_path = base_dir / 'flight_xgb.pkl'
+            
+            # Try enhanced model first
+            model_path = base_dir / 'flight_xgb_enhanced.pkl'
+            
+            if not model_path.exists():
+                # Fall back to original model
+                model_path = base_dir / 'flight_xgb.pkl'
+            
+            if not model_path.exists():
+                # Try relative to CWD as fallback
+                model_path = Path('flight_xgb_enhanced.pkl')
+                if not model_path.exists():
+                    model_path = Path('flight_xgb.pkl')
             
             print(f"[MODEL] Attempting to load XGBoost model from: {model_path}")
             
             if not model_path.exists():
-                # Try relative to CWD as fallback
-                model_path = Path('flight_xgb.pkl')
-                print(f"[WARN] Not found at primary path, trying fallback: {model_path.absolute()}")
+                print(f"[ERROR] No model found at: {model_path}")
+                return False
             
             with open(model_path, 'rb') as file:
                 self.model = pickle.load(file)
-                # Cache at class level
                 FlightPricePredictor._model = self.model
             
-            print("[SUCCESS] XGBoost Model loaded successfully!")
+            model_name = "Enhanced" if "enhanced" in str(model_path) else "Original"
+            print(f"[SUCCESS] {model_name} XGBoost Model loaded successfully!")
             print(f"   Model type: {type(self.model)}")
             
             # Try to get XGBoost specific info
@@ -104,17 +115,23 @@ class FlightPricePredictor:
     def load_feature_mapping(self):
         """Load feature column mappings from feature_mapping.json"""
         try:
-            mapping_path = Path(__file__).parent / 'feature_mapping.json'
+            # Try enhanced mapping first
+            mapping_path = Path(__file__).parent / 'feature_mapping_enhanced.json'
+            
+            if not mapping_path.exists():
+                # Fall back to original mapping
+                mapping_path = Path(__file__).parent / 'feature_mapping.json'
             
             if mapping_path.exists():
                 with open(mapping_path, 'r') as file:
                     self.feature_mapping = json.load(file)
                     # Cache at class level
                     FlightPricePredictor._feature_mapping = self.feature_mapping
-                print("[SUCCESS] Feature mapping loaded from feature_mapping.json")
+                mapping_name = "Enhanced" if "enhanced" in str(mapping_path) else "Original"
+                print(f"[SUCCESS] {mapping_name} Feature mapping loaded from {mapping_path.name}")
                 print(f"   Loaded {len(self.feature_mapping.get('feature_columns', []))} feature columns")
             else:
-                print(f"[ERROR] Feature mapping file not found at: {mapping_path}")
+                print(f"[ERROR] Feature mapping file not found!")
                 self.feature_mapping = FlightPricePredictor._feature_mapping
                 
         except Exception as e:
@@ -149,6 +166,8 @@ class FlightPricePredictor:
             
             features['Journey_day'] = dep_time.day
             features['Journey_month'] = dep_time.month
+            features['Journey_weekday'] = dep_time.weekday()
+            features['is_weekend'] = 1 if dep_time.weekday() >= 5 else 0
             
             # 3. Departure hour/minute
             features['Dep_hour'] = dep_time.hour
@@ -167,15 +186,56 @@ class FlightPricePredictor:
             features['Duration_hours'] = duration.seconds // 3600
             features['Duration_mins'] = (duration.seconds % 3600) // 60
             
-            # 6. Airline one-hot encoding
+            # 6. Enhanced features
+            features['is_holiday'] = flight_data.get('is_holiday', 0)
+            features['is_peak_season'] = flight_data.get('is_peak_season', 0)
+            features['is_off_peak'] = flight_data.get('is_off_peak', 0)
+            features['has_layover'] = flight_data.get('has_layover', 0)
+            features['has_meal'] = flight_data.get('has_meal', 0)
+            features['is_red_eye'] = flight_data.get('is_red_eye', 0)
+            
+            # Route complexity
+            origin = flight_data.get('origin', '')
+            destination = flight_data.get('destination', '')
+            features['route_segments'] = 1  # Direct flight default
+            
+            # Popular route (MNL-CEB, MNL-DVO, etc.)
+            route = f"{origin}-{destination}"
+            popular_routes = ['MNL-CEB', 'MNL-DVO', 'CEB-MNL', 'DVO-MNL', 'MNL-CRK']
+            features['is_popular_route'] = 1 if route in popular_routes else 0
+            
+            # Long haul
+            features['is_long_haul'] = 1 if features['Duration_hours'] >= 2 else 0
+            
+            # Advance booking days (default to 14 if not provided)
+            features['advance_booking_days'] = flight_data.get('advance_booking_days', 14)
+            
+            # Seat class (default Economy)
+            seat_class = flight_data.get('seat_class', 'Economy').lower()
+            features['seat_class_code'] = 0 if seat_class == 'economy' else (1 if seat_class == 'business' else 2)
+            features['SeatClass_Economy'] = 1 if seat_class == 'economy' else 0
+            features['SeatClass_Business'] = 1 if seat_class == 'business' else 0
+            features['SeatClass_Economy'] = 1 if seat_class == 'economy' else 0
+            features['SeatClass_Business'] = 1 if seat_class == 'business' else 0
+            features['SeatClass_First'] = 1 if seat_class == 'first' else 0
+            
+            # 7. Airline one-hot encoding
             airline_name = flight_data.get('airline_name', '')
+            if not airline_name:
+                airline_name = flight_data.get('airline_code', '')  # Fallback to code
+            
+            matched = False
             for airline_key, airline_col in self.feature_mapping['airline_codes'].items():
-                if airline_key.lower() in airline_name.lower() or airline_name.lower() in airline_key.lower():
+                if airline_key.lower().strip() in airline_name.lower().strip() or airline_name.lower().strip() in airline_key.lower().strip():
                     if airline_col in features:
                         features[airline_col] = 1
+                        matched = True
                         break
             
-            # 7. Source one-hot encoding
+            if not matched:
+                print(f"[WARN] Unknown airline: '{airline_name}' - using default features")
+            
+            # 8. Source one-hot encoding
             origin = flight_data.get('origin', '')
             for source_key, source_col in self.feature_mapping['source_codes'].items():
                 if source_key in origin or origin in source_key:
@@ -183,7 +243,7 @@ class FlightPricePredictor:
                         features[source_col] = 1
                         break
             
-            # 8. Destination one-hot encoding
+            # 9. Destination one-hot encoding
             destination = flight_data.get('destination', '')
             for dest_key, dest_col in self.feature_mapping['destination_codes'].items():
                 if dest_key in destination or destination in dest_key:
@@ -196,11 +256,12 @@ class FlightPricePredictor:
             
             # Ensure columns are in the right order
             df = df[self.feature_mapping['feature_columns']]
-            
+
             return df
             
         except Exception as e:
             print(f"[ERROR] Error preparing features: {e}")
+            print(f"[DEBUG] Flight data received: {flight_data}")
             return None
     
     def predict_price(self, flight_data):
@@ -239,6 +300,7 @@ class FlightPricePredictor:
             
         except Exception as e:
             print(f"[ERROR] XGBoost prediction error: {e}")
+            print(f"[DEBUG] Flight data: {flight_data}")
             return 0.0
 
     def predict_prices_batch(self, flight_data_list):
