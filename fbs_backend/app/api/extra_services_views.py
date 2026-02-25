@@ -1,11 +1,11 @@
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny
-from .models import (
+from ..models import (
     Country, SeatClassFeature, InsuranceProvider, InsuranceBenefit,
     InsuranceCoverageType, TravelInsurancePlan, PlanCoverage,
     MealCategory, MealOption, AssistanceService, BaggageOption, PricingConfiguration
 )
-from .serializers import (
+from ..serializers import (
     CountrySerializer, SeatClassFeatureSerializer,
     InsuranceProviderSerializer, InsuranceBenefitSerializer, InsuranceCoverageTypeSerializer,
     TravelInsurancePlanSerializer, PlanCoverageSerializer,
