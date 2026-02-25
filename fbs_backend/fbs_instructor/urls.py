@@ -12,21 +12,15 @@ from .views import (
     delete_activity,
     activity_details,
     activate_activity,
-<<<<<<< HEAD
-    student_activity_details,  # ? ADD THIS
-    student_dashboard,         # ? ADD THIS
-    get_activity_submissions,  # ? ADD THIS
-    submit_grade,
-    release_activity_grades,
-=======
+    student_activity_details,
     student_dashboard,
     get_activity_submissions,
-    student_activity_details,  # ADDED
-    validate_session,          # ADDED
-    list_sessions,             # ADDED
+    submit_grade,
+    release_activity_grades,
+    validate_session,
+    list_sessions,
     logout_view,
     update_profile,
->>>>>>> 180f93bb201c35eddd6b7c4897a717198d49311f
 )
 
 urlpatterns = [

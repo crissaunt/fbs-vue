@@ -53,7 +53,7 @@ export const authService = {
      * @returns {Promise}
      */
     register(formData) {
-        return api.post('api/register/', formData);
+        return api.post('api/auth/register/', formData);
     },
 
     /**

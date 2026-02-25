@@ -34,9 +34,10 @@ def grade_booking(booking, activity_id):
         weights = {
             'trip_type': 0.10,
             'pax_counts': 0.30, # 10% each for A, C, I
-            'origin': 0.20,
-            'destination': 0.20,
-            'seat_class': 0.20
+            'origin': 0.15,
+            'destination': 0.15,
+            'seat_class': 0.15,
+            'departure_date': 0.15
         }
         
         earned_percentages = 0.0
@@ -86,7 +87,7 @@ def grade_booking(booking, activity_id):
         if pax_correct:
             feedback.append(f"[OK] Correct Passenger Counts ({adults}A, {children}C, {infants}I)")
 
-        # 3, 4, 5. Flight Origin, Destination, Class
+        # 3, 4, 5, 8. Flight Origin, Destination, Class, Date
         # For multiple passengers, we usually check the first outbound detail
         # But we should be careful to pick the correct outbound vs return schedules
         all_schedules = []
@@ -138,6 +139,16 @@ def grade_booking(booking, activity_id):
                      feedback.append("[OK] Correct Seat Class")
                      earned_percentages += weights['seat_class']
 
+            # --- Check Departure Date ---
+            if activity.departure_date:
+                booked_date = outbound_schedule.departure_time.date()
+                req_date = activity.departure_date
+                if booked_date != req_date:
+                    feedback.append(f"[X] Incorrect Departure Date: Requires {req_date.isoformat()}, got {booked_date.isoformat()}")
+                else:
+                    feedback.append("[OK] Correct Departure Date")
+                    earned_percentages += weights['departure_date']
+
         # 6. Check Arrival/Return leg for Round Trip
         if activity.required_trip_type == 'round_trip':
             if len(all_schedules) < 2:
@@ -150,6 +161,60 @@ def grade_booking(booking, activity_id):
                     feedback.append("[X] Incorrect Return Route: Return flight must end at origin")
                 else:
                     feedback.append("[OK] Valid Return Route")
+
+        # 7. Check Multi-City Segments
+        if activity.required_trip_type == 'multi_city':
+            req_segments = activity.segments.all().order_by('order')
+            if not req_segments:
+                feedback.append("[NOTE] No specific multi-city segments defined by instructor")
+            else:
+                num_req = len(req_segments)
+                num_booked = len(all_schedules)
+                
+                # We combine origin (0.2) and destination (0.2) weight for multi-city
+                # Total multi-city leg weight is 0.4 of total score
+                leg_weight_total = weights['origin'] + weights['destination']
+                
+                if num_booked < num_req:
+                    feedback.append(f"[X] Missing Segments: Requires {num_req} legs, got {num_booked}")
+                    # Reduce earned_percentages because we already added weights['origin'] and weights['destination'] 
+                    # based on the first outbound leg earlier. Let's reset them and recalculate.
+                    earned_percentages -= weights['origin']
+                    earned_percentages -= weights['destination']
+                else:
+                    # Reset the initial origin/destination credits to recalculate across all legs
+                    earned_percentages -= weights['origin']
+                    earned_percentages -= weights['destination']
+                    
+                    segments_correct_count = 0
+                    total_checks = num_req * 2 # origin and destination for each leg
+                    
+                    for i, req_s in enumerate(req_segments):
+                        booked_s = all_schedules[i]
+                        booked_origin = booked_s.flight.route.origin_airport.code
+                        booked_dest = booked_s.flight.route.destination_airport.code
+                        
+                        req_origin = req_s.origin.upper()
+                        req_dest = req_s.destination.upper()
+                        
+                        leg_origin_match = (req_origin == booked_origin)
+                        leg_dest_match = (req_dest == booked_dest)
+                        
+                        if leg_origin_match: segments_correct_count += 1
+                        else: feedback.append(f"[X] Leg {i+1} Incorrect Origin: Requires {req_origin}, got {booked_origin}")
+                        
+                        if leg_dest_match: segments_correct_count += 1
+                        else: feedback.append(f"[X] Leg {i+1} Incorrect Destination: Requires {req_dest}, got {booked_dest}")
+                        
+                        if leg_origin_match and leg_dest_match:
+                            feedback.append(f"[OK] Leg {i+1} Route Correct: {booked_origin} -> {booked_dest}")
+
+                    # Calculate proportion of legs correct
+                    leg_accuracy = segments_correct_count / total_checks
+                    earned_percentages += (leg_accuracy * leg_weight_total)
+                    
+                    if segments_correct_count == total_checks:
+                         feedback.append("[OK] All Multi-City Segments verified successfully")
 
         # Calculate Final Score
         score = round(total_score * earned_percentages, 2)

@@ -28,9 +28,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        // Skip global error handling for authentication endpoints 
-        // because the login component handles its own error feedback using the notification store.
-        if (error.config && error.config.url && error.config.url.includes('auth/login')) {
+        // Skip global error handling for authentication endpoints
+        // because those components handle their own error feedback.
+        if (error.config && error.config.url && (
+            error.config.url.includes('auth/login') ||
+            error.config.url.includes('auth/register')
+        )) {
             return Promise.reject(error);
         }
 

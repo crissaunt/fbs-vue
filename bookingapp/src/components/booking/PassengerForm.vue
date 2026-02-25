@@ -7,14 +7,9 @@
     <div class="pal-card-body">
       <div class="form-row">
         <div class="field col-1">
-<<<<<<< HEAD
-          <label>Gender *</label>
-          <select v-model="form.title" @change="emitData">
-=======
           <label>Title</label>
           <select v-model="form.title" @change="emitData" required :class="{ 'error-border': showErrors && !form.title }">
             <option value="">Title</option>
->>>>>>> 180f93bb201c35eddd6b7c4897a717198d49311f
             <option value="MR">Mr.</option>
             <option value="MRS">Mrs.</option>
           </select>

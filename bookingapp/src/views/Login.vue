@@ -115,13 +115,7 @@ export default {
     return {
       username: '',
       password: '',
-<<<<<<< HEAD
-      loading: false,
-      error: null,
-      successMessage: ''
-=======
-      isLoading: false
->>>>>>> 180f93bb201c35eddd6b7c4897a717198d49311f
+      loading: false
     }
   },
   computed: {
@@ -138,13 +132,7 @@ export default {
         return
       }
       
-<<<<<<< HEAD
-      this.loading = true;
-      this.error = null;
-      this.successMessage = '';
-=======
-      this.isLoading = true
->>>>>>> 180f93bb201c35eddd6b7c4897a717198d49311f
+      this.loading = true
 
       try {
         console.log('🔐 Attempting login for:', this.username);
@@ -156,14 +144,6 @@ export default {
         this.userStore.setAuth({ token, user, role });
         
         console.log('✅ Login successful - User Store Updated');
-<<<<<<< HEAD
-        this.successMessage = 'Login successful! Redirecting...';
-        
-        // 3. Move to appropriate dashboard
-        setTimeout(() => {
-          this.$router.push(dashboard_route || '/');
-        }, 500);
-=======
         this.notificationStore.success('Login successful! Redirecting...')
         console.log('DEBUG: dashboard_route:', dashboard_route);
         console.log('DEBUG: router instance:', this.router);
@@ -181,24 +161,12 @@ export default {
              this.notificationStore.error('Navigation failed');
           }
         }, 500)
->>>>>>> 180f93bb201c35eddd6b7c4897a717198d49311f
         
       } catch (err) {
         console.error('❌ LOGIN ERROR:', err);
         if (err.response) {
           const data = err.response.data;
           if (err.response?.status === 401) {
-<<<<<<< HEAD
-            this.error = 'Invalid credentials';
-            this.notificationStore.error('Invalid username or password');
-          } else {
-            this.error = data.error || data.detail || data.message || 'An error occurred during login. Please try again.';
-            this.notificationStore.error('Login failed.');
-          }
-        } else {
-          this.error = "An unexpected error occurred. Please try again.";
-          this.notificationStore.error('Login failed. Connection error.');
-=======
             this.notificationStore.error('Invalid username or password')
           } else {
             const msg = data.error || data.detail || data.message || 'An error occurred during login.'
@@ -206,7 +174,6 @@ export default {
           }
         } else {
           this.notificationStore.error('Login failed. Please check your internet connection.')
->>>>>>> 180f93bb201c35eddd6b7c4897a717198d49311f
         }
       } finally {
         this.loading = false;

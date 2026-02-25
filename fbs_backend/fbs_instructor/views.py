@@ -44,6 +44,7 @@ from .models import (
     SectionEnrollment,
     ActivityStudentBinding,
     ActivityAddOn,
+    ActivitySegment,
     UserSession  # NEW: Our custom session model
 )
 from .serializers import LoginSerializer, UserSerializer
@@ -525,6 +526,18 @@ def create_activity(request, section_id):
                     time_limit_minutes=data.get('time_limit_minutes') or None,
                 )
 
+                # --- Handle Multi-City Segments ---
+                if data.get('required_trip_type') == 'multi_city':
+                    segments_data = data.get('segments', [])
+                    for index, s_data in enumerate(segments_data):
+                        ActivitySegment.objects.create(
+                            activity=activity,
+                            origin=s_data.get('origin', ''),
+                            destination=s_data.get('destination', ''),
+                            departure_date=s_data.get('departure_date'),
+                            order=index
+                        )
+
                 passengers_data = data.get('passengers', [])
                 
                 for index, p_data in enumerate(passengers_data):
@@ -630,7 +643,16 @@ def activity_details(request, activity_id):
             "is_code_active": activity.is_code_active if hasattr(activity, 'is_code_active') else False,
             "total_points": float(activity.total_points) if activity.total_points else 100,
             "grades_released": activity.grades_released if hasattr(activity, 'grades_released') else False,
-            "passengers": passengers_data
+            "passengers": passengers_data,
+            "segments": [
+                {
+                    "origin": s.origin,
+                    "destination": s.destination,
+                    "departure_date": s.departure_date.strftime("%Y-%m-%d") if s.departure_date else "",
+                    "order": s.order
+                }
+                for s in activity.segments.all()
+            ]
         }
         
         return Response(data)
@@ -1823,10 +1845,21 @@ def student_activity_details(request, activity_id):
             # Activity status
             'is_active': activity.is_code_active,
             
-            # ? NEW: Activity code for verification
+            # Activity code for verification
             'activity_code': activity.activity_code or '',
             
-            # ? NEW: Add completion status and booking ID
+            'segments': [
+                {
+                    'origin': s.origin,
+                    'destination': s.destination,
+                    'departure_date': s.departure_date.isoformat() if s.departure_date else None,
+                    'order': s.order
+                }
+                for s in activity.segments.all().order_by('order')
+            ],
+            
+            # Booking link
+            # NEW: Add completion status and booking ID
             'completed': booking_obj is not None,
             'confirmed_booking_id': booking_obj.id if booking_obj else None
         }
@@ -1871,7 +1904,6 @@ def student_activity_details(request, activity_id):
             "error": "Failed to build response data.",
             "details": str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-<<<<<<< HEAD
 @api_view(['POST'])
 @authentication_classes([MultiSessionTokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -1910,7 +1942,11 @@ def submit_grade(request, activity_id, student_id):
             "message": "Grade submitted successfully",
             "grade": float(binding.grade),
             "status": binding.status
-=======
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 # ============================================================
 # NEW: GET PRACTICE BOOKINGS (STUDENT)
 # ============================================================
@@ -1974,16 +2010,11 @@ def get_student_practice_bookings(request):
             
         return Response({
             "practice_bookings": practice_bookings_data
->>>>>>> 180f93bb201c35eddd6b7c4897a717198d49311f
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
         traceback.print_exc()
-<<<<<<< HEAD
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-=======
         return Response(
             {"error": f"Failed to load practice bookings: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
->>>>>>> 180f93bb201c35eddd6b7c4897a717198d49311f

@@ -121,6 +121,19 @@ class Activity(models.Model):
     def __str__(self):
         return self.title
 
+class ActivitySegment(models.Model):
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='segments')
+    origin = models.CharField(max_length=100)
+    destination = models.CharField(max_length=100)
+    departure_date = models.DateField()
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return f"{self.activity.title} - Leg {self.order + 1}: {self.origin} to {self.destination}"
+
 class ActivityPassenger(models.Model):
     activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='passengers')
     first_name = models.CharField(max_length=100)

@@ -1,26 +1,26 @@
 <template>
   <div class="flex flex-col h-screen bg-[#FDFCF7] font-sans">
-    <div class="bg-gradient-to-r from-pink-500 to-pink-400 text-white px-6 py-4 flex items-center justify-between shadow-md z-20">
+    <div class="bg-gradient-to-r from-pink-500 to-pink-400 text-white px-6 py-2.5 flex items-center justify-between shadow-sm z-20 border-b border-pink-400">
       <div class="flex items-center gap-4">
-        <button @click="toggleSidebar" class="p-2 hover:bg-pink-600 rounded-lg transition-colors focus:outline-none">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <button @click="toggleSidebar" class="p-1.5 hover:bg-pink-600 rounded-md transition-colors focus:outline-none">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
           </svg>
         </button>
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-2xl shadow-inner">🎓</div>
+          <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-xl shadow-inner">🎓</div>
           <div>
-            <h1 class="text-sm font-bold uppercase tracking-tight">CABAGAN STATE UNIVERSITY</h1>
-            <p class="text-[10px] opacity-90">Cabagan City</p>
+            <h1 class="text-[10px] font-bold uppercase tracking-widest text-white/90">Cabagan State University</h1>
+            <p class="text-[9px] uppercase tracking-tighter opacity-60">Faculty Portal</p>
           </div>
         </div>
       </div>
 
       <div class="relative">
-        <button @click="toggleDropdown" class="flex items-center gap-3 hover:bg-pink-600 p-2 rounded-lg transition-colors focus:outline-none">
-          <span class="text-sm font-medium">{{ userFullName }}</span>
-          <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden border-2 border-pink-300">
-             <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 font-bold uppercase">{{ initials }}</div>
+        <button @click="toggleDropdown" class="flex items-center gap-2 hover:bg-pink-600 p-1.5 rounded-md transition-colors focus:outline-none">
+          <span class="text-xs font-medium">{{ userFullName }}</span>
+          <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center overflow-hidden border border-pink-300">
+             <div class="w-full h-full bg-gray-300 rounded-full flex items-center justify-center text-gray-600 text-xs font-bold uppercase">{{ initials }}</div>
           </div>
         </button>
         <div v-if="dropdownOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-100">
@@ -30,19 +30,28 @@
     </div>
 
     <div class="flex flex-1 overflow-hidden">
-      <div :class="['bg-gradient-to-b from-pink-500 to-pink-400 text-white transition-all duration-300 ease-in-out flex flex-col z-10 shadow-lg', sidebarOpen ? 'w-64' : 'w-20']">
+      <div :class="['bg-gradient-to-b from-pink-500 to-pink-400 text-white transition-all duration-300 ease-in-out flex flex-col z-10 shadow-lg border-r border-pink-400/20', sidebarOpen ? 'w-56' : 'w-16']">
         <div class="flex flex-col h-full overflow-y-auto">
-           <button @click="$router.push('/instructor/dashboard')" class="flex items-center py-4 hover:bg-pink-600 transition-colors border-b border-pink-400 justify-center">
-             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+           <button @click="$router.push('/instructor/dashboard')" class="flex items-center py-3 hover:bg-pink-600 transition-colors border-b border-pink-400/20 justify-center">
+             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
              </svg>
-             <span v-show="sidebarOpen" class="text-lg font-medium ml-3">Home</span>
+             <span v-show="sidebarOpen" class="text-sm font-medium ml-3">Home</span>
            </button>
-           <div v-for="sidebarSection in sidebarSections" :key="sidebarSection.id" @click="goToSection(sidebarSection.id)" :class="['flex items-center py-3 px-6 hover:bg-pink-600 cursor-pointer transition-colors border-b border-pink-400/20', route.params.id == sidebarSection.id ? 'bg-pink-700' : '']">
-              <div class="w-8 h-8 rounded-full bg-white text-pink-500 flex items-center justify-center font-black text-xs flex-shrink-0 shadow-sm uppercase">
+           <div 
+             v-for="sidebarSection in sidebarSections" 
+             :key="sidebarSection.id" 
+             @click="goToSection(sidebarSection.id)" 
+             :class="[
+               'flex items-center py-2.5 hover:bg-pink-600 cursor-pointer transition-colors border-b border-pink-400/10', 
+               sidebarOpen ? 'px-5' : 'justify-center',
+               route.params.id == sidebarSection.id ? 'bg-pink-700' : ''
+             ]"
+           >
+              <div class="w-7 h-7 rounded-full bg-white text-pink-500 flex items-center justify-center font-bold text-[10px] flex-shrink-0 shadow-sm uppercase">
                 {{ sidebarSection.section_name.charAt(0) }}
               </div>
-              <span v-show="sidebarOpen" class="ml-3 truncate text-sm font-bold tracking-wide uppercase">{{ sidebarSection.section_name }}</span>
+              <span v-show="sidebarOpen" class="ml-3 truncate text-[11px] font-bold tracking-wider uppercase text-white">{{ sidebarSection.section_name }}</span>
            </div>
         </div>
       </div>
@@ -50,31 +59,30 @@
       <div class="flex-1 overflow-auto bg-[#FDFCF7]">
         <div class="p-8">
           <div>
-            <h2 class="text-4xl font-serif text-black font-bold">
-              Section , {{ section?.section_code }} - {{ section?.section_name }}
-            </h2>
+            <h2 class="text-2xl font-light text-gray-900 tracking-wide">
+              Course Section: {{ section?.section_code }} — {{ section?.section_name }}
+            </h2><br>
           </div>
-          <br>
           
           <div class="flex items-center gap-8 border-b border-gray-300 mb-8 px-2 relative">
-            <button class="pb-3 text-sm font-black uppercase border-b-4 border-[#0E8028] text-gray-800">Activity</button>
+            <button class="pb-3 text-sm font-bold uppercase border-b-4 border-[#0E8028] text-gray-900 tracking-wider">Assessments</button>
             <button 
-              @click="$router.push(`/instructor/section/${route.params.id}/people`)"
+              @click="$router.push(`/instructor/section/${route.params.id}/student`)"
               :class="[
-                'pb-3 text-sm font-black uppercase transition-colors',
-                route.name === 'SectionPeople' ? 'border-b-4 border-[#0E8028] text-gray-800' : 'text-gray-400 hover:text-gray-600'
+                'pb-3 text-sm font-bold uppercase transition-colors tracking-wider',
+                route.name === 'SectionStudent' ? 'border-b-4 border-[#0E8028] text-gray-900' : 'text-gray-400 hover:text-gray-600'
               ]"
             >
-              People
+                Student
             </button>
-            <button class="pb-3 text-sm font-black uppercase text-gray-400 hover:text-gray-600">Settings</button>
+            <button class="pb-3 text-sm font-bold uppercase text-gray-400 hover:text-gray-600 tracking-wider">Course Settings</button>
             
             <div class="ml-auto flex gap-3 mb-2">
-              <button @click="openEnrollModal" class="bg-[#F4D03F] text-[#0A3D16] px-5 py-2 rounded font-black text-[10px] uppercase shadow-md hover:scale-105 transition-transform">Add Student</button>
+              <button @click="openEnrollModal" class="bg-[#F4D03F] text-[#0A3D16] px-6 py-2.5 rounded-lg font-bold text-xs uppercase tracking-widest shadow-md hover:translate-y-[-1px] active:scale-95 transition-all">Enroll Student</button>
               <button 
                   @click="openActivityModal" 
-                  class="bg-[#0E8028] text-white px-5 py-2 rounded font-black text-[10px] uppercase shadow-md hover:scale-105 transition-transform">
-                  Add Task
+                  class="bg-[#0E8028] text-white px-6 py-2.5 rounded-lg font-bold text-xs uppercase tracking-widest shadow-md hover:translate-y-[-1px] active:scale-95 transition-all">
+                  Create Activity
               </button>
             </div>
           </div>
@@ -82,7 +90,7 @@
           <!-- Description Section -->
           <div class="grid grid-cols-1 gap-6 mb-6">
             <div class="bg-white rounded-lg border border-gray-200 p-8 shadow-sm">
-              <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Description</h3>
+              <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Description</h3>
               <p class="text-gray-600 leading-relaxed italic">
                 {{ section?.description || 'No description provided for this class.' }}
               </p>
@@ -264,7 +272,7 @@
         </div>
         <div class="p-8">
           <div class="mb-6">
-            <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Enter Student Number</label>
+            <label class="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Enter Student Number</label>
             <input 
               v-model="studentNumberInput"
               type="text" 
@@ -331,6 +339,7 @@
                     <select v-model="activityForm.required_trip_type" @change="handleTripTypeChange" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#093704]">
                       <option value="one_way">One Way</option>
                       <option value="round_trip">Round Trip</option>
+                      <option value="multi_city">Multi City</option>
                     </select>
                   </div>
                   <div>
@@ -343,9 +352,9 @@
                     </select>
                   </div>
                   <!-- Origin Airport Dropdown -->
-                  <div>
+                  <div v-if="activityForm.required_trip_type !== 'multi_city'">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Origin Airport *</label>
-                    <select v-model="activityForm.required_origin" required 
+                    <select v-model="activityForm.required_origin" :required="activityForm.required_trip_type !== 'multi_city'" 
                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#093704]"
                       :disabled="airports.length === 0">
                       <option value="">{{ airports.length === 0 ? 'Loading airports...' : 'Select Origin Airport' }}</option>
@@ -357,9 +366,9 @@
                   </div>
 
                   <!-- Destination Airport Dropdown -->
-                  <div>
+                  <div v-if="activityForm.required_trip_type !== 'multi_city'">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Destination Airport *</label>
-                    <select v-model="activityForm.required_destination" required 
+                    <select v-model="activityForm.required_destination" :required="activityForm.required_trip_type !== 'multi_city'" 
                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#093704]"
                       :disabled="airports.length === 0">
                       <option value="">{{ airports.length === 0 ? 'Loading airports...' : 'Select Destination Airport' }}</option>
@@ -369,14 +378,56 @@
                     </select>
                     <p v-if="airports.length === 0" class="text-xs text-blue-500 mt-1">Loading airports...</p>
                   </div>
-                  <div>
+                  <div v-if="activityForm.required_trip_type !== 'multi_city'">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Departure Date</label>
                     <input type="date" v-model="activityForm.required_departure_date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#093704]">
                   </div>
-                  <div v-show="showReturnDate">
+                  <div v-show="showReturnDate && activityForm.required_trip_type !== 'multi_city'">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Return Date</label>
                     <input type="date" v-model="activityForm.required_return_date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#093704]">
                   </div>
+
+                  <!-- Multi-City Segments Section -->
+                  <div v-if="activityForm.required_trip_type === 'multi_city'" class="md:col-span-2 space-y-4">
+                    <div class="flex items-center justify-between">
+                      <label class="block text-sm font-bold text-gray-700">Flight Segments *</label>
+                      <button type="button" @click="addSegment" class="text-xs bg-[#0E8028] text-white px-3 py-1 rounded hover:bg-green-700 transition-colors">
+                        + Add Segment
+                      </button>
+                    </div>
+                    
+                    <div v-for="(segment, index) in activityForm.segments" :key="index" class="p-4 bg-gray-50 rounded-lg border border-gray-200 relative group">
+                      <button @click="removeSegment(index)" type="button" class="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                      </button>
+                      
+                      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label class="block text-xs font-medium text-gray-600 mb-1">Origin *</label>
+                          <select v-model="segment.origin" required class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-pink-500">
+                            <option value="">Select Origin</option>
+                            <option v-for="airport in airports" :key="airport.code" :value="airport.code">{{ airport.code }} - {{ airport.name }}</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label class="block text-xs font-medium text-gray-600 mb-1">Destination *</label>
+                          <select v-model="segment.destination" required class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-pink-500">
+                            <option value="">Select Destination</option>
+                            <option v-for="airport in airports" :key="airport.code" :value="airport.code">{{ airport.code }} - {{ airport.name }}</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label class="block text-xs font-medium text-gray-600 mb-1">Date *</label>
+                          <input type="date" v-model="segment.departure_date" required class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-pink-500">
+                        </div>
+                      </div>
+                    </div>
+                    <p v-if="activityForm.segments.length === 0" class="text-sm text-red-500">At least one segment is required for multi-city trips.</p>
+                  </div>
+
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Max Price ($)</label>
                     <input type="number" v-model="activityForm.required_max_price" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#093704]">
@@ -468,7 +519,10 @@
                           </div>
                           <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Nationality *</label>
-                            <input type="text" v-model="passenger.nationality" placeholder="Enter nationality" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm">
+                            <select v-model="passenger.nationality" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm">
+                              <option value="">Select Nationality</option>
+                              <option v-for="nat in nationalities" :key="nat" :value="nat">{{ nat }}</option>
+                            </select>
                           </div>
                           <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Passport Number</label>
@@ -515,7 +569,10 @@
                           </div>
                           <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Nationality *</label>
-                            <input type="text" v-model="passenger.nationality" placeholder="Enter nationality" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400 text-sm">
+                            <select v-model="passenger.nationality" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400 text-sm">
+                              <option value="">Select Nationality</option>
+                              <option v-for="nat in nationalities" :key="nat" :value="nat">{{ nat }}</option>
+                            </select>
                           </div>
                           <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Passport Number</label>
@@ -562,7 +619,10 @@
                           </div>
                           <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Nationality</label>
-                            <input type="text" v-model="passenger.nationality" placeholder="Enter nationality" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm">
+                            <select v-model="passenger.nationality" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm">
+                              <option value="">Select Nationality</option>
+                              <option v-for="nat in nationalities" :key="nat" :value="nat">{{ nat }}</option>
+                            </select>
                           </div>
                           <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Passport Number</label>
@@ -783,6 +843,7 @@ const activityForm = reactive({
   require_passenger_details: true,
   require_addons: false,
   selected_addons: [],
+  segments: [],
   description: ''
 })
 
@@ -793,7 +854,7 @@ const sampleTitles = ['Flight Booking Assessment', 'Advanced Reservation Task', 
 const firstNames = ['James', 'Mary', 'Robert', 'Patricia', 'John', 'Jennifer', 'Michael', 'Linda', 'William', 'Elizabeth', 'David', 'Maria', 'Richard', 'Susan', 'Joseph', 'Rose' , 'Pathrick', 'Kyle', 'Samantha', 'Brian', 'Jessica', 'Kevin', 'Sarah', 'Thomas', 'Karen' , 'Charles', 'Nancy', 'Christopher', 'Lisa', 'Daniel', 'Betty' , 'Matthew', 'Margaret', 'Anthony', 'Sandra', 'Mark', 'Ashley', 'Donald', 'Kimberly', 'Steven', 'Emily', 'Paul', 'Donna', 'Andrew', 'Michelle' , 'Joshua', 'Dorothy', 'Kenneth', 'Carol', 'Kevin', 'Amanda'];
 const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson', 'Walker', 'Young', 'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores', 'Green', 'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera', 'Campbell', 'Mitchell', 'Carter', 'Roberts' ];
 const middleNames = ['Lee', 'Garcia', 'Quinto', 'Santos', 'Reyes', 'Cruz', 'Bautista', 'Ocampo', 'Mae', 'Ann', 'Marie', 'Louise' , 'James', 'John', 'Ray', 'Lynn', 'Grace', 'Rose', 'Mae', 'Jean', 'Paul', 'Mark', 'Jane', 'Louise', 'Michael', 'Elizabeth', 'Ann', 'Lee', 'Marie', 'Ray', 'Lynn', 'Grace', 'Rose', 'Jean', 'Paul', 'Mark', 'Jane', 'Louise'];
-const nationalities = ['Filipino', 'American', 'Japanese', 'Canadian', 'Australian', 'British', 'Singaporean', 'Korean' , 'Chinese', 'German', 'French', 'Italian', 'Spanish', 'Mexican', 'Brazilian', 'Indian', 'Russian', 'Dutch', 'Swedish', 'Norwegian'];
+const nationalities = ['Philippines', 'United States', 'Canada', 'Japan', 'South Korea', 'Singapore', 'Australia', 'United Kingdom'];
 
 const showSuccess = (message) => {
   successMessage.value = message
@@ -853,6 +914,26 @@ const closeActivityModal = () => {
 
 const handleTripTypeChange = () => {
   showReturnDate.value = activityForm.required_trip_type === 'round_trip'
+  
+  if (activityForm.required_trip_type === 'multi_city' && activityForm.segments.length === 0) {
+    // Add two initial segments for multi-city
+    addSegment()
+    addSegment()
+  } else if (activityForm.required_trip_type !== 'multi_city') {
+    activityForm.segments = []
+  }
+}
+
+const addSegment = () => {
+  activityForm.segments.push({
+    origin: '',
+    destination: '',
+    departure_date: ''
+  })
+}
+
+const removeSegment = (index) => {
+  activityForm.segments.splice(index, 1)
 }
 
 // Activity dropdown toggle
@@ -1017,9 +1098,7 @@ const updatePassengerForms = () => {
   }
   
   // ✅ IMPORTANT: Regenerate instructions after updating passengers
-  if (activityForm.instructions) {
-    activityForm.instructions = generateDetailedInstructions()
-  }
+  activityForm.instructions = generateDetailedInstructions()
 }
 
 const getPassengersByType = (type) => {
@@ -1060,36 +1139,72 @@ const toggleAddonRequirements = (addonId) => {
 }
 
 const generateDetailedInstructions = () => {
-  let detailedInstructions = `FLIGHT BOOKING ACTIVITY\n\n`;
+  const formatDateSafe = (dateVal, options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) => {
+    if (!dateVal) return 'Any';
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return 'Any';
+      return d.toLocaleDateString('en-US', options);
+    } catch (e) {
+      return 'Any';
+    }
+  };
+
+  let detailedInstructions = `ACADEMIC ASSESSMENT: ${activityForm.title || 'Untitled Activity'}\n\n`;
+  
+  if (activityForm.description) {
+    detailedInstructions += `TASK OVERVIEW:\n${activityForm.description}\n\n`;
+  }
+
+  detailedInstructions += `TECHNICAL REQUIREMENTS:\n`;
+  if (activityForm.total_points) {
+    detailedInstructions += `• Total Points: ${activityForm.total_points} pts\n`;
+  }
+  if (activityForm.due_date) {
+    detailedInstructions += `• Delivery Deadline: ${formatDateSafe(activityForm.due_date)}\n`;
+  }
+  detailedInstructions += `\n`;
   
   detailedInstructions += `TRIP DETAILS:\n`;
-  detailedInstructions += `You are required to book a ${activityForm.required_trip_type === 'one_way' ? 'ONE-WAY' : 'ROUND-TRIP'} flight `;
+  const typeMap = { 'one_way': 'ONE-WAY', 'round_trip': 'ROUND-TRIP', 'multi_city': 'MULTI-CITY' };
+  detailedInstructions += `You are required to book a ${typeMap[activityForm.required_trip_type] || 'FLIGHT'} trip `;
   detailedInstructions += `in ${activityForm.required_travel_class.toUpperCase().replace('_', ' ')} class.\n\n`;
   
   const originAirport = airports.value.find(a => a.code === activityForm.required_origin);
   const destinationAirport = airports.value.find(a => a.code === activityForm.required_destination);
   
-  if (originAirport || destinationAirport || activityForm.required_departure_date) {
+  if (activityForm.required_trip_type === 'multi_city' && activityForm.segments.length > 0) {
+    detailedInstructions += `ITINERARY SEGMENTS:\n`;
+    activityForm.segments.forEach((seg, idx) => {
+      const origin = airports.value.find(a => a.code === seg.origin)?.name || seg.origin || 'Any';
+      const dest = airports.value.find(a => a.code === seg.destination)?.name || seg.destination || 'Any';
+      const date = formatDateSafe(seg.departure_date, { month: 'long', day: 'numeric', year: 'numeric' });
+      detailedInstructions += `Leg ${idx + 1}: ${seg.origin || 'Any'} (${origin}) to ${seg.destination || 'Any'} (${dest}) on ${date}\n`;
+    });
+    detailedInstructions += `\n`;
+  } else {
     detailedInstructions += `ROUTE:\n`;
     
     if (originAirport) {
       detailedInstructions += `• Origin: ${originAirport.code} - ${originAirport.name}, ${originAirport.location}\n`;
     } else if (activityForm.required_origin) {
       detailedInstructions += `• Origin: ${activityForm.required_origin}\n`;
+    } else {
+      detailedInstructions += `• Origin: Any\n`;
     }
     
     if (destinationAirport) {
       detailedInstructions += `• Destination: ${destinationAirport.code} - ${destinationAirport.name}, ${destinationAirport.location}\n`;
     } else if (activityForm.required_destination) {
       detailedInstructions += `• Destination: ${activityForm.required_destination}\n`;
+    } else {
+      detailedInstructions += `• Destination: Any\n`;
     }
     
-    if (activityForm.required_departure_date) {
-      detailedInstructions += `• Departure Date: ${new Date(activityForm.required_departure_date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n`;
-    }
+    detailedInstructions += `• Departure Date: ${formatDateSafe(activityForm.required_departure_date)}\n`;
     
-    if (activityForm.required_trip_type === 'round_trip' && activityForm.required_return_date) {
-      detailedInstructions += `• Return Date: ${new Date(activityForm.required_return_date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n`;
+    if (activityForm.required_trip_type === 'round_trip') {
+      detailedInstructions += `• Return Date: ${formatDateSafe(activityForm.required_return_date)}\n`;
     }
     detailedInstructions += `\n`;
   }
@@ -1127,7 +1242,7 @@ const generateDetailedInstructions = () => {
       }
       
       if (passenger.dob) {
-        detailedInstructions += `  • Date of Birth: ${new Date(passenger.dob).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}\n`;
+        detailedInstructions += `  • Date of Birth: ${formatDateSafe(passenger.dob, { year: 'numeric', month: 'long', day: 'numeric' })}\n`;
       }
       
       if (passenger.nationality) {
@@ -1172,7 +1287,8 @@ const generateDetailedInstructions = () => {
   
   if (activityForm.required_max_price && activityForm.required_max_price > 0) {
     detailedInstructions += `BUDGET CONSTRAINT:\n`;
-    detailedInstructions += `• Maximum Total Price: ₱${parseFloat(activityForm.required_max_price).toLocaleString()}\n`;
+    const price = parseFloat(activityForm.required_max_price);
+    detailedInstructions += `• Maximum Total Price: ₱${isNaN(price) ? activityForm.required_max_price : price.toLocaleString()}\n`;
     detailedInstructions += `• Ensure the total cost (including all passengers and add-ons) does not exceed this amount.\n\n`;
   }
   
@@ -1224,15 +1340,38 @@ const randomizeData = async () => {
   activityForm.due_date = dueDate.toISOString().slice(0, 16);
   activityForm.required_departure_date = deptDate.toISOString().split('T')[0];
   
-  const tripTypes = ['one_way', 'round_trip'];
+  const tripTypes = ['one_way', 'round_trip', 'multi_city'];
   activityForm.required_trip_type = tripTypes[Math.floor(Math.random() * tripTypes.length)];
   handleTripTypeChange();
 
   if (activityForm.required_trip_type === 'round_trip') {
     const retDate = new Date(deptDate.getTime() + (Math.floor(Math.random() * 7) + 3) * 24 * 60 * 60 * 1000);
     activityForm.required_return_date = retDate.toISOString().split('T')[0];
+  } else if (activityForm.required_trip_type === 'multi_city') {
+    // Generate 2-3 segments
+    const numSegments = Math.floor(Math.random() * 2) + 2; // 2 or 3
+    activityForm.segments = [];
+    let lastDate = deptDate;
+    let lastDest = '';
+
+    for (let i = 0; i < numSegments; i++) {
+        const shuffled = [...airports.value].sort(() => 0.5 - Math.random());
+        let origin = lastDest || shuffled[0].code;
+        let dest = shuffled[1].code;
+        if (dest === origin) dest = shuffled[2].code;
+
+        activityForm.segments.push({
+            origin: origin,
+            destination: dest,
+            departure_date: lastDate.toISOString().split('T')[0]
+        });
+
+        lastDest = dest;
+        lastDate = new Date(lastDate.getTime() + (Math.floor(Math.random() * 5) + 2) * 24 * 60 * 60 * 1000);
+    }
   } else {
     activityForm.required_return_date = '';
+    activityForm.segments = [];
   }
   
   const classes = ['economy', 'premium_economy', 'business', 'first'];
@@ -1376,7 +1515,8 @@ const submitActivity = async () => {
       require_passport: activityForm.require_passport,
       require_passenger_details: activityForm.require_passenger_details,
       require_addons: activityForm.require_addons,
-      passengers: formattedPassengers
+      passengers: formattedPassengers,
+      segments: activityForm.required_trip_type === 'multi_city' ? activityForm.segments : []
     }
     
     console.log('Submitting activity data:', formData);
@@ -1431,9 +1571,9 @@ const fetchAllData = async () => {
     activities.value = detailData.activities || [];
     
     const dashData = await instructorDashboardService.getDashboard();
-    this.sidebarSections = dashData.sections || [];
+    sidebarSections.value = dashData.sections || [];
     
-    await this.userStore.ensureUserLoaded();
+    await userStore.ensureUserLoaded();
   } catch (error) { 
     console.error("Failed to load section data", error) 
   }
@@ -1441,39 +1581,43 @@ const fetchAllData = async () => {
 
 // Watchers
 watch(() => activityForm.required_trip_type, () => {
-  if (activityForm.instructions) {
-    activityForm.instructions = generateDetailedInstructions();
-  }
+  activityForm.instructions = generateDetailedInstructions();
+});
+
+watch(() => activityForm.title, () => {
+  activityForm.instructions = generateDetailedInstructions();
+});
+
+watch(() => activityForm.activity_type, () => {
+  activityForm.instructions = generateDetailedInstructions();
 });
 
 watch(() => activityForm.required_travel_class, () => {
-  if (activityForm.instructions) {
-    activityForm.instructions = generateDetailedInstructions();
-  }
+  activityForm.instructions = generateDetailedInstructions();
 });
 
 watch(() => activityForm.required_origin, () => {
-  if (activityForm.instructions) {
-    activityForm.instructions = generateDetailedInstructions();
-  }
+  activityForm.instructions = generateDetailedInstructions();
 });
 
 watch(() => activityForm.required_destination, () => {
-  if (activityForm.instructions) {
-    activityForm.instructions = generateDetailedInstructions();
-  }
+  activityForm.instructions = generateDetailedInstructions();
+});
+
+watch(() => activityForm.total_points, () => {
+  activityForm.instructions = generateDetailedInstructions();
+});
+
+watch(() => activityForm.due_date, () => {
+  activityForm.instructions = generateDetailedInstructions();
 });
 
 watch(() => activityForm.required_departure_date, () => {
-  if (activityForm.instructions) {
-    activityForm.instructions = generateDetailedInstructions();
-  }
+  activityForm.instructions = generateDetailedInstructions();
 });
 
 watch(() => activityForm.required_return_date, () => {
-  if (activityForm.instructions) {
-    activityForm.instructions = generateDetailedInstructions();
-  }
+  activityForm.instructions = generateDetailedInstructions();
 });
 
 watch(() => activityForm.required_passengers, () => {
@@ -1488,52 +1632,44 @@ watch(() => activityForm.required_infants, () => {
   updatePassengerForms(); // ✅ This will preserve existing data
 });
 
+watch(() => activityForm.segments, () => {
+  activityForm.instructions = generateDetailedInstructions();
+}, { deep: true });
+
 watch(() => passengerForms.value, () => {
-  if (activityForm.instructions) {
-    activityForm.instructions = generateDetailedInstructions();
-  }
+  activityForm.instructions = generateDetailedInstructions();
 }, { deep: true });
 
 watch(() => activityForm.require_addons, () => {
-  if (activityForm.instructions) {
-    activityForm.instructions = generateDetailedInstructions();
-  }
+  activityForm.instructions = generateDetailedInstructions();
 });
 
 watch(() => activityForm.selected_addons, () => {
-  if (activityForm.instructions) {
-    activityForm.instructions = generateDetailedInstructions();
-  }
+  activityForm.instructions = generateDetailedInstructions();
 }, { deep: true });
 
 watch(() => addonRequirements, () => {
-  if (activityForm.instructions) {
-    activityForm.instructions = generateDetailedInstructions();
-  }
+  activityForm.instructions = generateDetailedInstructions();
 }, { deep: true });
 
 watch(() => activityForm.required_max_price, () => {
-  if (activityForm.instructions) {
-    activityForm.instructions = generateDetailedInstructions();
-  }
+  activityForm.instructions = generateDetailedInstructions();
 });
 
 watch(() => activityForm.time_limit_minutes, () => {
-  if (activityForm.instructions) {
-    activityForm.instructions = generateDetailedInstructions();
-  }
+  activityForm.instructions = generateDetailedInstructions();
 });
 
 watch(() => activityForm.require_passport, () => {
-  if (activityForm.instructions) {
-    activityForm.instructions = generateDetailedInstructions();
-  }
+  activityForm.instructions = generateDetailedInstructions();
+});
+
+watch(() => activityForm.description, () => {
+  activityForm.instructions = generateDetailedInstructions();
 });
 
 watch(() => activityForm.require_passenger_details, () => {
-  if (activityForm.instructions) {
-    activityForm.instructions = generateDetailedInstructions();
-  }
+  activityForm.instructions = generateDetailedInstructions();
 });
 
 watch(() => route.params.id, () => { fetchAllData() })
@@ -1725,6 +1861,7 @@ select[size="5"] option {
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

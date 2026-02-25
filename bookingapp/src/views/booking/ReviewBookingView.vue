@@ -83,46 +83,10 @@
                     <strong>{{ formatTitle(p.title) }} {{ p.firstName }} {{ p.lastName }}</strong>
                     <div class="sub-text">{{ p.type }}</div>
                   </td>
-<<<<<<< HEAD
-                  <td>{{ getSeatLabel(p.key) }}</td>
-                  <td>{{ getBaggageLabel(p.key, 'depart') }}</td>
-                  <td>{{ getMealLabel(p.key, 'depart') }}</td>
-                  <td>{{ getAssistanceLabel(p.key, 'depart') }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Return Flight Add-ons (only for round trips) -->
-          <div class="review-card mt-3" v-if="bookingStore.isRoundTrip && bookingStore.selectedReturn">
-            <div class="segment-header">
-              <h4>Return Flight Add-ons</h4>
-              <span class="flight-badge return">{{ bookingStore.selectedReturn.flight_number }}</span>
-            </div>
-            <table class="review-table">
-              <thead>
-                <tr>
-                  <th>Passenger</th>
-                  <th>Baggage</th>
-                  <th>Meal</th>
-                  <th>Assistance</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="p in bookingStore.passengers" :key="p.key">
-                  <td>
-                    <strong>{{ formatTitle(p.title) }} {{ p.firstName }} {{ p.lastName }}</strong>
-                    <div class="sub-text">{{ p.type }}</div>
-                  </td>
-                  <td>{{ getBaggageLabel(p.key, 'return') }}</td>
-                  <td>{{ getMealLabel(p.key, 'return') }}</td>
-                  <td>{{ getAssistanceLabel(p.key, 'return') }}</td>
-=======
                   <td>{{ getSeatLabel(p.key, segment.key) }}</td>
                   <td>{{ getBaggageLabel(p.key, segment.key) }}</td>
                   <td>{{ getMealLabel(p.key, segment.key) }}</td>
                   <td>{{ getAssistanceLabel(p.key, segment.key) }}</td>
->>>>>>> 180f93bb201c35eddd6b7c4897a717198d49311f
                 </tr>
               </tbody>
             </table>

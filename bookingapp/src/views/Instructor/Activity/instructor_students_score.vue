@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-[#F3F4F6] font-sans text-gray-900 p-8">
+  <div class="min-h-screen bg-gray-50 font-sans text-gray-900 p-8">
     <!-- Navigation Back Link -->
     <div class="max-w-7xl mx-auto mb-6">
       <button @click="goBack" class="text-sm font-semibold text-gray-500 hover:text-black transition-all flex items-center gap-2">
@@ -11,7 +11,7 @@
       <div class="w-12 h-1 bg-gray-200 rounded-full overflow-hidden mb-4">
         <div class="h-full bg-blue-500 w-1/3 animate-[loading_1s_infinite_linear]"></div>
       </div>
-      <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Generating Analysis</p>
+      <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Generating Assessment Analysis...</p>
     </div>
 
     <main v-else class="max-w-7xl mx-auto space-y-8">
@@ -21,22 +21,26 @@
         <!-- Left: Activity Info & Score -->
         <div class="flex-1 space-y-8">
           <div>
-            <h1 class="text-4xl font-bold mb-2 tracking-tight">{{ activity?.title || 'Title of Activity' }}</h1>
+            <h1 class="text-4xl font-light mb-2 tracking-wide text-gray-900">{{ activity?.title || 'Assessment Title' }}</h1>
             <p class="text-gray-500 font-medium text-lg">{{ activity?.course_code || 'CS-101' }} - {{ activity?.block || 'Block A' }}</p>
             <p class="text-gray-400 text-sm mt-1">Due: {{ formatDueDate(activity?.due_date) }}</p>
             
-            <div class="flex gap-2 mt-4">
-              <span class="px-3 py-1 bg-blue-100 text-blue-600 text-[10px] font-bold rounded-full uppercase tracking-tighter">Flight Booking</span>
-              <span class="px-3 py-1 bg-green-100 text-green-600 text-[10px] font-bold rounded-full uppercase tracking-tighter">Active</span>
-              <span class="px-3 py-1 bg-yellow-100 text-yellow-600 text-[10px] font-bold rounded-full uppercase tracking-tighter">Submitted</span>
+            <div class="flex flex-wrap gap-2 mt-4">
+              <span class="px-3 py-1 bg-pink-100 text-pink-600 text-[10px] font-black rounded-full uppercase tracking-widest border border-pink-200">
+                Student: {{ student?.first_name }} {{ student?.last_name }} ({{ student?.student_number }})
+              </span>
+              <span v-if="actualRoute" class="px-3 py-1 bg-blue-100 text-blue-600 text-[10px] font-black rounded-full uppercase tracking-widest border border-blue-200">
+                Route: {{ actualRoute }}
+              </span>
+              <span class="px-3 py-1 bg-green-100 text-green-600 text-[10px] font-black rounded-full uppercase tracking-widest border border-green-200">Assessment Active</span>
             </div>
           </div>
 
           <div class="space-y-4">
-            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Student Score:</p>
+            <p class="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Final Assessment Score:</p>
             <div class="bg-[#D1FAE5] rounded-lg p-10 flex items-center justify-center border border-[#A7F3D0]">
               <span class="text-6xl font-bold tracking-tighter">
-                {{ calculatedScore.toFixed(0) }}/{{ activity?.total_points || 100 }}
+                {{ (storedGrade !== null ? storedGrade : calculatedScore).toFixed(1) }}/{{ activity?.total_points || 100 }}
               </span>
             </div>
           </div>
@@ -44,7 +48,7 @@
 
         <!-- Right: Score Breakdown Bars -->
         <div class="w-full lg:w-1/2 bg-[#F9FAFB] rounded-xl border border-gray-100 p-8">
-          <h2 class="text-lg font-bold mb-8">Score Breakdown</h2>
+          <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-8">Performance Categorization</h2>
           <div class="space-y-8">
             <div v-for="item in scoreBreakdown" :key="item.label" class="space-y-3">
               <div class="flex justify-between items-end">
@@ -64,18 +68,18 @@
 
       <!-- Bottom Card: Comparison Table -->
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-10 space-y-8">
-        <h2 class="text-2xl font-bold flex items-center">
-          Requirements <span class="text-gray-400 font-normal px-2 text-sm italic">vs</span> Student Work
+        <h2 class="text-2xl font-semibold flex items-center text-gray-900 tracking-tight">
+          Requirement Compliance <span class="text-gray-400 font-normal px-2 text-sm italic">vs</span> Submission Integrity
         </h2>
 
         <div class="overflow-hidden border border-gray-200 rounded-lg">
           <table class="w-full border-collapse">
             <thead>
               <tr class="bg-gray-50 text-gray-700 text-sm font-bold">
-                <th class="border border-gray-200 p-4 text-left">Category</th>
-                <th class="border border-gray-200 p-4 text-left">Activity Requirement</th>
-                <th class="border border-gray-200 p-4 text-left">Student Work</th>
-                <th class="border border-gray-200 p-4 text-left">Status</th>
+                <th class="border border-gray-200 p-4 text-left font-black uppercase text-xs tracking-widest text-gray-400">Parameter Category</th>
+                <th class="border border-gray-200 p-4 text-left font-black uppercase text-xs tracking-widest text-gray-400">Defined Requirement</th>
+                <th class="border border-gray-200 p-4 text-left font-black uppercase text-xs tracking-widest text-gray-400">Submitted Work</th>
+                <th class="border border-gray-200 p-4 text-left font-black uppercase text-xs tracking-widest text-gray-400">Verification Status</th>
               </tr>
             </thead>
             <tbody>
@@ -85,7 +89,7 @@
               >
                 <td class="border border-gray-200 p-4">
                   <p class="font-bold text-gray-900">{{ row.label }}</p>
-                  <p class="text-[11px] text-gray-400">({{ row.priority }} priority)</p>
+                  <p class="text-xs text-gray-400">({{ row.priority }} priority)</p>
                 </td>
                 <td class="border border-gray-200 p-4 font-medium">{{ row.requirement }}</td>
                 <td class="border border-gray-200 p-4 font-medium" :class="!row.isMet && 'text-red-600'">{{ row.work }}</td>
@@ -114,11 +118,11 @@
             <!-- Traveler Card Header -->
             <div class="bg-gray-50 border-b border-gray-200 p-6 flex justify-between items-center">
               <div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Dossier Identity</p>
+                <p class="text-xs font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Dossier Identity</p>
                 <h3 class="text-lg font-bold">Passenger 0{{ idx + 1 }}</h3>
               </div>
               <div 
-                class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border"
+                class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest border"
                 :class="isPassengerPerfect(p) ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'"
               >
                 {{ isPassengerPerfect(p) ? 'Fully Verified' : 'Discrepancy Found' }}
@@ -127,7 +131,7 @@
 
             <!-- Traveler Comparison Body -->
             <div class="p-0">
-              <div class="grid grid-cols-4 bg-gray-50/50 text-[10px] font-black uppercase tracking-widest text-gray-500 border-b border-gray-100">
+              <div class="grid grid-cols-4 bg-gray-50/50 text-xs font-black uppercase tracking-widest text-gray-500 border-b border-gray-100">
                 <div class="p-4 border-r border-gray-100">Field</div>
                 <div class="p-4 border-r border-gray-100">Activity Req.</div>
                 <div class="p-4 border-r border-gray-100">Student Work</div>
@@ -180,6 +184,7 @@ const error = ref(null);
 const activity = ref(null);
 const booking = ref(null);
 const student = ref(null);
+const storedGrade = ref(null);
 
 const fetchData = async () => {
     loading.value = true;
@@ -194,6 +199,7 @@ const fetchData = async () => {
         if (!submission) throw new Error("Submission not found.");
         
         student.value = { first_name: submission.first_name, last_name: submission.last_name, student_number: submission.student_number };
+        storedGrade.value = submission.grade;
 
         if (!submission.booking) throw new Error("No student work data.");
 
@@ -216,47 +222,31 @@ const scoreBreakdown = computed(() => {
     const m = matches.value;
     const totalPoints = parseFloat(activity.value.total_points || 100);
     
-    // 1. Compliance (40% base)
-    let compPenalty = 0;
-    if (!m.origin) compPenalty += 40;
-    if (!m.destination) compPenalty += 40;
-    if (!m.trip_type) compPenalty += 20;
-    if (!m.travel_class) compPenalty += 10;
-    
-    const compScore = Math.max(0, (totalPoints * 0.4) - (compPenalty / 100 * totalPoints));
+    // 1. Trip Type (10% base)
+    const tripTypeScore = m.trip_type ? (totalPoints * 0.1) : 0;
     
     // 2. Passengers (30% base)
     let paxPenalty = 0;
     const paxTypes = actualPaxTypes.value;
     if (paxTypes.adult !== activity.value.required_passengers) paxPenalty += 10;
-    if (paxTypes.child !== activity.value.required_children) paxPenalty += 5;
-    if (paxTypes.infant !== activity.value.required_infants) paxPenalty += 5;
+    if (paxTypes.child !== activity.value.required_children) paxPenalty += 10;
+    if (paxTypes.infant !== activity.value.required_infants) paxPenalty += 10;
 
-    m.passenger_details?.forEach(p => {
-        if (p.name.actual === 'Not Found') {
-            paxPenalty += 25;
-        } else {
-            if (!p.gender.isMet) paxPenalty += 2;
-            if (!p.dob.isMet) paxPenalty += 5;
-            if (!p.nationality.isMet) paxPenalty += 3;
-            if (!p.passport.isMet) paxPenalty += 10;
-        }
-    });
-    
-    const paxScore = Math.max(0, (totalPoints * 0.3) - (paxPenalty / 100 * totalPoints));
+    const paxScore = Math.max(0, (totalPoints * 0.3) - (paxPenalty / 30 * (totalPoints * 0.3)));
 
-    // 3. Completion (30% base)
-    let datePenalty = 0;
-    const reqTripType = (activity.value.required_trip_type || '').toLowerCase().replace('_', ' ');
-    if (!m.departure_date) datePenalty += 15;
-    if (reqTripType === 'round trip' && !m.return_date) datePenalty += 15;
+    // 3. Flight Details (60% base) - Includes Origin, Destination, Class, Dates
+    let detailScore = 0;
+    const detailWeight = (totalPoints * 0.6) / 4; // Split among Origin, Dest, Class, Date
     
-    const completionScore = Math.max(0, (totalPoints * 0.3) - (datePenalty / 100 * totalPoints));
+    if (m.origin) detailScore += detailWeight;
+    if (m.destination) detailScore += detailWeight;
+    if (m.travel_class) detailScore += detailWeight;
+    if (m.departure_date) detailScore += detailWeight;
 
     return [
-        { label: 'Completion', score: completionScore, max: totalPoints * 0.3 },
+        { label: 'Trip Type', score: tripTypeScore, max: totalPoints * 0.1 },
         { label: 'Passengers', score: paxScore, max: totalPoints * 0.3 },
-        { label: 'Compliance', score: compScore, max: totalPoints * 0.4 }
+        { label: 'Flight Details', score: detailScore, max: totalPoints * 0.6 }
     ];
 });
 
@@ -300,6 +290,21 @@ const actualClass = computed(() => booking.value?.details?.[0]?.seat_class_name 
 const actualDepartureDate = computed(() => {
     const date = booking.value?.details?.find(d => d.schedule?.origin?.toLowerCase() === activity.value?.required_origin?.toLowerCase())?.schedule?.departure_date;
     return date ? new Date(date).toISOString().split('T')[0] : '-';
+});
+
+const actualRoute = computed(() => {
+    if (!booking.value || !booking.value.details || booking.value.details.length === 0) return null;
+    const segments = booking.value.details;
+    if (segments.length === 1) {
+        return `${segments[0].schedule.origin} → ${segments[0].schedule.destination}`;
+    }
+    const cities = [segments[0].schedule.origin];
+    segments.forEach(seg => {
+        if (cities[cities.length - 1] !== seg.schedule.destination) {
+            cities.push(seg.schedule.destination);
+        }
+    });
+    return cities.join(' → ');
 });
 
 const actualReturnDate = computed(() => {

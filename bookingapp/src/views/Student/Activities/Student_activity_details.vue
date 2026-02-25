@@ -182,34 +182,29 @@
             </div>
           </div>
 
-          <!-- Flight Details Box - Pill Shape with Yellow Border -->
-          <div class="border-2 border-[#f5c842] rounded-full py-6 px-8 bg-white">
+          <!-- Standard Flight Details Box (Pill Shape) -->
+          <div v-if="normalizedTripType !== 'multi_city'" class="border-2 border-[#f5c842] rounded-full py-6 px-8 bg-white">
             <div class="grid grid-cols-5 gap-6 items-center">
-              <!-- From -->
               <div class="text-center">
                 <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">From</p>
                 <p class="text-2xl font-black text-gray-900">{{ activity.required_origin || 'N/A' }}</p>
               </div>
 
-              <!-- To -->
               <div class="text-center">
                 <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">To</p>
                 <p class="text-2xl font-black text-gray-900">{{ activity.required_destination || 'N/A' }}</p>
               </div>
 
-              <!-- Depart -->
               <div class="text-center">
                 <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Depart</p>
                 <p class="text-sm font-bold text-gray-900">{{ formatFullDate(activity.departure_date) }}</p>
               </div>
 
-              <!-- Return -->
               <div class="text-center">
                 <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Return</p>
                 <p class="text-sm font-bold text-gray-900">{{ formatFullDate(activity.arrival_date) }}</p>
               </div>
 
-              <!-- Passenger -->
               <div class="text-center">
                 <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Passenger</p>
                 <div class="flex flex-col items-center gap-0.5 text-[11px] text-gray-700">
@@ -224,6 +219,50 @@
                   <div class="flex items-center gap-1">
                     <span class="text-gray-500">Infant:</span>
                     <span class="font-bold">{{ activity.required_infants || 0 }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Multi-City Segments Display -->
+          <div v-else class="space-y-4">
+            <div 
+              v-for="(segment, idx) in activity.segments" 
+              :key="idx"
+              class="border-2 border-[#f5c842] rounded-2xl py-4 px-8 bg-white flex items-center justify-between shadow-sm relative overflow-hidden"
+            >
+              <div class="absolute left-0 top-0 bottom-0 w-2 bg-[#f5c842]"></div>
+              <div class="flex items-center gap-8 flex-1">
+                <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-black text-gray-400">
+                  {{ idx + 1 }}
+                </div>
+                
+                <div class="flex-1 grid grid-cols-3 gap-8">
+                  <div class="flex items-center gap-4">
+                    <div>
+                      <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Origin</p>
+                      <p class="text-xl font-black text-gray-900 uppercase">{{ segment.origin }}</p>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                    <div>
+                      <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Destination</p>
+                      <p class="text-xl font-black text-gray-900 uppercase">{{ segment.destination }}</p>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Flight Date</p>
+                    <p class="text-lg font-bold text-gray-800">{{ formatFullDate(segment.departure_date) }}</p>
+                  </div>
+
+                  <div v-if="idx === 0" class="text-right flex flex-col justify-center">
+                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Passengers</p>
+                    <p class="text-sm font-bold text-gray-800">
+                      {{ activity.required_passengers }}A, {{ activity.required_children }}C, {{ activity.required_infants }}I
+                    </p>
                   </div>
                 </div>
               </div>
@@ -380,7 +419,7 @@
                     <span class="text-[9px] text-gray-400 italic">Scores aren't published yet</span>
                   </div>
                   <p v-else class="text-2xl font-black text-gray-900">
-                    {{ activity.grade !== null ? activity.grade : '-' }}
+                    {{ activity.grade !== null ? activity.grade.toFixed(1) : '-' }}
                     <span class="text-xs text-gray-400 font-medium">/ {{ activity.total_points }} pts</span>
                   </p>
                 </div>
@@ -575,7 +614,8 @@ export default {
         arrival_date: null,
         status: '',
         is_active: false,
-        activity_code: '' // Store the activity code
+        activity_code: '', // Store the activity code
+        segments: []
       },
       instructor: null,
       passengers: [],
@@ -715,7 +755,8 @@ export default {
           grade: activityData.grade,
           feedback: activityData.feedback || '',
           completed: activityData.completed || false,
-          created_at: activityData.created_at
+          created_at: activityData.created_at,
+          segments: activityData.segments || []
         };
         
         console.log('✅ Activity populated with code:', this.activity.activity_code);

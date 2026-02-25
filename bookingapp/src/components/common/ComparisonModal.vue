@@ -177,15 +177,24 @@ const formatClass = (cls) => {
 const actualOrigin = computed(() => props.booking?.details?.[0]?.schedule?.origin || 'N/A');
 const actualDestination = computed(() => props.booking?.details?.[0]?.schedule?.destination || 'N/A');
 const actualClass = computed(() => props.booking?.details?.[0]?.seat_class_name || 'N/A');
-const actualDepartureDate = computed(() => {
-  const date = props.booking?.details?.[0]?.schedule?.departure_date;
-  return date ? new Date(date).toISOString().split('T')[0] : 'N/A';
+
+const actualSegments = computed(() => {
+  if (!props.booking?.details) return [];
+  // For multi-city or round-trip, we need to map based on the booking details
+  return props.booking.details.map(d => ({
+    origin: d.schedule?.origin,
+    destination: d.schedule?.destination,
+    departure_date: d.schedule?.departure_date ? new Date(d.schedule.departure_date).toISOString().split('T')[0] : 'N/A'
+  }));
 });
+
+const actualDepartureDate = computed(() => actualSegments.value[0]?.departure_date || 'N/A');
 const actualReturnDate = computed(() => {
-    if (!props.booking?.details) return 'N/A';
-    const schedules = props.booking.details.map(d => d.schedule).filter(Boolean);
-    const returnLeg = schedules.find(s => s.destination === props.activity?.required_origin);
-    return returnLeg ? new Date(returnLeg.departure_date).toISOString().split('T')[0] : 'N/A';
+    if (props.activity?.required_trip_type === 'round_trip') {
+        const returnLeg = actualSegments.value.find(s => s.destination === props.activity?.required_origin);
+        return returnLeg ? returnLeg.departure_date : 'N/A';
+    }
+    return 'N/A';
 });
 const actualPaxCount = computed(() => props.booking?.details?.length || 0);
 const actualPaxTypes = computed(() => {
@@ -213,8 +222,21 @@ const matches = computed(() => {
     pax_types: actualPaxTypes.value.adult === props.activity.required_passengers && 
                actualPaxTypes.value.child === props.activity.required_children && 
                actualPaxTypes.value.infant === props.activity.required_infants,
+    segments: [],
     passenger_details: []
   };
+
+  // Segment Matching for Multi-City
+  if (props.activity.required_trip_type === 'multi_city' && props.activity.segments) {
+    props.activity.segments.forEach((expected, idx) => {
+      const actual = actualSegments.value[idx];
+      m.segments.push({
+        origin: expected.origin?.toLowerCase() === actual?.origin?.toLowerCase(),
+        destination: expected.destination?.toLowerCase() === actual?.destination?.toLowerCase(),
+        departure_date: expected.departure_date === actual?.departure_date
+      });
+    });
+  }
 
   // Exhaustive Comparison for each required passenger
   if (props.activity.passengers) {
@@ -310,17 +332,42 @@ const comparisonRows = computed(() => {
       isMet: m.destination
     },
     {
-      label: 'Schedule Match',
-      priority: 'Medium',
-      requirement: `Departure on ${props.activity.required_departure_date || props.activity.departure_date || 'Any'}`,
       work: actualDepartureDate.value,
       isMet: m.departure_date
     }
   ];
 
-  const reqTripType = (props.activity.required_trip_type || '').toLowerCase().replace('_', ' ');
-  if (reqTripType === 'round trip') {
-      rows.push({ label: 'Schedule Match', priority: 'Medium', requirement: `Return on ${props.activity.required_return_date || props.activity.arrival_date || 'Any'}`, work: actualReturnDate.value || '-', isMet: m.return_date });
+  const reqTripType = (props.activity.required_trip_type || '').toLowerCase();
+  
+  if (reqTripType === 'round_trip') {
+      rows.push({ 
+        label: 'Schedule Match (Return)', 
+        priority: 'Medium', 
+        requirement: `Return on ${props.activity.required_return_date || 'Any'}`, 
+        work: actualReturnDate.value || '-', 
+        isMet: m.return_date 
+      });
+  } else if (reqTripType === 'multi_city' && props.activity.segments) {
+      props.activity.segments.forEach((seg, idx) => {
+        const actual = actualSegments.value[idx];
+        const segMatch = m.segments[idx];
+        
+        rows.push({
+          label: `Leg ${idx + 1} Route`,
+          priority: 'Medium',
+          requirement: `${seg.origin} → ${seg.destination}`,
+          work: actual ? `${actual.origin} → ${actual.destination}` : 'Not Found',
+          isMet: segMatch?.origin && segMatch?.destination
+        });
+        
+        rows.push({
+          label: `Leg ${idx + 1} Schedule`,
+          priority: 'Medium',
+          requirement: seg.departure_date,
+          work: actual?.departure_date || 'N/A',
+          isMet: segMatch?.departure_date
+        });
+      });
   }
 
   return rows;
@@ -346,8 +393,21 @@ const scoreBreakdown = computed(() => {
   const detailFactor = pDetailMax > 0 ? (pDetailPoints / pDetailMax) : 1;
   const passengerScore = ((paxTypeScore * 0.3) + (detailFactor * 0.7)) * (total * 0.3);
 
-  // Completion (30%): Dates
-  const completionScore = ( (m.departure_date ? 1 : 0) + (m.return_date ? 1 : 0) ) / (props.activity.required_trip_type === 'round_trip' ? 2 : 1) * (total * 0.3);
+  // Completion (30%): Dates / Segments
+  let completionPoints = 0;
+  let completionMax = 0;
+  
+  if (props.activity.required_trip_type === 'multi_city' && m.segments.length > 0) {
+    m.segments.forEach(s => {
+      completionPoints += (s.origin ? 1 : 0) + (s.destination ? 1 : 0) + (s.departure_date ? 1 : 0);
+      completionMax += 3;
+    });
+  } else {
+    completionPoints = (m.departure_date ? 1 : 0) + (m.return_date ? 1 : 0);
+    completionMax = (props.activity.required_trip_type === 'round_trip' ? 2 : 1);
+  }
+  
+  const completionScore = (completionMax > 0 ? (completionPoints / completionMax) : 1) * (total * 0.3);
 
   return [
     { label: 'Compliance', score: complianceScore, max: total * 0.4, color: 'bg-[#111827]' },
