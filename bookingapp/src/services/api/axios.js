@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { useNotificationStore } from '@/stores/notification';
-import router from '@/router';
 import AuthStorage from '@/utils/authStorage';
 import { getFriendlyErrorMessage } from '@/utils/errorMapper';
 
@@ -35,14 +34,11 @@ api.interceptors.response.use(
     (error) => {
         // Skip global error handling for authentication and enrollment endpoints 
         // because the login component handles its own error feedback using the notification store.
-<<<<<<< HEAD
         if (error.config && error.config.url && (
             error.config.url.includes('auth/login') ||
+            error.config.url.includes('admin/login') ||
             error.config.url.includes('student/dashboard')
         )) {
-=======
-        if (error.config && error.config.url && (error.config.url.includes('auth/login') || error.config.url.includes('admin/login'))) {
->>>>>>> origin/doms
             return Promise.reject(error);
         }
 
@@ -60,8 +56,8 @@ api.interceptors.response.use(
         // Special handling for 401: clear session
         if (error.response && error.response.status === 401) {
             AuthStorage.clearCurrentSession();
-            if (router.currentRoute.value.path !== '/login') {
-                router.push('/login');
+            if (window.location.pathname !== '/login') {
+                window.location.href = '/login';
             }
         }
 
