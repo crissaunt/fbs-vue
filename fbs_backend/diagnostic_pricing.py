@@ -1,57 +1,60 @@
 import os
-import sys
 import django
+import sys
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 # Setup Django environment
-sys.path.append(r'c:\Users\Crissaunt\Documents\GitHub\fbs-vue\fbs_backend')
+sys.path.append('c:\\Users\\Crissaunt\\Documents\\GitHub\\fbs-vue\\fbs_backend')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'fbs_backend.settings')
-try:
-    django.setup()
-except Exception as e:
-    print(f"Django setup warning: {e}")
+django.setup()
 
 from flightapp.ml.dynamic_pricing import dynamic_pricing
+from flightapp.ml.predictor import predictor
 from django.utils import timezone
 
-def test_pricing_fluctuation():
-    origin = 'MNL'
-    destination = 'CEB'
-    airline = 'Philippine Airlines'
+def test_pricing_scenarios():
+    print("=== Pricing Diagnostic ===")
     
-    # Test cases: Tomorrow vs 1 Week After
-    now = timezone.now()
-    dates = [
-        ('Tomorrow', now + timedelta(days=1)),
-        ('1 Week After', now + timedelta(days=7)),
-        ('2 Weeks After', now + timedelta(days=14)),
-        ('1 Month After', now + timedelta(days=30)),
+    # Mock flight data
+    flight_data_template = {
+        'flight_number': '5J 123',
+        'airline_code': '5J',
+        'airline_name': 'Cebu Pacific',
+        'origin': 'MNL',
+        'destination': 'CEB',
+        'total_stops': 0,
+        'is_domestic': True
+    }
+    
+    scenarios = [
+        ("Near Date (Tomorrow)", 1),
+        ("Near Date (2 days)", 2),
+        ("Far Date (1 month)", 30),
+        ("Very Far Date (3 months)", 90),
     ]
     
-    print(f"{'Timeframe':<15} | {'Date':<12} | {'Base Price':<10} | {'Final Price':<10} | {'Urgency Mult':<12}")
-    print("-" * 70)
-    
-    for label, dep_time in dates:
-        flight_data = {
-            'origin': origin,
-            'destination': destination,
-            'airline_name': airline,
-            'departure_time': dep_time.isoformat(),
-            'arrival_time': (dep_time + timedelta(hours=1, minutes=30)).isoformat(),
-            'duration_hours': 1.5,
-            'total_stops': 0,
-            'flight_number': 'PR-123',
-            'base_price': 3000, # Assuming a fixed base for comparison
-        }
+    for label, days in scenarios:
+        flight_data = flight_data_template.copy()
+        dep_time = timezone.now() + timedelta(days=days)
+        flight_data['departure_time'] = dep_time.isoformat()
+        flight_data['arrival_time'] = (dep_time + timedelta(hours=1, minutes=30)).isoformat()
         
-        result = dynamic_pricing.get_price_for_user(flight_data)
+        print(f"\nScenario: {label} ({days} days out)")
         
-        # Calculate manually what the urgency factor was (it's part of demand_factor)
-        # We can see the factors in result['factors_applied']
-        factors = result['factors_applied']
-        demand_f = factors.get('demand_factor', 1.0)
+        # 1. Base ML Prediction
+        # Re-check advance_booking_days handling
+        ml_price = predictor.predict_price(flight_data)
+        print(f"  ML Base Prediction: {ml_price:.2f}")
         
-        print(f"{label:<15} | {dep_time.strftime('%Y-%m-%d'):<12} | {result['base_price']:<10} | {result['final_price']:<10} | {demand_f:<12.4f}")
+        # 2. Dynamic Pricing Result
+        pricing_result = dynamic_pricing.get_price_for_user(flight_data, user=None, session_id="test_session")
+        
+        print(f"  Final Price: {pricing_result['final_price']}")
+        print(f"  Base Price used in calculation: {pricing_result['base_price']}")
+        print(f"  Factors Applied:")
+        for factor, value in pricing_result['factors_applied'].items():
+            print(f"    - {factor}: {value:.4f}")
 
 if __name__ == "__main__":
-    test_pricing_fluctuation()
+    test_pricing_scenarios()

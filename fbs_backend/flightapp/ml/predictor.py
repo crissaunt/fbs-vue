@@ -86,6 +86,7 @@ class FlightPricePredictor:
             
             with open(model_path, 'rb') as file:
                 self.model = pickle.load(file)
+                self.model_path_used = str(model_path)
                 FlightPricePredictor._model = self.model
             
             model_name = "Enhanced" if "enhanced" in str(model_path) else "Original"
@@ -113,14 +114,19 @@ class FlightPricePredictor:
             return False
 
     def load_feature_mapping(self):
-        """Load feature column mappings from feature_mapping.json"""
+        """Load feature column mappings from appropriate json"""
         try:
-            # Try enhanced mapping first
-            mapping_path = Path(__file__).parent / 'feature_mapping_enhanced.json'
+            base_dir = Path(__file__).parent
             
-            if not mapping_path.exists():
-                # Fall back to original mapping
-                mapping_path = Path(__file__).parent / 'feature_mapping.json'
+            # Determine mapping path based on model type
+            model_is_enhanced = False
+            if hasattr(self, 'model_path_used') and 'enhanced' in str(self.model_path_used):
+                model_is_enhanced = True
+                
+            if model_is_enhanced:
+                mapping_path = base_dir / 'feature_mapping_enhanced.json'
+            else:
+                mapping_path = base_dir / 'feature_mapping.json'
             
             if mapping_path.exists():
                 with open(mapping_path, 'r') as file:
@@ -131,7 +137,7 @@ class FlightPricePredictor:
                 print(f"[SUCCESS] {mapping_name} Feature mapping loaded from {mapping_path.name}")
                 print(f"   Loaded {len(self.feature_mapping.get('feature_columns', []))} feature columns")
             else:
-                print(f"[ERROR] Feature mapping file not found!")
+                print(f"[ERROR] Feature mapping file not found at {mapping_path}!")
                 self.feature_mapping = FlightPricePredictor._feature_mapping
                 
         except Exception as e:
@@ -207,8 +213,17 @@ class FlightPricePredictor:
             # Long haul
             features['is_long_haul'] = 1 if features['Duration_hours'] >= 2 else 0
             
-            # Advance booking days (default to 14 if not provided)
-            features['advance_booking_days'] = flight_data.get('advance_booking_days', 14)
+            # Advance booking days (calculate if not provided)
+            advance_days = flight_data.get('advance_booking_days')
+            if advance_days is None:
+                now = datetime.now()
+                # Make naive for simple subtraction since dep_time might be offset-aware or naive
+                if dep_time.tzinfo is not None:
+                    dep_time_naive = dep_time.replace(tzinfo=None)
+                else:
+                    dep_time_naive = dep_time
+                advance_days = max(0, (dep_time_naive - now).days)
+            features['advance_booking_days'] = advance_days
             
             # Seat class (default Economy)
             seat_class = flight_data.get('seat_class', 'Economy').lower()

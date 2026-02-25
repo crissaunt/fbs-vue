@@ -138,7 +138,7 @@ class DynamicPricingService:
             base_price = self.get_base_ml_price(flight_data)
         
         # 2. Apply dynamic factors
-        price = base_price - 2000
+        price = base_price
         
         # DEBUG: Print base price (commented for performance)
         # print(f"? Base price: ?{base_price:.2f}")

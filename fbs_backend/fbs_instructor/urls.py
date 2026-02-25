@@ -13,6 +13,7 @@ from .views import (
     activity_details,
     activate_activity,
     student_activity_details,
+    student_dashboard,
     submit_grade,
     release_activity_grades,
     validate_session,
