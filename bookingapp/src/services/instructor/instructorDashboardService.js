@@ -26,7 +26,7 @@ export const instructorDashboardService = {
     // DELETE: Remove a section by ID
     async deleteSection(id) {
         try {
-            const response = await api.delete(`${BASE_URL}${id}/`);
+            const response = await api.delete(`api/instructor/sections/${id}/update/`);
             return response.data;
         } catch (error) {
             throw error;

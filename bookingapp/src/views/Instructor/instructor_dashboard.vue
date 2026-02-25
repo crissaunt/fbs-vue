@@ -100,7 +100,6 @@
                       <button @click.stop class="text-white/100 hover:text-white p-1">⋮</button>
                       <div class="hidden group-hover:block absolute right-0 top-full w-32 bg-white shadow-xl rounded border border-gray-100 z-30 overflow-hidden">
                         <button @click.stop="editSection(section)" class="block w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 font-bold uppercase">Edit</button>
-                        <button @click.stop="deleteSection(section.id)" class="block w-full text-left px-4 py-2 text-xs text-red-600 hover:bg-red-50 font-bold uppercase">Delete</button>
                       </div>
                     </div>
                   </div>
@@ -237,6 +236,11 @@ const goToSection = (id) => {
   router.push(`/instructor/section/${id}`)
 }
 
+// Edit Section logic - Redirect to Settings
+const editSection = (section) => {
+  router.push(`/instructor/section/${section.id}/settings`)
+}
+
 // Logout logic
 const handleLogout = () => {
   localStorage.clear()
@@ -285,28 +289,6 @@ const submitSection = async () => {
     notificationStore.error("Backend Error: " + serverMessage);
   }
 };
-
-/**
- * Action: Delete a section
- */
-const deleteSection = async (id) => {
-  const confirmed = await modalStore.confirm({
-    title: 'Delete Section?',
-    message: 'Are you sure you want to delete this section? This action cannot be undone and all associated students and activities will be lost.',
-    confirmText: 'Delete',
-    cancelText: 'Cancel'
-  })
-
-  if (confirmed) {
-    try {
-      await instructorDashboardService.deleteSection(id);
-      notificationStore.success("Section deleted successfully.");
-      await fetchInstructorData(); // Refresh list
-    } catch (error) {
-      notificationStore.error("Failed to delete section.");
-    }
-  }
-}
 
 // Lifecycle: Initialize data
 onMounted(async () => {

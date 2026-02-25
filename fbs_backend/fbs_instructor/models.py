@@ -39,6 +39,8 @@ class Section(models.Model):
     schedule = models.CharField(max_length=100, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     
+    is_locked = models.BooleanField(default=False)
+    
     instructor = models.ForeignKey(
         User, 
         on_delete=models.CASCADE, 

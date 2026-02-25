@@ -21,6 +21,7 @@ from .views import (
     list_sessions,
     logout_view,
     update_profile,
+    update_section,
 )
 
 urlpatterns = [
@@ -37,6 +38,7 @@ urlpatterns = [
 
     # Section Management
     path('instructor/sections/<int:section_id>/', section_details, name='section_details'),
+    path('instructor/sections/<int:section_id>/update/', update_section, name='update_section'),
     path('instructor/sections/<int:section_id>/enroll/', EnrollStudentView.as_view(), name='enroll-student'),
     path('instructor/sections/<int:section_id>/students/', Enroll_Student_list, name='Enroll_Student_list'),
     path('instructor/sections/<int:section_id>/enroll/<int:student_id>/', UnenrollStudentView.as_view(), name='unenroll-student'),

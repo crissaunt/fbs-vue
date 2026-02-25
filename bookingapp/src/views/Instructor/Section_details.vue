@@ -75,7 +75,12 @@
             >
                 Student
             </button>
-            <button class="pb-3 text-sm font-bold uppercase text-gray-400 hover:text-gray-600 tracking-wider">Course Settings</button>
+            <button 
+              @click="$router.push(`/instructor/section/${route.params.id}/settings`)"
+              class="pb-3 text-sm font-bold uppercase text-gray-400 hover:text-gray-600 tracking-wider"
+            >
+              Course Settings
+            </button>
             
             <div class="ml-auto flex gap-3 mb-2">
               <button @click="openEnrollModal" class="bg-[#F4D03F] text-[#0A3D16] px-6 py-2.5 rounded-lg font-bold text-xs uppercase tracking-widest shadow-md hover:translate-y-[-1px] active:scale-95 transition-all">Enroll Student</button>

@@ -341,6 +341,7 @@ def section_details(request, section_id):
             'academic_year': section.academic_year,
             'schedule': section.schedule,
             'description': section.description,
+            'is_locked': section.is_locked,
             'created_at': section.created_at,
             'activities': activities_data
         }, status=status.HTTP_200_OK)
@@ -348,6 +349,55 @@ def section_details(request, section_id):
     except Section.DoesNotExist:
         return Response({"error": "Section not found or unauthorized."}, status=status.HTTP_404_NOT_FOUND)
 
+
+@api_view(['PATCH', 'PUT', 'DELETE'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated, IsInstructor])
+def update_section(request, section_id):
+    user = request.user
+    section = get_object_or_404(Section, id=section_id, instructor=user)
+    
+    if request.method == 'DELETE':
+        section_name = section.section_name
+        section.delete()
+        return Response({"message": f"Section '{section_name}' deleted successfully!"}, status=status.HTTP_200_OK)
+    
+    data = request.data
+    
+    # Update fields if they exist in the request
+    if 'section_name' in data:
+        section.section_name = data['section_name']
+    if 'section_code' in data:
+        # Check for uniqueness if code is changed
+        new_code = data['section_code']
+        if new_code != section.section_code:
+            if Section.objects.filter(section_code=new_code, instructor=user).exists():
+                return Response({"error": "Section code already exists for your account."}, status=status.HTTP_400_BAD_REQUEST)
+            section.section_code = new_code
+    if 'semester' in data:
+        section.semester = data['semester']
+    if 'academic_year' in data:
+        section.academic_year = data['academic_year']
+    if 'schedule' in data:
+        section.schedule = data['schedule']
+    if 'description' in data:
+        section.description = data['description']
+    if 'is_locked' in data:
+        section.is_locked = data['is_locked']
+        
+    try:
+        section.save()
+        return Response({
+            "message": "Section updated successfully!",
+            "section": {
+                "id": section.id,
+                "section_name": section.section_name,
+                "section_code": section.section_code,
+                "is_locked": section.is_locked
+            }
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
 @authentication_classes([MultiSessionTokenAuthentication])
@@ -380,6 +430,9 @@ class EnrollStudentView(APIView):
     def post(self, request, section_id):
         student_num = request.data.get('student_number')
         section = get_object_or_404(Section, id=section_id, instructor=request.user)
+        
+        if section.is_locked:
+            return Response({"error": "This section is currently locked. New enrollments are not allowed."}, status=status.HTTP_403_FORBIDDEN)
         
         try:
             student = Students.objects.get(student_number=student_num)
