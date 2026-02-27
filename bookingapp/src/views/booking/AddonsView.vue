@@ -1,5 +1,6 @@
 <template>
-  <div class="pal-bg">
+  <div class="pal-bg pb-20 lg:pb-0">
+    <BookingStatusHeader />
     <div class="container pal-layout">
       <main class="main-content">
         <div class="trip-type-header">
@@ -321,10 +322,6 @@
                         <div v-if="service.special_requirements" class="assistance-requirements">
                           <small>📋 {{ service.special_requirements }}</small>
                         </div>
-                        <div class="assistance-price">
-                          <span v-if="service.price > 0">₱{{ parseFloat(service.price).toLocaleString() }}</span>
-                          <span v-else>Free service</span>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -333,12 +330,16 @@
             </div>
           </template>
         </div>
-
         <div class="footer-nav">
           <button class="btn-back" @click="$router.back()">BACK</button>
-          <button class="btn-continue" @click="saveAndContinue">CONTINUE TO PAYMENT</button>
+          <button class="btn-continue hidden lg:block" @click="saveAndContinue">CONTINUE TO REVIEW</button>
         </div>
       </main>
+      
+      <MobileBookingFooter 
+        button-text="Continue to Review" 
+        @next="saveAndContinue" 
+      />
 
       <aside class="sidebar">
         <BookingTimer variant="sidebar" />
@@ -349,25 +350,20 @@
             <div v-if="flightInfo.length > 0" class="flight-breakdown">
               <!-- Adults Breakdown -->
               <div class="price-line" v-if="bookingStore.passengerCount.adults > 0">
-                <span>{{ bookingStore.passengerCount.adults }} Adult(s) (Base Fare)</span> 
-                <span>₱{{ (bookingStore.combinedBasePrice * bookingStore.passengerCount.adults).toLocaleString() }}</span>
+                <span>{{ bookingStore.passengerCount.adults }} Adult(s) (Total Base Fare)</span> 
+                <AnimatedNumber :value="bookingStore.grandTotalForAdults" prefix="₱" />
               </div>
               
               <!-- Children Breakdown -->
               <div class="price-line" v-if="bookingStore.passengerCount.children > 0">
-                <span>{{ bookingStore.passengerCount.children }} Child(ren) (Base Fare)</span> 
-                <span>₱{{ (bookingStore.combinedBasePrice * bookingStore.passengerCount.children).toLocaleString() }}</span>
+                <span>{{ bookingStore.passengerCount.children }} Child(ren) (Total Base Fare)</span> 
+                <AnimatedNumber :value="bookingStore.grandTotalForChildren" prefix="₱" />
               </div>
 
               <!-- Infants Breakdown (50% Base Fare) -->
               <div class="price-line infant-line" v-if="bookingStore.passengerCount.infants > 0">
                 <span>{{ bookingStore.passengerCount.infants }} Infant(s) (50% Base Fare)</span> 
-                <span>₱{{ ((bookingStore.combinedBasePrice * 0.5) * bookingStore.passengerCount.infants).toLocaleString() }}</span>
-              </div>
-
-              <div class="price-line taxes-line">
-                <span>Estimated Taxes & Fees (12%)</span>
-                <span>₱{{ (bookingStore.totalTaxes).toLocaleString() }}</span>
+                <AnimatedNumber :value="bookingStore.grandTotalForInfants" prefix="₱" />
               </div>
             </div>
 
@@ -399,9 +395,9 @@
             <hr>
 
             <div class="total-row" id="sidebar-total">
-              <span>Total</span> 
+              <span>Subtotal</span>
               <span class="final-amt">
-                <AnimatedNumber :value="grandTotal" prefix="₱" />
+                <AnimatedNumber :value="addonsSubtotal" prefix="₱" />
               </span>
             </div>
           </div>
@@ -494,6 +490,8 @@ import api from '@/services/api/axios';
 import BookingTimer from '@/components/booking/BookingTimer.vue';
 import AnimatedNumber from '@/components/common/AnimatedNumber.vue';
 import FlyingIcon from '@/components/common/FlyingIcon.vue';
+import BookingStatusHeader from '@/components/booking/BookingStatusHeader.vue';
+import MobileBookingFooter from '@/components/booking/MobileBookingFooter.vue';
 
 const bookingStore = useBookingStore();
 const router = useRouter();
@@ -667,7 +665,7 @@ const selectedInsurancePlanId = computed(() => {
 });
 
 const insurancePrice = computed(() => {
-  return bookingStore.addons?.insurance?.price || 0;
+  return bookingStore.insurancePrice;
 });
 
 // Roadmap logic: track completion for each segment
@@ -977,7 +975,17 @@ const taxesPrice = computed(() => {
   }
   return bookingStore.totalTaxes;
 });
-// Use bookingStore.grandTotal for consistency
+// Subtotal excluding taxes
+const addonsSubtotal = computed(() => {
+  return bookingStore.combinedBasePriceTotal + 
+         bookingStore.totalBaggagePrice + 
+         bookingStore.totalMealsPrice + 
+         bookingStore.totalSeatsPrice + 
+         bookingStore.totalAssistancePrice + 
+         bookingStore.insurancePrice;
+});
+
+// Keep grandTotal for other uses if needed, or remove
 const grandTotal = computed(() => bookingStore.grandTotal);
 
 const saveAndContinue = () => {

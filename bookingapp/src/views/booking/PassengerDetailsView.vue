@@ -1,5 +1,6 @@
 <template>
-  <div class="minimal-container">
+  <div class="minimal-container pb-20 lg:pb-0">
+    <BookingStatusHeader />
     <div class="minimal-layout">
       <!-- Main Content - Forms -->
       <main class="main-content">
@@ -317,6 +318,12 @@
         </div>
       </aside>
     </div>
+    
+    <MobileBookingFooter 
+      button-text="Continue to Add-ons" 
+      :loading="isSaving"
+      @next="handleContinueToAddons" 
+    />
   </div>
 </template>
 
@@ -327,6 +334,8 @@ import { useNotificationStore } from '@/stores/notification';
 import { useRouter } from 'vue-router';
 import PassengerForm from '@/components/booking/PassengerForm.vue';
 import BookingTimer from '@/components/booking/BookingTimer.vue';
+import BookingStatusHeader from '@/components/booking/BookingStatusHeader.vue';
+import MobileBookingFooter from '@/components/booking/MobileBookingFooter.vue';
 
 const bookingStore = useBookingStore();
 const notificationStore = useNotificationStore();

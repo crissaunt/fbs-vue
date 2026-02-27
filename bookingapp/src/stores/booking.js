@@ -97,7 +97,7 @@ export const useBookingStore = defineStore('booking', {
       const activeSegments = this.allSegments;
 
       activeSegments.forEach((seg, index) => {
-        const segKey = state.isMultiCity ? index.toString() : seg.type;
+        const segKey = this.isMultiCity ? index.toString() : seg.type;
         const segmentSeats = seats[segKey] || {};
         Object.values(segmentSeats).forEach(seat => {
           if (seat && seat.seat_price !== undefined) {
@@ -114,7 +114,7 @@ export const useBookingStore = defineStore('booking', {
       const activeSegments = this.allSegments;
 
       activeSegments.forEach((seg, index) => {
-        const segKey = state.isMultiCity ? index.toString() : seg.type;
+        const segKey = this.isMultiCity ? index.toString() : seg.type;
         const segmentBaggage = baggage[segKey] || {};
         Object.values(segmentBaggage).forEach(baggageItem => {
           if (baggageItem && typeof baggageItem === 'object' && baggageItem.price !== undefined) {
@@ -131,7 +131,7 @@ export const useBookingStore = defineStore('booking', {
       const activeSegments = this.allSegments;
 
       activeSegments.forEach((seg, index) => {
-        const segKey = state.isMultiCity ? index.toString() : seg.type;
+        const segKey = this.isMultiCity ? index.toString() : seg.type;
         const segmentMeals = meals[segKey] || {};
         Object.values(segmentMeals).forEach(meal => {
           if (meal && typeof meal === 'object' && meal.price !== undefined) {
@@ -140,10 +140,6 @@ export const useBookingStore = defineStore('booking', {
         });
       });
       return total;
-    },
-
-    totalAssistancePrice(state) {
-      return 0; // Assistance is typically free
     },
 
     combinedBasePrice(state) {
@@ -162,6 +158,20 @@ export const useBookingStore = defineStore('booking', {
         base = outboundPrice + returnPrice;
       }
       return base;
+    },
+
+    departBaseFare(state) {
+      if (state.tripType === 'multi_city' || state.tripType === 'multi-city') {
+        return state.multiCitySegments[0]?.selectedFlight?.price || 0;
+      }
+      return state.selectedOutbound?.price || 0;
+    },
+
+    returnBaseFare(state) {
+      if (state.tripType === 'round_trip' || state.tripType === 'round-trip') {
+        return state.selectedReturn?.price || 0;
+      }
+      return 0;
     },
 
     grandTotalForAdults(state) {
@@ -202,44 +212,49 @@ export const useBookingStore = defineStore('booking', {
 
     // Total Base Fare for all passengers EXACTLY AS DISPLAYED IN SUBTOTAL (WITH DISCOUNTS)
     combinedBasePriceTotal(state) {
-      return this.grandTotalForAdults + this.grandTotalForChildren + this.grandTotalForInfants;
+      return (this.grandTotalForAdults || 0) + (this.grandTotalForChildren || 0) + (this.grandTotalForInfants || 0);
     },
 
     // Standard 12% tax applied ONLY to taxable Base Fare 
     // Senior/PWD base fares are VAT EXEMPT in the Philippines
+    // Also includes Terminal Fee (DPSC) of ₱200/segment per pax
     totalTaxes(state) {
-      const base = this.combinedBasePrice;
+      const base = parseFloat(this.combinedBasePrice) || 0;
       let taxableBaseTotal = 0;
 
       // Adults testing for VAT exemption
-      const adults = state.passengers.filter(p => p.type === 'Adult');
+      const adults = Array.isArray(state.passengers) ? state.passengers.filter(p => p.type === 'Adult') : [];
       if (adults.length === 0) {
         // Fallback: all adults are taxable
-        taxableBaseTotal += base * (state.passengerCount.adults || 0);
+        taxableBaseTotal += base * (parseInt(state.passengerCount?.adults) || 0);
       } else {
         adults.forEach(adult => {
           if (adult.phDiscountType !== 'senior' && adult.phDiscountType !== 'pwd') {
             taxableBaseTotal += base; // Regular adult is taxable
           }
-          // Senior and PWD are VAT exempt (do not add their discounted base to taxable total)
         });
       }
 
       // Children and infants are generally taxable
-      taxableBaseTotal += base * (state.passengerCount.children || 0);
-      taxableBaseTotal += (base * 0.5) * (state.passengerCount.infants || 0);
+      taxableBaseTotal += base * (parseInt(state.passengerCount?.children) || 0);
+      taxableBaseTotal += (base * 0.5) * (parseInt(state.passengerCount?.infants) || 0);
 
       const baseVat = taxableBaseTotal * 0.12;
 
       // Addons are also taxable (12% VAT)
-      const addonsVat = this.totalAddonsPrice * 0.12;
+      const addonsVat = (this.totalAddonsPrice || 0) * 0.12;
 
-      return baseVat + addonsVat;
+      // Terminal Fee (DPSC) - ₱200 per segment per paying passenger (Adult/Child)
+      const activeSegmentsCount = (this.allSegments || []).length;
+      const payingPaxCount = (parseInt(state.passengerCount?.adults) || 0) + (parseInt(state.passengerCount?.children) || 0);
+      const terminalFees = activeSegmentsCount * payingPaxCount * 200;
+
+      return baseVat + addonsVat + terminalFees;
     },
 
     // Total for all selected add-ons (Active segments only)
     totalAddonsPrice(state) {
-      return this.totalBaggagePrice + this.totalMealsPrice + this.totalSeatsPrice + this.totalAssistancePrice;
+      return (this.totalBaggagePrice || 0) + (this.totalMealsPrice || 0) + (this.totalSeatsPrice || 0) + (this.totalAssistancePrice || 0);
     },
 
     // Insurance price (per passenger: Adult + Child)
@@ -264,9 +279,16 @@ export const useBookingStore = defineStore('booking', {
       return total;
     },
 
-    // Final aggregated amount
+    // Final aggregated amount (Rounded UP)
+    // Final aggregated amount (Rounded UP)
     grandTotal(state) {
-      return this.combinedBasePriceTotal + this.totalTaxes + this.totalAddonsPrice + this.insurancePrice;
+      const bPrice = parseFloat(this.combinedBasePriceTotal) || 0;
+      const tPrice = parseFloat(this.totalTaxes) || 0;
+      const aPrice = parseFloat(this.totalAddonsPrice) || 0;
+      const iPrice = parseFloat(this.insurancePrice) || 0;
+
+      const rawTotal = bPrice + tPrice + aPrice + iPrice;
+      return Math.ceil(rawTotal);
     },
 
     // Backward compatibility or internal use

@@ -1,5 +1,6 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-gray-50 pb-20 lg:pb-0">
+    <BookingStatusHeader />
     
     <!-- Edit Search Modal -->
     <div v-if="showEditSearch" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -804,6 +805,7 @@ import FlightFilterSidebar from '@/components/booking/FlightFilterSidebar.vue';
 import DateNavigator from '@/components/booking/DateNavigator.vue';
 import FlightCard from '@/components/booking/FlightCard.vue';
 import SeatClassModal from '@/components/booking/SeatClassModal.vue';
+import BookingStatusHeader from '@/components/booking/BookingStatusHeader.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -992,8 +994,8 @@ const sessionWatcher = ref(null);
 const loadSeatClassFeatures = async () => {
   try {
     const response = await flightService.getSeatClassFeatures();
-    if (response.data) {
-      seatClassFeatures.value = response.data;
+    if (response.data && response.data.data) {
+      seatClassFeatures.value = response.data.data;
       console.log('✅ Seat class features loaded:', seatClassFeatures.value);
       
       // Update filter options dynamically
@@ -1339,10 +1341,7 @@ const submitEditedSearch = () => {
   
   showEditSearch.value = false;
   
-  // Reload flights with new params
-  setTimeout(() => {
-    fetchFlights();
-  }, 100);
+  // fetchFlights() call removed - now handled by route watcher
 };
 
 // Session expired modal handler
@@ -1438,7 +1437,7 @@ const extractSeatClassesFromFlight = (flight) => {
         description: getSeatClassDescription(className),
         price: calculateSeatClassPrice(flight.price, className, flight),
         icon: getSeatClassIcon(className),
-        features: seatClassFeatures.value[className],
+        features: parseFeatures(seatClassFeatures.value[className]),
         ml_predicted: flight.ml_predicted
       };
     });
@@ -1512,7 +1511,7 @@ const getSeatClassFeatures = (className) => {
   
   // Try to get from API data first
   if (seatClassFeatures.value[key] && seatClassFeatures.value[key].length > 0) {
-    return seatClassFeatures.value[key];
+    return parseFeatures(seatClassFeatures.value[key]);
   }
   
   // If not found, check for similar keys
@@ -1742,6 +1741,11 @@ onUnmounted(() => {
     clearInterval(countdownInterval.value);
   }
 });
+  // NEW: Watch for route query changes to refresh search
+  watch(() => route.query, () => {
+    console.log('🔄 Route query changed, refreshing results...');
+    fetchFlights();
+  }, { deep: true });
 
 // Watch for filter changes
 watch([filters, dateFilter], () => {
@@ -2428,18 +2432,22 @@ const retryFetchFlights = () => {
   fetchFlights();
 };
 
-// Format seat classes for display
-const formatSeatClasses = (seatClasses) => {
-  if (!seatClasses || !Array.isArray(seatClasses)) return '';
-  
-  return seatClasses.map(sc => {
-    if (typeof sc === 'string') {
-      return sc;
-    } else if (sc && typeof sc === 'object') {
-      return sc.name || sc.class_name || sc.value || 'Unknown';
-    }
-    return 'Unknown';
-  }).join(', ');
+// Helper to safely parse features (in case they are JSON strings)
+const parseFeatures = (features) => {
+  if (!features) return [];
+  if (Array.isArray(features)) {
+    return features.map(f => {
+      if (typeof f === 'string' && (f.startsWith('[') || f.startsWith('{'))) {
+        try {
+          return JSON.parse(f);
+        } catch (e) {
+          return f;
+        }
+      }
+      return f;
+    }).flat(); // Flatten in case a single feature string represents an array of features
+  }
+  return [];
 };
 
 // Format time
@@ -2768,11 +2776,14 @@ const availableSeatClassOptions = computed(() => {
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
+  appearance: none;
   margin: 0;
 }
 
 input[type="number"] {
+  -webkit-appearance: textfield;
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 /* Animation for flight cards */

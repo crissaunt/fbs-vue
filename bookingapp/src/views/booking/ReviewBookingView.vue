@@ -1,5 +1,7 @@
 <template>
-  <div class="pal-bg">
+  <div class="review-booking-container pb-20 lg:pb-0">
+    <BookingStatusHeader />
+
     <!-- Loading State -->
     <div v-if="isLoading" class="loading-state">
       <div class="loading-spinner"></div>
@@ -131,15 +133,7 @@
         <BookingTimer variant="sidebar" />
         <div class="summary-card sticky">
           <div class="summary-header">Payment Summary</div>
-          <div class="summary-body" v-if="isCalculatingPrice">
-            <div class="price-loading">
-              <div class="loading-dots">
-                <span></span><span></span><span></span>
-              </div>
-              <p>Verifying price with server...</p>
-            </div>
-          </div>
-          <div class="summary-body" v-else>
+          <div class="summary-body">
             <!-- Flight Base Fares Breakdown -->
             <div class="flight-base-summary" v-if="hasFlightData">
               <!-- Adults Breakdown -->
@@ -160,7 +154,17 @@
                 <AnimatedNumber :value="bookingStore.grandTotalForInfants" prefix="₱" />
               </div>
 
-              <div class="price-line taxes-line">
+              
+              <!-- Granular Taxes Breakdown -->
+              <div v-if="backendTaxDetails && Object.keys(backendTaxDetails).length > 0">
+                <div v-for="(amount, label) in backendTaxDetails" :key="label" class="price-line tax-detail-line">
+                  <span class="tax-label">{{ label }}</span>
+                  <AnimatedNumber :value="amount" prefix="₱" />
+                </div>
+              </div>
+              
+              <!-- Fallback to single line if no breakdown yet -->
+              <div v-else class="price-line taxes-line">
                 <span>Verification / Taxes & Fees (VAT)</span>
                 <AnimatedNumber :value="bookingStore.totalTaxes" prefix="₱" />
               </div>
@@ -204,6 +208,12 @@
         </div>
       </aside>
     </div>
+
+    <MobileBookingFooter 
+      button-text="Proceed to Payment" 
+      :loading="isProcessing"
+      @next="handleConfirmBooking" 
+    />
   </div>
 </template>
 
@@ -215,6 +225,8 @@ import { addonService } from '@/services/booking/addonService';
 import { bookingService } from '@/services/booking/bookingService';
 import { useNotificationStore } from '@/stores/notification';
 import BookingTimer from '@/components/booking/BookingTimer.vue';
+import BookingStatusHeader from '@/components/booking/BookingStatusHeader.vue';
+import MobileBookingFooter from '@/components/booking/MobileBookingFooter.vue';
 import AnimatedNumber from '@/components/common/AnimatedNumber.vue';
 
 const bookingStore = useBookingStore();
@@ -227,9 +239,10 @@ const baggageOptions = ref([]);
 const mealOptions = ref([]);
 const assistanceOptions = ref([]);
 
-// Backend Price Data
+// Backend Price Data (kept for potential future use but no longer used for display)
 const backendTotal = ref(null);
 const backendBreakdown = ref(null);
+const backendTaxDetails = ref(null);
 const isCalculatingPrice = ref(false);
 
 onMounted(async () => {
@@ -303,7 +316,7 @@ onMounted(async () => {
       assistanceOptions.value = Array.isArray(data) ? data : (data?.results || []);
     }
 
-    // Fetch backend-calculated price
+    // Fetch backend price to show authoritative breakdown
     await fetchBackendPrice();
 
   } catch (error) {
@@ -313,21 +326,22 @@ onMounted(async () => {
   }
 });
 
+// Not called anymore — kept for reference in case we need it later.
 const fetchBackendPrice = async () => {
+  if (!hasFlightData.value) return;
+  
   isCalculatingPrice.value = true;
   try {
-    console.log('🔍 Fetching authoritative backend price...');
-    const result = await bookingService.calculatePrice(bookingStore);
-    if (result.success) {
-      backendTotal.value = result.totalAmount;
-      backendBreakdown.value = result.breakdown;
-      console.log('✅ Backend price confirmed:', backendTotal.value);
-      console.log('📊 Backend breakdown:', backendBreakdown.value);
-    } else {
-      console.warn('⚠️ Could not get backend price, falling back to store calculation:', result.error);
+    const response = await bookingService.calculatePrice(bookingStore);
+    if (response.success) {
+      backendTotal.value = response.total_amount;
+      backendBreakdown.value = response.breakdown;
+      backendTaxDetails.value = response.tax_details || null;
+      console.log('✅ Backend price confirmed:', response.total_amount);
+      console.log('📑 Tax Details:', backendTaxDetails.value);
     }
   } catch (error) {
-    console.error('❌ Error in fetchBackendPrice:', error);
+    console.error('Error fetching backend price:', error);
   } finally {
     isCalculatingPrice.value = false;
   }
@@ -529,14 +543,11 @@ const taxesPrice = computed(() => {
 });
 
 const grandTotal = computed(() => {
-  // Delegate to the store's authoritative grandTotal getter.
-  // If a backend-verified price exists, use that instead.
-  if (backendTotal.value) {
-    console.log('💰 ReviewBooking: Using Backend Total:', backendTotal.value);
-    console.log('📊 ReviewBooking Backend Breakdown:', backendBreakdown.value);
-    return parseFloat(backendTotal.value);
+  // Use backend confirmed total if available
+  if (backendTotal.value !== null && !isNaN(backendTotal.value)) {
+    return backendTotal.value;
   }
-  console.log('⚠️ ReviewBooking: No Backend Total, using Store Total:', bookingStore.grandTotal);
+  // Otherwise use the store's computed grandTotal as fallback
   return bookingStore.grandTotal;
 });
 
@@ -713,12 +724,14 @@ const confirmBooking = async () => {
         total: bookingStore.booking_total
       });
       
-      // 6. Move to Payment
+      // 6. Move to Payment — pass confirmed amount so Payment doesn't re-derive it.
+      const confirmedAmount = bookingStore.booking_total || bookingStore.grandTotal;
       router.push({ 
         name: 'Payment', 
         query: { 
           bookingId: response.booking_id,
-          bookingReference: response.booking_reference || `CSUCC${String(response.booking_id).padStart(8, '0')}`
+          bookingReference: response.booking_reference || `CSUCC${String(response.booking_id).padStart(8, '0')}`,
+          amount: confirmedAmount
         } 
       });
     }
@@ -1129,6 +1142,23 @@ const handleBookingError = (error) => {
   margin-top: 10px;
   color: #888;
   font-size: 0.85rem;
+}
+
+.tax-detail-line {
+  font-size: 0.85rem;
+  color: #666;
+  padding-left: 1rem;
+  margin-top: 4px;
+}
+
+.tax-label {
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.taxes-line {
+  font-weight: 600;
+  margin-top: 10px;
 }
 
 .mt-3 {

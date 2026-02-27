@@ -305,8 +305,9 @@ export const bookingService = {
       if (response.data?.success) {
         return {
           success: true,
-          totalAmount: response.data.total_amount,
+          total_amount: response.data.total_amount,
           breakdown: response.data.breakdown,
+          tax_details: response.data.tax_details,
           currency: response.data.currency
         }
       }

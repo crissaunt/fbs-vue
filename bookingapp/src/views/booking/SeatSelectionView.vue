@@ -1,6 +1,7 @@
 <template>
-  <div class="pal-bg">
-    <div class="container seat-layout-wrapper">
+  <div class="seat-selection-view pb-20 lg:pb-0">
+    <BookingStatusHeader />
+    <div class="container container-layout">
       <main class="seat-main">
         <div class="seat-header">
           <button @click="$router.back()" class="back-link">❮ Back to Add-ons</button>
@@ -41,7 +42,7 @@
           <p>Loading seat map for {{ activeFlightSegmentLabel }}...</p>
         </div>
 
-        <div v-else-if="aircraftModel && AircraftLayout" class="seat-selection-grid">
+        <div v-else-if="rawSeats.length > 0" class="seat-selection-grid">
           <aside class="seat-passenger-list">
             <h3>Passengers</h3>
             <div 
@@ -123,29 +124,78 @@
               </div>
             </div>
             
-            <!-- Dynamically load the aircraft layout component -->
-            <component
-              :is="AircraftLayout"
-              :seats="rawSeats"
-              :selectedSeats="assignedSeats"
-              :activePassenger="activePassenger"
-              :onSeatSelect="assignSeat"
-              :onSeatHover="hoverSeat"
-            />
+            <!-- Dynamic seat map rendered from API data -->
+            <div class="dynamic-seat-map">
+              <!-- Aircraft body shape -->
+              <div class="plane-nose">✈</div>
+
+              <!-- Group by seat class -->
+              <div v-for="seatClass in seatClasses" :key="seatClass.id" 
+                   :class="['cabin-section', { 'dimmed-class': isClassDimmed(seatClass.name) }]">
+                <!-- Cabin class header -->
+                <div class="cabin-header" :style="{ borderColor: getClassColor(seatClass.name), color: getClassColor(seatClass.name) }">
+                  <span class="cabin-dot" :style="{ background: getClassColor(seatClass.name) }"></span>
+                  <span class="cabin-label">{{ seatClass.name }}</span>
+                  <span class="cabin-mult">×{{ seatClass.price_multiplier }}</span>
+                  <span v-if="isClassDimmed(seatClass.name)" class="cabin-restricted-badge">Restricted</span>
+                </div>
+
+                <!-- Rows for this class -->
+                <div v-for="rowGroup in getRowGroupsByClass(seatClass.id)" :key="rowGroup.row" class="seat-row-wrapper">
+                  <!-- Exit row banner -->
+                  <div v-if="rowGroup.isExitRow" class="exit-row-banner">🚪 Emergency Exit</div>
+
+                  <div class="seat-row">
+                    <!-- Left side seats (first half of columns) -->
+                    <div class="seat-group">
+                      <button
+                        v-for="seat in rowGroup.leftSeats"
+                        :key="seat.id"
+                        @click="assignSeat(seat)"
+                        :class="['seat-btn', getSeatStatus(seat), { 'seat-exit': seat.is_exit_row, 'seat-legroom': seat.has_extra_legroom }]"
+                        :style="seat.is_available && getSeatStatus(seat) === 'available' ? { borderColor: getClassColor(seatClass.name), '--seat-class-color': getClassColor(seatClass.name) } : {}"
+                        :title="getSeatTooltip(seat)"
+                        :disabled="!seat.is_available || getSeatStatus(seat) === 'taken-by-other' || isClassDimmed(seat.seat_class?.name)"
+                      >
+                        <span class="seat-label">{{ seat.column }}</span>
+                        <span v-if="seat.is_exit_row" class="seat-badge exit-badge">🚪</span>
+                        <span v-else-if="seat.has_extra_legroom" class="seat-badge leg-badge">↕</span>
+                        <span v-else-if="seat.is_wheelchair_accessible" class="seat-badge wheel-badge">♿</span>
+                      </button>
+                    </div>
+
+                    <!-- Aisle / Row number -->
+                    <div class="row-label">{{ rowGroup.globalRow }}</div>
+
+                    <!-- Right side seats (second half of columns) -->
+                    <div class="seat-group">
+                      <button
+                        v-for="seat in rowGroup.rightSeats"
+                        :key="seat.id"
+                        @click="assignSeat(seat)"
+                        :class="['seat-btn', getSeatStatus(seat), { 'seat-exit': seat.is_exit_row, 'seat-legroom': seat.has_extra_legroom }]"
+                        :style="seat.is_available && getSeatStatus(seat) === 'available' ? { borderColor: getClassColor(seatClass.name), '--seat-class-color': getClassColor(seatClass.name) } : {}"
+                        :title="getSeatTooltip(seat)"
+                        :disabled="!seat.is_available || getSeatStatus(seat) === 'taken-by-other' || isClassDimmed(seat.seat_class?.name)"
+                      >
+                        <span class="seat-label">{{ seat.column }}</span>
+                        <span v-if="seat.is_exit_row" class="seat-badge exit-badge">🚪</span>
+                        <span v-else-if="seat.has_extra_legroom" class="seat-badge leg-badge">↕</span>
+                        <span v-else-if="seat.is_wheelchair_accessible" class="seat-badge wheel-badge">♿</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="plane-tail">▼</div>
+            </div>
             
             <div class="aircraft-footer">
               <div class="cabin-legend">
-                <span class="legend-item">
-                  <span class="legend-color first"></span>
-                  <span>First Class</span>
-                </span>
-                <span class="legend-item">
-                  <span class="legend-color business"></span>
-                  <span>Business</span>
-                </span>
-                <span class="legend-item">
-                  <span class="legend-color economy"></span>
-                  <span>Economy</span>
+                <span v-for="sc in seatClasses" :key="sc.id" class="legend-item">
+                  <span class="legend-color" :style="{ background: getClassColor(sc.name) }"></span>
+                  <span>{{ sc.name }}</span>
                 </span>
               </div>
             </div>
@@ -217,50 +267,43 @@
                     <div class="progress-track">
                       <div class="progress-fill" :style="{ width: seg.percent + '%' }"></div>
                     </div>
-                    <div class="progress-count">{{ seg.count }}/{{ bookingStore.passengers.length }}</div>
+                  <div class="progress-count">{{ seg.count }}/{{ bookingStore.passengers.length }}</div>
                   </div>
                 </div>
               </div>
 
-              <button 
-                class="btn-confirm-seats" 
-                @click="confirmSeats"
-                :disabled="!allPassengersHaveSeats"
-                :class="{ disabled: !allPassengersHaveSeats }"
-              >
+              <div v-if="hasNextSegment" class="next-segment-nav">
+                <button class="next-segment-btn" @click="goToNextSegment">
+                  Next Flight: {{ getNextSegmentLabel }} ❯
+                </button>
+              </div>
+
+              <button class="confirm-btn flex-1 hidden lg:block" :disabled="!allPassengersHaveSeats" @click="confirmSeats">
                 {{ confirmButtonText }}
-              </button>
-              
-              <button 
-                v-if="hasNextSegment"
-                @click="goToNextSegment"
-                class="btn-next-segment"
-              >
-                Continue to Next Flight Seats →
               </button>
             </div>
           </aside>
         </div>
-
-        <div v-else-if="!isLoading" class="error-state">
-          <div class="error-icon">✈️</div>
-          <h3>Unable to Load Seat Map</h3>
-          <p v-if="aircraftModel">The aircraft layout for "{{ aircraftModel }}" is not available.</p>
-          <p v-else>Unable to determine aircraft type.</p>
-          <button @click="$router.back()" class="back-btn">Go Back</button>
-        </div>
       </main>
+
+      <MobileBookingFooter 
+        :button-text="confirmButtonText" 
+        :disabled="!allPassengersHaveSeats"
+        @next="confirmSeats" 
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, defineAsyncComponent, watch, shallowRef } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useBookingStore } from '@/stores/booking';
 import { seatService } from '@/services/booking/seatService';
 import { useModalStore } from '@/stores/modal';
 import { useNotificationStore } from '@/stores/notification';
+import BookingStatusHeader from '@/components/booking/BookingStatusHeader.vue';
+import MobileBookingFooter from '@/components/booking/MobileBookingFooter.vue';
 
 const router = useRouter();
 const bookingStore = useBookingStore();
@@ -268,14 +311,13 @@ const notificationStore = useNotificationStore();
 const modalStore = useModalStore();
 
 const activePIndex = ref(0);
-const activeFlightSegment = ref(''); // Will be set on mount
+const activeFlightSegment = ref('');
 const hoveredSeat = ref(null);
 const rawSeats = ref([]);
 const isLoading = ref(true);
 const baseFlightPrice = ref(0);
 const aircraftModel = ref('');
 const aircraftCapacity = ref(0);
-const AircraftLayout = shallowRef(null);
 
 // Computed properties
 const currentFlight = computed(() => {
@@ -471,6 +513,15 @@ const hasNextSegment = computed(() => {
   return bookingStore.isRoundTrip && activeFlightSegment.value === 'depart' && allPassengersHaveSeats.value;
 });
 
+const getNextSegmentLabel = computed(() => {
+  const tripType = bookingStore.tripType;
+  if (tripType === 'multi_city' || tripType === 'multi-city') {
+    const currentIdx = parseInt(activeFlightSegment.value);
+    return `Flight ${currentIdx + 2}`;
+  }
+  return 'Return Flight';
+});
+
 const goToNextSegment = () => {
   const tripType = bookingStore.tripType;
   if (tripType === 'multi_city' || tripType === 'multi-city') {
@@ -517,19 +568,14 @@ const fetchSeatData = async () => {
       rawSeats.value = Array.isArray(seatsData) ? seatsData : [];
       
       baseFlightPrice.value = response.schedule_price || 0;
-      aircraftModel.value = response.aircraft_model || 'Airbus A321';
+      // aircraftModel.value = response.aircraft_model || 'Airbus A321';
+      aircraftModel.value = response.aircraft_model ;
       aircraftCapacity.value = response.aircraft_capacity || 220;
       
       console.log(`✅ Seat data loaded for ${activeFlightSegmentLabel.value}:`, {
         scheduleId,
-        schedulePrice: baseFlightPrice.value,
-        aircraftModel: aircraftModel.value,
-        aircraftCapacity: aircraftCapacity.value,
         seatsCount: rawSeats.value.length
       });
-      
-      // Load the appropriate aircraft layout component
-      await loadAircraftLayout(aircraftModel.value);
       
       if (rawSeats.value.length === 0) {
         console.error(`❌ No seats found for ${activeFlightSegmentLabel.value} flight`, scheduleId);
@@ -540,94 +586,35 @@ const fetchSeatData = async () => {
     
   } catch (err) {
     console.error(`❌ Failed to load seat map for ${activeFlightSegmentLabel.value}`, err);
-    // If it's a 400 error (verification failure), refresh the page after a short delay
-    // to give the user time to read the toast message.
     if (err.response?.status === 400) {
-      setTimeout(() => {
-        window.location.reload();
-      }, 3000);
+      setTimeout(() => { window.location.reload(); }, 3000);
     }
   } finally {
     isLoading.value = false;
   }
 };
 
-// Load aircraft layout component
-const loadAircraftLayout = async (model) => {
-  try {
-    const normalizedModel = normalizeAircraftModel(model);
-    
-    console.log(`🛩️ Loading layout for aircraft: ${model} (normalized: ${normalizedModel})`);
-    
-    try {
-      AircraftLayout.value = defineAsyncComponent(() => 
-        import(`@/components/seatmaps/${normalizedModel}Layout.vue`)
-      );
-      
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      console.log(`✅ Loaded specific layout for ${model}`);
-    } catch (error) {
-      console.log(`⚠️ Specific layout for ${model} not found, trying default...`, error);
-      
-      try {
-        AircraftLayout.value = defineAsyncComponent(() => 
-          import('@/components/seatmaps/AirbusA321Layout.vue')
-        );
-        console.log(`✅ Loaded default Airbus A321 layout`);
-      } catch (fallbackError) {
-        console.error('❌ Failed to load default layout:', fallbackError);
-        AircraftLayout.value = null;
-      }
-    }
-    
-  } catch (error) {
-    console.error('❌ Error loading aircraft layout:', error);
-    AircraftLayout.value = null;
-  }
-};
-
-// Helper function to normalize aircraft model names
-const normalizeAircraftModel = (model) => {
-  if (!model) return 'AirbusA321';
-  
-  const modelMappings = {
-    'Airbus A321': 'AirbusA321',
-    'Airbus A320': 'AirbusA320',
-    'Airbus A319': 'AirbusA319',
-    'Boeing 737': 'Boeing737',
-    'Boeing 747': 'Boeing747',
-    'Boeing 777': 'Boeing777',
-    'Boeing 787': 'Boeing787',
-    'ATR 72': 'ATR72',
-    'ATR 42': 'ATR42'
-  };
-  
-  if (modelMappings[model]) {
-    return modelMappings[model];
-  }
-  
-  for (const [key, value] of Object.entries(modelMappings)) {
-    if (model.toLowerCase().includes(key.toLowerCase())) {
-      return value;
-    }
-  }
-  
-  return model
-    .replace(/\s+/g, '')
-    .replace(/[^a-zA-Z0-9]/g, '')
-    .replace(/\d+$/, '') + model.match(/\d+$/)?.[0] || '';
-};
-
-// Layout Logic
-const seatMapRows = computed(() => {
-  const rows = {};
-  rawSeats.value.forEach(s => {
-    if (!rows[s.row]) rows[s.row] = { number: s.row, seats: [] };
-    rows[s.row].seats.push(s);
+// Layout helpers - group seats by class and row for the inline dynamic map
+const getRowGroupsByClass = (classId) => {
+  const classSeats = rawSeats.value.filter(s => s.seat_class?.id === classId);
+  const rowMap = {};
+  classSeats.forEach(seat => {
+    if (!rowMap[seat.row]) rowMap[seat.row] = [];
+    rowMap[seat.row].push(seat);
   });
-  return Object.values(rows).sort((a, b) => a.number - b.number);
-});
+
+  return Object.keys(rowMap).sort((a, b) => Number(a) - Number(b)).map(rowNum => {
+    const seats = rowMap[rowNum].sort((a, b) => a.column.localeCompare(b.column));
+    const mid = Math.ceil(seats.length / 2);
+    return {
+      row: Number(rowNum),
+      globalRow: rowNum,
+      leftSeats: seats.slice(0, mid),
+      rightSeats: seats.slice(mid),
+      isExitRow: seats.some(s => s.is_exit_row)
+    };
+  });
+};
 
 const seatClasses = computed(() => {
   const unique = [];
@@ -639,23 +626,53 @@ const seatClasses = computed(() => {
 
 const exitRows = computed(() => [...new Set(rawSeats.value.filter(s => s.is_exit_row).map(s => s.row))]);
 
+// Seat tooltip helper for the dynamic map
+const getSeatTooltip = (seat) => {
+  const parts = [`Seat ${seat.seat_code}`, seat.seat_class?.name || ''];
+  
+  if (isClassDimmed(seat.seat_class?.name)) {
+    parts.push(`Restricted to ${currentFlight.value?.selected_seat_class || 'your selected class'}`);
+  }
+  
+  if (seat.is_exit_row) parts.push('Exit Row');
+  if (seat.has_extra_legroom) parts.push('Extra Legroom');
+  if (seat.is_wheelchair_accessible) parts.push('Wheelchair Accessible');
+  if (seat.has_bassinet) parts.push('Bassinet');
+  return parts.join(' • ');
+};
+
 // Helpers
 const getSeatStatus = (seat) => {
   const currentPKey = bookingStore.passengers[activePIndex.value]?.key;
   if (assignedSeats.value[currentPKey]?.id === seat.id) return 'selected';
   if (!seat.is_available) return 'occupied';
   const isTaken = Object.values(assignedSeats.value).some(s => s.id === seat.id);
-  return isTaken ? 'taken-by-other' : 'available';
+  if (isTaken) return 'taken-by-other';
+  
+  // If seat class doesn't match selected class, mark it as disabled/unavailable for selection
+  if (isClassDimmed(seat.seat_class?.name)) return 'occupied';
+  
+  return 'available';
 };
 
+const isClassDimmed = (className) => {
+  if (!currentFlight.value?.selected_seat_class) return false;
+  return className.toLowerCase() !== currentFlight.value.selected_seat_class.toLowerCase();
+};
+
+
 const getClassColor = (name) => {
+  // First try to get the color from the seat class object itself (admin-configured)
+  const sc = seatClasses.value.find(c => c.name === name);
+  if (sc?.color) return sc.color;
+  // Fallback to name-based mapping
   const colors = { 
     'First Class': '#8B4513', 
     'Business': '#4169E1', 
     'Premium Economy': '#228B22', 
     'Economy': '#666' 
   };
-  return colors[name] || '#666';
+  return colors[name] || '#003870';
 };
 
 const getPassengerName = (key) => {
@@ -671,6 +688,12 @@ const hoverSeat = (seat) => {
 // Actions
 const assignSeat = (seat) => {
   if (!seat.is_available) return;
+
+  if (isClassDimmed(seat.seat_class?.name)) {
+    notificationStore.warn(`You have selected ${currentFlight.value?.selected_seat_class} for this flight. You can only choose seats in that class.`);
+    return;
+  }
+
   
   const currentP = bookingStore.passengers[activePIndex.value];
   if (!currentP || currentP.type === 'Infant') return; // Do not allow infants to select seats
@@ -850,6 +873,218 @@ onMounted(async () => {
   gap: 10px; 
   align-items: start;
 }
+
+/* ====== DYNAMIC SEAT MAP ====== */
+.dynamic-seat-map {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 10px 0;
+}
+
+.plane-nose {
+  font-size: 2rem;
+  margin-bottom: 8px;
+  color: #003870;
+  opacity: 0.4;
+  transform: rotate(-45deg);
+}
+
+.plane-tail {
+  font-size: 1.2rem;
+  margin-top: 12px;
+  color: #003870;
+  opacity: 0.3;
+}
+
+.cabin-section {
+  width: 100%;
+  margin-bottom: 20px;
+  transition: opacity 0.3s ease;
+}
+
+.cabin-section.dimmed-class {
+  opacity: 0.4;
+}
+
+.cabin-section.dimmed-class .seat-btn {
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+
+
+.cabin-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 5px 16px;
+  border: 2px solid;
+  border-radius: 20px;
+  background: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cabin-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cabin-mult {
+  font-weight: 500;
+  opacity: 0.7;
+  font-size: 0.7rem;
+}
+
+.cabin-restricted-badge {
+  background: #f0f0f0;
+  color: #999;
+  font-size: 0.6rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border: 1px solid #ddd;
+}
+
+
+.seat-row-wrapper {
+  margin-bottom: 4px;
+}
+
+.exit-row-banner {
+  text-align: center;
+  font-size: 0.65rem;
+  color: #e53935;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 2px 0 4px;
+  text-transform: uppercase;
+}
+
+.seat-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.seat-group {
+  display: flex;
+  gap: 4px;
+}
+
+.row-label {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #bbb;
+  background: #f8f8f8;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* Seat button base */
+.seat-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px 6px 4px 4px;
+  border: 2px solid #d0e8ff;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+  padding: 0;
+  gap: 1px;
+}
+
+.seat-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  background: color-mix(in srgb, var(--seat-class-color, #003870) 10%, white);
+}
+
+.seat-btn .seat-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #334;
+  line-height: 1;
+}
+
+/* Status variants */
+.seat-btn.available {
+  background: #fff;
+  cursor: pointer;
+}
+
+.seat-btn.available .seat-label { color: #225; }
+
+.seat-btn.selected {
+  background: #d11241;
+  border-color: #a50d32;
+  box-shadow: 0 0 0 2px rgba(209,18,65,0.3);
+}
+
+.seat-btn.selected .seat-label { color: #fff; }
+
+.seat-btn.occupied {
+  background: #e0e0e0;
+  border-color: #bdbdbd;
+  cursor: not-allowed;
+}
+
+.seat-btn.occupied .seat-label { color: #999; }
+
+.seat-btn.taken-by-other {
+  background: #ffe0e0;
+  border-color: #ffaaaa;
+  cursor: not-allowed;
+}
+
+.seat-btn.taken-by-other .seat-label { color: #c66; }
+
+/* Feature tints */
+.seat-btn.seat-exit { border-color: #f44 !important; }
+.seat-btn.seat-legroom { border-color: #4c8 !important; }
+
+/* Badges inside seat */
+.seat-badge {
+  font-size: 0.45rem;
+  line-height: 1;
+  position: absolute;
+  top: 1px;
+  right: 2px;
+}
+
+.seat-btn:disabled {
+  opacity: 0.75;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
 
 .p-seat-card.is-infant {
    opacity: 0.7;

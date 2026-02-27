@@ -477,50 +477,92 @@ class Schedule(models.Model):
 
     def save(self, *args, **kwargs):
         self.status = self.automatic_status  # Ensure status is correct before saving
+        is_new = self.pk is None
         super().save(*args, **kwargs)
+        
+        # Auto-generate seats for new schedules if they don't have any
+        if is_new:
+            transaction.on_commit(lambda: self.generate_seats())
 
-    def update_ml_price(self, save=True):
-        """Update the ML predicted price for this schedule"""
+    def generate_seats(self, config_data=None):
+        """Generate seats for this schedule based on layout config"""
+        # Get config from aircraft if not provided
+        if not config_data:
+            if self.flight and self.flight.aircraft:
+                config_data = self.flight.aircraft.get_layout_config()
+            else:
+                # Default fallback
+                config_data = {'seat_classes': [], 'total_seats': 0}
+
+        seat_classes = config_data.get('seat_classes', [])
+        if not seat_classes:
+            print(f"⚠️ No seat classes configured for schedule {self.id}")
+            return False
+            
         try:
-            # Import inside the method to avoid circular imports
-            from flightapp.ml.predictor import predictor
-            
-            # Check if model is loaded - if not, try to load it
-            if not predictor.model:
-                print(f"?? Schedule {self.id}: ML model not loaded, attempting to load...")
-                predictor.load_model()
+            with transaction.atomic():
+                # Get existing seats
+                existing_seats = Seat.objects.filter(schedule=self)
+                existing_map = {f"{s.row}-{s.column}": s for s in existing_seats}
                 
-                if not predictor.model:
-                    print(f"? Schedule {self.id}: Failed to load ML model")
-                    return False, None
-            
-            flight_data = {
-                'schedule_id': self.id,
-                'flight_number': self.flight.flight_number,
-                'airline_code': self.flight.airline.code,
-                'airline_name': self.flight.airline.name,
-                'origin': self.flight.route.origin_airport.code,
-                'destination': self.flight.route.destination_airport.code,
-                'departure_time': self.departure_time.isoformat(),
-                'arrival_time': self.arrival_time.isoformat(),
-                'total_stops': 0,
-                'is_domestic': self.flight.route.is_domestic,
-            }
-            
-            predicted_price = Decimal(str(predictor.predict_price(flight_data)))
-            self.ml_base_price = predicted_price
-            self.ml_price_updated_at = timezone.now()
-            
-            if save:
-                self.save(update_fields=['ml_base_price', 'ml_price_updated_at'])
-            
-            print(f"? Schedule {self.id}: ML price updated to ?{predicted_price:,.2f}")
-            return True, predicted_price
+                processed_seat_ids = []
+                
+                for sc_config in seat_classes:
+                    class_id = sc_config.get('class_id')
+                    rows = sc_config.get('rows', 0)
+                    columns = sc_config.get('columns', 0)
+                    start_row = sc_config.get('start_row', 1)
+                    
+                    try:
+                        seat_class = SeatClass.objects.get(id=class_id)
+                    except SeatClass.DoesNotExist:
+                        continue
+                        
+                    for r in range(rows):
+                        row_num = start_row + r
+                        
+                        for c in range(columns):
+                            col_num = c + 1
+                            col_label = chr(64 + col_num) # 1=A, 2=B, etc.
+                            
+                            seat_key = f"{row_num}-{col_label}"
+                            
+                            is_window = (col_num == 1 or col_num == columns)
+                            is_aisle = False
+                            if columns == 6:
+                                is_aisle = (col_num == 3 or col_num == 4)
+                            elif columns == 4:
+                                is_aisle = (col_num == 2 or col_num == 3)
+                                
+                            seat_data = {
+                                'schedule': self,
+                                'seat_class': seat_class,
+                                'seat_number': f"{row_num}{col_label}",
+                                'row': row_num,
+                                'column': col_label,
+                                'is_window': is_window,
+                                'is_aisle': is_aisle,
+                                'is_available': True
+                            }
+                            
+                            if seat_key in existing_map:
+                                seat = existing_map[seat_key]
+                                if seat.seat_class_id != class_id:
+                                    seat.seat_class = seat_class
+                                    seat.save()
+                                processed_seat_ids.append(seat.id)
+                            else:
+                                seat = Seat.objects.create(**seat_data)
+                                processed_seat_ids.append(seat.id)
+                
+                # Delete obsolete seats
+                Seat.objects.filter(schedule=self).exclude(id__in=processed_seat_ids).delete()
+                return True
+                
         except Exception as e:
-            print(f"? Error updating ML price for schedule {self.id}: {e}")
-            import traceback
-            traceback.print_exc()
-            return False, None
+            print(f"❌ Error generating seats for schedule {self.id}: {e}")
+            return False
+
 
 # ============================================================
 # SEAT REQUIREMENT MODEL (Prices for special seats)

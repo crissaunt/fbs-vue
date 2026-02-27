@@ -8,7 +8,7 @@
 
     <!-- Main Container -->
     <div class="relative max-w-6xl mx-auto">
-      
+      <BookingStatusHeader />
       <!-- Loading State -->
       <div v-if="loading" class="bg-white rounded-[5px] border border-gray-100 shadow-xl p-12 text-center max-w-lg mx-auto mt-20">
         <div class="relative inline-flex mb-8">
@@ -278,11 +278,13 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useBookingStore } from '@/stores/booking';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import api from '@/services/booking/api';
+import BookingStatusHeader from '@/components/booking/BookingStatusHeader.vue';
 
 const bookingStore = useBookingStore();
 const router = useRouter();
+const route = useRoute();
 
 const loading = ref(false);
 const loadingMessage = ref("");
@@ -301,10 +303,18 @@ const contactName = computed(() => {
 });
 
 const totalAmount = computed(() => {
+  // Priority 1: Amount passed as query param from Review (booking creation response.total_amount)
+  const queryAmount = parseFloat(route.query.amount);
+  if (Number.isFinite(queryAmount) && queryAmount > 0) {
+    console.log('💰 PaymentView: Using query amount (from booking response):', queryAmount);
+    return queryAmount;
+  }
+  // Priority 2: Store's booking_total (synced from backend after booking creation)
   if (bookingStore.booking_total > 0) {
     console.log('💰 PaymentView: Using Store booking_total (from backend sync):', bookingStore.booking_total);
     return bookingStore.booking_total;
   }
+  // Priority 3: Client-computed grand total (fallback)
   console.log('⚠️ PaymentView: No backend synced total, using Store grandTotal:', bookingStore.grandTotal);
   return bookingStore.grandTotal || 0;
 });

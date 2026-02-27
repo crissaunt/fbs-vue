@@ -178,7 +178,7 @@ class SeatSerializer(serializers.ModelSerializer):
         model = Seat
         fields = [
             'id', 'seat_code', 'seat_number', 'row', 'column', 'is_available', 
-            'price_adjustment', 'final_price', 'seat_class', 'seat_class_name',
+            'final_price', 'seat_class', 'seat_class_name',
             'is_window', 'is_aisle', 'has_extra_legroom', 'is_exit_row', 
             'is_wheelchair_accessible', 'has_bassinet', 'has_nut_allergy', 
             'is_unaccompanied_minor', 'is_bulkhead', 'price_adjustment_manual',
@@ -190,7 +190,8 @@ class SeatSerializer(serializers.ModelSerializer):
             return {
                 'id': obj.seat_class.id,
                 'name': obj.seat_class.name,
-                'price_multiplier': float(obj.seat_class.price_multiplier)
+                'price_multiplier': float(obj.seat_class.price_multiplier),
+                'color': obj.seat_class.color if hasattr(obj.seat_class, 'color') else None,
             }
         return None
     
@@ -209,7 +210,9 @@ class SeatSerializer(serializers.ModelSerializer):
                 base_price = Decimal('0.00')
             
             multiplier = obj.seat_class.price_multiplier if obj.seat_class else Decimal('1.00')
-            adjustment = obj.price_adjustment if obj.price_adjustment else Decimal('0.00')
+            # Use price_adjustment_auto + price_adjustment_manual (the actual model fields)
+            adjustment = (getattr(obj, 'price_adjustment_auto', None) or Decimal('0.00')) + \
+                         (getattr(obj, 'price_adjustment_manual', None) or Decimal('0.00'))
             return float((base_price * multiplier) + adjustment)
     
     def get_seat_code(self, obj):
