@@ -180,8 +180,10 @@ class DashboardViewSet(viewsets.ViewSet):
                     'id': s.id,
                     'flight_number': s.flight.flight_number,
                     'airline': s.flight.airline.name,
-                    'origin': {'lat': float(origin.latitude), 'lng': float(origin.longitude), 'city': origin.city},
-                    'destination': {'lat': float(dest.latitude), 'lng': float(dest.longitude), 'city': dest.city},
+                    'origin': {'lat': float(origin.latitude), 'lng': float(origin.longitude), 'city': origin.city, 'code': origin.code},
+                    'destination': {'lat': float(dest.latitude), 'lng': float(dest.longitude), 'city': dest.city, 'code': dest.code},
+                    'departure_time': s.departure_time,
+                    'arrival_time': s.arrival_time,
                     'status': s.status
                 })
         return Response(data)
@@ -189,12 +191,29 @@ class DashboardViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def seat_class_distribution(self, request):
         distribution = BookingDetail.objects.filter(
-            Q(booking__status__iexact='confirmed') | Q(booking__status__iexact='Completed')
+            Q(booking__status__iexact='confirmed') | Q(booking__status__iexact='Completed') | Q(booking__status__iexact='Paid')
         ).values('seat_class__name', 'seat_class__color').annotate(
             count=Count('id'),
             revenue=Sum('price')
         ).order_by('-count')
-        return Response(distribution)
+        
+        total = sum(item['count'] for item in distribution)
+        
+        classes = []
+        for item in distribution:
+            percentage = round((item['count'] / total * 100), 1) if total > 0 else 0
+            classes.append({
+                'label': item['seat_class__name'] or 'Unknown',
+                'count': item['count'],
+                'revenue': float(item['revenue']) if item['revenue'] else 0.0,
+                'color': item['seat_class__color'] or '#CBD5E1', # Default gray if no color
+                'percentage': percentage
+            })
+            
+        return Response({
+            'total': total,
+            'classes': classes
+        })
     
     @action(detail=False, methods=['get'])
     def passenger_composition(self, request):
