@@ -141,7 +141,7 @@
               {{ activity.is_active ? 'Active' : 'Inactive' }}
             </span>
             <span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
-              {{ activity.total_points || 100 }} pts
+              Grade Weight: 100%
             </span>
           </div>
         </div>
@@ -413,14 +413,16 @@
                   </svg>
                 </div>
                 <div>
-                  <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Score / Grade</p>
+                  <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Performance Score</p>
                   <div v-if="activity.status === 'graded' && activity.grade === null" class="flex flex-col">
                     <span class="text-sm font-bold text-yellow-600">Pending Release</span>
                     <span class="text-[9px] text-gray-400 italic">Scores aren't published yet</span>
                   </div>
-                  <p v-else class="text-2xl font-black text-gray-900">
-                    {{ activity.grade !== null ? activity.grade.toFixed(1) : '-' }}
-                    <span class="text-xs text-gray-400 font-medium">/ {{ activity.total_points }} pts</span>
+                  <p v-else class="text-2xl font-black text-gray-900 flex items-center gap-2">
+                    <span v-if="activity.grade !== null" class="text-2xl font-black text-emerald-600">
+                      {{ Math.round((activity.grade / activity.total_points) * 100) }}%
+                    </span>
+                    <span v-else class="text-gray-400">-</span>
                   </p>
                 </div>
               </div>
@@ -441,6 +443,8 @@
               </div>
             </div>
 
+
+
             <!-- Feedback -->
             <div v-if="activity.feedback" class="mt-6 bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
               <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2 flex items-center gap-1">
@@ -453,16 +457,27 @@
             </div>
             
             <!-- View Work Button -->
-            <div v-if="activity.completed" class="mt-6 flex justify-center">
-              <button 
-                @click="openComparisonModal"
-                class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg transition-all shadow-md flex items-center gap-2"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-                </svg>
-                View Work
-              </button>
+            <div v-if="activity.completed" class="mt-6 flex flex-col items-center gap-2">
+              <template v-if="activity.grade !== null">
+                <button 
+                  @click="openComparisonModal"
+                  class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg transition-all shadow-md flex items-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  View Performance Analysis
+                </button>
+              </template>
+              <template v-else-if="activity.status === 'graded' || activity.status === 'submitted'">
+                <div class="px-6 py-3 bg-amber-50 border border-amber-200 text-amber-700 text-sm font-bold rounded-lg flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Results not released yet
+                </div>
+                <p class="text-[10px] text-gray-400 italic">Analysis will be available once the instructor releases the grades.</p>
+              </template>
             </div>
           </div>
 
@@ -615,7 +630,8 @@ export default {
         status: '',
         is_active: false,
         activity_code: '', // Store the activity code
-        segments: []
+        segments: [],
+        analysis: null
       },
       instructor: null,
       passengers: [],
@@ -756,7 +772,8 @@ export default {
           feedback: activityData.feedback || '',
           completed: activityData.completed || false,
           created_at: activityData.created_at,
-          segments: activityData.segments || []
+          segments: activityData.segments || [],
+          analysis: activityData.analysis || null
         };
         
         console.log('✅ Activity populated with code:', this.activity.activity_code);
@@ -820,27 +837,7 @@ export default {
     },
 
     async openComparisonModal() {
-      this.showComparison = true;
-      this.comparisonBooking = null;
-      this.isLoadingBooking = true;
-      this.comparisonError = null;
-
-      try {
-        console.log('🔍 Loading comparison data for activity:', this.activity.id);
-        const data = await comparisonService.getComparisonData(this.activity.id, this.activity.confirmed_booking_id);
-        
-        if (data.success) {
-          if (data.activity) this.activity = { ...this.activity, ...data.activity };
-          this.comparisonBooking = data.booking;
-        } else {
-          this.comparisonError = data.error || "Could not find booking data for this activity.";
-        }
-      } catch (error) {
-        console.error("Error loading comparison data:", error);
-        this.comparisonError = "Failed to connect to the server. Please try again later.";
-      } finally {
-        this.isLoadingBooking = false;
-      }
+      this.$router.push(`/student/activity/${this.activity.id}/analysis`);
     },
     
     openCodeModal() {

@@ -46,6 +46,7 @@ export const useBookingStore = defineStore('booking', {
 
     // Activity Code & Practice Mode
     activityCode: null,           // Activity code entered by student
+    activityId: null,             // ID of the activity
     isPractice: false,            // Whether this is a practice booking
     hasActivityCodeValidation: false, // Whether student has completed activity code step
 
@@ -460,6 +461,10 @@ export const useBookingStore = defineStore('booking', {
     // Activity Code & Practice Mode Actions
     setActivityCode(code, activityData = null) {
       this.activityCode = code;
+      if (activityData && activityData.id) {
+        this.activityId = activityData.id;
+        console.log('🆔 Activity ID stored in booking store:', this.activityId);
+      }
       this.isPractice = false;
       this.hasActivityCodeValidation = true;
       this.startSession();
@@ -964,6 +969,7 @@ export const useBookingStore = defineStore('booking', {
             price: 0
           }
         },
+        activityId: null,
         sessionExpiry: null,
         isFreshSession: true,
       });

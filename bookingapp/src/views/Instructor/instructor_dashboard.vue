@@ -22,20 +22,97 @@
         </div>
       </div>
 
-      <div class="relative">
-        <button 
-          @click="toggleDropdown" 
-          class="flex items-center gap-2 hover:bg-pink-600 p-1.5 rounded-md transition-colors focus:outline-none"
-        >
-          <span class="text-xs font-medium">{{ userStore.userFullName || 'Instructor' }}</span>
-          <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center overflow-hidden border border-pink-300">
-             <div class="w-full h-full bg-gray-300 rounded-full flex items-center justify-center text-gray-600 text-xs font-bold uppercase">{{ initials }}</div>
-          </div>
-        </button>
+      <div class="flex items-center gap-4 relative">
+        <!-- Notification Bell (Newly Added) -->
+        <div class="relative">
+          <button 
+            @click="toggleNotificationDropdown" 
+            class="p-2 hover:bg-pink-600 rounded-full transition-colors relative focus:outline-none group"
+            :class="{ 
+              'bg-pink-600': notificationDropdownOpen,
+              'animate-shake': unseenCount > 0 && !notificationDropdownOpen
+            }"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            <div v-if="unseenCount > 0" class="absolute -top-0.5 -right-0.5 flex items-center justify-center">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+              <span class="relative flex items-center justify-center min-w-[18px] h-[18px] bg-white text-pink-500 text-[10px] font-black rounded-full border border-pink-500 shadow-sm px-1">
+                {{ unseenCount }}
+              </span>
+            </div>
+          </button>
 
-        <div v-if="dropdownOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-100">
-           <button @click="router.push('/profile')" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">My Profile</button>
-           <button @click="handleLogout" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Logout</button>
+          <!-- Notification Dropdown -->
+          <div v-if="notificationDropdownOpen" class="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl py-2 z-[60] border border-gray-100 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+            <div class="px-4 py-2 border-b border-gray-50 flex items-center justify-between bg-slate-50/50">
+              <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Scheduled Notifications</span>
+              <span v-if="allNotifications.length > 0" class="text-[9px] bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded-full font-black uppercase tracking-widest">Today</span>
+            </div>
+            
+            <div class="max-h-80 overflow-y-auto">
+              <div v-if="allNotifications.length === 0" class="p-10 text-center">
+                <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3 rotate-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
+                </div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">No notifications yet</p>
+              </div>
+              
+              <div 
+                v-for="s in allNotifications" 
+                :key="s.scheduleId"
+                class="px-4 py-4 hover:bg-slate-50 transition-all border-b border-gray-50 last:border-0 group"
+              >
+                <div class="flex items-start gap-4">
+                  <div :class="[
+                    'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-xs shadow-sm transition-transform group-hover:scale-110',
+                    s.type === 'missed' ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                  ]">
+                    {{ s.sectionName.charAt(0) }}
+                  </div>
+                  <div class="flex-1">
+                    <div class="flex justify-between items-start mb-0.5">
+                      <p class="text-[11px] font-black text-slate-800 uppercase tracking-tight">{{ s.sectionName }}</p>
+                      <span :class="[
+                        'text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded',
+                        s.type === 'missed' ? 'text-red-400' : 'text-emerald-400'
+                      ]">
+                        {{ s.type }}
+                      </span>
+                    </div>
+                    <p class="text-[10px] text-slate-500 font-medium leading-normal italic">
+                      {{ s.type === 'missed' ? 'You have a missed schedule today.' : 'Schedule session acknowledged.' }}
+                    </p>
+                    <div class="flex items-center gap-2 mt-2">
+                       <span class="text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{{ formatTimeOnly(s.start_time) }}</span>
+                       <span class="text-[9px] font-bold text-slate-300">→</span>
+                       <span class="text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{{ formatTimeOnly(s.end_time) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative">
+          <button 
+            @click="toggleDropdown" 
+            class="flex items-center gap-2 hover:bg-pink-600 p-1.5 rounded-md transition-colors focus:outline-none"
+          >
+            <span class="text-xs font-medium">{{ userStore.userFullName || 'Instructor' }}</span>
+            <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center overflow-hidden border border-pink-300">
+               <div class="w-full h-full bg-gray-300 rounded-full flex items-center justify-center text-gray-600 text-xs font-bold uppercase">{{ initials }}</div>
+            </div>
+          </button>
+
+          <div v-if="dropdownOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-100">
+             <button @click="router.push('/profile')" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">My Profile</button>
+             <button @click="handleLogout" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Logout</button>
+          </div>
         </div>
       </div>
     </div>
@@ -72,72 +149,220 @@
         </div>
       </div>
 
-      <div class="flex-1 overflow-auto bg-gray-50 ">
-        <div class="p-8">
-          <div class="mb-6">
-              <h2 class="text-2xl font-light text-gray-900 tracking-wide">Academic Sections</h2>
-              <p class="text-xs text-gray-500 mt-1 font-medium italic">Welcome to your Faculty Dashboard, {{ fullName }}.</p>
+      <div class="flex-1 overflow-auto bg-[#F8FAFC]">
+        <div class="p-4 lg:p-8 max-w-7xl mx-auto">
+          <!-- Welcome and Breadcrumbs -->
+          <div class="mb-8">
+            <h2 class="text-2xl font-bold text-slate-800 tracking-tight">Instructor Dashboard</h2>
+            <div class="flex items-center gap-2 text-sm text-slate-500 mt-1">
+              <span>Main Console</span>
+              <span class="text-slate-300">•</span>
+              <span class="text-pink-500 font-medium">Overview</span>
+            </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-300 ml-27">
+          <!-- Stats Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 transition-all hover:shadow-md">
+              <div class="w-12 h-12 bg-pink-50 rounded-lg flex items-center justify-center text-pink-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Sections</p>
+                <h4 class="text-2xl font-bold text-slate-700">{{ sections?.length || 0 }}</h4>
+              </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 transition-all hover:shadow-md">
+              <div class="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Students</p>
+                <h4 class="text-2xl font-bold text-slate-700">{{ totalStudents }}</h4>
+              </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 transition-all hover:shadow-md">
+              <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center text-blue-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Activities</p>
+                <h4 class="text-2xl font-bold text-slate-700">{{ totalActivities }}</h4>
+              </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 transition-all hover:shadow-md">
+              <div class="w-12 h-12 bg-amber-50 rounded-lg flex items-center justify-center text-amber-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Last Sync</p>
+                <h4 class="text-sm font-bold text-slate-700">{{ lastSyncTime }}</h4>
+              </div>
+            </div>
+          </div>
+          
+
+          <!-- Section Controls -->
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <h3 class="text-lg font-bold text-slate-700">Academic Sections</h3>
             
+            <div class="flex items-center gap-3 w-full sm:w-auto">
+              <div class="relative flex-1 sm:w-64">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </span>
+                <input 
+                  v-model="searchQuery" 
+                  type="text" 
+                  placeholder="Search sections..." 
+                  class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all shadow-sm"
+                >
+              </div>
+              <button 
+                @click="showModal = true"
+                class="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition-all active:scale-95 whitespace-nowrap"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Register New
+              </button>
+            </div>
+          </div>
+
+          <!-- Grid View -->
+          <div v-if="!searchQuery || filteredSections.length > 0" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <!-- Register New Section Card -->
             <div 
+              v-if="!searchQuery"
               @click="showModal = true"
-              class="border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:border-pink-400 hover:bg-pink-50 transition-all min-h-[220px]"
+              class="group border-2 border-dashed border-slate-200 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-pink-500 hover:bg-pink-50 transition-all duration-300 min-h-[260px] bg-white shadow-sm hover:shadow-md"
             >
-              <div class="w-16 h-16 bg-white border border-dashed border-gray-300 rounded-full flex items-center justify-center mb-3 group-hover:border-pink-500 transition-colors">
-                <span class="text-3xl text-gray-400 group-hover:text-pink-500 transition-colors">+</span>
+              <div class="w-16 h-16 bg-slate-50 border-2 border-dashed border-slate-200 rounded-full flex items-center justify-center mb-4 group-hover:border-pink-500 group-hover:bg-white transition-all duration-300">
+                <span class="text-3xl text-slate-300 group-hover:text-pink-500 transition-colors">+</span>
               </div>
-              <p class="text-gray-600 font-bold uppercase text-xs tracking-widest group-hover:text-pink-600 transition-colors">Register New Section</p>
+              <p class="text-slate-500 font-bold uppercase text-xs tracking-widest group-hover:text-pink-600 transition-colors text-center">Register New Section</p>
             </div>
 
-            <template v-if="sections && sections.length > 0">
-              <div v-for="section in sections" :key="section.id" @click="goToSection(section.id)" class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow border border-gray-100 flex flex-col min-h-[220px] cursor-pointer group/card">
-                  <div class="bg-[#e93d82] text-white px-4 py-3 flex justify-between items-center group-hover/card:bg-pink-600 transition-colors">
-                      <div class="flex items-center gap-2">
-                        <span v-if="section.is_active === false" class="bg-red-500/20 text-red-100 text-[10px] px-2 py-0.5 rounded border border-red-500/30 font-black uppercase tracking-tighter">Disabled</span>
-                        <h3 class="font-bold tracking-wide uppercase text-sm text-white">
-                          {{ section.section_code }}
-                        </h3>
+            <div 
+              v-for="section in filteredSections" 
+              :key="section.id" 
+              @click="goToSection(section.id)" 
+              class="group bg-white rounded-xl shadow-sm hover:shadow-xl border border-slate-100 overflow-hidden transition-all duration-300 cursor-pointer flex flex-col h-full"
+            >
+              <div class="p-1">
+                <div class="bg-gradient-to-br from-pink-600 to-pink-500 text-white p-4 rounded-lg relative overflow-hidden">
+                  <!-- Decorative Element -->
+                  <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
+                  
+                  <div class="flex justify-between items-start relative z-10">
+                    <div>
+                      <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-pink-400 mb-1 block">Course Code</span>
+                      <h3 class="text-lg font-bold">{{ section.section_code }}</h3>
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <span v-if="!section.is_active" class="bg-red-500/20 text-red-200 text-[10px] px-2 py-0.5 rounded border border-red-500/30 font-bold uppercase">Inactive</span>
+                      <button @click.stop="editSection(section)" class="p-1.5 hover:bg-white/10 rounded-md transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div class="mt-4 flex items-center gap-3 relative z-10">
+                    <div class="w-10 h-10 rounded-full bg-slate-100/10 flex items-center justify-center font-bold text-sm text-pink-400">
+                      {{ section.section_name.charAt(0) }}
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-slate-100 leading-none mb-1">{{ section.section_name }}</p>
+                      <div v-if="section.schedule" class="flex flex-wrap gap-1 mt-1">
+                        <template v-if="Array.isArray(parsedSectionSchedule(section.schedule))">
+                           <span v-for="(s, i) in parsedSectionSchedule(section.schedule).slice(0, 2)" :key="i" class="text-[9px] bg-white/10 text-white/90 px-1.5 py-0.5 rounded border border-white/10 backdrop-blur-sm font-bold">
+                             {{ s.day.substring(0, 2) }} {{ formatTimeOnly(s.start_time) }}
+                           </span>
+                           <span v-if="parsedSectionSchedule(section.schedule).length > 2" class="text-[9px] text-white/40 self-center font-bold ml-1">+{{ parsedSectionSchedule(section.schedule).length - 2 }} more</span>
+                        </template>
+                        <p v-else class="text-[11px] text-slate-200 font-medium">{{ formatSchedule(section.schedule) }}</p>
                       </div>
-                    
-                    <div class="relative group">
-                      <button @click.stop class="text-white/100 hover:text-white p-1">⋮</button>
-                      <div class="hidden group-hover:block absolute right-0 top-full w-32 bg-white shadow-xl rounded border border-gray-100 z-30 overflow-hidden">
-                        <button @click.stop="editSection(section)" class="block w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 font-bold uppercase">Edit</button>
-                      </div>
+                      <p v-else class="text-[11px] text-white/70 font-medium">No schedule set</p>
                     </div>
                   </div>
-
-                  <div class="p-5 flex-1">
-                    <div class="flex justify-between items-start mb-1">
-                      <p class="text-xs font-black text-[#0E8028] uppercase tracking-widest">
-                        {{ section.section_name }}
-                      </p>
-                      <p v-if="section.schedule" class="text-xs font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-100 uppercase">
-                        {{ section.schedule }}
-                      </p>
-                    </div>
-
-                    <p class="text-sm text-gray-400 italic line-clamp-3 leading-relaxed mt-2">
-                      {{ section.description || 'No description provided.' }}
-                    </p>
-                  </div>
-
-                  <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center text-xs text-[#0E8028] font-bold uppercase">
-                    <div class="flex flex-col">
-                        <span>{{ section.semester }}</span>
-                        <span class="text-[10px] lowercase opacity-70">0 students - 0 activities</span>
-                    </div>
-                    <span>{{ section.academic_year }}</span>
-                  </div>
+                </div>
               </div>
-            </template>
 
-            <div v-else class="col-span-full py-10 text-center bg-white rounded-lg border border-gray-100">
-                <p class="text-gray-400 italic">No sections found in the database for your account.</p>
+              <div class="p-5 flex-1 flex flex-col justify-between">
+                <div>
+                  <p class="text-sm text-slate-500 leading-relaxed line-clamp-2 italic mb-4">
+                    {{ section.description || 'Provide a detailed overview of this section to help organize your curriculum.' }}
+                  </p>
+                </div>
+
+                <div class="pt-4 border-t border-slate-50 flex items-center justify-end">
+                  <div class="text-right">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{{ section.semester }}</p>
+                    <p class="text-[10px] font-black text-slate-600">{{ section.activity_count || 0 }} Activities</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="bg-slate-50/50 px-5 py-3 flex items-center justify-between group-hover:bg-pink-50 transition-colors">
+                <span class="text-[10px] font-bold text-slate-500 group-hover:text-pink-600 transition-colors flex items-center gap-1.5 uppercase">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  Manage Console
+                </span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-300 group-hover:text-pink-500 transition-all transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
             </div>
+          </div>
 
+          <!-- Empty State (Only shown when searching and no results) -->
+          <div v-else-if="searchQuery && filteredSections.length === 0" class="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center">
+            <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-700 mb-1">No sections found</h3>
+            <p class="text-slate-500 text-sm max-w-xs mx-auto mb-6">
+              {{ searchQuery ? `We couldn't find any sections matching "${searchQuery}".` : "You haven't registered any academic sections yet. Start by creating your first class." }}
+            </p>
+            <button 
+              v-if="!searchQuery"
+              @click="showModal = true"
+              class="bg-pink-500 hover:bg-pink-600 text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-pink-200 transition-all active:scale-95 inline-flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Create Your First Section
+            </button>
+            <button 
+              v-else
+              @click="searchQuery = ''"
+              class="text-pink-500 font-bold text-sm hover:underline"
+            >
+              Clear search results
+            </button>
           </div>
         </div>
       </div>
@@ -173,13 +398,45 @@
             </div>
             <div>
               <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Academic Year <span class="text-red-500 font-bold">*</span></label>
-              <input v-model="form.academic_year" type="text" placeholder="2024-2025" class="w-full border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-pink-400 outline-none bg-gray-50" required>
+              <select v-model="form.academic_year" class="w-full border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-pink-400 outline-none bg-gray-50" required>
+                <option value="" disabled>Select Year</option>
+                <option value="2024-2025">2024-2025</option>
+                <option value="2025-2026">2025-2026</option>
+                <option value="2026-2027">2026-2027</option>
+                <option value="2027-2028">2027-2028</option>
+                <option value="2029-2030">2029-2030</option>
+              </select>
             </div>
           </div>
 
           <div class="mb-4">
-            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Schedule</label>
-            <input v-model="form.schedule" type="text" placeholder="e.g., M-W-F 8:00 AM - 10:00 AM" class="w-full border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-pink-400 outline-none bg-gray-50">
+            <label class="block text-[10px] font-black text-gray-400 uppercase mb-2">Schedule(s)</label>
+            <div v-for="(sched, index) in form.schedules" :key="index" class="flex gap-2 mb-2 items-center">
+              <select v-model="sched.day" class="flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-400 outline-none bg-gray-50 text-sm" required>
+                <option value="" disabled>Day</option>
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+                <option value="Friday">Friday</option>
+                <option value="Saturday">Saturday</option>
+                <option value="Sunday">Sunday</option>
+              </select>
+              <input v-model="sched.start_time" type="time" class="flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-400 outline-none bg-gray-50 text-sm" required>
+              <span class="text-gray-400 text-xs">-</span>
+              <input v-model="sched.end_time" type="time" class="flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-400 outline-none bg-gray-50 text-sm" required>
+              <button v-if="form.schedules.length > 1" type="button" @click="removeSchedule(index)" class="text-red-400 hover:text-red-500 p-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <button type="button" @click="addSchedule" class="text-pink-500 text-[10px] font-bold uppercase tracking-widest hover:text-pink-600 flex items-center gap-1 mt-1 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" />
+              </svg>
+              Add Another Schedule
+            </button>
           </div>
 
           <div class="mb-6">
@@ -194,11 +451,57 @@
         </form>
       </div>
     </div>
+
+    <!-- Real-time Schedule Alert Modal -->
+    <div v-if="showScheduleAlert" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md px-4 p-20">
+      <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-300 border border-white/20">
+        <!-- Professional Header -->
+        <div class="bg-gradient-to-br from-slate-900 to-slate-800 p-8 text-center relative overflow-hidden">
+          <div class="absolute inset-0 bg-pink-500/10 animate-pulse"></div>
+          <div class="relative z-10">
+            <div class="w-16 h-16 bg-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4 rotate-3 shadow-lg shadow-pink-500/30">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 class="text-white text-xl font-black uppercase tracking-widest mb-1">Schedule Alert</h3>
+            <p class="text-pink-400 text-[10px] font-bold uppercase tracking-[0.3em]">Cabagan State University • {{ currentTimeDisplay }}</p>
+          </div>
+        </div>
+
+        <!-- Alert Content -->
+        <div class="p-8 text-center bg-white">
+          <p class="text-slate-500 text-sm font-medium mb-2 uppercase tracking-tight">You have a Schedule today in</p>
+          <h2 class="text-3xl font-black text-slate-800 mb-2 leading-tight">{{ currentAlertSchedule?.sectionName }}</h2>
+          <div class="inline-flex flex-center items-center gap-2 bg-pink-50 px-4 py-2 rounded-full border border-pink-100 mb-8">
+            <span class="w-2 h-2 bg-pink-500 rounded-full animate-ping"></span>
+            <span class="text-pink-600 font-black text-xs uppercase tracking-widest">
+              {{ formatTimeOnly(currentAlertSchedule?.start_time) }} - {{ formatTimeOnly(currentAlertSchedule?.end_time) }}
+            </span>
+          </div>
+
+          <div class="space-y-3">
+             <button 
+               @click="acknowledgeSchedule" 
+               class="w-full py-4 bg-pink-500 hover:bg-pink-600 text-white rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-pink-200 transition-all active:scale-[0.98]"
+             >
+               Understood, I'm Ready
+             </button>
+             <button 
+               @click="showScheduleAlert = false" 
+               class="w-full py-3 text-slate-400 hover:text-slate-600 font-bold uppercase text-[10px] tracking-widest transition-colors"
+             >
+               Dismiss Alert
+             </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 // Import the new API service
 import { instructorDashboardService } from '@/services/instructor/instructorDashboardService'
@@ -217,6 +520,19 @@ const sidebarOpen = ref(false)
 const dropdownOpen = ref(false)
 const showModal = ref(false)
 const sections = ref([])
+const searchQuery = ref('')
+const lastSyncTime = ref(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+
+// Notification & Alert State
+const dismissedSchedules = ref(new Set())
+const shownAlerts = ref(new Set())
+const acknowledgedSchedules = ref([]) // For alerts that were clicked "I Understood"
+const readNotificationIds = ref(new Set())
+const showScheduleAlert = ref(false)
+const notificationDropdownOpen = ref(false)
+const currentAlertSchedule = ref(null)
+const currentTimeDisplay = ref(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
+let scheduleInterval = null
 
 // Form state for creating a new section
 const form = ref({
@@ -224,8 +540,131 @@ const form = ref({
   section_code: '',
   semester: '',
   academic_year: '',
-  schedule: '',
+  schedules: [{ day: '', start_time: '', end_time: '' }],
   description: ''
+})
+
+const addSchedule = () => {
+  form.value.schedules.push({ day: '', start_time: '', end_time: '' })
+}
+
+const removeSchedule = (index) => {
+  form.value.schedules.splice(index, 1)
+}
+
+const formatTimeOnly = (t) => {
+  if (!t) return ''
+  const [h, m] = t.split(':')
+  const hour = parseInt(h)
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  const h12 = hour % 12 || 12
+  return `${h12}:${m} ${ampm}`
+}
+
+const parsedSectionSchedule = (scheduleData) => {
+  if (!scheduleData) return null
+  try {
+    const schedules = typeof scheduleData === 'string' ? JSON.parse(scheduleData) : scheduleData
+    if (Array.isArray(schedules) && schedules.length > 0) return schedules
+  } catch (e) {}
+  return null
+}
+
+const formatSchedule = (scheduleData) => {
+  if (!scheduleData) return 'No schedule set'
+  
+  // Handle new structured format if it comes back as string from backend
+  try {
+    const schedules = typeof scheduleData === 'string' ? JSON.parse(scheduleData) : scheduleData
+    if (Array.isArray(schedules)) {
+      if (schedules.length === 0) return 'No schedule set'
+      return schedules.map(s => {
+        const dayShort = s.day.substring(0, 3)
+        const formatTime = (t) => {
+          if (!t) return ''
+          const [h, m] = t.split(':')
+          const hour = parseInt(h)
+          const ampm = hour >= 12 ? 'PM' : 'AM'
+          const h12 = hour % 12 || 12
+          return `${h12}:${m} ${ampm}`
+        }
+        return `${dayShort} ${formatTime(s.start_time)}-${formatTime(s.end_time)}`
+      }).join(', ')
+    }
+  } catch (e) {
+    // Fallback to plain text if not JSON
+  }
+  
+  return scheduleData
+}
+
+// Filtered sections based on search query
+const filteredSections = computed(() => {
+  if (!searchQuery.value) return sections.value
+  const query = searchQuery.value.toLowerCase()
+  return sections.value.filter(s => 
+    s.section_name.toLowerCase().includes(query) || 
+    s.section_code.toLowerCase().includes(query) ||
+    (s.semester && s.semester.toLowerCase().includes(query)) ||
+    (s.academic_year && s.academic_year.toLowerCase().includes(query))
+  )
+})
+
+// Statistics
+const totalStudents = computed(() => {
+  return sections.value.reduce((acc, s) => acc + (s.student_count || 0), 0)
+})
+
+const totalActivities = computed(() => {
+  return sections.value.reduce((acc, s) => acc + (s.activity_count || 0), 0)
+})
+
+const allNotifications = computed(() => {
+  const now = new Date()
+  const dateStr = now.toDateString()
+  const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  const today = days[now.getDay()]
+  
+  const notifications = []
+  
+  // 1. Add Acknowledged Alerts
+  acknowledgedSchedules.value.forEach(s => {
+    notifications.push({ 
+      ...s, 
+      type: 'acknowledged',
+      id: `${s.scheduleId}-${dateStr}-ack` 
+    })
+  })
+  
+  // 2. Detect and Add Missed Schedules (those not acknowledged yet)
+  sections.value.forEach(section => {
+    const schedules = parsedSectionSchedule(section.schedule)
+    if (schedules) {
+      schedules.forEach(s => {
+        const scheduleId = `${section.id}-${s.day}-${s.start_time}`
+        const isMissed = s.day === today && currentTime > s.start_time
+        const alreadyInAcknowledged = acknowledgedSchedules.value.some(as => as.scheduleId === scheduleId)
+        
+        if (isMissed && !alreadyInAcknowledged && !dismissedSchedules.value.has(scheduleId)) {
+          notifications.push({
+            ...s,
+            type: 'missed',
+            sectionId: section.id,
+            sectionName: section.section_name,
+            scheduleId,
+            id: `${scheduleId}-${dateStr}-missed`
+          })
+        }
+      })
+    }
+  })
+  
+  return notifications.sort((a, b) => b.start_time.localeCompare(a.start_time))
+})
+
+const unseenCount = computed(() => {
+  return allNotifications.value.filter(n => !readNotificationIds.value.has(n.id)).length
 })
 
 // Computed: User initials for the avatar
@@ -236,7 +675,18 @@ const initials = computed(() => {
 
 // UI Toggles
 const toggleSidebar = () => { sidebarOpen.value = !sidebarOpen.value }
-const toggleDropdown = () => { dropdownOpen.value = !dropdownOpen.value }
+const toggleDropdown = () => { 
+  dropdownOpen.value = !dropdownOpen.value
+  if (dropdownOpen.value) notificationDropdownOpen.value = false
+}
+const toggleNotificationDropdown = () => {
+  notificationDropdownOpen.value = !notificationDropdownOpen.value
+  if (notificationDropdownOpen.value) {
+    dropdownOpen.value = false
+    // Mark all current as read
+    allNotifications.value.forEach(n => readNotificationIds.value.add(n.id))
+  }
+}
 
 // Navigation logic for Section Details
 const goToSection = (id) => {
@@ -254,6 +704,62 @@ const handleLogout = () => {
   router.push('/login')
 }
 
+const dismissSchedule = (id) => {
+  dismissedSchedules.value.add(id)
+}
+
+const acknowledgeSchedule = () => {
+  if (currentAlertSchedule.value) {
+    const scheduleId = `${currentAlertSchedule.value.sectionId}-${currentAlertSchedule.value.day}-${currentAlertSchedule.value.start_time}`
+    
+    // Add to acknowledged list if not already there
+    if (!acknowledgedSchedules.value.find(s => s.scheduleId === scheduleId)) {
+      acknowledgedSchedules.value.push({
+        ...currentAlertSchedule.value,
+        scheduleId
+      })
+    }
+  }
+  showScheduleAlert.value = false
+}
+
+const checkScheduleAlerts = () => {
+  const now = new Date()
+  currentTimeDisplay.value = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  
+  const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  const today = days[now.getDay()]
+
+  sections.value.forEach(section => {
+    const schedules = parsedSectionSchedule(section.schedule)
+    if (schedules) {
+      schedules.forEach(s => {
+        if (s.day === today && s.start_time === currentTime) {
+          const alertId = `${section.id}-${s.day}-${s.start_time}-${now.toDateString()}`
+          if (!shownAlerts.value.has(alertId)) {
+            currentAlertSchedule.value = {
+              ...s,
+              sectionId: section.id,
+              sectionName: section.section_name,
+              scheduleId: alertId
+            }
+            showScheduleAlert.value = true
+            shownAlerts.value.add(alertId)
+            // Increment unseenCount for the alert itself? 
+            // The user said "if missed ... OR click i understand ... then show the alert the new alert like ther is a number"
+            // Wait, if it alerts, does it count as unseen yet? 
+            // "if missed can you add a bell ... if click i understand when alert show then show the alert the new alert like ther is a number"
+            // So yes, after modal it adds to bell.
+            
+            console.log('SCHEDULE ALERT:', currentAlertSchedule.value.sectionName)
+          }
+        }
+      })
+    }
+  })
+}
+
 /**
  * Action: Fetch data from Backend
  */
@@ -267,6 +773,8 @@ const fetchInstructorData = async () => {
     if (data.user) {
       userStore.user = data.user;
     }
+    // Update sync time
+    lastSyncTime.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   } catch (error) {
     if (error.response?.status === 401 || error.response?.status === 403) {
       // If unauthorized, boot to login
@@ -282,13 +790,17 @@ const fetchInstructorData = async () => {
  */
 const submitSection = async () => {
   try {
-    await instructorDashboardService.createSection(form.value);
+    const payload = {
+      ...form.value,
+      schedule: JSON.stringify(form.value.schedules)
+    }
+    await instructorDashboardService.createSection(payload);
     
     // Reset UI state
     showModal.value = false;
     form.value = { 
       section_name: '', section_code: '', semester: '', 
-      academic_year: '', schedule: '', description: '' 
+      academic_year: '', schedules: [{ day: '', start_time: '', end_time: '' }], description: '' 
     };
     
     // Refresh the list immediately
@@ -304,5 +816,29 @@ const submitSection = async () => {
 onMounted(async () => {
   await userStore.ensureUserLoaded();
   await fetchInstructorData();
+  
+  // Start schedule alert checker (High Precision - 1s)
+  checkScheduleAlerts() // Initial check
+  scheduleInterval = setInterval(checkScheduleAlerts, 1000)
+})
+
+onUnmounted(() => {
+  if (scheduleInterval) clearInterval(scheduleInterval)
 })
 </script>
+
+<style scoped>
+@keyframes shake {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(8deg); }
+  40% { transform: rotate(-8deg); }
+  60% { transform: rotate(8deg); }
+  80% { transform: rotate(-8deg); }
+}
+
+.animate-shake {
+  animation: shake 0.6s cubic-bezier(.36,.07,.19,.97) both;
+  animation-iteration-count: infinite;
+  transform-origin: center top;
+}
+</style>

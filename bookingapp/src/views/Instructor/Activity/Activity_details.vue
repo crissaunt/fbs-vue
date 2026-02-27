@@ -58,7 +58,7 @@
       </div>
 
       <!-- Main Content -->
-      <main class="flex-1 overflow-y-auto bg-[#FDFBF7] p-8">
+      <main class="flex-1 overflow-y-auto bg-[#FDFBF7] p-8" :data-date="new Date().toLocaleDateString()">
         <div class="max-w-5xl mx-auto">
           
           <div class="flex justify-between items-center mb-6">
@@ -127,7 +127,7 @@
                         {{ activity.is_code_active ? 'Active' : 'Inactive' }}
                       </span>
                       <span class="px-2 py-1 bg-purple-50 text-purple-600 text-xs font-bold rounded uppercase border border-purple-100">
-                        {{ activity.total_points || 100 }} pts
+                        Weight: 100%
                       </span>
                     </div>
                   </div>
@@ -334,6 +334,16 @@
                     </div>
 
                     <button 
+                      @click="handlePrint" 
+                      class="text-[10px] font-black text-green-600 hover:text-green-800 uppercase tracking-widest flex items-center gap-2"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                      </svg>
+                      Print Report
+                    </button>
+
+                    <button 
                       @click="fetchSubmissions" 
                       class="text-[10px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest flex items-center gap-2"
                     >
@@ -358,43 +368,57 @@
                   <table class="w-full text-left border-collapse">
                     <thead class="bg-gray-50 border-b border-gray-100">
                       <tr>
-                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Student</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Booking Info</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Grade</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Action</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Student</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Compliance</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Passengers</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Completion</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Add-ons</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Score</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest print:hidden">Action</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-50">
                       <tr v-for="sub in submissions" :key="sub.student_id" class="hover:bg-gray-50/50 transition-colors">
-                        <td class="px-6 py-5">
+                        <td class="px-4 py-5">
                           <div class="font-bold text-sm text-gray-900">{{ sub.first_name }} {{ sub.last_name }}</div>
                           <div class="text-[10px] text-gray-400 font-medium tracking-tight">{{ sub.student_number }}</div>
-                        </td>
-                        <td class="px-6 py-5">
-                          <span :class="['px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider', getStatusClass(sub.status)]">
-                            {{ getStatusLabel(sub.status) }}
-                          </span>
-                        </td>
-                        <td class="px-6 py-5">
-                          <div v-if="sub.booking">
-                            <div class="text-[10px] font-black text-gray-700 uppercase">
-                              Booking #{{ sub.booking.id }}
-                            </div>
-                            <div class="text-[9px] text-gray-400">
-                              {{ sub.booking.status }} • ₱{{ sub.booking.total_amount.toLocaleString() }}
-                            </div>
-                            <div class="text-[10px] font-bold text-pink-600 mt-1">
-                              {{ getBookingRoute(sub.booking) }}
-                            </div>
+                          <div class="mt-1 print:hidden">
+                            <span :class="['px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider', getStatusClass(sub.status)]">
+                              {{ getStatusLabel(sub.status) }}
+                            </span>
                           </div>
-                          <div v-else class="text-[9px] text-gray-400 italic">No booking found</div>
                         </td>
-                        <td class="px-6 py-5 text-sm font-bold text-gray-700">
-                          {{ sub.grade !== null ? sub.grade.toFixed(1) : '-' }}
-                          <span v-if="sub.grade !== null" class="text-[10px] font-normal text-gray-400">/ {{ activity?.total_points || 100 }} pts</span>
+                        <td class="px-4 py-5 text-center">
+                          <span v-if="sub.analysis" class="text-xs font-bold" :class="sub.analysis.compliance > 0 ? 'text-green-600' : 'text-gray-400'">
+                            {{ Math.round((sub.analysis.compliance / ((activity?.total_points || 100) * 0.4)) * 100) }}%
+                          </span>
+                          <span v-else class="text-gray-300">-</span>
                         </td>
-                        <td class="px-6 py-5">
+                        <td class="px-4 py-5 text-center">
+                          <span v-if="sub.analysis" class="text-xs font-bold" :class="sub.analysis.passengers > 0 ? 'text-blue-600' : 'text-gray-400'">
+                            {{ Math.round((sub.analysis.passengers / ((activity?.total_points || 100) * 0.25)) * 100) }}%
+                          </span>
+                          <span v-else class="text-gray-300">-</span>
+                        </td>
+                        <td class="px-4 py-5 text-center">
+                          <span v-if="sub.analysis" class="text-xs font-bold" :class="sub.analysis.completion > 0 ? 'text-amber-600' : 'text-gray-400'">
+                            {{ Math.round((sub.analysis.completion / ((activity?.total_points || 100) * 0.25)) * 100) }}%
+                          </span>
+                          <span v-else class="text-gray-300">-</span>
+                        </td>
+                        <td class="px-4 py-5 text-center">
+                          <span v-if="sub.analysis" class="text-xs font-bold" :class="sub.analysis.addons > 0 ? 'text-pink-600' : 'text-gray-400'">
+                            {{ Math.round(((sub.analysis.addons || 0) / ((activity?.total_points || 100) * 0.1)) * 100) }}%
+                          </span>
+                          <span v-else class="text-gray-300">-</span>
+                        </td>
+                        <td class="px-4 py-5 text-sm font-bold text-gray-700">
+                          <span v-if="sub.grade !== null" class="text-pink-500 font-black">
+                            {{ ((sub.grade / (activity?.total_points || 100)) * 100).toFixed(0) }}%
+                          </span>
+                          <span v-else class="text-gray-300">-</span>
+                        </td>
+                        <td class="px-4 py-5 print:hidden">
                           <button 
                             v-if="sub.booking"
                             @click="goToAnalysis(sub)"
@@ -634,6 +658,10 @@ const goToAnalysis = (sub) => {
   router.push(`/instructor/activity/${activity.value.id}/student/${sub.student_id}/score`)
 }
 
+const handlePrint = () => {
+  window.print();
+}
+
 const handleReleaseGrades = async () => {
   if (!activity.value || releasingGrades.value) return
   
@@ -668,3 +696,99 @@ onMounted(() => {
   fetchData()
 })
 </script>
+
+<style scoped>
+@media print {
+  /* Hide UI elements that shouldn't be printed */
+  nav, 
+  aside,
+  header,
+  .print\:hidden,
+  button,
+  .inline-flex,
+  .flex.items-center.gap-4 {
+    display: none !important;
+  }
+
+  /* Reset layout for print */
+  .fixed, .absolute {
+    position: relative !important;
+  }
+  
+  .h-screen {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  
+  .flex-1 {
+    flex: none !important;
+  }
+
+  main, .flex-1.overflow-auto {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .p-8 {
+    padding: 0 !important;
+  }
+
+  /* Table styles for print */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 10pt !important;
+    margin-top: 20px !important;
+  }
+
+  th, td {
+    border: 1px solid #e5e7eb !important;
+    padding: 10px !important;
+    text-align: left !important;
+  }
+
+  th {
+    background-color: #f9fafb !important;
+    color: #111827 !important;
+    font-weight: bold !important;
+    text-transform: uppercase !important;
+    font-size: 8pt !important;
+  }
+
+  .text-center {
+    text-align: center !important;
+  }
+
+  /* Remove colors/shadows for better printing */
+  .bg-white {
+    background-color: white !important;
+  }
+  
+  .shadow-sm, .shadow-md {
+    shadow: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Header Branding */
+  .p-8::before {
+    content: "CABAGAN STATE UNIVERSITY - FACULTY PORTAL";
+    display: block;
+    text-align: center;
+    font-size: 10pt;
+    font-weight: bold;
+    margin-bottom: 5px;
+    border-bottom: 2px solid black;
+    padding-bottom: 5px;
+  }
+
+  .p-8::after {
+    content: "Assessment Report generated on " attr(data-date);
+    display: block;
+    text-align: right;
+    font-size: 8pt;
+    margin-top: 20px;
+    font-style: italic;
+  }
+}
+</style>

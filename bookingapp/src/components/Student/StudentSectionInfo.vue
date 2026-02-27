@@ -27,6 +27,18 @@
         </p>
       </div>
 
+      <!-- Schedule -->
+      <div class="rounded-md border border-gray-300 p-3">
+        <p class="text-xs text-gray-500 mb-2">Class Schedule</p>
+        <div v-if="!section.schedule" class="text-xs text-gray-400 italic">No schedule set</div>
+        <div v-else class="space-y-2">
+          <div v-for="(s, i) in parsedSchedules" :key="i" class="flex items-center justify-between bg-gray-50 p-2 rounded border border-gray-100">
+            <span class="text-[10px] font-bold text-pink-500 uppercase">{{ s.day.substring(0, 3) }}</span>
+            <span class="text-[10px] font-medium text-gray-600">{{ formatTime(s.start_time) }} - {{ formatTime(s.end_time) }}</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Total Activities -->
       <div class="rounded-md border border-gray-300 p-3 flex justify-between items-center">
         <span class="text-xs text-gray-500">Total Activities</span>
@@ -61,6 +73,27 @@ export default {
     activeActivities: {
       type: Number,
       default: 0
+    }
+  },
+  computed: {
+    parsedSchedules() {
+      const scheduleData = this.section.schedule
+      if (!scheduleData) return []
+      try {
+        const schedules = typeof scheduleData === 'string' ? JSON.parse(scheduleData) : scheduleData
+        if (Array.isArray(schedules)) return schedules
+      } catch (e) {}
+      return []
+    }
+  },
+  methods: {
+    formatTime(t) {
+      if (!t) return ''
+      const [h, m] = t.split(':')
+      const hour = parseInt(h)
+      const ampm = hour >= 12 ? 'PM' : 'AM'
+      const h12 = hour % 12 || 12
+      return `${h12}:${m} ${ampm}`
     }
   }
 }

@@ -1,198 +1,142 @@
 <template>
   <div class="min-h-screen bg-gray-50 font-sans text-gray-900 p-8">
     <!-- Navigation Back Link -->
-    <div class="max-w-7xl mx-auto mb-6">
+    <div class="max-w-7xl mx-auto mb-6 flex justify-between items-center">
       <button @click="goBack" class="text-sm font-semibold text-gray-500 hover:text-black transition-all flex items-center gap-2">
-        ← Back to Submissions
+        ← Back to Activity Details
       </button>
+      <div v-if="storedGrade !== null" class="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-black uppercase tracking-widest border border-emerald-200">
+        Assessment Finalized
+      </div>
     </div>
 
     <div v-if="loading" class="flex flex-col items-center justify-center py-20">
       <div class="w-12 h-1 bg-gray-200 rounded-full overflow-hidden mb-4">
         <div class="h-full bg-blue-500 w-1/3 animate-[loading_1s_infinite_linear]"></div>
       </div>
-      <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Generating Assessment Analysis...</p>
+      <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Generating Your Assessment Analysis...</p>
     </div>
 
-    <main v-else class="max-w-7xl mx-auto space-y-8">
-      
-      <!-- Top Card: Activity Summary & Score -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-10 flex flex-col lg:flex-row gap-12">
-        <!-- Left: Activity Info & Score -->
-        <div class="flex-1 space-y-8">
-          <div>
-            <h1 class="text-4xl font-light mb-2 tracking-wide text-gray-900">{{ activity?.title || 'Assessment Title' }}</h1>
-            <p class="text-gray-500 font-medium text-lg">{{ activity?.course_code || 'CS-101' }} - {{ activity?.block || 'Block A' }}</p>
-            <p class="text-gray-400 text-sm mt-1">Due: {{ formatDueDate(activity?.due_date) }}</p>
-            
-            <div class="flex flex-wrap gap-2 mt-4">
-              <span class="px-3 py-1 bg-pink-100 text-pink-600 text-[10px] font-black rounded-full uppercase tracking-widest border border-pink-200">
-                Student: {{ student?.first_name }} {{ student?.last_name }} ({{ student?.student_number }})
-              </span>
-              <span v-if="actualRoute" class="px-3 py-1 bg-blue-100 text-blue-600 text-[10px] font-black rounded-full uppercase tracking-widest border border-blue-200">
-                Route: {{ actualRoute }}
-              </span>
-              <span class="px-3 py-1 bg-green-100 text-green-600 text-[10px] font-black rounded-full uppercase tracking-widest border border-green-200">Assessment Active</span>
-            </div>
-          </div>
+    <!-- Results not released notification -->
+    <div v-if="!loading && !error && activity && activity.grade === null" class="max-w-xl mx-auto py-20 text-center px-4">
+      <div class="inline-flex items-center justify-center w-20 h-20 bg-amber-50 text-amber-500 rounded-full mb-6">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <h2 class="text-3xl font-black text-gray-900 mb-4 tracking-tight">Results Not Released Yet</h2>
+      <p class="text-gray-500 mb-8 font-medium">Your instructor hasn't released the assessment results for this activity. Please check back later.</p>
+      <button @click="goBack" class="px-8 py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-lg uppercase tracking-widest text-xs">Back to Activity</button>
+    </div>
 
-          <div class="space-y-4">
-            <p class="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Final Assessment Score:</p>
-            <div class="bg-[#D1FAE5] rounded-lg p-10 flex items-center justify-center border border-[#A7F3D0]">
-              <span class="text-6xl font-black tracking-tighter text-emerald-900">
-                {{ Math.round(((storedGrade !== null ? storedGrade : calculatedScore) / (activity?.total_points || 100)) * 100) }}%
-              </span>
+    <main v-else-if="!loading && !error && activity" class="max-w-5xl mx-auto space-y-6 pb-20 px-4">
+      
+      <!-- Clean Header & Points Summary -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 space-y-6">
+        <div class="flex justify-between items-start">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded uppercase">Graded</span>
+              <span class="text-xs text-gray-400 font-bold uppercase tracking-widest">{{ activity.section_code }}</span>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-1 tracking-tight">{{ activity?.title }}</h1>
+            <p class="text-gray-500 font-medium text-sm">Results for {{ student?.first_name }} {{ student?.last_name }}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Final Assessment Score</p>
+            <div class="text-4xl font-black text-emerald-600 tracking-tighter">
+              {{ Math.round((calculatedScore / (activity?.total_points || 100)) * 100) }}%
             </div>
           </div>
         </div>
 
-        <!-- Right: Score Breakdown Bars -->
-        <div class="w-full lg:w-1/2 bg-[#F9FAFB] rounded-xl border border-gray-100 p-8">
-          <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-8">Performance Categorization</h2>
-          <div class="space-y-6">
-            <div v-for="item in scoreBreakdown" :key="item.label" class="space-y-3">
-              <div class="flex justify-between items-end">
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ item.label }} Score</p>
-                <p class="text-sm font-bold text-gray-900">
-                  {{ Math.round((item.score / item.max) * 100) }}%
-                </p>
-              </div>
-              <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden flex">
-                <div 
-                  class="h-full transition-all duration-1000" 
-                  :class="getBarColor(item.score, item.max)"
-                  :style="{ width: (item.score / item.max * 100) + '%' }"
-                ></div>
-              </div>
-              <p class="text-right text-[10px] font-black text-pink-500 uppercase tracking-widest">
-                Contribution: {{ Math.round((item.score / (activity?.total_points || 100)) * 100) }}% of total
-              </p>
-            </div>
+        <div class="grid grid-cols-4 gap-4 border-t border-gray-100 pt-6">
+          <div v-for="item in scoreBreakdown" :key="item.label" class="p-5 bg-gray-50 rounded-xl text-center border border-gray-100 relative overflow-hidden group hover:border-emerald-200 transition-colors">
+            <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{{ item.label }} Weight</p>
+            <p class="text-2xl font-black text-gray-900">
+              {{ Math.round((item.score / item.max) * 100) }}%
+            </p>
+            <div class="absolute bottom-0 left-0 h-1 bg-emerald-500" :style="{ width: (item.score / item.max * 100) + '%' }"></div>
           </div>
         </div>
       </div>
 
-      <!-- Bottom Card: Comparison Table -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-10 space-y-8">
-        <h2 class="text-2xl font-semibold flex items-center text-gray-900 tracking-tight">
-          Requirement Compliance <span class="text-gray-400 font-normal px-2 text-sm italic">vs</span> Submission Integrity
-        </h2>
-
-        <div class="overflow-hidden border border-gray-200 rounded-lg">
-          <table class="w-full border-collapse">
+      <!-- Compliance Comparison Table -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-8 py-5 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+          <h2 class="text-xs font-black text-gray-900 uppercase tracking-widest">Compliance Verification</h2>
+          <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Weights: 40% of grade</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse text-left">
             <thead>
-              <tr class="bg-gray-50 text-gray-700 text-sm font-bold">
-                <th class="border border-gray-200 p-4 text-left font-black uppercase text-xs tracking-widest text-gray-400">Parameter Category</th>
-                <th class="border border-gray-200 p-4 text-left font-black uppercase text-xs tracking-widest text-gray-400">Defined Requirement</th>
-                <th class="border border-gray-200 p-4 text-left font-black uppercase text-xs tracking-widest text-gray-400">Submitted Work</th>
-                <th class="border border-gray-200 p-4 text-left font-black uppercase text-xs tracking-widest text-gray-400">Verification Status</th>
+              <tr class="bg-white text-gray-400 text-[10px] font-black uppercase tracking-widest border-b border-gray-100">
+                <th class="p-4 pl-8">Requirement</th>
+                <th class="p-4">Expected Detail</th>
+                <th class="p-4">Your Submitted Work</th>
+                <th class="p-4 text-center pr-8">Status</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-gray-50">
               <tr v-for="row in comparisonRows" :key="row.label" 
-                class="transition-colors text-sm"
-                :class="row.isMet ? 'bg-[#DCFCE7]' : 'bg-[#FEE2E2]'"
+                class="hover:bg-gray-50/50 transition-colors group"
+                :class="!row.isMet && 'bg-red-50/30'"
               >
-                <td class="border border-gray-200 p-4">
-                  <p class="font-bold text-gray-900">{{ row.label }}</p>
-                  <p class="text-xs text-gray-400">({{ row.priority }} priority)</p>
+                <td class="p-4 pl-8">
+                  <span class="text-xs font-bold text-gray-700 block">{{ row.label }}</span>
+                  <span :class="['text-[9px] font-black uppercase px-1.5 py-0.5 rounded', row.priority === 'High' ? 'bg-red-50 text-red-500' : 'bg-gray-100 text-gray-500']">
+                    {{ row.priority }}
+                  </span>
                 </td>
-                <td class="border border-gray-200 p-4 font-medium">{{ row.requirement }}</td>
-                <td class="border border-gray-200 p-4 font-medium" :class="!row.isMet && 'text-red-600'">{{ row.work }}</td>
-                <td class="border border-gray-200 p-4">
-                  <div class="flex items-center gap-2 font-bold" :class="row.isMet ? 'text-green-700' : 'text-red-700'">
-                    <span>{{ row.isMet ? '✓' : '✕' }}</span>
-                    <span>{{ row.isMet ? 'Met' : 'Not Met' }}</span>
+                <td class="p-4 text-xs text-gray-600 font-medium">{{ row.requirement }}</td>
+                <td class="p-4 text-xs font-bold" :class="row.isMet ? 'text-gray-900' : 'text-red-700'">{{ row.work }}</td>
+                <td class="p-4 text-center pr-8">
+                  <div v-if="row.isMet" class="flex flex-col items-center">
+                    <span class="w-6 h-6 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-[10px] mb-0.5">✓</span>
+                    <span class="text-[8px] font-black text-emerald-600 uppercase">Correct</span>
+                  </div>
+                  <div v-else class="flex flex-col items-center">
+                    <span class="w-6 h-6 bg-red-100 text-red-700 rounded-full flex items-center justify-center text-[10px] mb-0.5">✕</span>
+                    <span class="text-[8px] font-black text-red-600 uppercase">Mismatch</span>
                   </div>
                 </td>
               </tr>
             </tbody>
           </table>
-        </div>
-      </div>
-
-      <!-- Passenger Verification: Explicit Comparison -->
-      <div v-if="matches.passenger_details?.length" class="space-y-8">
-        <h2 class="text-2xl font-bold flex items-center gap-3">
-          Passenger Information <span class="text-gray-400 font-normal px-2 text-sm italic">vs</span> Submission Data
-        </h2>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div v-for="(p, idx) in matches.passenger_details" :key="idx" 
-            class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
-          >
-            <!-- Traveler Card Header -->
-            <div class="bg-gray-50 border-b border-gray-200 p-6 flex justify-between items-center">
-              <div>
-                <p class="text-xs font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Dossier Identity</p>
-                <h3 class="text-lg font-bold">Passenger 0{{ idx + 1 }}</h3>
-              </div>
-              <div 
-                class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest border"
-                :class="isPassengerPerfect(p) ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'"
-              >
-                {{ isPassengerPerfect(p) ? 'Fully Verified' : 'Discrepancy Found' }}
-              </div>
-            </div>
-
-            <!-- Traveler Comparison Body -->
-            <div class="p-0">
-              <div class="grid grid-cols-4 bg-gray-50/50 text-xs font-black uppercase tracking-widest text-gray-500 border-b border-gray-100">
-                <div class="p-4 border-r border-gray-100">Field</div>
-                <div class="p-4 border-r border-gray-100">Activity Req.</div>
-                <div class="p-4 border-r border-gray-100">Student Work</div>
-                <div class="p-4 text-center">Status</div>
-              </div>
-              <div v-for="(field, key) in p" :key="key" 
-                class="grid grid-cols-4 text-xs font-bold border-b border-gray-100 last:border-0 transition-colors"
-                :class="field.isMet ? 'bg-green-50/20' : 'bg-red-50/20'"
-              >
-                <div class="p-4 border-r border-gray-100 text-gray-400 uppercase tracking-tighter">{{ key }}</div>
-                <div class="p-4 border-r border-gray-100 truncate text-gray-500">{{ field.expected }}</div>
-                <div class="p-4 border-r border-gray-100 truncate" :class="!field.isMet && 'text-red-600'">{{ field.actual }}</div>
-                <div class="p-4 flex items-center justify-center">
-                  <span v-if="field.isMet" class="text-green-600 font-bold">✓</span>
-                  <span v-else class="text-red-600 font-bold">✕</span>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
       <!-- Add-ons Verification Table (Compliance Style) -->
-      <div v-if="matches.addons?.length" class="bg-white rounded-xl shadow-sm border border-gray-200 p-10 space-y-8">
-        <h2 class="text-2xl font-bold flex items-center text-gray-900 tracking-tight">
-          Add-on Compliance <span class="text-gray-400 font-normal px-2 text-sm italic">vs</span> Service Integrity
-        </h2>
-        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-[-1.5rem]">Includes Baggage, Meals, Insurance, & Other Services</p>
-
-        <div class="overflow-hidden border border-gray-200 rounded-lg">
-          <table class="w-full border-collapse">
+      <div v-if="matches.addons?.length" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+        <div class="px-8 py-5 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+          <h2 class="text-xs font-black text-gray-900 uppercase tracking-widest">Add-on & Service Compliance (10%)</h2>
+          <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Baggage, Meals, Insurance & Others</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse text-left">
             <thead>
-              <tr class="bg-gray-50 text-gray-700 text-sm font-bold">
-                <th class="border border-gray-200 p-4 text-left font-black uppercase text-xs tracking-widest text-gray-400 w-1/4">Passenger</th>
-                <th class="border border-gray-200 p-4 text-left font-black uppercase text-xs tracking-widest text-gray-400 w-1/4">Requirement</th>
-                <th class="border border-gray-200 p-4 text-left font-black uppercase text-xs tracking-widest text-gray-400 w-1/4">Student Work</th>
-                <th class="border border-gray-200 p-4 text-left font-black uppercase text-xs tracking-widest text-gray-400 w-1/4 text-center">Result</th>
+              <tr class="bg-white text-gray-400 text-[10px] font-black uppercase tracking-widest border-b border-gray-100">
+                <th class="p-4 pl-8">Passenger</th>
+                <th class="p-4">Requirement</th>
+                <th class="p-4">Your Selection</th>
+                <th class="p-4 text-center pr-8">Result</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-gray-50">
               <tr v-for="(addon, aIdx) in matches.addons" :key="aIdx" 
-                class="transition-colors text-sm"
-                :class="addon.isMet ? 'bg-[#DCFCE7]' : 'bg-[#FEE2E2]'"
+                class="hover:bg-gray-50/50 transition-colors group"
+                :class="!addon.isMet && 'bg-red-50/30'"
               >
-                <td class="border border-gray-200 p-4">
-                  <p class="font-bold text-gray-900">{{ addon.passengerName }}</p>
-                </td>
-                <td class="border border-gray-200 p-4 font-medium">{{ addon.requirement }}</td>
-                <td class="border border-gray-200 p-4 font-medium" :class="!addon.isMet && 'text-red-600'">{{ addon.actual || 'No Add-on Selected' }}</td>
-                <td class="border border-gray-200 p-4">
-                  <div class="flex flex-col items-center justify-center gap-1">
-                    <div class="flex items-center gap-2 font-black uppercase tracking-widest text-[10px]" :class="addon.isMet ? 'text-green-700' : 'text-red-700'">
-                      <span>{{ addon.isMet ? '✓' : '✕' }}</span>
-                      <span>{{ addon.isMet ? 'Correct' : 'Wrong' }}</span>
-                    </div>
+                <td class="p-4 pl-8 font-bold text-gray-700 text-xs">{{ addon.passengerName }}</td>
+                <td class="p-4 text-xs text-gray-600 font-medium">{{ addon.requirement }}</td>
+                <td class="p-4 text-xs font-bold" :class="addon.isMet ? 'text-gray-900' : 'text-red-700'">{{ addon.actual || 'None' }}</td>
+                <td class="p-4 text-center pr-8">
+                  <div class="flex flex-col items-center">
+                    <span v-if="addon.isMet" class="w-6 h-6 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-[10px] mb-0.5">✓</span>
+                    <span v-else class="w-6 h-6 bg-red-100 text-red-700 rounded-full flex items-center justify-center text-[10px] mb-0.5">✕</span>
+                    <span :class="['text-[8px] font-black uppercase', addon.isMet ? 'text-emerald-600' : 'text-red-600']">
+                      {{ addon.isMet ? 'Correct' : 'Wrong' }}
+                    </span>
                   </div>
                 </td>
               </tr>
@@ -201,21 +145,79 @@
         </div>
       </div>
 
-      <!-- Actions Footer removed for Automated Grading -->
-      <div class="flex justify-start items-center gap-4 pb-20">
-        <button @click="goBack" class="px-8 py-4 border-2 border-gray-200 rounded-xl text-sm font-bold hover:bg-white transition-all uppercase tracking-widest text-[#FFC145]">← Back to Student Submissions</button>
+      <!-- Passenger Comparison Tables -->
+      <div v-if="matches.passenger_details?.length" class="space-y-4">
+        <div class="flex items-center justify-between px-2">
+          <h2 class="text-xs font-black text-gray-900 uppercase tracking-widest">Passenger Identity Verification (25%)</h2>
+          <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2 py-1 bg-gray-100 rounded-full">{{ matches.passenger_details.length }} Records Analyzed</span>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6">
+          <div v-for="(p, idx) in matches.passenger_details" :key="idx" 
+            class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+          >
+            <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-white border border-gray-200 rounded-lg flex items-center justify-center text-xs font-black text-gray-400">
+                  {{ idx + 1 }}
+                </div>
+                <h3 class="text-sm font-bold text-gray-700">
+                  Passenger: <span class="text-emerald-600">{{ p.name.expected }}</span>
+                </h3>
+              </div>
+              <span 
+                class="px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-widest border shadow-sm"
+                :class="isPassengerPerfect(p) ? 'bg-emerald-500 text-white border-emerald-600' : 'bg-red-500 text-white border-red-600'"
+              >
+                {{ isPassengerPerfect(p) ? 'IDENTITY VERIFIED' : 'IDENTITY FAILED' }}
+              </span>
+            </div>
+
+            <table class="w-full border-collapse text-left">
+              <thead>
+                <tr class="bg-white text-gray-400 text-[9px] font-black uppercase tracking-widest border-b border-gray-100">
+                  <th class="px-6 py-3 pl-10">Verification Field</th>
+                  <th class="px-6 py-3">Assigned Requirement</th>
+                  <th class="px-6 py-3">Student Entry</th>
+                  <th class="px-6 py-3 text-center pr-10">Result</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-50">
+                <tr v-for="(field, key) in p" :key="key" 
+                  class="text-xs transition-colors hover:bg-gray-50/50"
+                  :class="!field.isMet && 'bg-red-50/30'"
+                >
+                  <td class="px-6 py-3 pl-10">
+                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{{ key === 'dob' ? 'Date of Birth' : key }}</span>
+                  </td>
+                  <td class="px-6 py-3 font-medium text-gray-700">{{ field.expected }}</td>
+                  <td class="px-6 py-3 font-black" :class="field.isMet ? 'text-gray-900' : 'text-red-700'">{{ field.actual }}</td>
+                  <td class="px-6 py-3 text-center pr-10">
+                    <span v-if="field.isMet" class="text-emerald-500 font-bold block">✓ Matches</span>
+                    <span v-else class="text-red-500 font-bold block">✕ Error</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer/Return Button -->
+      <div class="pt-8 flex flex-col items-center gap-4">
+        <button @click="goBack" class="px-12 py-4 bg-gray-900 text-white rounded-xl text-xs font-black hover:bg-black transition-all uppercase tracking-widest shadow-xl border-t-4 border-gray-700">
+          Return to Activity Details
+        </button>
+        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest italic">Assessment ID: #{{ activityId }}-{{ student?.id }}</p>
       </div>
     </main>
-
-    <!-- Success Overlay removed for Automated Grading -->
-
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { activityDetailsService } from '@/services/instructor/activityDetailsService';
+import { studentActivityDetailsService } from '@/services/Student/studentActivityDetailsService';
 import { bookingService } from '@/services/booking/bookingService';
 import { useNotificationStore } from '@/stores/notification';
 
@@ -224,7 +226,6 @@ const router = useRouter();
 const notificationStore = useNotificationStore();
 
 const activityId = route.params.activityId;
-const studentId = route.params.studentId;
 
 const loading = ref(true);
 const error = ref(null);
@@ -232,34 +233,32 @@ const activity = ref(null);
 const booking = ref(null);
 const student = ref(null);
 const storedGrade = ref(null);
-const backendAnalysis = ref(null);
 
 const fetchData = async () => {
     loading.value = true;
     error.value = null;
     try {
-        const actData = await activityDetailsService.getActivity(activityId);
-        activity.value = actData.activity || actData;
-
-        const subData = await activityDetailsService.getSubmissions(activityId);
-        const submission = subData.submissions.find(s => s.student_id == studentId);
+        const response = await studentActivityDetailsService.getActivityDetails(activityId);
+        const data = response.data;
         
-        if (!submission) throw new Error("Submission not found.");
-        
-        student.value = { first_name: submission.first_name, last_name: submission.last_name, student_number: submission.student_number };
-        storedGrade.value = submission.grade;
-        backendAnalysis.value = submission.analysis;
+        if (data && data.activity) {
+            activity.value = data.activity;
+            student.value = data.student;
+            storedGrade.value = data.activity.grade;
 
-        if (!submission.booking) throw new Error("No student work data.");
-
-        const bookingRes = await bookingService.getBookingDetails(submission.booking.id);
-        if (bookingRes.success) {
-            booking.value = bookingRes.booking;
+            if (data.activity.confirmed_booking_id) {
+                const bookingRes = await bookingService.getBookingDetails(data.activity.confirmed_booking_id);
+                if (bookingRes.success) {
+                    booking.value = bookingRes.booking;
+                }
+            }
         } else {
-            throw new Error("Failed to load booking details.");
+            error.value = "We couldn't find the assessment details for this activity.";
         }
     } catch (err) {
-        error.value = err.message;
+        console.error('Failed to fetch assessment analysis:', err);
+        error.value = err.response?.data?.error || "An error occurred while loading your assessment details. Please try again later.";
+        notificationStore.error('Could not load analysis details.');
     } finally {
         loading.value = false;
     }
@@ -267,12 +266,13 @@ const fetchData = async () => {
 
 const scoreBreakdown = computed(() => {
     if (!activity.value || !booking.value) return [];
-    
+
+    const m = matches.value;
     const totalPoints = parseFloat(activity.value.total_points || 100);
 
-    // --- PRIMARY: Use backend-computed analysis for perfect consistency ---
-    if (backendAnalysis.value) {
-        const b = backendAnalysis.value;
+    // --- PRIMARY: Use backend-computed analysis ---
+    if (activity.value?.analysis?.breakdown) {
+        const b = activity.value.analysis.breakdown;
         return [
             { label: 'Compliance', score: parseFloat(b.compliance), max: totalPoints * 0.4 },
             { label: 'Passenger', score: parseFloat(b.passengers), max: totalPoints * 0.25 },
@@ -280,20 +280,17 @@ const scoreBreakdown = computed(() => {
             { label: 'Add-ons', score: parseFloat(b.addons || 0), max: totalPoints * 0.1 }
         ];
     }
-    
-    // --- FALLBACK: Client-side logic ---
-    const m = matches.value;
-    
-    // 1. Compliance (40% base)
+
+    // --- FALLBACK: Client-side calculation ---
+    const compMax = totalPoints * 0.4;
     let compPenalty = 0;
     if (!m.trip_type) compPenalty += 20;
     if (!m.origin) compPenalty += 40;
     if (!m.destination) compPenalty += 40;
     if (!m.travel_class) compPenalty += 10;
-    
-    const compScore = Math.max(0, (totalPoints * 0.4) * (1 - compPenalty / 100.0));
-    
-    // 2. Passenger (25% base)
+    const compScore = Math.max(0, compMax * (1 - compPenalty / 100.0));
+
+    const paxMax = totalPoints * 0.25;
     let paxPenalty = 0;
     const paxTypes = actualPaxTypes.value;
     if (paxTypes.adult !== activity.value.required_passengers) paxPenalty += 10;
@@ -307,38 +304,41 @@ const scoreBreakdown = computed(() => {
         if (!p.nationality.isMet) paxPenalty += 3;
         if (!p.passport.isMet) paxPenalty += 10;
     });
+    const paxScore = Math.max(0, paxMax * (1 - paxPenalty / 100.0));
 
-    const paxScore = Math.max(0, (totalPoints * 0.25) * (1 - paxPenalty / 100.0));
-
-    // 3. Completion (25% base)
+    const completionMax = totalPoints * 0.25;
     let datePenalty = 0;
     if (!m.departure_date) datePenalty += 15;
     if (!m.return_date) datePenalty += 15;
+    const completionScore = Math.max(0, completionMax * (1 - datePenalty / 100.0));
 
-    const completionScore = Math.max(0, (totalPoints * 0.25) * (1 - datePenalty / 100.0));
-
-    // 4. Add-ons (10% base)
-    let addonScore = totalPoints * 0.1;
+    const addonMax = totalPoints * 0.1;
+    let addonScore = addonMax;
     if (m.addons?.length) {
         const correctCount = m.addons.filter(a => a.isMet).length;
-        addonScore = (totalPoints * 0.1) * (correctCount / m.addons.length);
+        addonScore = addonMax * (correctCount / m.addons.length);
     }
 
     return [
-        { label: 'Compliance', score: Math.round(compScore), max: totalPoints * 0.4 },
-        { label: 'Passenger', score: Math.round(paxScore), max: totalPoints * 0.25 },
-        { label: 'Completion', score: Math.round(completionScore), max: totalPoints * 0.25 },
-        { label: 'Add-ons', score: Math.round(addonScore), max: totalPoints * 0.1 }
+        { label: 'Compliance', score: Math.round(compScore), max: compMax },
+        { label: 'Passenger', score: Math.round(paxScore), max: paxMax },
+        { label: 'Completion', score: Math.round(completionScore), max: completionMax },
+        { label: 'Add-ons', score: Math.round(addonScore), max: addonMax }
     ];
 });
 
 const calculatedScore = computed(() => {
+    // Use backend-stored grade for the total (matches what instructor sees)
+    if (activity.value?.grade !== null && activity.value?.grade !== undefined) {
+        return parseFloat(activity.value.grade);
+    }
     return scoreBreakdown.value.reduce((acc, c) => acc + c.score, 0);
 });
 
+
 onMounted(fetchData);
 
-const goBack = () => router.push(`/instructor/activity/${activityId}`);
+const goBack = () => router.push(`/student/activity/${activityId}`);
 
 const formatDueDate = (date) => {
     if (!date) return 'TBA';
@@ -434,7 +434,7 @@ const matches = computed(() => {
         addons: []
     };
 
-    // 1. Passenger Identities (Stateful Matching)
+    // 1. Passenger Identities
     const bookedPassengers = [];
     const seenPId = new Set();
     booking.value.details.forEach(d => {
@@ -505,10 +505,9 @@ const matches = computed(() => {
         });
     }
 
-    // 2. Add-ons Verification
+    // 2. Add-ons
     if (activity.value.activity_addons?.length) {
         activity.value.activity_addons.forEach(req => {
-            const actualPassenger = findMatchingPassenger(req.passenger);
             const detail = booking.value.details.find(d => 
                 d.passenger?.first_name?.toLowerCase() === req.passenger.first_name?.toLowerCase() &&
                 d.passenger?.last_name?.toLowerCase() === req.passenger.last_name?.toLowerCase()
@@ -586,7 +585,6 @@ const comparisonRows = computed(() => {
 
     return rows;
 });
-
 
 </script>
 

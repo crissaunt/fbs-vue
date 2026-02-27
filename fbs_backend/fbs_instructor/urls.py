@@ -22,6 +22,8 @@ from .views import (
     logout_view,
     update_profile,
     update_section,
+    bulk_enroll_students,
+    clear_section_enrollments,
 )
 
 urlpatterns = [
@@ -42,6 +44,8 @@ urlpatterns = [
     path('instructor/sections/<int:section_id>/enroll/', EnrollStudentView.as_view(), name='enroll-student'),
     path('instructor/sections/<int:section_id>/students/', Enroll_Student_list, name='Enroll_Student_list'),
     path('instructor/sections/<int:section_id>/enroll/<int:student_id>/', UnenrollStudentView.as_view(), name='unenroll-student'),
+    path('instructor/sections/<int:section_id>/bulk-enroll/', bulk_enroll_students, name='bulk_enroll_students'),
+    path('instructor/sections/<int:section_id>/clear-enrollments/', clear_section_enrollments, name='clear_section_enrollments'),
     
     # Activity Management - Create & Delete
     path('instructor/sections/<int:section_id>/activities/create/', create_activity, name='api_create_activity'),

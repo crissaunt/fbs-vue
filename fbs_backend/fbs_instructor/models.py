@@ -36,7 +36,7 @@ class Section(models.Model):
     section_code = models.CharField(max_length=50) 
     semester = models.CharField(max_length=50)
     academic_year = models.CharField(max_length=20)
-    schedule = models.CharField(max_length=100, blank=True, null=True)
+    schedule = models.CharField(max_length=500, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     
     is_locked = models.BooleanField(default=False)
