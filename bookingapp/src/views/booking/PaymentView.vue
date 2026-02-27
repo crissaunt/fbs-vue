@@ -164,7 +164,30 @@
           <div class="bg-white rounded-[5px] border border-gray-100 shadow-lg shadow-pink-100/20 overflow-hidden">
             <div class="p-8">
               <h3 class="text-xl font-bold text-gray-900 mb-2">Secure Checkout</h3>
-              <p class="text-xs text-gray-400 mb-8 leading-relaxed">You will be redirected to our secure payment gateway to complete your transaction. All major credit cards and e-wallets are supported.</p>
+              <p class="text-xs text-gray-400 mb-6 leading-relaxed">You will be redirected to our secure PayMongo payment gateway to complete your transaction.</p>
+
+              <!-- Supported Payment Methods -->
+              <div class="mb-8">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Philippine Payment Methods</p>
+                <div class="flex flex-wrap gap-2">
+                  <!-- GCash Badge -->
+                  <div class="flex items-center px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-[5px]">
+                    <span class="text-blue-600 font-bold text-xs tracking-tight">GCash</span>
+                  </div>
+                  <!-- Maya Badge -->
+                  <div class="flex items-center px-3 py-1.5 bg-green-50 border border-green-100 rounded-[5px]">
+                    <span class="text-green-600 font-bold text-xs tracking-tight">Maya</span>
+                  </div>
+                  <!-- Over-the-counter Badge -->
+                  <div class="flex items-center px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-[5px]">
+                    <span class="text-gray-600 text-xs font-medium">Over-the-counter (7-Eleven, Cebuana)</span>
+                  </div>
+                  <!-- Cards Badge -->
+                  <div class="flex items-center px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-[5px]">
+                    <span class="text-gray-600 text-xs font-medium">Credit/Debit Card</span>
+                  </div>
+                </div>
+              </div>
 
               <!-- Main Action -->
               <div class="mt-8 pt-8 border-t border-gray-50">

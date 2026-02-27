@@ -160,7 +160,7 @@
                   <span><strong>{{ segment.label }}</strong> ({{ segment.flight }})</span>
                 </div>
                 
-                <div v-for="p in bookingStore.passengers" :key="p.key" class="p-addon-row">
+                <div v-for="p in eligiblePassengers" :key="p.key" class="p-addon-row">
                   <div class="p-info">
                     <strong>{{ p.firstName }} {{ p.lastName }}</strong> ({{ p.type }})
                     
@@ -202,7 +202,7 @@
                   <span><strong>{{ segment.label }}</strong> ({{ segment.flight }})</span>
                 </div>
                 
-                <div v-for="p in bookingStore.passengers" :key="p.key" class="p-addon-row">
+                <div v-for="p in eligiblePassengers" :key="p.key" class="p-addon-row">
                   <div class="p-info"><strong>{{ p.firstName }} {{ p.lastName }}</strong> ({{ p.type }})
                     
                     <button 
@@ -273,7 +273,7 @@
                   <span><strong>{{ segment.label }}</strong> ({{ segment.flight }})</span>
                 </div>
                 
-                <div v-for="p in bookingStore.passengers" :key="p.key" class="p-addon-row">
+                <div v-for="p in eligiblePassengers" :key="p.key" class="p-addon-row">
                   <div class="p-info"><strong>{{ p.firstName }} {{ p.lastName }}</strong> ({{ p.type }})
                     
                     <button 
@@ -941,6 +941,11 @@ const confirmSelection = () => {
   bookingStore.snapshotToServer();
   closeConfirmationModal();
 };
+
+// Computed Properties
+const eligiblePassengers = computed(() => {
+  return bookingStore.passengers.filter(p => p.type !== 'Infant');
+});
 
 // Indicator Position Logic
 const indicatorStyle = computed(() => {

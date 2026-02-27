@@ -81,7 +81,11 @@
                 <tr v-for="p in bookingStore.passengers" :key="p.key">
                   <td>
                     <strong>{{ formatTitle(p.title) }} {{ p.firstName }} {{ p.lastName }}</strong>
-                    <div class="sub-text">{{ p.type }}</div>
+                    <div class="sub-text">
+                      {{ p.type }}
+                      <span v-if="p.phDiscountType === 'senior'" class="text-xs text-pink-600 ml-1 font-bold">(Senior Citizen)</span>
+                      <span v-if="p.phDiscountType === 'pwd'" class="text-xs text-pink-600 ml-1 font-bold">(PWD)</span>
+                    </div>
                   </td>
                   <td>{{ getSeatLabel(p.key, segment.key) }}</td>
                   <td>{{ getBaggageLabel(p.key, segment.key) }}</td>
@@ -141,24 +145,24 @@
               <!-- Adults Breakdown -->
               <div class="price-line" v-if="bookingStore.passengerCount.adults > 0">
                 <span>{{ bookingStore.passengerCount.adults }} Adult(s) (Total Base Fare)</span> 
-                <AnimatedNumber :value="bookingStore.combinedBasePrice * bookingStore.passengerCount.adults" prefix="₱" />
+                <AnimatedNumber :value="bookingStore.grandTotalForAdults" prefix="₱" />
               </div>
               
               <!-- Children Breakdown -->
               <div class="price-line" v-if="bookingStore.passengerCount.children > 0">
                 <span>{{ bookingStore.passengerCount.children }} Child(ren) (Total Base Fare)</span> 
-                <AnimatedNumber :value="bookingStore.combinedBasePrice * bookingStore.passengerCount.children" prefix="₱" />
+                <AnimatedNumber :value="bookingStore.grandTotalForChildren" prefix="₱" />
               </div>
               
               <!-- Infants Breakdown (50% Base Fare) -->
               <div class="price-line infant-line" v-if="bookingStore.passengerCount.infants > 0">
                 <span>{{ bookingStore.passengerCount.infants }} Infant(s) (50% Base Fare)</span> 
-                <AnimatedNumber :value="(bookingStore.combinedBasePrice * 0.5) * bookingStore.passengerCount.infants" prefix="₱" />
+                <AnimatedNumber :value="bookingStore.grandTotalForInfants" prefix="₱" />
               </div>
 
               <div class="price-line taxes-line">
-                <span>Verification / Taxes & Fees</span>
-                <AnimatedNumber :value="taxesPrice" prefix="₱" />
+                <span>Verification / Taxes & Fees (VAT)</span>
+                <AnimatedNumber :value="bookingStore.totalTaxes" prefix="₱" />
               </div>
             </div>
 
@@ -351,6 +355,9 @@ const getOptionById = (list, id) => {
 };
 
 const getBaggageLabel = (passengerKey, segment = 'depart') => {
+  const p = bookingStore.passengers.find(p => p.key === passengerKey);
+  if (p?.type === 'Infant') return 'Incl. in Adult Allowance';
+
   const baggage = bookingStore.addons?.baggage?.[segment]?.[passengerKey];
   if (!baggage) return 'Standard (Free)';
   
@@ -366,6 +373,9 @@ const getBaggageLabel = (passengerKey, segment = 'depart') => {
 };
 
 const getMealLabel = (passengerKey, segment = 'depart') => {
+  const p = bookingStore.passengers.find(p => p.key === passengerKey);
+  if (p?.type === 'Infant') return 'Not Available';
+
   const meal = bookingStore.addons?.meals?.[segment]?.[passengerKey];
   if (!meal) return 'No meal';
   
@@ -378,6 +388,9 @@ const getMealLabel = (passengerKey, segment = 'depart') => {
 };
 
 const getAssistanceLabel = (passengerKey, segment = 'depart') => {
+  const p = bookingStore.passengers.find(p => p.key === passengerKey);
+  if (p?.type === 'Infant') return 'Not Available';
+
   const assistanceId = bookingStore.addons?.wheelchair?.[segment]?.[passengerKey];
   if (!assistanceId || !Array.isArray(assistanceOptions.value)) return 'No assistance';
   
@@ -386,6 +399,16 @@ const getAssistanceLabel = (passengerKey, segment = 'depart') => {
 };
 
 const getSeatLabel = (passengerKey, segmentKey = 'depart') => {
+  const p = bookingStore.passengers.find(p => p.key === passengerKey);
+  if (p?.type === 'Infant') {
+    const adultKey = bookingStore.infantAdultMapping[passengerKey];
+    if (adultKey && bookingStore.addons?.seats?.[segmentKey]?.[adultKey]) {
+      const adultSeat = bookingStore.addons.seats[segmentKey][adultKey];
+      return `Lap (${adultSeat.seat_code})`;
+    }
+    return 'On Lap';
+  }
+
   const seat = bookingStore.addons?.seats?.[segmentKey]?.[passengerKey] || bookingStore.addons?.seats?.[passengerKey];
   if (!seat) return 'Not selected';
   
@@ -625,6 +648,8 @@ const preparePassengersForSubmission = () => {
       dateOfBirth: dateOfBirth,
       nationality: p.nationality || 'Philippines',
       passportNumber: p.passportNumber || '',
+      phDiscountType: p.phDiscountType || 'none',
+      phDiscountId: p.phDiscountId || '',
       type: p.type || 'Adult'
     };
   });

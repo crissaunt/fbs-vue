@@ -1346,6 +1346,19 @@ class PassengerInfo(models.Model):
     passport_number = models.CharField(max_length=50, blank=True, null=True)
     nationality = models.CharField(max_length=100, null=True, blank=True)
     passenger_type = models.CharField(max_length=10, choices=TYPE_CHOICES, default="Adult")
+    
+    # Philippine-specific discounts
+    DISCOUNT_CHOICES = [
+        ("none", "None"),
+        ("senior", "Senior Citizen"),
+        ("pwd", "PWD")
+    ]
+    ph_discount_type = models.CharField(
+        max_length=10, 
+        choices=DISCOUNT_CHOICES, 
+        default="none",
+        help_text="Philippine mandatory discounts (Senior Citizen/PWD)"
+    )
 
     # Infant linked to adult
     linked_adult = models.ForeignKey(

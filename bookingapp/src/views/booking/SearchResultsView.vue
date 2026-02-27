@@ -1320,6 +1320,11 @@ const submitEditedSearch = () => {
   
   // Update store
   bookingStore.setTripType(editSearchForm.value.tripType);
+  bookingStore.setPassengerCount({
+    adults: parseInt(editSearchForm.value.adults) || 1,
+    children: parseInt(editSearchForm.value.children) || 0,
+    infants: parseInt(editSearchForm.value.infants) || 0
+  });
   
   // Navigate with new search params
   router.push({
@@ -1677,6 +1682,14 @@ onMounted(() => {
   
   if (route.query.tripType && !bookingStore.tripType) {
     bookingStore.setTripType(route.query.tripType);
+  }
+  
+  if (route.query.adults !== undefined) {
+    bookingStore.setPassengerCount({
+      adults: parseInt(route.query.adults) || 1,
+      children: parseInt(route.query.children) || 0,
+      infants: parseInt(route.query.infants) || 0
+    });
   }
   
   console.log('Trip Type from Store:', bookingStore.tripType);

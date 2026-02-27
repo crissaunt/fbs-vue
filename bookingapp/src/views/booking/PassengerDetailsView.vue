@@ -408,8 +408,8 @@ const completionPercentage = computed(() => {
 
 const hasPassengerError = (index) => {
   const key = `pax_${index}`;
-  const validation = passengerValidation.value[key];
-  return validation === false;
+  // Only show error if explicitly marked invalid AND user has tried to submit or moved past it
+  return passengerValidation.value[key] === false && showValidation.value;
 };
 
 // --- METHODS ---

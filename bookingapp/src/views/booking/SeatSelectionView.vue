@@ -24,7 +24,7 @@
                 <div class="segment-details">
                   {{ segment.flight }} • {{ segment.route }}
                   <span v-if="getSeatsForSegment(segment.key).length > 0" class="seat-count">
-                    ({{ getSeatsForSegment(segment.key).length }}/{{ bookingStore.passengers.length }} selected)
+                    ({{ getSeatsForSegment(segment.key).length }}/{{ eligiblePassengers.length }} selected)
                   </span>
                 </div>
               </div>
@@ -45,13 +45,14 @@
           <aside class="seat-passenger-list">
             <h3>Passengers</h3>
             <div 
-              v-for="(p, index) in bookingStore.passengers" 
+              v-for="(p, index) in eligiblePassengers" 
               :key="p.key"
               :class="['p-seat-card', { 
-                active: activePIndex === index,
-                'has-seat': assignedSeats[p.key]
+                active: activePIndex === index && p.type !== 'Infant',
+                'has-seat': assignedSeats[p.key] || (p.type === 'Infant' && getInfantSeat(p.key)),
+                'is-infant': p.type === 'Infant'
               }]"
-              @click="activePIndex = index"
+              @click="p.type !== 'Infant' ? activePIndex = index : null"
             >
               <div class="p-info">
                 <span class="p-number">{{ index + 1 }}</span>
@@ -61,11 +62,14 @@
                 </div>
               </div>
               <div class="seat-action">
-                <span class="p-assigned-seat">
+                <span v-if="p.type === 'Infant'" class="p-assigned-seat text-xs text-orange-600">
+                  {{ getInfantSeat(p.key) ? `Lap: ${getInfantSeat(p.key).seat_code}` : 'Awaiting Adult' }}
+                </span>
+                <span v-else class="p-assigned-seat">
                   {{ assignedSeats[p.key]?.seat_code || 'Not Selected' }}
                 </span>
                 <button 
-                  v-if="assignedSeats[p.key]"
+                  v-if="assignedSeats[p.key] && p.type !== 'Infant'"
                   @click.stop="changeSeat(p.key)"
                   class="change-seat-btn"
                   title="Change seat"
@@ -115,7 +119,7 @@
               </div>
               <div class="aircraft-capacity">
                 <span class="capacity-badge">Capacity: {{ aircraftCapacity }} seats</span>
-                <span class="selected-badge">Selected: {{ Object.keys(assignedSeats).length }}/{{ bookingStore.passengers.length }}</span>
+                <span class="selected-badge">Selected: {{ Object.keys(assignedSeats).length }}/{{ eligiblePassengers.length }}</span>
               </div>
             </div>
             
@@ -172,6 +176,20 @@
                   <div class="selected-price">
                     ₱{{ (seat.seat_price || 0).toLocaleString() }}
                     <button @click="removeSeat(pKey)" class="remove-btn">×</button>
+                  </div>
+                </div>
+                
+                <!-- Display mapped infants -->
+                <div v-for="infant in mappedInfants" :key="infant.key" class="selected-item infant-item">
+                  <div class="selected-info">
+                    <span class="passenger-name">{{ infant.firstName }} {{ infant.lastName }} (Infant)</span>
+                    <div class="seat-badge-row">
+                      <span class="seat-mini-pill lap-pill">Lap of {{ infant.adultName }}</span>
+                      <span class="seat-class-label">{{ infant.seatCode }}</span>
+                    </div>
+                  </div>
+                  <div class="selected-price">
+                    Included
                   </div>
                 </div>
 
@@ -324,7 +342,7 @@ const segmentProgress = computed(() => {
       label: seg.label,
       key: seg.key,
       count,
-      percent: (count / bookingStore.passengers.length) * 100
+      percent: (count / eligiblePassengers.value.length) * 100
     };
   });
 });
@@ -340,11 +358,11 @@ const returnSeatCount = computed(() => {
 
 // Progress percentages
 const departProgress = computed(() => {
-  return (departSeatCount.value / bookingStore.passengers.length) * 100;
+  return (departSeatCount.value / eligiblePassengers.value.length) * 100;
 });
 
 const returnProgress = computed(() => {
-  return (returnSeatCount.value / bookingStore.passengers.length) * 100;
+  return (returnSeatCount.value / eligiblePassengers.value.length) * 100;
 });
 
 // Check if depart segment has seats
@@ -354,12 +372,52 @@ const hasDepartSeats = computed(() => {
 
 // Seat selection progress
 const allPassengersHaveSeats = computed(() => {
-  return bookingStore.allPassengersHaveSeatsForSegment(activeFlightSegment.value);
+  const adultsAndChildren = bookingStore.passengers.filter(p => p.type !== 'Infant');
+  const seats = bookingStore.getSeatsBySegment(activeFlightSegment.value) || {};
+  return adultsAndChildren.every(p => seats[p.key]);
 });
 
 const allPassengersHaveAllSeats = computed(() => {
-  return bookingStore.allPassengersHaveAllSeats;
+  const adultsAndChildren = bookingStore.passengers.filter(p => p.type !== 'Infant');
+  const segments = flightSegments.value;
+  if (segments.length === 0) return false;
+
+  return segments.every(seg => {
+    const seats = bookingStore.getSeatsBySegment(seg.key) || {};
+    return adultsAndChildren.every(p => seats[p.key]);
+  });
 });
+
+const mappedInfants = computed(() => {
+  const infants = bookingStore.passengers.filter(p => p.type === 'Infant');
+  const mapped = [];
+  
+  infants.forEach(inf => {
+     const assignedAdultKey = bookingStore.infantAdultMapping[inf.key];
+     if (assignedAdultKey) {
+       const adultSeat = assignedSeats.value[assignedAdultKey];
+       const adult = bookingStore.passengers.find(p => p.key === assignedAdultKey);
+       if (adultSeat && adult) {
+         mapped.push({
+           key: inf.key,
+           firstName: inf.firstName,
+           lastName: inf.lastName,
+           adultName: adult.firstName,
+           seatCode: adultSeat.seat_code
+         });
+       }
+     }
+  });
+  return mapped;
+});
+
+const getInfantSeat = (infantKey) => {
+  const adultKey = bookingStore.infantAdultMapping[infantKey];
+  if (adultKey && assignedSeats.value[adultKey]) {
+    return assignedSeats.value[adultKey];
+  }
+  return null;
+};
 
 const confirmButtonText = computed(() => {
   if (bookingStore.isRoundTrip) {
@@ -423,9 +481,14 @@ const goToNextSegment = () => {
   }
 };
 
+// Eligible passengers for seats (excluding infants)
+const eligiblePassengers = computed(() => {
+  return bookingStore.passengers.filter(p => p.type !== 'Infant');
+});
+
 // Get active passenger
 const activePassenger = computed(() => {
-  return bookingStore.passengers[activePIndex.value] || bookingStore.passengers[0];
+  return eligiblePassengers.value[activePIndex.value] || eligiblePassengers.value[0];
 });
 
 // Get seats for a specific segment
@@ -610,6 +673,8 @@ const assignSeat = (seat) => {
   if (!seat.is_available) return;
   
   const currentP = bookingStore.passengers[activePIndex.value];
+  if (!currentP || currentP.type === 'Infant') return; // Do not allow infants to select seats
+  
   const occupantKey = Object.keys(assignedSeats.value).find(k => assignedSeats.value[k]?.id === seat.id);
   
   if (occupantKey && occupantKey !== currentP.key) {
@@ -658,12 +723,12 @@ const assignSeat = (seat) => {
 };
 
 const findNextPassengerWithoutSeat = () => {
-  let next = bookingStore.passengers.findIndex((p, i) => 
+  let next = eligiblePassengers.value.findIndex((p, i) => 
     i > activePIndex.value && !assignedSeats.value[p.key]
   );
   
   if (next === -1) {
-    next = bookingStore.passengers.findIndex(p => !assignedSeats.value[p.key]);
+    next = eligiblePassengers.value.findIndex(p => !assignedSeats.value[p.key]);
   }
   
   return next;
@@ -784,6 +849,26 @@ onMounted(async () => {
   grid-template-columns: 250px 1fr 250px; 
   gap: 10px; 
   align-items: start;
+}
+
+.p-seat-card.is-infant {
+   opacity: 0.7;
+   cursor: not-allowed;
+   background: #fff8f0;
+}
+
+.p-seat-card.is-infant .p-number {
+   background: #ffb347;
+}
+
+.infant-item {
+   background: #fff8f0;
+   border-left: 3px solid #ffb347;
+}
+
+.lap-pill {
+   background: #ffb347;
+   color: white;
 }
 
 /* Aircraft Layout Container */

@@ -276,7 +276,7 @@ class PassengerInfoSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'first_name', 'middle_name', 'last_name', 'full_name',
             'title', 'date_of_birth', 'passport_number', 'nationality',
-            'passenger_type', 'linked_adult'
+            'passenger_type', 'linked_adult', 'ph_discount_type'
         ]
     
     def get_full_name(self, obj):
@@ -468,6 +468,17 @@ class CreatePassengerSerializer(serializers.Serializer):
         default=""
     )
     
+    ph_discount_type = serializers.CharField(
+        max_length=10,
+        required=False,
+        default="none"
+    )
+    phDiscountType = serializers.CharField(
+        max_length=10,
+        required=False,
+        default="none"
+    )
+    
     def to_internal_value(self, data):
         """Convert camelCase to snake_case and handle both formats"""
         # First, normalize the data
@@ -485,6 +496,8 @@ class CreatePassengerSerializer(serializers.Serializer):
             'date_of_birth': 'date_of_birth',
             'passportNumber': 'passport_number',
             'passport_number': 'passport_number',
+            'phDiscountType': 'ph_discount_type',
+            'ph_discount_type': 'ph_discount_type',
         }
         
         for key, value in data.items():
