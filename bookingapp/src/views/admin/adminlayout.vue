@@ -52,7 +52,7 @@
         <div class="px-4 py-2 mt-4" v-if="!collapsed">
           <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Flights</p>
         </div>
-        <SidebarGroup title="Flight Profiles" icon="ph-airplane">
+        <SidebarGroup title="Manage Flight" icon="ph-airplane">
           <SidebarSubLink label="Schedules" to="/admin/manage-flight/schedules" />
           <SidebarSubLink label="Profiles" to="/admin/manage-flight/flights" /> 
           <SidebarSubLink label="Routes" to="/admin/manage-flight/routes" />
