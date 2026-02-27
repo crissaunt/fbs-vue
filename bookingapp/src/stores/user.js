@@ -8,6 +8,7 @@ export const useUserStore = defineStore('user', {
         token: localStorage.getItem('token') || localStorage.getItem('auth_token') || null,
         studentProfile: null,
         instructorProfile: null,
+        isEnrolled: localStorage.getItem('isEnrolled') !== 'false',  // Track enrollment status
         isLoading: false,
         error: null,
     }),
@@ -15,13 +16,21 @@ export const useUserStore = defineStore('user', {
     persist: {
         key: 'user-store',
         storage: localStorage,
-        paths: ['user', 'role', 'token', 'studentProfile', 'instructorProfile'],
+        paths: ['user', 'role', 'token', 'studentProfile', 'instructorProfile', 'isEnrolled'],
     },
 
     getters: {
         isAuthenticated: (state) => !!state.token,
         isStudent: (state) => state.role === 'student' || (state.user?.role === 'student'),
         isInstructor: (state) => state.role === 'instructor' || (state.user?.role === 'instructor'),
+        canAccessBooking: (state) => {
+            // Only students with enrollment can access booking
+            if (state.role === 'student') {
+                return state.isEnrolled;
+            }
+            // Instructors and others can access
+            return true;
+        },
         userFullName: (state) => {
             if (!state.user) return '';
             return `${state.user.first_name || ''} ${state.user.last_name || ''}`.trim();
@@ -37,6 +46,7 @@ export const useUserStore = defineStore('user', {
             this.token = authData.token;
             this.user = authData.user;
             this.role = authData.role;
+            this.isEnrolled = true;  // Reset enrollment on login - will be verified on dashboard
             this.error = null;
 
             // Keep localStorage in sync for now for any legacy code
@@ -45,6 +55,7 @@ export const useUserStore = defineStore('user', {
             localStorage.setItem('user', JSON.stringify(authData.user));
             localStorage.setItem('user_data', JSON.stringify(authData.user));
             localStorage.setItem('role', authData.role);
+            localStorage.setItem('isEnrolled', 'true');
         },
 
         async fetchUserProfile() {
@@ -82,7 +93,15 @@ export const useUserStore = defineStore('user', {
             localStorage.setItem('student_data', JSON.stringify(profile));
         },
 
+        setEnrolled(status) {
+            this.isEnrolled = status;
+            localStorage.setItem('isEnrolled', status ? 'true' : 'false');
+        },
+
         logout() {
+            // Call backend to logout
+            authService.logout();
+            
             this.user = null;
             this.role = null;
             this.token = null;

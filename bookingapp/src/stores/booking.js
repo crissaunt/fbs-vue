@@ -50,6 +50,8 @@ export const useBookingStore = defineStore('booking', {
     isPractice: false,            // Whether this is a practice booking
     hasActivityCodeValidation: false, // Whether student has completed activity code step
 
+    nonStopOnly: false,
+    stopPreference: 'all', // 'all', 'nonstop', 'direct', 'connecting'
     sessionExpiry: null,
     isFreshSession: true,
   }),
@@ -165,8 +167,26 @@ export const useBookingStore = defineStore('booking', {
 
     grandTotalForAdults(state) {
       const base = this.combinedBasePrice;
-      const count = state.passengerCount.adults || 0;
-      return base * count;
+      let total = 0;
+
+      const adults = state.passengers.filter(p => p.type === 'Adult');
+
+      // If passengers list is empty, fallback to simple multiplication
+      if (adults.length === 0) {
+        const count = state.passengerCount.adults || 0;
+        return base * count;
+      }
+
+      adults.forEach(adult => {
+        // Apply 20% discount for Senior Citizens and PWDs on base fare
+        if (adult.phDiscountType === 'senior' || adult.phDiscountType === 'pwd') {
+          total += base * 0.8;
+        } else {
+          total += base;
+        }
+      });
+
+      return total;
     },
 
     grandTotalForChildren(state) {
@@ -181,14 +201,41 @@ export const useBookingStore = defineStore('booking', {
       return (base * 0.5) * count;
     },
 
-    // Total Base Fare for all passengers
+    // Total Base Fare for all passengers EXACTLY AS DISPLAYED IN SUBTOTAL (WITH DISCOUNTS)
     combinedBasePriceTotal(state) {
-      const adultsCount = state.passengerCount.adults || 0;
-      const childrenCount = state.passengerCount.children || 0;
-      const infantsCount = state.passengerCount.infants || 0;
-      const base = this.combinedBasePrice;
+      return this.grandTotalForAdults + this.grandTotalForChildren + this.grandTotalForInfants;
+    },
 
-      return (base * (adultsCount + childrenCount)) + ((base * 0.5) * infantsCount);
+    // Standard 12% tax applied ONLY to taxable Base Fare 
+    // Senior/PWD base fares are VAT EXEMPT in the Philippines
+    totalTaxes(state) {
+      const base = this.combinedBasePrice;
+      let taxableBaseTotal = 0;
+
+      // Adults testing for VAT exemption
+      const adults = state.passengers.filter(p => p.type === 'Adult');
+      if (adults.length === 0) {
+        // Fallback: all adults are taxable
+        taxableBaseTotal += base * (state.passengerCount.adults || 0);
+      } else {
+        adults.forEach(adult => {
+          if (adult.phDiscountType !== 'senior' && adult.phDiscountType !== 'pwd') {
+            taxableBaseTotal += base; // Regular adult is taxable
+          }
+          // Senior and PWD are VAT exempt (do not add their discounted base to taxable total)
+        });
+      }
+
+      // Children and infants are generally taxable
+      taxableBaseTotal += base * (state.passengerCount.children || 0);
+      taxableBaseTotal += (base * 0.5) * (state.passengerCount.infants || 0);
+
+      const baseVat = taxableBaseTotal * 0.12;
+
+      // Addons are also taxable (12% VAT)
+      const addonsVat = this.totalAddonsPrice * 0.12;
+
+      return baseVat + addonsVat;
     },
 
     // Total for all selected add-ons (Active segments only)
@@ -196,14 +243,11 @@ export const useBookingStore = defineStore('booking', {
       return this.totalBaggagePrice + this.totalMealsPrice + this.totalSeatsPrice + this.totalAssistancePrice;
     },
 
-    // Standard 12% tax applied ONLY to the Base Fare (matches backend)
-    totalTaxes(state) {
-      return this.combinedBasePriceTotal * 0.12;
-    },
-
-    // Insurance price (covers all passengers once)
+    // Insurance price (per passenger: Adult + Child)
     insurancePrice(state) {
-      return parseFloat(state.addons?.insurance?.price) || 0;
+      const perPerson = parseFloat(state.addons?.insurance?.price) || 0;
+      const count = (state.passengerCount.adults || 0) + (state.passengerCount.children || 0);
+      return perPerson * count;
     },
 
     // Assistance price (active segments only)
@@ -453,9 +497,9 @@ export const useBookingStore = defineStore('booking', {
     },
 
     setPassengerCount(counts) {
-      this.passengerCount.adults = counts.adult;
-      this.passengerCount.children = counts.children;
-      this.passengerCount.infants = counts.infant;
+      this.passengerCount.adults = counts.adult !== undefined ? counts.adult : (counts.adults || 1);
+      this.passengerCount.children = counts.children !== undefined ? counts.children : 0;
+      this.passengerCount.infants = counts.infant !== undefined ? counts.infant : (counts.infants || 0);
     },
 
     // Activity Code & Practice Mode Actions
@@ -514,6 +558,12 @@ export const useBookingStore = defineStore('booking', {
         this.selectedOutbound = null;
         this.selectedReturn = null;
       }
+    },
+
+    setStopPreference(pref) {
+      console.log('🛑 Setting stop preference in Pinia:', pref);
+      this.stopPreference = pref;
+      this.nonStopOnly = (pref === 'nonstop');
     },
 
     setMultiCitySegments(segments) {

@@ -72,7 +72,7 @@ export const getFriendlyErrorMessage = (error) => {
             return flattened || data.error || data.message || 'Invalid request. Please check your input.';
 
         case 401:
-            return 'Your session has expired. For your security, please log in again.';
+            return 'Successfully logout';
 
         case 403:
             return 'Access denied. You do not have permission for this action.';

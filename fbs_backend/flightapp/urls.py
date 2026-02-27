@@ -21,6 +21,7 @@ urlpatterns = [
     # Dynamic pricing endpoints
     path('api/test-dynamic-pricing/', views.test_dynamic_pricing, name='test-dynamic-pricing'),
     path('api/predict-price/', views.predict_flight_price, name='predict-price'),
+    path('api/price-trend-report/', views.price_trend_report, name='price-trend-report'),
 
     # Payment endpoints
     path('create-payment-intent/', views.create_payment_intent, name='create_payment_intent'),

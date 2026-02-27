@@ -13,6 +13,14 @@
                      flight.is_domestic ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700']">
             {{ flight.is_domestic ? 'Domestic' : 'International' }}
           </div>
+          <div v-if="(flight.total_stops || 0) === 0" 
+            class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+            Non-stop
+          </div>
+          <div v-else 
+            class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+            {{ flight.total_stops }} {{ flight.total_stops === 1 ? 'Stop' : 'Stops' }}
+          </div>
         </div>
         
         <div class="text-center">
@@ -20,10 +28,49 @@
           <div class="text-bold font-bold text-gray-500">{{ formatDay(flight.departure_time) }}</div>
         </div>
         
-        <div class="text-right">
+        <div class="text-right flex flex-col items-end">
           <div class="text-2xl font-bold" :class="flight.ml_predicted ? 'text-pink-600' : 'text-pink-500'">
             ₱{{ Number(flight.price).toLocaleString() }}
           </div>
+          <button 
+            v-if="flight.ml_predicted" 
+            @click="$emit('view-pricing', flight)"
+            class="text-[10px] text-pink-400 hover:text-pink-600 font-medium flex items-center gap-1 mt-1 uppercase tracking-wider transition-colors"
+          >
+            Price Insights
+            <svg class="w-3 h-3" :class="{'rotate-180': showPricingDetails && selectedPriceId === flight.price_id}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Price Insights Breakdown Overlay -->
+      <div v-if="showPricingDetails && selectedPriceId === flight.price_id" 
+           class="mb-6 p-4 bg-pink-50/50 rounded-sm border border-pink-100 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div class="flex justify-between items-center mb-3">
+          <h4 class="text-xs font-bold text-pink-600 uppercase tracking-widest">Price Breakdown</h4>
+          <span class="text-[10px] text-gray-400">ML ID: {{ flight.price_id }}</span>
+        </div>
+        
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="space-y-1">
+            <div class="text-[10px] text-gray-500 uppercase">Base Prediction</div>
+            <div class="text-sm font-bold text-gray-700">₱{{ Number(flight.ml_base_price).toLocaleString() }}</div>
+          </div>
+          
+          <div v-for="(factor, key) in flight.ml_factors" :key="key" class="space-y-1">
+            <div class="text-[10px] text-gray-500 uppercase">{{ getFactorLabel(key) }}</div>
+            <div class="text-sm font-bold" :class="factor > 1 ? 'text-orange-500' : (factor < 1 ? 'text-green-600' : 'text-gray-600')">
+              {{ factor > 1 ? '+' : '' }}{{ ((factor - 1) * 100).toFixed(0) }}%
+              <span class="text-[10px] font-normal text-gray-400 ml-1">(x{{ factor.toFixed(2) }})</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-3 pt-3 border-t border-pink-100 flex items-center gap-2">
+          <div class="w-2 h-2 rounded-full bg-pink-400 animate-pulse"></div>
+          <p class="text-[10px] text-pink-500 italic">This price includes real-time surge protection and local holiday adjustments.</p>
         </div>
       </div>
       
@@ -106,10 +153,13 @@ const props = defineProps({
   selectionPhase: String,
   selectedOutbound: Object,
   selectedReturn: Object,
-  selectButtonText: String
+  selectButtonText: String,
+  mlPricingEnabled: Boolean,
+  showPricingDetails: Boolean,
+  selectedPriceId: String
 });
 
-defineEmits(['select-flight']);
+defineEmits(['select-flight', 'view-pricing']);
 
 const isSelected = computed(() => {
   if (props.isRoundTrip) {
@@ -164,5 +214,17 @@ const formatSeatClasses = (seatClasses) => {
     if (sc && typeof sc === 'object') return sc.name || sc.class_name || sc.value || 'Unknown';
     return 'Unknown';
   }).join(', ');
+};
+const getFactorLabel = (key) => {
+  const labels = {
+    'user_factor': 'Loyalty',
+    'session_factor': 'Session',
+    'demand_factor': 'Urgency',
+    'time_factor': 'Peak Time',
+    'inventory_factor': 'Occupancy',
+    'randomization': 'Disturbance',
+    'festival_factor': 'Fiesta'
+  };
+  return labels[key] || key.replace('_', ' ');
 };
 </script>

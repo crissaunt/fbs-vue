@@ -3,7 +3,9 @@
     "Cebu Pacific": "Airline_Cebu Pacific",
     "Philippine Airlines": "Airline_Philippine Airlines",
     "Cebu Pacific Air": "Airline_Cebu Pacific",
-    "PAL Express": "Airline_Philippine Airlines"
+    "PAL Express": "Airline_Philippine Airlines",
+    "AirAsia Philippines": "Airline_AirAsia Philippines",
+    "AirAsia": "Airline_AirAsia Philippines"
   },
   "source_codes": {
     "MNL": "Source_Manila (MNL)",
@@ -29,7 +31,9 @@
     "ZAM": "Source_Zamboanga (ZAM)",
     "Zamboanga (ZAM)": "Source_Zamboanga (ZAM)",
     "GES": "Source_General Santos (GES)",
-    "General Santos (GES)": "Source_General Santos (GES)"
+    "General Santos (GES)": "Source_General Santos (GES)",
+    "BCD": "Source_Bacolod (BCD)",
+    "Bacolod (BCD)": "Source_Bacolod (BCD)"
   },
   "destination_codes": {
     "MNL": "Destination_Manila (MNL)",
@@ -57,7 +61,9 @@
     "ZAM": "Destination_Zamboanga (ZAM)",
     "Zamboanga (ZAM)": "Destination_Zamboanga (ZAM)",
     "GES": "Destination_General Santos (GES)",
-    "General Santos (GES)": "Destination_General Santos (GES)"
+    "General Santos (GES)": "Destination_General Santos (GES)",
+    "BCD": "Destination_Bacolod (BCD)",
+    "Bacolod (BCD)": "Destination_Bacolod (BCD)"
   },
   "feature_columns": [
     "Total_Stops",
@@ -69,8 +75,10 @@
     "Arrival_min",
     "Duration_hours",
     "Duration_mins",
+    "Airline_AirAsia Philippines",
     "Airline_Cebu Pacific",
     "Airline_Philippine Airlines",
+    "Source_Bacolod (BCD)",
     "Source_Cagayan de Oro (CGY)",
     "Source_Caticlan (MPH)",
     "Source_Cebu (CEB)",
@@ -83,6 +91,7 @@
     "Source_Puerto Princesa (PPS)",
     "Source_Tacloban (TAC)",
     "Source_Zamboanga (ZAM)",
+    "Destination_Bacolod (BCD)",
     "Destination_Cagayan de Oro (CGY)",
     "Destination_Caticlan (MPH)",
     "Destination_Cebu (CEB)",

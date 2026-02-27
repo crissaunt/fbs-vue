@@ -92,6 +92,34 @@
         </div>
       </div>
 
+      <!-- PH SPECIFIC: Senior / PWD -->
+      <div v-if="type === 'Adult'" class="ph-discount-section">
+        <label class="section-label mt-3">Special Passenger Discounts (Philippines Only)</label>
+        <div class="form-row">
+          <label class="discount-radio">
+            <input type="radio" v-model="form.phDiscountType" value="none" @change="emitData">
+            Regular Passenger (No Discount)
+          </label>
+          <label class="discount-radio" :class="{ 'disabled-radio': isSeniorDisabled }">
+            <input type="radio" v-model="form.phDiscountType" value="senior" :disabled="isSeniorDisabled" @change="emitData">
+            Senior Citizen 
+            <span v-if="isSeniorDisabled" class="small-warning text-xs ml-1">(Must be 60+ years old)</span>
+          </label>
+          <label class="discount-radio">
+            <input type="radio" v-model="form.phDiscountType" value="pwd" @change="emitData">
+            Person with Disability (PWD)
+          </label>
+        </div>
+        
+        <div v-if="form.phDiscountType !== 'none'" class="form-row mt-2">
+          <div class="field col-2">
+            <label>{{ form.phDiscountType === 'senior' ? 'Senior Citizen ID Number' : 'PWD ID Number' }} <span class="required">*</span></label>
+            <input v-model="form.phDiscountId" type="text" placeholder="ID Number" @input="debounceEmit" :class="{ 'error-border': showErrors && !form.phDiscountId }" required>
+            <span v-if="showErrors && !form.phDiscountId" class="small-error">ID Number is required to claim discount</span>
+          </div>
+        </div>
+      </div>
+
       <!-- INFANT ONLY: Adult Seat Assignment -->
       <div v-if="type === 'Infant'" class="infant-section">
         <label class="section-label">Select Adult to sit with <span class="required">*</span></label>
@@ -161,6 +189,8 @@ const form = reactive({
     dobYear: '',
     nationality: 'Philippines',
     passport: '',
+    phDiscountType: 'none',
+    phDiscountId: '',
     associatedAdult: null
 });
 
@@ -250,7 +280,24 @@ const isFormValid = computed(() => {
   
   if (props.type === 'Infant' && !form.associatedAdult) return false;
   
+  // Validate PH Discount ID if claimed
+  if (props.type === 'Adult' && form.phDiscountType !== 'none' && !form.phDiscountId.trim()) return false;
+  
   return basicValid;
+});
+
+// Computed properties for discounts
+const isSeniorDisabled = computed(() => {
+  return !calculatedAge.value || calculatedAge.value < 60;
+});
+
+// Watch age changes to reset senior choice if they drop below 60
+watch(calculatedAge, (newAge) => {
+  if (form.phDiscountType === 'senior' && (!newAge || newAge < 60)) {
+    form.phDiscountType = 'none';
+    form.phDiscountId = '';
+    emitData();
+  }
 });
 
 // Get saved passenger data for this index
@@ -290,6 +337,8 @@ const loadSavedData = () => {
     form.lastName = savedPassenger.value.lastName || '';
     form.nationality = savedPassenger.value.nationality || 'Philippines';
     form.passport = savedPassenger.value.passportNumber || '';
+    form.phDiscountType = savedPassenger.value.phDiscountType || 'none';
+    form.phDiscountId = savedPassenger.value.phDiscountId || '';
     
     // Parse date of birth - FIXED: Check for dateOfBirth field
     if (savedPassenger.value.dateOfBirth) {
@@ -341,6 +390,8 @@ const resetForm = () => {
   form.dobYear = '';
   form.nationality = 'Philippines';
   form.passport = '';
+  form.phDiscountType = 'none';
+  form.phDiscountId = '';
   form.associatedAdult = null;
   
   emitData();
@@ -356,14 +407,22 @@ watch(() => props.index, () => {
 });
 
 watch(() => props.adultPassengers, (newAdults) => {
-  if (props.type === 'Infant' && form.associatedAdult) {
-    const currentAdult = newAdults.find(a => a.number === form.associatedAdult);
-    if (!currentAdult || currentAdult.alreadyHasInfant) {
-      form.associatedAdult = null;
+  if (props.type === 'Infant') {
+    // If we have an associated adult, check if they are still valid
+    if (form.associatedAdult) {
+      const currentAdult = newAdults.find(a => a.number === form.associatedAdult);
+      if (!currentAdult || currentAdult.alreadyHasInfant) {
+        form.associatedAdult = null;
+        emitData();
+      }
+    } 
+    // Auto-assign if there's exactly 1 available adult and we have none assigned
+    else if (!form.associatedAdult && newAdults.length === 1 && !newAdults[0].alreadyHasInfant) {
+      form.associatedAdult = newAdults[0].number;
       emitData();
     }
   }
-}, { deep: true });
+}, { deep: true, immediate: true });
 
 watch(() => bookingStore.isSessionValid, (isValid) => {
   if (!isValid) {
@@ -371,6 +430,11 @@ watch(() => bookingStore.isSessionValid, (isValid) => {
     resetForm();
   }
 });
+
+// FIXED: Always emit validation when isFormValid changes
+watch(isFormValid, (newValid) => {
+  emit('validation', { index: props.index, isValid: newValid });
+}, { immediate: true });
 
 // Debounce timer
 let debounceTimer = null;
@@ -426,6 +490,8 @@ const emitData = () => {
     dateOfBirth: dateOfBirth,
     nationality: form.nationality,
     passportNumber: form.passport.trim(),
+    phDiscountType: form.phDiscountType,
+    phDiscountId: form.phDiscountId.trim(),
     type: props.type,
     key: `pax_${props.index}`,
     isValid: isFormValid.value,
@@ -698,4 +764,43 @@ input:invalid, select:invalid {
 .error-message:last-child {
   margin-bottom: 0;
 }
+
+/* PH Specific Styling */
+.ph-discount-section {
+  padding: 15px;
+  background: #fdfaf6;
+  border-radius: 5px;
+  border: 1px solid #f2e2ce;
+  margin-top: 10px;
+}
+
+.discount-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: normal;
+  color: #333;
+  margin-right: 15px;
+  cursor: pointer;
+  text-transform: none;
+}
+
+.disabled-radio {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.small-warning {
+  color: #ef4444;
+}
+
+.text-xs {
+  font-size: 0.75rem;
+}
+
+.ml-1 {
+  margin-left: 0.25rem;
+}
+
 </style>

@@ -1,7 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useBookingStore } from '@/stores/booking';
 import { useNotificationStore } from '@/stores/notification';
+import { useUserStore } from '@/stores/user';
 import AuthStorage from '@/utils/authStorage';
+
+// 1. Import your new admin routes file
+import adminRoutes from './admin';
 
 // Booking Views
 import HomeView from '@/views/booking/HomeView.vue';
@@ -28,6 +32,9 @@ import StudentDashboard from '@/views/Student/Student_dashboard.vue';
 import StudentActivityDetails from '@/views/Student/Activities/Student_activity_details.vue'
 
 const routes = [
+  // 3. Use the Spread Operator (...) to include all admin routes
+  ...adminRoutes,
+
   {
     path: '/login',
     name: 'instructor_login',
@@ -251,6 +258,14 @@ router.beforeEach((to, from, next) => {
     if (to.meta.isBookingProtected && userRole === 'instructor') {
       console.warn('⛔ Instructor attempted to access booking flow:', to.path);
       return next('/instructor/dashboard');
+    }
+
+    // Additional Check: Non-enrolled students cannot access booking flow
+    const userStore = useUserStore();
+    if (to.meta.isBookingProtected && userRole === 'student' && !userStore.isEnrolled) {
+      console.warn('⛔ Non-enrolled student attempted to access booking flow:', to.path);
+      notificationStore.error('You are not enrolled in any section. Please contact your administrator.');
+      return next('/student/dashboard');
     }
   }
 

@@ -11,9 +11,9 @@ export const authService = {
     async login(username, password) {
         try {
             // 1. Get Token and User Data from Custom Login Endpoint
-            const loginResponse = await api.post('api/auth/login/', { username, password });
-            const data = loginResponse.data;
-            const token = data.token; // Custom login returns session token in 'token'
+            const response = await api.post('api/auth/login/', { username, password });
+            const data = response.data;
+            const token = data.token;
             const session_id = data.session_id;
 
             if (!token) {
@@ -24,7 +24,22 @@ export const authService = {
             const role = data.role;
             const dashboard_route = data.dashboard_route || '/';
 
-            // 2. Clear old state and Initialize New Session using AuthStorage
+            if (role === 'student') {
+                try {
+                    const enrollResponse = await api.get('api/student/dashboard/data/', {
+                        headers: { Authorization: `Token ${token}` },
+                        skipGlobalToast: true
+                    });
+                } catch (enrollError) {
+                    if (enrollError.response?.status === 403 && enrollError.response?.data?.not_enrolled) {
+                        throw new Error('NOT_ENROLLED');
+                    }
+                    if (enrollError.response?.status === 403) {
+                        throw new Error('NOT_ENROLLED');
+                    }
+                }
+            }
+
             AuthStorage.clearCurrentSession();
             AuthStorage.initializeSession({
                 token,
@@ -42,7 +57,7 @@ export const authService = {
 
             return { token, user, role, dashboard_route };
         } catch (error) {
-            console.error('Login failed:', error);
+            // Return error for handling in UI
             throw error;
         }
     },
@@ -65,10 +80,15 @@ export const authService = {
     },
 
     /**
-     * Logout user and clear local storage
+     * Logout user
      */
-    logout() {
+    async logout() {
+        try {
+            // Call backend to deactivate session
+            await api.post('api/auth/logout/');
+        } catch (e) {
+            // Ignore errors - proceed with local logout
+        }
         localStorage.clear();
-        // Redirect logic should stay in components or a dedicated router guard
     }
 };

@@ -29,59 +29,120 @@
                   <input type="radio" v-model="editSearchForm.tripType" value="round-trip" class="h-4 w-4 text-pink-500 focus:ring-pink-500 border-gray-300">
                   <span class="ml-2 text-gray-700">Round Trip</span>
                 </label>
+                <label class="flex items-center">
+                  <input type="radio" v-model="editSearchForm.tripType" value="multi-city" class="h-4 w-4 text-pink-500 focus:ring-pink-500 border-gray-300">
+                  <span class="ml-2 text-gray-700">Multi-City</span>
+                </label>
               </div>
             </div>
             
-            <!-- Route -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="relative">
-                <label class="block text-sm font-medium text-gray-700 mb-2">From</label>
-                <input v-model="fromSearchInput" type="text" 
-                  @input="searchEditAirports(fromSearchInput, 'from')"
-                  @focus="fromSearchInput = ''; fromResults = []"
-                  placeholder="e.g. MNL"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent">
-                
-                <ul v-if="fromResults.length" class="absolute left-0 top-full z-[60] max-h-48 w-full overflow-y-auto border border-gray-200 bg-white shadow-xl rounded-b-sm">
-                  <li v-for="a in fromResults" :key="a.code" @click="selectEditAirport(a, 'from')" class="cursor-pointer border-b border-gray-50 p-3 hover:bg-pink-50">
-                    <div class="flex items-center gap-2">
-                      <span class="font-bold text-pink-600">{{ a.code }}</span>
-                      <span class="text-xs text-gray-600">- {{ a.city }}</span>
-                    </div>
-                  </li>
-                </ul>
+            <!-- Standard Route & Dates -->
+            <div v-if="editSearchForm.tripType !== 'multi-city'" class="space-y-6">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="relative">
+                  <label class="block text-sm font-medium text-gray-700 mb-2">From</label>
+                  <input v-model="fromSearchInput" type="text" 
+                    @input="searchEditAirports(fromSearchInput, 'from')"
+                    @focus="fromSearchInput = ''; fromResults = []"
+                    placeholder="e.g. MNL"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                  
+                  <ul v-if="fromResults.length" class="absolute left-0 top-full z-[60] max-h-48 w-full overflow-y-auto border border-gray-200 bg-white shadow-xl rounded-b-sm">
+                    <li v-for="a in fromResults" :key="a.code" @click="selectEditAirport(a, 'from')" class="cursor-pointer border-b border-gray-50 p-3 hover:bg-pink-50">
+                      <div class="flex items-center gap-2">
+                        <span class="font-bold text-pink-600">{{ a.code }}</span>
+                        <span class="text-xs text-gray-600">- {{ a.city }}</span>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                <div class="relative">
+                  <label class="block text-sm font-medium text-gray-700 mb-2">To</label>
+                  <input v-model="toSearchInput" type="text" 
+                    @input="searchEditAirports(toSearchInput, 'to')"
+                    @focus="toSearchInput = ''; toResults = []"
+                    placeholder="e.g. CEB"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                  
+                  <ul v-if="toResults.length" class="absolute left-0 top-full z-[60] max-h-48 w-full overflow-y-auto border border-gray-200 bg-white shadow-xl rounded-b-sm">
+                    <li v-for="a in toResults" :key="a.code" @click="selectEditAirport(a, 'to')" class="cursor-pointer border-b border-gray-50 p-3 hover:bg-pink-50">
+                      <div class="flex items-center gap-2">
+                        <span class="font-bold text-pink-600">{{ a.code }}</span>
+                        <span class="text-xs text-gray-600">- {{ a.city }}</span>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
               </div>
-              <div class="relative">
-                <label class="block text-sm font-medium text-gray-700 mb-2">To</label>
-                <input v-model="toSearchInput" type="text" 
-                  @input="searchEditAirports(toSearchInput, 'to')"
-                  @focus="toSearchInput = ''; toResults = []"
-                  placeholder="e.g. CEB"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent">
-                
-                <ul v-if="toResults.length" class="absolute left-0 top-full z-[60] max-h-48 w-full overflow-y-auto border border-gray-200 bg-white shadow-xl rounded-b-sm">
-                  <li v-for="a in toResults" :key="a.code" @click="selectEditAirport(a, 'to')" class="cursor-pointer border-b border-gray-50 p-3 hover:bg-pink-50">
-                    <div class="flex items-center gap-2">
-                      <span class="font-bold text-pink-600">{{ a.code }}</span>
-                      <span class="text-xs text-gray-600">- {{ a.city }}</span>
-                    </div>
-                  </li>
-                </ul>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Departure Date</label>
+                  <input v-model="editSearchForm.departure" type="date" :min="todayDateString"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                </div>
+                <div v-if="editSearchForm.tripType === 'round-trip'">
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Return Date</label>
+                  <input v-model="editSearchForm.returnDate" type="date" :min="editSearchForm.departure || todayDateString"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                </div>
               </div>
             </div>
-            
-            <!-- Dates -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Departure Date</label>
-                <input v-model="editSearchForm.departure" type="date" :min="todayDateString"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+
+            <!-- Multi-City Legs -->
+            <div v-else class="space-y-4">
+              <div v-for="(leg, index) in editSearchForm.legs" :key="index" class="p-4 border border-gray-100 rounded-sm space-y-4 relative bg-gray-50/50">
+                <button v-if="editSearchForm.legs.length > 2" @click="removeEditLeg(index)" 
+                  class="absolute top-2 right-2 text-gray-400 hover:text-red-500">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                <div class="text-xs font-bold text-gray-400 uppercase">Flight {{ index + 1 }}</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="relative">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">From</label>
+                    <input v-model="leg.fromSearch" type="text" 
+                      @input="searchEditAirports(leg.fromSearch, 'from', index)"
+                      @focus="leg.fromSearch = ''; leg.fromResults = []"
+                      placeholder="Origin"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:ring-2 focus:ring-pink-500">
+                    <ul v-if="leg.fromResults.length" class="absolute left-0 top-full z-[70] max-h-32 w-full overflow-y-auto border border-gray-200 bg-white shadow-xl rounded-b-sm">
+                      <li v-for="a in leg.fromResults" :key="a.code" @click="selectEditAirport(a, 'from', index)" class="cursor-pointer border-b border-gray-50 p-2 hover:bg-pink-50">
+                        <div class="flex items-center gap-2">
+                          <span class="font-bold text-pink-600 text-xs">{{ a.code }}</span>
+                          <span class="text-[10px] text-gray-600">- {{ a.city }}</span>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="relative">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">To</label>
+                    <input v-model="leg.toSearch" type="text" 
+                      @input="searchEditAirports(leg.toSearch, 'to', index)"
+                      @focus="leg.toSearch = ''; leg.toResults = []"
+                      placeholder="Destination"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:ring-2 focus:ring-pink-500">
+                    <ul v-if="leg.toResults.length" class="absolute left-0 top-full z-[70] max-h-32 w-full overflow-y-auto border border-gray-200 bg-white shadow-xl rounded-b-sm">
+                      <li v-for="a in leg.toResults" :key="a.code" @click="selectEditAirport(a, 'to', index)" class="cursor-pointer border-b border-gray-50 p-2 hover:bg-pink-50">
+                        <div class="flex items-center gap-2">
+                          <span class="font-bold text-pink-600 text-xs">{{ a.code }}</span>
+                          <span class="text-[10px] text-gray-600">- {{ a.city }}</span>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Date</label>
+                  <input v-model="leg.date" type="date" :min="index === 0 ? todayDateString : editSearchForm.legs[index-1].date"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:ring-2 focus:ring-pink-500">
+                </div>
               </div>
-              <div v-if="editSearchForm.tripType === 'round-trip'">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Return Date</label>
-                <input v-model="editSearchForm.returnDate" type="date" :min="editSearchForm.departure || todayDateString"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent">
-              </div>
+              <button @click="addEditLeg" v-if="editSearchForm.legs.length < 6"
+                class="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-sm hover:border-pink-300 hover:text-pink-500 transition-colors text-sm font-medium">
+                + Add Another Flight
+              </button>
             </div>
             
             <!-- Passengers -->
@@ -781,7 +842,8 @@ const editSearchForm = ref({
   adults: 1,
   children: 0,
   infants: 0,
-  tripType: 'one-way'
+  tripType: 'one-way',
+  legs: [] // For multi-city
 });
 
 // Airport Autocomplete State for Edit Search
@@ -791,6 +853,28 @@ const fromSearchInput = ref('');
 const toSearchInput = ref('');
 const selectedFromAirport = ref(null);
 const selectedToAirport = ref(null);
+
+// Methods for Multi-City legs
+const addEditLeg = () => {
+  if (editSearchForm.value.legs.length < 6) {
+    const lastLeg = editSearchForm.value.legs[editSearchForm.value.legs.length - 1];
+    editSearchForm.value.legs.push({
+      fromSearch: lastLeg?.selectedTo ? `${lastLeg.selectedTo.code} - ${lastLeg.selectedTo.city}` : '',
+      toSearch: '',
+      selectedFrom: lastLeg?.selectedTo || null,
+      selectedTo: null,
+      date: lastLeg?.date || todayDateString.value,
+      fromResults: [],
+      toResults: []
+    });
+  }
+};
+
+const removeEditLeg = (index) => {
+  if (editSearchForm.value.legs.length > 2) {
+    editSearchForm.value.legs.splice(index, 1);
+  }
+};
 
 // Multi-step selection
 const selectionPhase = ref('outbound');
@@ -834,6 +918,7 @@ const filters = ref({
   sortBy: 'departure_time',
   hasAvailableSeats: false,
   seatClass: 'all',
+  stops: 'all',
 });
 
 // Date filter state
@@ -969,7 +1054,8 @@ const parseDuration = (durationStr) => {
 };
 
 // Toggle pricing details for a specific flight
-const togglePricingDetails = (flightId) => {
+const togglePricingDetails = (flight) => {
+  const flightId = flight.price_id || flight.id;
   if (selectedPriceId.value === flightId) {
     selectedPriceId.value = null;
     showPricingDetails.value = false;
@@ -1081,8 +1167,33 @@ const initializeEditSearch = () => {
     adults: parseInt(route.query.adults) || 1,
     children: parseInt(route.query.children) || 0,
     infants: parseInt(route.query.infants) || 0,
-    tripType: (route.query.tripType === 'round_trip' || route.query.tripType === 'round-trip') ? 'round-trip' : 'one-way'
+    tripType: (route.query.tripType === 'round_trip' || route.query.tripType === 'round-trip') ? 'round-trip' : 
+              (route.query.tripType === 'multi-city' ? 'multi-city' : 'one-way'),
+    legs: []
   };
+
+  if (editSearchForm.value.tripType === 'multi-city' && route.query.segments) {
+    try {
+      const segments = JSON.parse(route.query.segments);
+      editSearchForm.value.legs = segments.map(s => ({
+        fromSearch: `${s.origin}`,
+        toSearch: `${s.destination}`,
+        selectedFrom: { code: s.origin },
+        selectedTo: { code: s.destination },
+        date: s.date,
+        fromResults: [],
+        toResults: []
+      }));
+    } catch (e) {
+      console.error('Failed to parse segments for edit:', e);
+    }
+  } else if (editSearchForm.value.tripType === 'multi-city') {
+    // Fallback if multi-city but no segments
+    editSearchForm.value.legs = [
+      { fromSearch: '', toSearch: '', selectedFrom: null, selectedTo: null, date: todayDateString.value, fromResults: [], toResults: [] },
+      { fromSearch: '', toSearch: '', selectedFrom: null, selectedTo: null, date: todayDateString.value, fromResults: [], toResults: [] }
+    ];
+  }
   
   // Set initial search strings for autocomplete
   fromSearchInput.value = route.query.origin || '';
@@ -1096,13 +1207,17 @@ const initializeEditSearch = () => {
 };
 
 // Search airports for autocomplete
-const searchEditAirports = async (query, target) => {
+const searchEditAirports = async (query, target, index = null) => {
   if (query.includes(' - ')) return;
 
   const searchQuery = query.toUpperCase().trim();
   if (searchQuery.length < 3) {
-    if (target === 'from') fromResults.value = [];
-    else toResults.value = [];
+    if (index !== null) {
+      editSearchForm.value.legs[index][target === 'from' ? 'fromResults' : 'toResults'] = [];
+    } else {
+      if (target === 'from') fromResults.value = [];
+      else toResults.value = [];
+    }
     return;
   }
 
@@ -1111,44 +1226,105 @@ const searchEditAirports = async (query, target) => {
     const airports = response.data.results || response.data;
     
     // Filter out opposite selected airport
-    const oppositeCode = target === 'from' ? selectedToAirport.value?.code : selectedFromAirport.value?.code;
+    let oppositeCode = null;
+    if (index !== null) {
+      const leg = editSearchForm.value.legs[index];
+      oppositeCode = target === 'from' ? leg.selectedTo?.code : leg.selectedFrom?.code;
+    } else {
+      oppositeCode = target === 'from' ? selectedToAirport.value?.code : selectedFromAirport.value?.code;
+    }
     const filtered = airports.filter(a => a.code !== oppositeCode);
 
-    if (target === 'from') fromResults.value = filtered;
-    else toResults.value = filtered;
+    if (index !== null) {
+      editSearchForm.value.legs[index][target === 'from' ? 'fromResults' : 'toResults'] = filtered;
+    } else {
+      if (target === 'from') fromResults.value = filtered;
+      else toResults.value = filtered;
+    }
   } catch (error) {
     console.error("Airport search error:", error);
   }
 };
 
 // Select airport from results
-const selectEditAirport = (airport, target) => {
+const selectEditAirport = (airport, target, index = null) => {
   const displayString = `${airport.code} - ${airport.city}`;
 
-  if (target === 'from') {
-    selectedFromAirport.value = airport;
-    fromSearchInput.value = displayString;
-    fromResults.value = [];
-    editSearchForm.value.origin = airport.code;
+  if (index !== null) {
+    const leg = editSearchForm.value.legs[index];
+    if (target === 'from') {
+      leg.selectedFrom = airport;
+      leg.fromSearch = displayString;
+      leg.fromResults = [];
+    } else {
+      leg.selectedTo = airport;
+      leg.toSearch = displayString;
+      leg.toResults = [];
+      
+      // Auto-fill next leg's 'from'
+      if (index < editSearchForm.value.legs.length - 1) {
+        const nextLeg = editSearchForm.value.legs[index + 1];
+        if (!nextLeg.selectedFrom) {
+          nextLeg.selectedFrom = airport;
+          nextLeg.fromSearch = displayString;
+        }
+      }
+    }
   } else {
-    selectedToAirport.value = airport;
-    toSearchInput.value = displayString;
-    toResults.value = [];
-    editSearchForm.value.destination = airport.code;
+    if (target === 'from') {
+      selectedFromAirport.value = airport;
+      fromSearchInput.value = displayString;
+      fromResults.value = [];
+      editSearchForm.value.origin = airport.code;
+    } else {
+      selectedToAirport.value = airport;
+      toSearchInput.value = displayString;
+      toResults.value = [];
+      editSearchForm.value.destination = airport.code;
+    }
   }
 };
 
 // Submit edited search
 const submitEditedSearch = () => {
+  const isMulti = editSearchForm.value.tripType === 'multi-city';
+  
   const searchParams = {
-    ...editSearchForm.value,
+    tripType: editSearchForm.value.tripType,
     adults: editSearchForm.value.adults.toString(),
     children: editSearchForm.value.children.toString(),
     infants: editSearchForm.value.infants.toString()
   };
+
+  if (isMulti) {
+    // Validate segments
+    for (let i = 0; i < editSearchForm.value.legs.length; i++) {
+      const leg = editSearchForm.value.legs[i];
+      if (!leg.selectedFrom || !leg.selectedTo) {
+        notificationStore.warn(`Please select both Origin and Destination for Flight ${i + 1}.`);
+        return;
+      }
+    }
+    
+    searchParams.segments = JSON.stringify(editSearchForm.value.legs.map(l => ({
+      origin: l.selectedFrom.code,
+      destination: l.selectedTo.code,
+      date: l.date
+    })));
+  } else {
+    searchParams.origin = editSearchForm.value.origin;
+    searchParams.destination = editSearchForm.value.destination;
+    searchParams.departure = editSearchForm.value.departure;
+    searchParams.returnDate = editSearchForm.value.returnDate;
+  }
   
   // Update store
   bookingStore.setTripType(editSearchForm.value.tripType);
+  bookingStore.setPassengerCount({
+    adults: parseInt(editSearchForm.value.adults) || 1,
+    children: parseInt(editSearchForm.value.children) || 0,
+    infants: parseInt(editSearchForm.value.infants) || 0
+  });
   
   // Navigate with new search params
   router.push({
@@ -1508,11 +1684,27 @@ onMounted(() => {
     bookingStore.setTripType(route.query.tripType);
   }
   
+  if (route.query.adults !== undefined) {
+    bookingStore.setPassengerCount({
+      adults: parseInt(route.query.adults) || 1,
+      children: parseInt(route.query.children) || 0,
+      infants: parseInt(route.query.infants) || 0
+    });
+  }
+  
   console.log('Trip Type from Store:', bookingStore.tripType);
   console.log('Trip Type from Route:', route.query.tripType);
   console.log('Is Round Trip:', isRoundTrip.value);
   console.log('Has Outbound Selected:', hasOutboundSelected.value);
   console.log('Has Return Selected:', hasReturnSelected.value);
+  
+  // Set stop preference if requested from home
+  if (bookingStore.stopPreference !== 'all') {
+    console.log('🛑 Stop preference active:', bookingStore.stopPreference);
+    filters.value.stops = bookingStore.stopPreference;
+  } else if (route.query.stops) {
+    filters.value.stops = route.query.stops;
+  }
   
   // AUTO-SWITCH TO RETURN PHASE IF OUTBOUND IS ALREADY SELECTED
   if (isRoundTrip.value && hasOutboundSelected.value && !hasReturnSelected.value) {
@@ -1761,6 +1953,15 @@ const applyFilters = () => {
     });
   }
   
+  // Stops filter
+  if (filters.value.stops !== 'all') {
+    if (filters.value.stops === 'nonstop' || filters.value.stops === 'direct') {
+      result = result.filter(f => (f.total_stops || 0) === 0);
+    } else if (filters.value.stops === 'connecting') {
+      result = result.filter(f => (f.total_stops || 0) > 0);
+    }
+  }
+  
   // Sort flights
   result.sort((a, b) => {
     switch (filters.value.sortBy) {
@@ -1790,6 +1991,7 @@ const resetFilters = () => {
     sortBy: 'departure_time',
     hasAvailableSeats: false,
     seatClass: 'all',
+    stops: 'all',
   };
   
   dateFilter.value = {

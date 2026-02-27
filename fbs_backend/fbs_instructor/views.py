@@ -104,17 +104,23 @@ def Login_view(request):
     # 3. Check Role using UserProfile
     try:
         profile = UserProfile.objects.get(user=user)
-        print(f"? Profile found: {profile.role}")
+        role = profile.role or ('admin' if (user.is_superuser or user.is_staff) else None)
+        if role is None:
+             role = 'student' # Default fallback
+        print(f"✅ Profile found: {role}")
     except UserProfile.DoesNotExist:
-        print(f"? No profile found for user")
-        return Response({"error": "Profile not found"}, status=status.HTTP_403_FORBIDDEN)
+        if user.is_superuser or user.is_staff:
+            role = 'admin'
+        else:
+            print(f"❌ No profile found for user: {user.username}")
+            return Response({"error": "Profile not found"}, status=status.HTTP_403_FORBIDDEN)
 
     # 4. Create a NEW session for this login (allows multiple simultaneous logins)
     try:
         session = UserSession.objects.create(
             user=user,
             session_token=UserSession.generate_token(),
-            role=profile.role,
+            role=role,
             ip_address=get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
             is_active=True
@@ -122,8 +128,9 @@ def Login_view(request):
         print(f"? New session created: {session.session_token[:16]}... (Role: {session.role})")
     except Exception as e:
         print(f"? Session creation failed: {str(e)}")
+        import traceback
         traceback.print_exc()
-        return Response({"error": "Failed to create session"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"error": f"Failed to create session: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     # 5. Determine Route based on role
     dashboard_route = '/'
@@ -1645,12 +1652,13 @@ def student_dashboard(request):
         print("? FATAL: Could not find Students record!")
         return Response({
             "error": "Student record not found. Please contact your administrator.",
+            "not_enrolled": True,
             "debug_info": {
                 "user_id": user.id,
                 "user_email": user.email,
                 "username": user.username
             }
-        }, status=status.HTTP_404_NOT_FOUND)
+        }, status=status.HTTP_403_FORBIDDEN)
     
     print(f"? Student record: {student.first_name} {student.last_name} (#{student.student_number})")
     
@@ -1661,6 +1669,8 @@ def student_dashboard(request):
     if not enrollment or not enrollment.section.is_active:
         print("?? Student not enrolled in any session or section is disabled")
         return Response({
+            'error': 'You are not enrolled in any section. Please contact your administrator.',
+            'not_enrolled': True,
             'user': {
                 'username': user.username,
                 'first_name': user.first_name,
@@ -1673,12 +1683,7 @@ def student_dashboard(request):
             'section': None,
             'activities': [],
             'total_activities': 0,
-            'session_info': {
-                'session_id': session_obj.id,
-                'role': session_obj.role,
-                'last_activity': session_obj.last_activity.isoformat()
-            }
-        }, status=status.HTTP_200_OK)
+        }, status=status.HTTP_403_FORBIDDEN)
     
     section = enrollment.section
     print(f"? Enrolled in: {section.section_name} ({section.section_code})")
@@ -2291,3 +2296,103 @@ def get_student_practice_bookings(request):
             {"error": f"Failed to load practice bookings: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+# ==========================================
+# ADMIN: LMS OVERVIEW STATS
+# ==========================================
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def admin_lms_overview(request):
+    """
+    Admin-only LMS analytics endpoint.
+    Returns aggregated stats for the dashboard overview page.
+    """
+    from django.db.models import Count, Avg, Q
+    from django.db.models.functions import TruncWeek, TruncMonth
+    from datetime import timedelta
+
+    try:
+        # ── 1. Activity Status Breakdown (all bindings) ──
+        status_breakdown = (
+            ActivityStudentBinding.objects
+            .values('status')
+            .annotate(count=Count('id'))
+            .order_by('status')
+        )
+        status_map = {s['status']: s['count'] for s in status_breakdown}
+        total_bindings = sum(status_map.values())
+
+        # ── 2. Completion Rate per Section ──
+        sections = Section.objects.all().prefetch_related('enrollments')
+        section_stats = []
+        for sec in sections:
+            bindings = ActivityStudentBinding.objects.filter(activity__section=sec)
+            total = bindings.count()
+            completed = bindings.filter(status='completed').count()
+            avg_grade = bindings.filter(grade__isnull=False).aggregate(avg=Avg('grade'))['avg']
+            section_stats.append({
+                'name': f"{sec.section_name} ({sec.section_code})",
+                'total': total,
+                'completed': completed,
+                'rate': round((completed / total * 100), 1) if total > 0 else 0,
+                'avg_grade': round(float(avg_grade), 1) if avg_grade else None,
+                'enrolled': sec.enrollments.count(),
+            })
+        # Sort by completion rate descending
+        section_stats.sort(key=lambda x: x['rate'], reverse=True)
+
+        # ── 3. Submission Timeline (last 8 weeks) ──
+        eight_weeks_ago = timezone.now() - timedelta(weeks=8)
+        weekly = (
+            ActivityStudentBinding.objects
+            .filter(submitted_at__gte=eight_weeks_ago, submitted_at__isnull=False)
+            .annotate(week=TruncWeek('submitted_at'))
+            .values('week')
+            .annotate(count=Count('id'))
+            .order_by('week')
+        )
+        timeline = [
+            {'week': w['week'].strftime('%b %d'), 'count': w['count']}
+            for w in weekly
+        ]
+
+        # ── 4. Top Performing Students (highest avg grade) ──
+        from app.models import Students
+        top_students = (
+            ActivityStudentBinding.objects
+            .filter(grade__isnull=False)
+            .values('student__first_name', 'student__last_name', 'student__student_number')
+            .annotate(avg_grade=Avg('grade'), completed=Count('id', filter=Q(status='completed')))
+            .order_by('-avg_grade')[:8]
+        )
+        top_list = [
+            {
+                'name': f"{s['student__first_name']} {s['student__last_name']}",
+                'student_number': s['student__student_number'],
+                'avg_grade': round(float(s['avg_grade']), 1),
+                'completed': s['completed'],
+            }
+            for s in top_students
+        ]
+
+        # ── 5. Totals ──
+        totals = {
+            'students': Students.objects.count(),
+            'instructors': Instructor.objects.count(),
+            'sections': Section.objects.count(),
+            'activities': Activity.objects.count(),
+            'bindings': total_bindings,
+        }
+
+        return Response({
+            'totals': totals,
+            'status_breakdown': status_map,
+            'section_stats': section_stats,
+            'timeline': timeline,
+            'top_students': top_list,
+        }, status=200)
+
+    except Exception as e:
+        traceback.print_exc()
+        return Response({'error': str(e)}, status=500)
