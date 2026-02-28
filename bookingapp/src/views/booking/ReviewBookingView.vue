@@ -22,10 +22,23 @@
       <main class="main-content">
         <h2 class="page-title">Review Your Booking</h2>
 
+        <div class="itinerary-header mb-8">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-lg border border-gray-100 shadow-sm">
+            <div>
+              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Electronic Ticket Identification (PNR)</p>
+              <h2 class="text-3xl font-mono font-black text-pink-500 tracking-tighter">{{ generatedPNR }}</h2>
+            </div>
+            <div class="text-right">
+              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Booking Status</p>
+              <span class="px-3 py-1 bg-amber-50 text-amber-700 text-xs font-bold rounded-md border border-amber-100 uppercase">Awaiting Confirmation</span>
+            </div>
+          </div>
+        </div>
+
         <section class="review-section">
           <div class="section-header">
             <span class="icon">✈️</span>
-            <h3>Flight Details</h3>
+            <h3>Flight Itinerary</h3>
             <span class="trip-type-badge" :class="{ 
               'round-trip': bookingStore.isRoundTrip, 
               'one-way': bookingStore.tripType === 'one_way',
@@ -38,19 +51,79 @@
               }}
             </span>
           </div>
-          <div class="review-card">
-            <div v-for="(segment, index) in flightSegments" :key="index" class="flight-summary" :class="{ 'mt-3': index > 0 }">
-              <div class="route-info">
-                <span class="badge" :class="{ 'return': segment.isReturn, 'multi': segment.isMulti }">
-                  {{ segment.label }}
-                </span>
-                <strong>{{ segment.origin }} → {{ segment.destination }}</strong>
+          
+          <div class="space-y-4">
+            <div v-for="(segment, index) in flightSegments" :key="index" class="boarding-pass-card bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden flex flex-col md:flex-row">
+              <div class="pass-left p-6 flex-1 relative border-r border-dashed border-gray-200">
+                <div class="absolute -top-3 -right-3 w-6 h-6 bg-gray-50 rounded-full"></div>
+                <div class="absolute -bottom-3 -right-3 w-6 h-6 bg-gray-50 rounded-full"></div>
+                
+                <div class="flex items-center justify-between mb-6">
+                  <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 bg-gray-900 text-white text-[10px] font-bold rounded uppercase tracking-tighter">{{ segment.flight_number }}</span>
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">{{ segment.label }}</span>
+                  </div>
+                  <span class="text-xs font-black text-gray-900 uppercase">Confirmed</span>
+                </div>
+
+                <div class="flex items-center justify-between gap-4">
+                  <div class="text-center md:text-left">
+                    <h4 class="text-3xl font-black text-gray-900 tracking-tighter">{{ segment.origin }}</h4>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Departure</p>
+                  </div>
+                  
+                  <div class="flex-1 flex flex-col items-center">
+                    <div class="w-full border-t-2 border-dashed border-gray-200 relative">
+                      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-2 bg-white">
+                        <svg class="w-4 h-4 text-pink-500 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="text-center md:text-right">
+                    <h4 class="text-3xl font-black text-gray-900 tracking-tighter">{{ segment.destination }}</h4>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Arrival</p>
+                  </div>
+                </div>
+
+                <div class="mt-8 grid grid-cols-2 md:grid-cols-3 gap-6">
+                  <div>
+                    <label class="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] block mb-1">Departure Date</label>
+                    <p class="text-xs font-bold text-gray-800">{{ formatDate(segment.departure_time) }}</p>
+                  </div>
+                  <div>
+                    <label class="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] block mb-1">Class & Fare</label>
+                    <p class="text-xs font-bold text-gray-800 uppercase tracking-tighter">
+                      {{ segment.class_type || 'Economy' }} 
+                      <span v-if="bookingStore.fareFamilies[segment.key]" class="text-pink-600 ml-1">
+                        ({{ bookingStore.fareFamilies[segment.key] === 'premium' ? 'Premium' : 'Basic' }})
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <label class="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] block mb-1">Gate/Terminal</label>
+                    <p class="text-xs font-bold text-gray-800 uppercase tracking-tighter">Terminal 2</p>
+                  </div>
+                </div>
               </div>
-              <div class="detail-grid">
-                <div><small>Flight:</small> {{ segment.flight_number }}</div>
-                <div><small>Departure:</small> {{ formatDate(segment.departure_time) }}</div>
-                <div><small>Class:</small> {{ segment.class_type || 'Economy' }}</div>
-                <div><small>Price per person:</small> ₱{{ parseFloat(segment.price).toLocaleString() }}</div>
+              
+              <div class="pass-right bg-pink-50/30 p-6 md:w-56 flex flex-col justify-center border-t md:border-t-0 md:border-l border-gray-100">
+                <div class="space-y-4">
+                  <div>
+                    <label class="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] block mb-1">Boarding Info</label>
+                    <div class="flex items-center gap-2">
+                      <div class="w-10 h-10 bg-white rounded-md flex items-center justify-center border border-pink-100">
+                        <span class="text-sm font-black text-pink-500">B</span>
+                      </div>
+                      <p class="text-[11px] font-bold text-gray-900 leading-tight">Zone 3<br><span class="text-pink-600">Standard</span></p>
+                    </div>
+                  </div>
+                  <div class="pt-4 mt-4 border-t border-pink-100/50">
+                    <p class="text-[10px] font-mono font-bold text-pink-400 tracking-widest text-center truncate">BARCODE DATA: {{ segment.flight_number }}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -96,6 +169,31 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+        </section>
+
+        <section class="review-section">
+          <div class="section-header">
+            <span class="icon">📜</span>
+            <h3>Fare Rules & Conditions</h3>
+          </div>
+          <div class="bg-gray-50 border border-gray-100 rounded-lg p-5">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="flex items-start gap-3">
+                <div class="w-2 h-2 rounded-full bg-red-400 mt-1.5 flex-shrink-0"></div>
+                <div>
+                  <p class="text-xs font-bold text-gray-800 uppercase">Cancellation / Refund</p>
+                  <p class="text-[11px] text-gray-500 mt-0.5 leading-relaxed">This fare is non-refundable. Cancellations will result in forfeiture of the total amount unless travel insurance covers the reason.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-2 h-2 rounded-full bg-amber-400 mt-1.5 flex-shrink-0"></div>
+                <div>
+                  <p class="text-xs font-bold text-gray-800 uppercase">Change Policy</p>
+                  <p class="text-[11px] text-gray-500 mt-0.5 leading-relaxed">Changes allowed up to 24 hours before departure with a ₱2,500 fee plus any fare difference.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -238,6 +336,7 @@ const isProcessing = ref(false);
 const baggageOptions = ref([]);
 const mealOptions = ref([]);
 const assistanceOptions = ref([]);
+const generatedPNR = ref(Math.random().toString(36).substring(2, 8).toUpperCase());
 
 // Backend Price Data (kept for potential future use but no longer used for display)
 const backendTotal = ref(null);
@@ -372,18 +471,25 @@ const getBaggageLabel = (passengerKey, segment = 'depart') => {
   const p = bookingStore.passengers.find(p => p.key === passengerKey);
   if (p?.type === 'Infant') return 'Incl. in Adult Allowance';
 
+  const isPremium = bookingStore.fareFamilies[segment] === 'premium';
   const baggage = bookingStore.addons?.baggage?.[segment]?.[passengerKey];
-  if (!baggage) return 'Standard (Free)';
   
-  // Handle null or undefined baggage
-  if (baggage === null || baggage === undefined) return 'Standard (Free)';
+  if (!baggage) {
+    return isPremium ? 'Included (20kg)' : 'Standard (7kg hand-carry only)';
+  }
   
   if (typeof baggage === 'object' && baggage.formatted_weight) {
-    return `${baggage.formatted_weight} (₱${parseFloat(baggage.price).toLocaleString()})`;
+    const price = isPremium && parseFloat(baggage.weight_kg || 0) <= 20 ? 0 : parseFloat(baggage.price);
+    return `${baggage.formatted_weight} (₱${price.toLocaleString()})`;
   }
   
   const option = baggageOptions.value.find(o => o.id == baggage);
-  return option ? `${option.formatted_weight} (₱${parseFloat(option.price).toLocaleString()})` : 'Extra Baggage';
+  if (option) {
+    const price = isPremium && parseFloat(option.weight_kg || 0) <= 20 ? 0 : parseFloat(option.price);
+    return `${option.formatted_weight} (₱${price.toLocaleString()})`;
+  }
+  
+  return isPremium ? 'Included (20kg)' : 'Standard (7kg hand-carry only)';
 };
 
 const getMealLabel = (passengerKey, segment = 'depart') => {
@@ -423,12 +529,15 @@ const getSeatLabel = (passengerKey, segmentKey = 'depart') => {
     return 'On Lap';
   }
 
+  const isPremium = bookingStore.fareFamilies[segmentKey] === 'premium';
   const seat = bookingStore.addons?.seats?.[segmentKey]?.[passengerKey] || bookingStore.addons?.seats?.[passengerKey];
+  
   if (!seat) return 'Not selected';
   
-  // Use seat_price instead of final_price
-  const price = parseFloat(seat.seat_price) || 0;
-  return `${seat.seat_code || 'N/A'} (₱${price.toLocaleString()})`;
+  const seatCode = seat.seat_code || 'N/A';
+  const price = isPremium ? 0 : (parseFloat(seat.seat_price) || 0);
+  
+  return `${seatCode} (₱${price.toLocaleString()})`;
 };
 
 // Computed Properties

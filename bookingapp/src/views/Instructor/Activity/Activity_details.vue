@@ -81,7 +81,7 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
+          <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-10">
             <!-- Loading State (Skeleton UI) -->
             <div v-if="loading" class="animate-pulse">
               <div class="flex justify-between items-start mb-10">
@@ -99,7 +99,7 @@
               <div class="space-y-6">
                 <!-- Activity Stats Skeleton -->
                 <div class="grid grid-cols-3 gap-6 mb-10">
-                  <div v-for="i in 3" :key="i" class="h-24 bg-gray-50 rounded-xl border border-gray-100"></div>
+                  <div v-for="i in 3" :key="i" class="h-24 bg-gray-50 rounded-lg border border-gray-100"></div>
                 </div>
                 
                 <!-- Content Placeholder -->
@@ -149,7 +149,7 @@
                 <!-- Instructions -->
                 <div class="mb-10">
                   <h3 class="text-xs font-black uppercase text-gray-800 mb-4 tracking-widest">Instructions</h3>
-                  <div class="border border-gray-100 bg-gray-50/50 p-6 rounded-xl italic text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
+                  <div class="border border-gray-100 bg-gray-50/50 p-6 rounded-lg italic text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
                     {{ activity.instructions || 'No instructions provided.' }}
                   </div>
                 </div>
@@ -166,7 +166,7 @@
                     </span>
                   </div>
 
-                  <div class="border border-yellow-200 rounded-3xl py-6 px-10 flex items-center justify-between bg-white relative overflow-hidden">
+                  <div class="border border-yellow-200 rounded-xl py-6 px-10 flex items-center justify-between bg-white relative overflow-hidden">
                     <div class="text-center">
                       <p class="text-xs text-gray-400 uppercase font-bold tracking-widest">From</p>
                       <p class="text-xl font-bold text-gray-900">{{ activity.required_origin || '-' }}</p>
@@ -197,7 +197,7 @@
                 </div>
 
                 <!-- Passenger Information -->
-                <div class="border border-gray-200 rounded-xl p-8 bg-white">
+                <div class="border border-gray-200 rounded-lg p-8 bg-white">
                   <h3 class="text-lg font-bold mb-8 text-gray-800">Passenger Information</h3>
                   <div v-if="activity.passengers && activity.passengers.length > 0">
                     <div v-for="(p, index) in activity.passengers" :key="index" class="mb-10 last:mb-0 border-b border-gray-50 pb-8 last:border-0">
@@ -304,7 +304,7 @@
                   <button 
                     @click="handleActivation"
                     :disabled="activity.is_code_active || activating"
-                    class="w-full max-w-lg bg-[#FFC145] hover:bg-yellow-500 disabled:bg-gray-200 disabled:text-gray-400 py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-all shadow-md active:scale-95 disabled:cursor-not-allowed"
+                    class="w-full max-w-lg bg-[#FFC145] hover:bg-yellow-500 disabled:bg-gray-200 disabled:text-gray-400 py-4 rounded-lg font-bold text-sm uppercase tracking-widest transition-all shadow-md active:scale-95 disabled:cursor-not-allowed"
                   >
                     {{ activating ? 'Activating...' : (activity.is_code_active ? 'Already Activated' : 'Activate') }}
                   </button>
@@ -350,11 +350,11 @@
                   <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Loading student work...</p>
                 </div>
 
-                <div v-else-if="submissions.length === 0" class="text-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                <div v-else-if="submissions.length === 0" class="text-center py-20 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
                   <p class="text-gray-400 text-sm italic">No students are currently enrolled in this section.</p>
                 </div>
 
-                <div v-else class="overflow-hidden border border-gray-100 rounded-xl bg-white shadow-sm">
+                <div v-else class="overflow-hidden border border-gray-100 rounded-lg bg-white shadow-sm">
                   <table class="w-full text-left border-collapse">
                     <thead class="bg-gray-50 border-b border-gray-100">
                       <tr>
@@ -429,11 +429,11 @@
 
     <!-- Success Modal -->
     <div v-if="showSuccessModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div class="bg-white p-10 rounded-2xl text-center shadow-2xl max-w-sm w-full">
+      <div class="bg-white p-10 rounded-lg text-center shadow-2xl max-w-sm w-full">
         <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">✅</div>
         <h2 class="text-xl font-black mb-2 uppercase text-gray-900">Activity Activated</h2>
         <p class="text-gray-500 text-xs mb-6 leading-relaxed">Share this code with your students to begin the activity:</p>
-        <div class="bg-gray-100 text-4xl font-mono font-black py-4 rounded-xl tracking-widest text-pink-600 border-2 border-dashed border-gray-200 mb-8 uppercase">
+        <div class="bg-gray-100 text-4xl font-mono font-black py-4 rounded-lg tracking-widest text-pink-600 border-2 border-dashed border-gray-200 mb-8 uppercase">
           {{ activity?.activity_code }}
         </div>
         <button @click="showSuccessModal = false" class="w-full bg-black text-white py-3 rounded-lg font-bold uppercase text-xs tracking-widest">Close</button>

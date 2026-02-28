@@ -82,7 +82,7 @@
             <p class="text-sm text-gray-500 mt-1">Manage configurations and administrative controls for this course section.</p>
           </div>
 
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div class="p-8">
               <form @submit.prevent="saveSettings">
                 <div class="space-y-8">
@@ -92,22 +92,22 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Section Name</label>
-                        <input v-model="form.section_name" type="text" class="w-full border-2 border-gray-50 rounded-xl px-4 py-3 focus:border-pink-400 outline-none transition-all font-medium text-gray-700 bg-gray-50/50" required>
+                        <input v-model="form.section_name" type="text" class="w-full border-2 border-gray-50 rounded-lg px-4 py-3 focus:border-pink-400 outline-none transition-all font-medium text-gray-700 bg-gray-50/50" required>
                       </div>
                       <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Section Code</label>
-                        <input v-model="form.section_code" type="text" class="w-full border-2 border-gray-50 rounded-xl px-4 py-3 focus:border-pink-400 outline-none transition-all font-medium text-gray-700 bg-gray-50/50" required>
+                        <input v-model="form.section_code" type="text" class="w-full border-2 border-gray-50 rounded-lg px-4 py-3 focus:border-pink-400 outline-none transition-all font-medium text-gray-700 bg-gray-50/50" required>
                       </div>
                       <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Semester</label>
-                        <select v-model="form.semester" class="w-full border-2 border-gray-50 rounded-xl px-4 py-3 focus:border-pink-400 outline-none transition-all font-medium text-gray-700 bg-gray-50/50" required>
+                        <select v-model="form.semester" class="w-full border-2 border-gray-50 rounded-lg px-4 py-3 focus:border-pink-400 outline-none transition-all font-medium text-gray-700 bg-gray-50/50" required>
                           <option value="1st Semester">1st Semester</option>
                           <option value="2nd Semester">2nd Semester</option>
                         </select>
                       </div>
                       <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Academic Year</label>
-                        <input v-model="form.academic_year" type="text" class="w-full border-2 border-gray-50 rounded-xl px-4 py-3 focus:border-pink-400 outline-none transition-all font-medium text-gray-700 bg-gray-50/50" required>
+                        <input v-model="form.academic_year" type="text" class="w-full border-2 border-gray-50 rounded-lg px-4 py-3 focus:border-pink-400 outline-none transition-all font-medium text-gray-700 bg-gray-50/50" required>
                       </div>
                     </div>
                   </div>
@@ -118,18 +118,18 @@
                     <div class="space-y-6">
                       <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Class Schedule</label>
-                        <input v-model="form.schedule" type="text" placeholder="e.g. M-W-F 8:00 AM - 10:00 AM" class="w-full border-2 border-gray-50 rounded-xl px-4 py-3 focus:border-pink-400 outline-none transition-all font-medium text-gray-700 bg-gray-50/50">
+                        <input v-model="form.schedule" type="text" placeholder="e.g. M-W-F 8:00 AM - 10:00 AM" class="w-full border-2 border-gray-50 rounded-lg px-4 py-3 focus:border-pink-400 outline-none transition-all font-medium text-gray-700 bg-gray-50/50">
                       </div>
                       <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Course Description</label>
-                        <textarea v-model="form.description" rows="4" class="w-full border-2 border-gray-50 rounded-xl px-4 py-3 focus:border-pink-400 outline-none transition-all font-medium text-gray-700 bg-gray-50/50 resize-none"></textarea>
+                        <textarea v-model="form.description" rows="4" class="w-full border-2 border-gray-50 rounded-lg px-4 py-3 focus:border-pink-400 outline-none transition-all font-medium text-gray-700 bg-gray-50/50 resize-none"></textarea>
                       </div>
                     </div>
                   </div>
 
                   <!-- Administrative Controls -->
                   <div class="space-y-4">
-                    <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100">
+                    <div class="bg-gray-50 rounded-lg p-6 border border-gray-100">
                       <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Administrative Controls</h3>
                       <div class="space-y-6">
                         <!-- Lock Section -->
@@ -159,7 +159,7 @@
                     </div>
 
                     <!-- Danger Zone -->
-                    <div class="bg-red-50/50 rounded-2xl p-6 border border-red-100 mt-8">
+                    <div class="bg-red-50/50 rounded-lg p-6 border border-red-100 mt-8">
                       <h3 class="text-xs font-black text-red-400 uppercase tracking-widest mb-6">Danger Zone</h3>
                       <div class="flex items-center justify-between">
                         <div class="pr-8">
@@ -169,7 +169,7 @@
                         <button 
                           type="button" 
                           @click="confirmDelete"
-                          class="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-md transition-all active:scale-95"
+                          class="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-black uppercase tracking-widest shadow-md transition-all active:scale-95"
                         >
                           Delete Section
                         </button>
@@ -189,7 +189,7 @@
                   <button 
                     type="submit" 
                     :disabled="loading"
-                    class="bg-pink-500 text-white px-10 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg hover:shadow-pink-200 active:scale-95 transition-all disabled:opacity-50"
+                    class="bg-pink-500 text-white px-10 py-3 rounded-lg font-bold text-xs uppercase tracking-widest shadow-lg hover:shadow-pink-200 active:scale-95 transition-all disabled:opacity-50"
                   >
                     {{ loading ? 'Saving...' : 'Save Changes' }}
                   </button>

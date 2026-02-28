@@ -25,6 +25,8 @@ from .api.extra_services_views import (
     PlanCoverageViewSet, MealCategoryViewSet, MealOptionViewSet,
     AssistanceServiceViewSet, BaggageOptionViewSet, PricingConfigurationViewSet
 )
+from .api.dcs_views import get_dcs_flights, get_dcs_manifest, process_dcs_checkin, scan_qr_lookup, get_dcs_passenger_details, get_dcs_pnr_details, download_boarding_pass_view
+
 
 # Create a router and register our viewsets
 router = DefaultRouter()
@@ -81,6 +83,15 @@ router.register(r'pricing-config', PricingConfigurationViewSet, basename='pricin
 urlpatterns = [
     # Manual path for login
     path('admin/login/', AdminLoginView.as_view(), name='admin-login'),
+    
+    # DCS Simulator paths
+    path('dcs/flights/', get_dcs_flights, name='dcs_flights'),
+    path('dcs/manifest/<int:schedule_id>/', get_dcs_manifest, name='dcs_manifest'),
+    path('dcs/process-checkin/', process_dcs_checkin, name='dcs_process_checkin'),
+    path('dcs/passenger/<int:booking_detail_id>/', get_dcs_passenger_details, name='dcs_passenger_details'),
+    path('dcs/pnr/<str:pnr>/<int:schedule_id>/', get_dcs_pnr_details, name='dcs_pnr_details'),
+    path('dcs/boarding-pass/<int:booking_detail_id>/', download_boarding_pass_view, name='dcs_boarding_pass'),
+    path('dcs/scan-qr/', scan_qr_lookup, name='dcs_scan_qr'),
     
     # Include all the router-generated CRUD URLs
     path('', include(router.urls)),

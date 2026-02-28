@@ -147,6 +147,8 @@ class SeatSerializer(serializers.ModelSerializer):
     price_breakdown = serializers.ReadOnlyField()
     seat_code = serializers.ReadOnlyField()
     is_booked = serializers.SerializerMethodField()
+    is_locked = serializers.ReadOnlyField() # Model Property
+    is_locked_by_me = serializers.SerializerMethodField()
     
     # Requirements relation
     requirements_detail = SeatRequirementSerializer(source='requirements', many=True, read_only=True)
@@ -164,11 +166,42 @@ class SeatSerializer(serializers.ModelSerializer):
         return f"₱{obj.final_price:,.2f}"
     
     def get_is_booked(self, obj):
-        """Check if seat is linked to an active booking (pending or confirmed)"""
-        return BookingDetail.objects.filter(
+        """Check if seat is linked to an active booking OR is locked by another session"""
+        
+        # 1. Existing Booking Check
+        is_permanently_booked = BookingDetail.objects.filter(
             seat=obj,
             status__in=['pending', 'confirmed', 'checkin', 'boarding', 'completed']
         ).exists()
+        
+        if is_permanently_booked:
+            return True
+            
+        # 2. Lock check (Locked by someone else)
+        if obj.is_locked:
+            request = self.context.get('request')
+            session_id = None
+            if request:
+                session_id = request.query_params.get('session_id') or request.data.get('session_id')
+                if not session_id and hasattr(request, 'session'):
+                    session_id = request.session.session_key
+            
+            # If locked by someone else, it's "booked" (unavailable)
+            return obj.locked_by_session != session_id
+            
+        return False
+
+    def get_is_locked_by_me(self, obj):
+        """Check if THIS specific session holds the lock"""
+        request = self.context.get('request')
+        if not request or not obj.is_locked:
+            return False
+            
+        session_id = request.query_params.get('session_id') or request.data.get('session_id')
+        if not session_id and hasattr(request, 'session'):
+            session_id = request.session.session_key
+            
+        return obj.locked_by_session == session_id
     
     def to_representation(self, instance):
         """Custom representation to include dynamic prices from database"""
@@ -196,7 +229,7 @@ class SeatSerializer(serializers.ModelSerializer):
 class AirlineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Airline
-        fields = ['id', 'name', 'code']
+        fields = ['id', 'name', 'code', 'logo']
 
 class SeatClassSerializer(serializers.ModelSerializer):
     airline_name = serializers.ReadOnlyField(source='airline.name')  # Already exists
@@ -401,6 +434,7 @@ class PassengerInfoSerializer(serializers.ModelSerializer):
             'title',
             'date_of_birth',
             'passport_number',
+            'passport_expiry',
             'nationality',
             'passenger_type',
             'linked_adult',

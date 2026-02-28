@@ -53,6 +53,13 @@ export const useBookingStore = defineStore('booking', {
     stopPreference: 'all', // 'all', 'nonstop', 'direct', 'connecting'
     sessionExpiry: null,
     isFreshSession: true,
+    bookingSessionId: localStorage.getItem('booking_session_id') || `sess_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`,
+
+    // Fare Families (Basic vs Premium)
+    fareFamilies: {
+      depart: 'basic', // 'basic' or 'premium'
+      return: 'basic'
+    },
   }),
 
   persist: {
@@ -63,6 +70,23 @@ export const useBookingStore = defineStore('booking', {
   getters: {
     isRoundTrip: (state) => state.tripType === 'round-trip' || state.tripType === 'round_trip',
     isMultiCity: (state) => state.tripType === 'multi-city' || state.tripType === 'multi_city',
+
+    isInternational() {
+      // Check if any flight is not domestic (PH -> PH)
+      const segments = this.allSegments;
+      if (segments.length === 0) return false;
+
+      const phAirports = ['MNL', 'CEB', 'DVO', 'ILO', 'BCD', 'PPS', 'TAC', 'LGP', 'CGY', 'MPH', 'USU', 'GES', 'KLO', 'ZAM', 'CYP', 'DPL', 'TUG', 'SFS', 'LAO', 'VAC'];
+
+      return segments.some(seg => {
+        const flight = seg.selectedFlight;
+        if (!flight) return false;
+        const fromPH = phAirports.includes(flight.origin);
+        const toPH = phAirports.includes(flight.destination);
+        // If either side is not a known PH airport, we treat as international for documentation purposes
+        return !fromPH || !toPH;
+      });
+    },
 
     payingPassengerCount: (state) => {
       const { adults = 0, children = 0 } = state.passengerCount || {};
@@ -98,6 +122,12 @@ export const useBookingStore = defineStore('booking', {
 
       activeSegments.forEach((seg, index) => {
         const segKey = this.isMultiCity ? index.toString() : seg.type;
+
+        // Skip seat pricing if Premium fare is selected for this segment
+        if (state.fareFamilies[segKey] === 'premium') {
+          return;
+        }
+
         const segmentSeats = seats[segKey] || {};
         Object.values(segmentSeats).forEach(seat => {
           if (seat && seat.seat_price !== undefined) {
@@ -116,9 +146,28 @@ export const useBookingStore = defineStore('booking', {
       activeSegments.forEach((seg, index) => {
         const segKey = this.isMultiCity ? index.toString() : seg.type;
         const segmentBaggage = baggage[segKey] || {};
+
+        const isPremium = state.fareFamilies[segKey] === 'premium';
+
         Object.values(segmentBaggage).forEach(baggageItem => {
           if (baggageItem && typeof baggageItem === 'object' && baggageItem.price !== undefined) {
-            total += (parseFloat(baggageItem.price) || 0);
+            // If Premium, the first 20kg (or all standard baggage) might be included.
+            // For now, let's assume ALL baggage selected is free if Premium, 
+            // OR we just discount the 20kg price if it matches.
+            // The policy usually is: "1x 20kg included".
+
+            let price = parseFloat(baggageItem.price) || 0;
+
+            if (isPremium && baggageItem.weight_kg <= 20) {
+              price = 0;
+            } else if (isPremium && baggageItem.weight_kg > 20) {
+              // If they buy 32kg and 20kg is included, maybe they pay difference?
+              // Usually it's simpler: 20kg is free, others are paid.
+              // For simplicity: if premium and weight <= 20, it's 0.
+              price = 0; // Standard premium usually includes the luggage option they pick.
+            }
+
+            total += price;
           }
         });
       });
@@ -390,9 +439,10 @@ export const useBookingStore = defineStore('booking', {
     },
 
     startSession() {
-      this.sessionExpiry = Date.now() + (15 * 60 * 1000);
+      const expiryMinutes = (this.isPractice || this.activityCode) ? 30 : 15;
+      this.sessionExpiry = Date.now() + (expiryMinutes * 60 * 1000);
       this.isFreshSession = true;
-      console.log('🔄 Session started, expires at:', new Date(this.sessionExpiry).toLocaleString());
+      console.log(`🔄 Session started (${expiryMinutes}m), expires at:`, new Date(this.sessionExpiry).toLocaleString());
 
       setTimeout(() => {
         this.isFreshSession = false;
@@ -603,14 +653,19 @@ export const useBookingStore = defineStore('booking', {
           selected_seat_class: flight.selected_seat_class,
           seat_class_price: flight.price,
           original_base_price: flight.original_price || flight.base_price,
-          seat_class_features: flight.seat_class_features
+          seat_class_features: flight.seat_class_features,
+          fare_family: flight.fare_family || 'basic'
         };
 
         this.multiCitySegments[index].selectedFlight = {
           ...flight,
           ...seatClassInfo
         };
-        console.log(`✅ Flight selected for segment ${index}:`, flight.flight_number);
+
+        // Store fare family for this segment
+        this.fareFamilies[index.toString()] = flight.fare_family || 'basic';
+
+        console.log(`✅ Flight selected for segment ${index}:`, flight.flight_number, '| Fare:', flight.fare_family);
       }
     },
 
@@ -666,7 +721,8 @@ export const useBookingStore = defineStore('booking', {
         selected_seat_class: flight.selected_seat_class,
         seat_class_price: flight.price,
         original_base_price: flight.original_price || flight.base_price,
-        seat_class_features: flight.seat_class_features
+        seat_class_features: flight.seat_class_features,
+        fare_family: flight.fare_family || 'basic'
       };
 
       const flightWithSeatClass = {
@@ -675,11 +731,15 @@ export const useBookingStore = defineStore('booking', {
         price: flight.price
       };
 
+      const segKey = type === 'outbound' ? 'depart' : 'return';
+      this.fareFamilies[segKey] = flight.fare_family || 'basic';
+
       if (type === 'outbound') {
         this.selectedOutbound = flightWithSeatClass;
         console.log('✅ Outbound flight selected with seat class:', {
           flight: flight.flight_number,
           seat_class: flight.selected_seat_class,
+          fare_family: flight.fare_family,
           price: flight.price
         });
       } else {
@@ -688,6 +748,7 @@ export const useBookingStore = defineStore('booking', {
           console.log('✅ Return flight selected with seat class:', {
             flight: flight.flight_number,
             seat_class: flight.selected_seat_class,
+            fare_family: flight.fare_family,
             price: flight.price
           });
         } else {
@@ -1038,6 +1099,7 @@ export const useBookingStore = defineStore('booking', {
         },
         sessionExpiry: null,
         isFreshSession: true,
+        bookingSessionId: `sess_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`,
       });
 
       const keysToRemove = [

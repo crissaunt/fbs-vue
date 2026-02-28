@@ -31,6 +31,12 @@ import InstructorStudentScore from '@/views/Instructor/Activity/instructor_stude
 import StudentDashboard from '@/views/Student/Student_dashboard.vue';
 import StudentActivityDetails from '@/views/Student/Activities/Student_activity_details.vue'
 
+// DCS Views
+import DcsLayout from '@/views/dcs/DcsLayout.vue';
+import FlightDashboardView from '@/views/dcs/FlightDashboardView.vue';
+import ManifestView from '@/views/dcs/ManifestView.vue';
+import CheckinCounterView from '@/views/dcs/CheckinCounterView.vue';
+
 const routes = [
   // 3. Use the Spread Operator (...) to include all admin routes
   ...adminRoutes,
@@ -177,6 +183,33 @@ const routes = [
     name: 'BookingSuccess',
     meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true },
     component: () => import('@/views/booking/BookingSuccessView.vue')
+  },
+  {
+    path: '/dcs',
+    component: DcsLayout,
+    meta: { requiresAuth: true, role: 'student' },
+    children: [
+      {
+        path: 'dashboard',
+        name: 'DcsDashboard',
+        component: FlightDashboardView,
+        meta: { title: 'DCS | Flight Dashboard' }
+      },
+      {
+        path: 'manifest/:schedule_id',
+        name: 'DcsManifest',
+        component: ManifestView,
+        meta: { title: 'DCS | Passenger Manifest' },
+        props: true
+      },
+      {
+        path: 'checkin/:booking_detail_id',
+        name: 'DcsCheckin',
+        component: CheckinCounterView,
+        meta: { title: 'DCS | Check-in Counter' },
+        props: true
+      }
+    ]
   }
 ];
 

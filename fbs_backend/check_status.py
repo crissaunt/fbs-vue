@@ -1,0 +1,21 @@
+import os, django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'fbs_backend.settings')
+django.setup()
+from app.models import Airline, Flight, Schedule, Booking, BookingDetail, CheckInDetail, Seat
+
+print('\n--- System Status Overview ---')
+print(f'Airlines: {Airline.objects.count()}')
+print(f'Flights: {Flight.objects.count()}')
+print(f'Schedules: {Schedule.objects.count()}')
+print(f'Total Bookings: {Booking.objects.count()}')
+confirmed_bookings = Booking.objects.filter(status='confirmed').count()
+print(f'  Confirmed: {confirmed_bookings}')
+print(f'  Other Status: {Booking.objects.exclude(status="confirmed").count()}')
+print(f'Total Booking Details: {BookingDetail.objects.count()}')
+checkins = BookingDetail.objects.filter(status='checkin').count()
+print(f'Passengers Checked In: {checkins}')
+total_seats = Seat.objects.count()
+booked_seats = Seat.objects.filter(is_available=False).count()
+print(f'Total Seats: {total_seats}')
+print(f'Booked Seats: {booked_seats}')
+print('------------------------------\n')

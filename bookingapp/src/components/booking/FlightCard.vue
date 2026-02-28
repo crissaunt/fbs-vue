@@ -1,35 +1,35 @@
 <template>
-  <div class="bg-white rounded-[5px] shadow-sm border border-gray-200 hover:border-pink-300 hover:shadow-md transition-all duration-200">
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 hover:border-pink-300 hover:shadow-md transition-all duration-200">
     <div class="px-6 py-3">
       <!-- Flight Header -->
-      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 pb-6 border-b border-gray-100">
-        <div class="flex items-center space-x-4">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4 pb-4 border-b border-gray-100">
+        <div class="flex items-center space-x-4 flex ">
           <div>
-            <div class="font-bold text-pink-500">{{ flight.airline_name }}</div>
-            <div class="text-sm text-green-500">{{ flight.flight_number }}</div>
+            <div class="font-bold text-sm text-pink-500">{{ flight.airline_name }}</div>
+            <div class="text-[11px] text-green-500">{{ flight.flight_number }}</div>
           </div>
           <div v-if="flight.is_domestic !== undefined" 
-            :class="['px-3 py-1 rounded-full text-xs font-medium',
+            :class="['px-3 py-1 rounded-full text-[9px] font-medium',
                      flight.is_domestic ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700']">
             {{ flight.is_domestic ? 'Domestic' : 'International' }}
           </div>
           <div v-if="(flight.total_stops || 0) === 0" 
-            class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+            class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-[9px] font-medium">
             Non-stop
           </div>
           <div v-else 
-            class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+            class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-[9px] font-medium">
             {{ flight.total_stops }} {{ flight.total_stops === 1 ? 'Stop' : 'Stops' }}
           </div>
         </div>
         
         <div class="text-center">
-          <div class="text-sm text-gray-700">{{ formatDate(flight.departure_time) }}</div>
-          <div class="text-bold font-bold text-gray-500">{{ formatDay(flight.departure_time) }}</div>
+          <div class="text-xs text-gray-700">{{ formatDate(flight.departure_time) }}</div>
+          <div class=" font-bold text-gray-500">{{ formatDay(flight.departure_time) }}</div>
         </div>
         
         <div class="text-right flex flex-col items-end">
-          <div class="text-2xl font-bold" :class="flight.ml_predicted ? 'text-pink-600' : 'text-pink-500'">
+          <div class="text-xl font-bold" :class="flight.ml_predicted ? 'text-pink-600' : 'text-pink-500'">
             ₱{{ Number(flight.price).toLocaleString() }}
           </div>
           <button 
@@ -47,8 +47,8 @@
 
       <!-- Price Insights Breakdown Overlay -->
       <div v-if="showPricingDetails && selectedPriceId === flight.price_id" 
-           class="mb-6 p-4 bg-pink-50/50 rounded-sm border border-pink-100 animate-in fade-in slide-in-from-top-2 duration-300">
-        <div class="flex justify-between items-center mb-3">
+           class="mb-4 p-4 bg-pink-50/50 rounded-lg border border-pink-100 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div class="flex justify-between items-center mb-2">
           <h4 class="text-xs font-bold text-pink-600 uppercase tracking-widest">Price Breakdown</h4>
           <span class="text-[10px] text-gray-400">ML ID: {{ flight.price_id }}</span>
         </div>
@@ -75,24 +75,24 @@
       </div>
       
       <!-- Schedule Info -->
-      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-6">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-3">
         <!-- Departure -->
         <div class="flex-1">
-          <div class="text-3xl font-bold text-gray-900 mb-1">{{ formatTime(flight.departure_time) }}</div>
+          <div class="text-2xl font-bold text-gray-900 mb-1">{{ formatTime(flight.departure_time) }}</div>
           <div class="text-gray-700">{{ flight.origin }}</div>
           <div class="text-sm text-green-500">{{ flight.origin_airport_code }}</div>
         </div>
         
         <!-- Duration -->
         <div class="flex flex-col items-center">
-          <div class="w-full h-px bg-gray-300 mb-2"></div>
+          <div class="w-full h-px bg-gray-300 mb-1"></div>
           <div class="text-sm text-gray-600">{{ flight.flight_duration || formatDuration(flight.duration_minutes) }}</div>
           <div class="w-full h-px bg-gray-300 mt-2"></div>
         </div>
         
         <!-- Arrival -->
         <div class="flex-1 text-right">
-          <div class="text-3xl font-bold text-gray-900 mb-1">{{ formatTime(flight.arrival_time) }}</div>
+          <div class="text-2xl font-bold text-gray-900 mb-1">{{ formatTime(flight.arrival_time) }}</div>
           <div class="text-gray-700">{{ flight.destination }}</div>
           <div class="text-sm text-green-500">{{ flight.destination_airport_code }}</div>
         </div>
@@ -105,13 +105,13 @@
             <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
             </svg>
-            <span class="text-gray-700" :class="{ 'text-orange-500 font-semibold': flight.available_seats < 10 }">
+            <span class="text-gray-700 text-xs" :class="{ 'text-orange-500 font-semibold': flight.available_seats < 10 }">
               {{ flight.available_seats }} seats available
             </span>
           </div>
           
           <!-- Display seat classes -->
-          <div v-if="flight.seat_classes && flight.seat_classes.length" class="text-sm text-gray-600">
+          <div v-if="flight.seat_classes && flight.seat_classes.length" class="text-xs text-gray-600">
             Classes: {{ formatSeatClasses(flight.seat_classes) }}
           </div>
           
@@ -123,17 +123,17 @@
         
         <div class="flex space-x-2">
           <template v-if="isSelected">
-            <button class="px-6 py-3 bg-green-500 text-white rounded-sm font-medium whitespace-nowrap">
+            <button class="px-6 py-3 bg-green-500 text-white rounded-md font-medium whitespace-nowrap">
               ✓ {{ selectionLabel }}
             </button>
             <button @click="$emit('select-flight', flight)" 
-              class="px-6 py-3 border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 transition-colors font-medium whitespace-nowrap">
+              class="px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium whitespace-nowrap">
               Change Selection
             </button>
           </template>
           <template v-else>
             <button @click="$emit('select-flight', flight)" 
-              class="px-6 py-3 bg-pink-500 text-white rounded-[2px] hover:bg-pink-600 transition-colors font-medium whitespace-nowrap">
+              class="px-4 py-2 bg-pink-500 cursor-pointer text-white text-sm rounded-md hover:bg-pink-600 transition-colors font-medium whitespace-nowrap">
               {{ selectButtonText }}
             </button>
           </template>

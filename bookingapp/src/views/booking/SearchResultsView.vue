@@ -3,8 +3,8 @@
     <BookingStatusHeader />
     
     <!-- Edit Search Modal -->
-    <div v-if="showEditSearch" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-sm shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div v-if="showEditSearch" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div class="p-6 border-b border-gray-200">
           <div class="flex justify-between items-center">
             <h2 class="text-2xl font-bold text-gray-800">Edit Search</h2>
@@ -46,9 +46,9 @@
                     @input="searchEditAirports(fromSearchInput, 'from')"
                     @focus="fromSearchInput = ''; fromResults = []"
                     placeholder="e.g. MNL"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                    class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-transparent">
                   
-                  <ul v-if="fromResults.length" class="absolute left-0 top-full z-[60] max-h-48 w-full overflow-y-auto border border-gray-200 bg-white shadow-xl rounded-b-sm">
+                  <ul v-if="fromResults.length" class="absolute left-0 top-full z-[60] max-h-48 w-full overflow-y-auto border border-gray-200 bg-white shadow-xl rounded-b-lg">
                     <li v-for="a in fromResults" :key="a.code" @click="selectEditAirport(a, 'from')" class="cursor-pointer border-b border-gray-50 p-3 hover:bg-pink-50">
                       <div class="flex items-center gap-2">
                         <span class="font-bold text-pink-600">{{ a.code }}</span>
@@ -63,9 +63,9 @@
                     @input="searchEditAirports(toSearchInput, 'to')"
                     @focus="toSearchInput = ''; toResults = []"
                     placeholder="e.g. CEB"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                    class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-transparent">
                   
-                  <ul v-if="toResults.length" class="absolute left-0 top-full z-[60] max-h-48 w-full overflow-y-auto border border-gray-200 bg-white shadow-xl rounded-b-sm">
+                  <ul v-if="toResults.length" class="absolute left-0 top-full z-[60] max-h-48 w-full overflow-y-auto border border-gray-200 bg-white shadow-xl rounded-b-lg">
                     <li v-for="a in toResults" :key="a.code" @click="selectEditAirport(a, 'to')" class="cursor-pointer border-b border-gray-50 p-3 hover:bg-pink-50">
                       <div class="flex items-center gap-2">
                         <span class="font-bold text-pink-600">{{ a.code }}</span>
@@ -80,19 +80,19 @@
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Departure Date</label>
                   <input v-model="editSearchForm.departure" type="date" :min="todayDateString"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                    class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-transparent">
                 </div>
                 <div v-if="editSearchForm.tripType === 'round-trip'">
                   <label class="block text-sm font-medium text-gray-700 mb-2">Return Date</label>
                   <input v-model="editSearchForm.returnDate" type="date" :min="editSearchForm.departure || todayDateString"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                    class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-transparent">
                 </div>
               </div>
             </div>
 
             <!-- Multi-City Legs -->
             <div v-else class="space-y-4">
-              <div v-for="(leg, index) in editSearchForm.legs" :key="index" class="p-4 border border-gray-100 rounded-sm space-y-4 relative bg-gray-50/50">
+              <div v-for="(leg, index) in editSearchForm.legs" :key="index" class="p-4 border border-gray-100 rounded-lg space-y-4 relative bg-gray-50/50">
                 <button v-if="editSearchForm.legs.length > 2" @click="removeEditLeg(index)" 
                   class="absolute top-2 right-2 text-gray-400 hover:text-red-500">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -107,8 +107,8 @@
                       @input="searchEditAirports(leg.fromSearch, 'from', index)"
                       @focus="leg.fromSearch = ''; leg.fromResults = []"
                       placeholder="Origin"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:ring-2 focus:ring-pink-500">
-                    <ul v-if="leg.fromResults.length" class="absolute left-0 top-full z-[70] max-h-32 w-full overflow-y-auto border border-gray-200 bg-white shadow-xl rounded-b-sm">
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-pink-500">
+                    <ul v-if="leg.fromResults.length" class="absolute left-0 top-full z-[70] max-h-32 w-full overflow-y-auto border border-gray-200 bg-white shadow-xl rounded-b-lg">
                       <li v-for="a in leg.fromResults" :key="a.code" @click="selectEditAirport(a, 'from', index)" class="cursor-pointer border-b border-gray-50 p-2 hover:bg-pink-50">
                         <div class="flex items-center gap-2">
                           <span class="font-bold text-pink-600 text-xs">{{ a.code }}</span>
@@ -123,8 +123,8 @@
                       @input="searchEditAirports(leg.toSearch, 'to', index)"
                       @focus="leg.toSearch = ''; leg.toResults = []"
                       placeholder="Destination"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:ring-2 focus:ring-pink-500">
-                    <ul v-if="leg.toResults.length" class="absolute left-0 top-full z-[70] max-h-32 w-full overflow-y-auto border border-gray-200 bg-white shadow-xl rounded-b-sm">
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-pink-500">
+                    <ul v-if="leg.toResults.length" class="absolute left-0 top-full z-[70] max-h-32 w-full overflow-y-auto border border-gray-200 bg-white shadow-xl rounded-b-lg">
                       <li v-for="a in leg.toResults" :key="a.code" @click="selectEditAirport(a, 'to', index)" class="cursor-pointer border-b border-gray-50 p-2 hover:bg-pink-50">
                         <div class="flex items-center gap-2">
                           <span class="font-bold text-pink-600 text-xs">{{ a.code }}</span>
@@ -137,11 +137,11 @@
                 <div>
                   <label class="block text-xs font-medium text-gray-700 mb-1">Date</label>
                   <input v-model="leg.date" type="date" :min="index === 0 ? todayDateString : editSearchForm.legs[index-1].date"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:ring-2 focus:ring-pink-500">
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-pink-500">
                 </div>
               </div>
               <button @click="addEditLeg" v-if="editSearchForm.legs.length < 6"
-                class="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-sm hover:border-pink-300 hover:text-pink-500 transition-colors text-sm font-medium">
+                class="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:border-pink-300 hover:text-pink-500 transition-colors text-sm font-medium">
                 + Add Another Flight
               </button>
             </div>
@@ -153,17 +153,17 @@
                 <div>
                   <label class="block text-xs text-gray-500 mb-1">Adults</label>
                   <input v-model.number="editSearchForm.adults" type="number" min="1" 
-                    class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                    class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-transparent">
                 </div>
                 <div>
                   <label class="block text-xs text-gray-500 mb-1">Children</label>
                   <input v-model.number="editSearchForm.children" type="number" min="0" 
-                    class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                    class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-transparent">
                 </div>
                 <div>
                   <label class="block text-xs text-gray-500 mb-1">Infants</label>
                   <input v-model.number="editSearchForm.infants" type="number" min="0" 
-                    class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                    class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-transparent">
                 </div>
               </div>
             </div>
@@ -171,11 +171,11 @@
           
           <div class="mt-8 flex justify-end space-x-4">
             <button @click="showEditSearch = false" 
-              class="px-6 py-2 border border-gray-300 rounded-sm text-gray-700 hover:bg-gray-50 transition-colors">
+              class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">
               Cancel
             </button>
             <button @click="submitEditedSearch" 
-              class="px-6 py-2 bg-pink-500 text-white rounded-sm hover:bg-pink-600 transition-colors font-medium">
+              class="px-6 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-600 transition-colors font-medium">
               Update Search
             </button>
           </div>
@@ -193,8 +193,8 @@
     />
     
     <!-- Confirmation Modal -->
-    <div v-if="showConfirmation" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-sm shadow-2xl w-full max-w-lg">
+    <div v-if="showConfirmation" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg">
         <div class="p-6 border-b border-gray-200">
           <div class="flex justify-between items-center">
             <h2 class="text-xl font-bold text-gray-800">{{ modalTitle }}</h2>
@@ -209,7 +209,7 @@
         <div class="p-6">
           <div v-if="isRoundTrip && selectionPhase === 'return' && bookingStore.selectedOutbound" class="space-y-6">
             <!-- Round Trip Complete Summary -->
-            <div class="bg-pink-50 rounded-sm p-4">
+            <div class="bg-pink-50 rounded-lg p-4">
               <div class="flex justify-between items-center mb-4">
                 <h3 class="font-semibold text-gray-800">Round-Trip Itinerary</h3>
                 <div class="text-lg font-bold text-pink-500">
@@ -273,7 +273,7 @@
           
           <div v-else class="space-y-6">
             <!-- Single Flight Summary -->
-            <div class="bg-pink-50 rounded-sm p-4">
+            <div class="bg-pink-50 rounded-lg p-4">
               <div class="flex justify-between items-center mb-4">
                 <h3 class="font-semibold text-gray-800">
                   {{ isRoundTrip && selectionPhase === 'outbound' ? 'Outbound Flight' : 'Flight Details' }}
@@ -293,7 +293,7 @@
                   <div class="text-sm text-gray-500">• {{ selectedFlight?.airline_name }}</div>
                 </div>
                 
-                <div v-if="selectedFlight?.selected_seat_class" class="bg-pink-100 border border-pink-200 rounded-sm p-3">
+                <div v-if="selectedFlight?.selected_seat_class" class="bg-pink-100 border border-pink-200 rounded-lg p-3">
                   <div class="flex justify-between items-center">
                     <div>
                       <div class="text-sm font-medium text-pink-700">Selected Seat Class</div>
@@ -329,7 +329,7 @@
             
             <!-- Next Step Info -->
             <div v-if="modalActionDescription" 
-              class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-sm">
+              class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <div class="flex items-center text-blue-700">
                 <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
@@ -346,11 +346,11 @@
         <div class="p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
           <div class="flex space-x-4">
             <button @click="cancelSelection" 
-              class="flex-1 px-4 py-3 border border-gray-300 rounded-sm text-gray-700 hover:bg-gray-100 transition-colors font-medium">
+              class="flex-1 px-4 py-3 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors font-medium">
               Cancel
             </button>
             <button @click="confirmSelection" 
-              class="flex-1 px-4 py-3 bg-pink-500 text-white rounded-sm hover:bg-pink-600 transition-colors font-medium">
+              class="flex-1 px-4 py-3 bg-pink-500 text-white rounded-md hover:bg-pink-600 transition-colors font-medium">
               {{ confirmButtonText }}
             </button>
           </div>
@@ -359,8 +359,8 @@
     </div>
     
     <!-- Session Expired Modal -->
-    <div v-if="showSessionExpired" class="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4">
-      <div class="bg-white rounded-sm shadow-2xl w-full max-w-md">
+    <div v-if="showSessionExpired" class="fixed inset-0 bg-black/60 backdrop-blur-md z-[60] flex items-center justify-center p-4">
+      <div class="bg-white rounded-lg shadow-2xl w-full max-w-md">
         <div class="p-6 border-b border-gray-200">
           <div class="flex items-center justify-center mb-4">
             <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
@@ -376,14 +376,14 @@
         </div>
         
         <div class="p-6">
-          <div class="bg-red-50 border border-red-200 rounded-sm p-4 mb-6">
+          <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <div class="flex items-start">
               <svg class="w-5 h-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
               </svg>
               <div class="text-sm text-red-700">
                 <p class="font-medium">Why did this happen?</p>
-                <p class="mt-1">Flight search sessions expire after 15 minutes of inactivity to ensure you get the latest flight availability and pricing.</p>
+                <p class="mt-1">Flight search sessions expire after {{ bookingStore.isPractice || bookingStore.activityCode ? '30' : '15' }} minutes of inactivity to ensure you get the latest flight availability and pricing.</p>
               </div>
             </div>
           </div>
@@ -398,7 +398,7 @@
         
         <div class="p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
           <button @click="() => { bookingStore.resetBooking(); router.push({ name: 'Home' }); }" 
-            class="w-full px-6 py-3 bg-red-500 text-white rounded-sm hover:bg-red-600 transition-colors font-medium">
+            class="w-full px-6 py-3 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors font-medium">
             Go to Home Now
           </button>
         </div>
@@ -408,24 +408,24 @@
     <!-- Main Content -->
     <div class="max-w-screen-2xl mx-auto lg:px-8 py-8">
       <!-- Header -->
-      <div class="bg-white rounded-sm shadow-sm border border-gray-200 p-6 mb-8">
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
         <!-- Step Indicator -->
         <div v-if="isRoundTrip || isMultiCity" class="mb-6">
           <div class="flex items-center space-x-4 overflow-x-auto pb-2">
             <template v-if="isRoundTrip">
-              <div :class="['flex-1 text-center py-2 rounded-sm min-w-[120px]', 
+              <div :class="['flex-1 text-center py-2 rounded-md min-w-[120px]', 
                        selectionPhase === 'outbound' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-600']">
                 <div class="font-medium">1. Select Outbound</div>
               </div>
               <div class="w-8 h-px bg-gray-300 shrink-0"></div>
-              <div :class="['flex-1 text-center py-2 rounded-sm min-w-[120px]', 
+              <div :class="['flex-1 text-center py-2 rounded-md min-w-[120px]', 
                        selectionPhase === 'return' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-600']">
                 <div class="font-medium">2. Select Return</div>
               </div>
             </template>
             <template v-else-if="isMultiCity">
               <div v-for="(seg, idx) in multiSegments" :key="idx" class="flex items-center flex-1">
-                <div :class="['flex-1 text-center py-2 rounded-sm min-w-[120px]', 
+                <div :class="['flex-1 text-center py-2 rounded-md min-w-[120px]', 
                          currentSegmentIndex === idx ? 'bg-pink-500 text-white' : (idx < currentSegmentIndex ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600')]">
                   <div class="font-medium">{{ idx + 1 }}. {{ seg.selectedFrom?.code || seg.origin }} → {{ seg.selectedTo?.code || seg.destination }}</div>
                 </div>
@@ -438,7 +438,7 @@
         <!-- Trip Type and Edit Button -->
         <div class="flex items-center justify-between ">
           <!-- Left Content -->
-          <div class="min-w-0">
+          <div class="min-w-0 space-y-1 ">
             <!-- Top Row -->
             <div class="flex flex-wrap items-center gap-2 mb-1 text-[9px] font-semibold ">
               <span
@@ -467,8 +467,10 @@
             </div>
 
             <!-- Route Line -->
-            <div class="truncate text-xs text-gray-300  ">
-              {{ selectionPhase === 'outbound' ? 'Departing:' : 'Returning:' }}
+            <div class="truncate text-xs  text-gray-400 flex flex-col ">
+              <span class="text-[9px]">
+                    {{ selectionPhase === 'outbound' ? 'Departing:' : 'Returning:' }}
+              </span>
               <span class="font-bold text-2xl text-black">
                 {{ phaseRouteInfo.origin }} → {{ phaseRouteInfo.destination }}
               </span>
@@ -491,7 +493,7 @@
         
         <!-- Auto-Switch Notification -->
         <div v-if="isRoundTrip && selectionPhase === 'return' && hasOutboundSelected" 
-          class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-sm">
+          class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <div class="flex items-start">
             <svg class="w-5 h-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
@@ -503,12 +505,12 @@
           </div>
         </div>
         
-        <!-- Selected Flights Summary -->
-        <div v-if="selectedFlightsSummary.length > 0" class="mt-6 pt-6 border-t border-gray-100">
+        <!-- Selected Flights Summary (Mobile Only) -->
+        <div v-if="selectedFlightsSummary.length > 0" class="mt-6 pt-6 border-t border-gray-100 lg:hidden">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Your Selection</h3>
           <div class="space-y-4">
             <div v-for="item in selectedFlightsSummary" :key="item.type" 
-              class="bg-gray-50 rounded-sm p-4 border border-gray-200">
+              class="bg-gray-50 rounded-lg p-4 border border-gray-200">
               <div class="flex justify-between items-start mb-2">
                 <div class="flex items-center space-x-3">
                   <div v-if="isRoundTrip" class="font-medium text-gray-900">{{ item.type }}:</div>
@@ -542,7 +544,7 @@
           
           <!-- Progress Indicators for Round Trips -->
           <div v-if="isRoundTrip" class="mt-4">
-            <div v-if="!hasOutboundSelected" class="p-3 bg-yellow-50 border border-yellow-200 rounded-sm">
+            <div v-if="!hasOutboundSelected" class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <div class="flex items-center text-yellow-700">
                 <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
@@ -551,7 +553,7 @@
               </div>
             </div>
             
-            <div v-else-if="!hasReturnSelected && selectionPhase === 'outbound'" class="p-3 bg-blue-50 border border-blue-200 rounded-sm">
+            <div v-else-if="!hasReturnSelected && selectionPhase === 'outbound'" class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <div class="flex items-center text-blue-700">
                 <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
@@ -564,7 +566,7 @@
           <!-- Phase Navigation (Round Trips Only) -->
           <div v-if="isRoundTrip" class="mt-6 flex flex-wrap gap-3">
             <button v-if="selectionPhase === 'return'" @click="goBackToOutbound" 
-              class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-sm text-gray-700 hover:bg-gray-50 transition-colors text-sm">
+              class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors text-sm">
               <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
@@ -574,7 +576,7 @@
             <!-- Show "Continue to Return Flight" only when outbound is selected AND we're in outbound phase -->
             <button v-if="selectionPhase === 'outbound' && hasOutboundSelected && !hasReturnSelected" 
               @click="goToReturnPhase" 
-              class="inline-flex items-center px-4 py-2 bg-pink-500 text-white rounded-sm hover:bg-pink-600 transition-colors text-sm">
+              class="inline-flex items-center px-4 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-600 transition-colors text-sm">
               Continue to Return Flight
               <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -584,7 +586,7 @@
             <!-- Show "Proceed to Passenger Details" when both flights are selected -->
             <button v-if="hasOutboundSelected && hasReturnSelected" 
               @click="proceedToPassengerDetails"
-              class="inline-flex items-center px-4 py-2 bg-green-500 text-white rounded-sm hover:bg-green-600 transition-colors text-sm">
+              class="inline-flex items-center px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-sm">
               Proceed to Passenger Details
               <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
@@ -597,13 +599,13 @@
       <!-- Mobile Filter Toggle -->
       <div class="lg:hidden mb-6">
         <button @click="showFilters = !showFilters" 
-          class="w-full flex items-center justify-between p-4 bg-white rounded-sm shadow-sm border border-gray-200">
+          class="w-full flex items-center justify-between p-4 bg-white rounded-lg shadow-sm border border-gray-200">
           <div class="flex items-center space-x-2">
             <svg class="w-5 h-5 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
             </svg>
-            <span class="font-medium text-gray-800">Filters & Sort</span>
-            <span v-if="filteredFlights.length < flights.length" class="text-sm text-pink-500">
+            <span class="font-medium text-gray-800 text-[11px] uppercase tracking-wider">Filters & Sort</span>
+            <span v-if="filteredFlights.length < flights.length" class="text-[9px] font-bold text-pink-500">
               ({{ filteredFlights.length }} of {{ flights.length }})
             </span>
           </div>
@@ -614,7 +616,7 @@
         </button>
       </div>
       
-      <div class="flex flex-col lg:flex-row gap-8">
+      <div class="flex flex-col lg:flex-row lg:items-start gap-8">
         <!-- Filters Sidebar -->
         <FlightFilterSidebar 
           v-model:filters="filters"
@@ -634,7 +636,7 @@
         />
         
         <!-- Main Content -->
-        <main class="flex-1">
+        <main class="flex-1 min-w-0">
           <!-- 7-Day Date Selector -->
           <DateNavigator 
             :weekDays="dateSelector.weekDays"
@@ -663,7 +665,7 @@
             </div>
 
             <!-- Skeleton Flight Cards -->
-            <div v-for="i in 3" :key="i" class="bg-white rounded-sm border border-gray-200 overflow-hidden shadow-sm">
+            <div v-for="i in 3" :key="i" class="bg-white rounded-md border border-gray-200 overflow-hidden shadow-sm">
               <div class="px-6 py-4">
                 <!-- Card Header Skeleton -->
                 <div class="flex justify-between items-center mb-6 pb-6 border-b border-gray-100">
@@ -708,7 +710,7 @@
           </div>
           
           <!-- No Results (including timeout case) -->
-          <div v-else-if="showNoResults || filteredFlights.length === 0" class="bg-white rounded-sm shadow-sm border border-gray-200 p-12 text-center">
+          <div v-else-if="showNoResults || filteredFlights.length === 0" class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
             <div class="w-16 h-16 mx-auto mb-6 text-gray-300">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
@@ -724,7 +726,7 @@
             </p>
             
             <!-- Additional info for timeout case -->
-            <div v-if="showNoResults && flights.length === 0" class="bg-yellow-50 border border-yellow-200 rounded-sm p-4 max-w-md mx-auto mb-6">
+            <div v-if="showNoResults && flights.length === 0" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-md mx-auto mb-6">
               <div class="flex items-start">
                 <svg class="w-5 h-5 text-yellow-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
@@ -738,18 +740,18 @@
             
             <div class="flex flex-col sm:flex-row gap-3 justify-center">
               <button @click="retryFetchFlights" 
-                class="px-6 py-3 bg-pink-500 text-white rounded-sm hover:bg-pink-600 transition-colors font-medium">
+                class="px-6 py-3 bg-pink-500 text-white rounded-md hover:bg-pink-600 transition-colors font-medium">
                 <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
                 Try Again
               </button>
               <button @click="resetFilters" 
-                class="px-6 py-3 border border-gray-300 rounded-sm text-gray-700 hover:bg-gray-50 transition-colors font-medium">
+                class="px-6 py-3 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors font-medium">
                 Reset All Filters
               </button>
               <button @click="initializeEditSearch" 
-                class="px-6 py-3 border border-pink-300 text-pink-500 rounded-sm hover:bg-pink-50 transition-colors font-medium">
+                class="px-6 py-3 border border-pink-300 text-pink-500 rounded-md hover:bg-pink-50 transition-colors font-medium">
                 Edit Search
               </button>
             </div>
@@ -757,14 +759,18 @@
           
           <!-- Flight List -->
           <div v-else>
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
               <h2 class="text-2xl font-bold text-gray-900">Available Flights ({{ filteredFlights.length }})</h2>
-              <div class="text-sm text-gray-600">
+              <div class="text-xs text-gray-600">
                 Sorted by: {{ filterOptions.sortOptions.find(s => s.value === filters.sortBy)?.label }}
               </div>
             </div>
             
-            <div class="space-y-3">
+            <TransitionGroup 
+              tag="div" 
+              name="flight-list" 
+              class="space-y-5"
+            >
               <FlightCard 
                 v-for="f in filteredFlights" 
                 :key="f.id"
@@ -780,10 +786,100 @@
                 @view-pricing="togglePricingDetails"
                 @select-flight="handleSelectFlight"
               />
-            </div>
+            </TransitionGroup>
           </div>
           </div>
         </main>
+
+        <!-- Right Sidebar for Selection Summary (Desktop Only) -->
+        <aside v-if="selectedFlightsSummary.length > 0" class="w-full lg:w-[320px] shrink-0 sticky top-8 z-10 hidden lg:block">
+           <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">Your Selection</h3>
+              <div class="space-y-4">
+                <div v-for="item in selectedFlightsSummary" :key="item.type" 
+                  class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <div class="flex justify-between items-start mb-2">
+                    <div class="flex items-center space-x-3">
+                      <div v-if="isRoundTrip" class="font-medium text-gray-900">{{ item.type }}:</div>
+                      <div class="px-2 py-1 bg-pink-500 text-white text-[10px] font-bold tracking-widest uppercase rounded-md">
+                        {{ item.flight }}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <div class="space-y-1">
+                      <div class="text-sm font-bold text-gray-800">{{ item.route }}</div>
+                      <div class="text-xs font-semibold text-gray-500">{{ item.time }} • {{ item.date }}</div>
+                      <div v-if="item.selected_seat_class" class="text-xs text-pink-600 font-bold mt-1">
+                        Seat Class: {{ item.selected_seat_class }}
+                        <span v-if="item.seat_class_price && item.base_price" class="text-[10px]">
+                          (+₱{{ Number(item.seat_class_price - item.base_price).toLocaleString() }})
+                        </span>
+                      </div>
+                    </div>
+                    <div class="font-black text-pink-600 text-lg">₱{{ item.price }}</div>
+                  </div>
+                </div>
+                
+                <!-- Total Price for Round Trips -->
+                <div v-if="isRoundTrip && selectedFlightsSummary.length > 1" 
+                  class="flex justify-between items-center pt-4 mt-4 border-t border-gray-200">
+                  <div class="font-bold text-gray-900 uppercase tracking-widest text-xs">Total Amount:</div>
+                  <div class="text-2xl font-black text-pink-600">₱{{ totalPrice.toLocaleString() }}</div>
+                </div>
+              </div>
+              
+              <!-- Progress Indicators for Round Trips -->
+              <div v-if="isRoundTrip" class="mt-6">
+                <div v-if="!hasOutboundSelected" class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg shadow-sm">
+                  <div class="flex items-start text-yellow-700 gap-3">
+                    <svg class="w-5 h-5 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="font-bold text-sm">Select your outbound flight to continue</span>
+                  </div>
+                </div>
+                
+                <div v-else-if="!hasReturnSelected && selectionPhase === 'outbound'" class="p-4 bg-blue-50 border border-blue-200 rounded-lg shadow-sm">
+                  <div class="flex items-start text-blue-700 gap-3">
+                    <svg class="w-5 h-5 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="font-bold text-sm">Outbound flight selected! Click "Continue to Return Flight" below</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Phase Navigation (Round Trips Only) -->
+              <div v-if="isRoundTrip" class="mt-6 flex flex-col gap-3">
+                <button v-if="selectionPhase === 'return'" @click="goBackToOutbound" 
+                  class="w-full inline-flex justify-center items-center px-4 py-2 border-2 border-gray-200 rounded-md text-gray-600 hover:bg-gray-100 transition-colors text-sm font-bold shadow-sm active:scale-95">
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  Back to Outbound
+                </button>
+                
+                <button v-if="selectionPhase === 'outbound' && hasOutboundSelected && !hasReturnSelected" 
+                  @click="goToReturnPhase" 
+                  class="w-full inline-flex justify-center items-center px-4 py-3 bg-pink-500 text-white rounded-md hover:bg-pink-600 transition-colors text-sm font-black shadow-md shadow-pink-200 active:scale-95">
+                  Continue to Return
+                  <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </button>
+                
+                <button v-if="hasOutboundSelected && hasReturnSelected" 
+                  @click="proceedToPassengerDetails"
+                  class="w-full inline-flex justify-center items-center px-4 py-3 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-sm font-black shadow-lg shadow-green-200 active:scale-95">
+                  Proceed to Passenger Details
+                  <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </button>
+              </div>
+           </div>
+        </aside>
       </div>
     </div>
   </div>
@@ -1078,26 +1174,34 @@ const formatPrice = (flight) => {
 };
 
 // Calculate price with selected seat class
-const calculateSeatClassPrice = (basePrice, className, flight = null) => {
+const calculateSeatClassPrice = (basePrice, className, flight = null, fareFamily = 'basic') => {
+  let price = 0;
+  
   // Use ML predicted seat class prices if available
   if (flight && flight.seat_class_prices && flight.seat_class_prices[className.toLowerCase()]) {
-    return flight.seat_class_prices[className.toLowerCase()];
+    price = flight.seat_class_prices[className.toLowerCase()];
+  } else {
+    // Fallback to multipliers
+    const priceMultipliers = {
+      'economy': 1.0,
+      'business': 1.8,
+      'first': 2.5,
+      'premium_economy': 1.3,
+      'first_class': 2.5,
+      'business_class': 1.8
+    };
+    
+    const key = className.toLowerCase().replace(' ', '_');
+    const multiplier = priceMultipliers[key] || 1.0;
+    price = Math.round(basePrice * multiplier);
   }
-  
-  // Fallback to multipliers
-  const priceMultipliers = {
-    'economy': 1.0,
-    'business': 1.8,
-    'first': 2.5,
-    'premium_economy': 1.3,
-    'first_class': 2.5,
-    'business_class': 1.8,
-    'premium_economy': 1.3
-  };
-  
-  const key = className.toLowerCase().replace(' ', '_');
-  const multiplier = priceMultipliers[key] || 1.0;
-  return Math.round(basePrice * multiplier);
+
+  // Add Premium Fare Family markup (e.g., +₱1,200 for bundled baggage/seat)
+  if (fareFamily === 'premium') {
+    price += 1200;
+  }
+
+  return price;
 };
 
 // =================================================
@@ -1387,92 +1491,74 @@ const showSeatClasses = (flight) => {
 const extractSeatClassesFromFlight = (flight) => {
   if (!flight) return [];
   
-  let seatClasses = [];
+  let rawSeatClasses = [];
   
-  // Structure 1: flight.available_classes array
+  // Extract raw seat classes based on available structures
   if (Array.isArray(flight.available_classes) && flight.available_classes.length > 0) {
-    seatClasses = flight.available_classes.map(className => ({
-      name: className,
-      description: getSeatClassDescription(className),
-      price: calculateSeatClassPrice(flight.price, className, flight),
-      icon: getSeatClassIcon(className),
-      features: getSeatClassFeatures(className),
-      ml_predicted: flight.ml_predicted
-    }));
+    rawSeatClasses = flight.available_classes.map(name => ({ name }));
+  } else if (Array.isArray(flight.seat_classes) && flight.seat_classes.length > 0) {
+    rawSeatClasses = flight.seat_classes.map(sc => typeof sc === 'string' ? { name: sc } : sc);
+  } else if (Object.keys(seatClassFeatures.value).length > 0) {
+    rawSeatClasses = Object.keys(seatClassFeatures.value).map(name => ({ name }));
+  } else {
+    rawSeatClasses = [{ name: 'Economy' }, { name: 'Business' }, { name: 'First Class' }];
   }
-  // Structure 2: flight.seat_classes array
-  else if (Array.isArray(flight.seat_classes) && flight.seat_classes.length > 0) {
-    seatClasses = flight.seat_classes.map(seatClass => {
-      if (typeof seatClass === 'string') {
-        return {
-          name: seatClass,
-          description: getSeatClassDescription(seatClass),
-          price: calculateSeatClassPrice(flight.price, seatClass, flight),
-          icon: getSeatClassIcon(seatClass),
-          features: getSeatClassFeatures(seatClass),
-          ml_predicted: flight.ml_predicted
-        };
-      } else if (typeof seatClass === 'object') {
-        return {
-          name: seatClass.name || seatClass.class_name || seatClass.value || 'Unknown',
-          description: seatClass.description || getSeatClassDescription(seatClass.name || seatClass.class_name),
-          price: seatClass.price || calculateSeatClassPrice(flight.price, seatClass.name || seatClass.class_name, flight),
-          icon: getSeatClassIcon(seatClass.name || seatClass.class_name),
-          features: seatClass.features || getSeatClassFeatures(seatClass.name || seatClass.class_name),
-          ml_predicted: flight.ml_predicted || seatClass.ml_predicted
-        };
-      }
-      return null;
-    }).filter(Boolean);
-  }
-  // Structure 3: Use loaded seat class features
-  else if (Object.keys(seatClassFeatures.value).length > 0) {
-    seatClasses = Object.keys(seatClassFeatures.value).map(className => {
-      const formattedName = className.split('_').map(word => 
-        word.charAt(0).toUpperCase() + word.slice(1)
-      ).join(' ');
-      
-      return {
-        name: formattedName,
-        description: getSeatClassDescription(className),
-        price: calculateSeatClassPrice(flight.price, className, flight),
-        icon: getSeatClassIcon(className),
-        features: parseFeatures(seatClassFeatures.value[className]),
-        ml_predicted: flight.ml_predicted
-      };
-    });
-  }
-  // Default fallback
-  else {
-    seatClasses = [
-      { 
-        name: 'Economy', 
-        description: getSeatClassDescription('economy'), 
-        price: flight.price, 
+
+  const finalClasses = [];
+
+  rawSeatClasses.forEach(sc => {
+    const className = sc.name || sc.class_name || sc.value || 'Unknown';
+    const isEconomy = className.toLowerCase().includes('economy');
+
+    if (isEconomy) {
+      // Split Economy into Basic and Premium
+      // 1. Economy Basic
+      finalClasses.push({
+        name: 'Economy Basic',
+        fare_family: 'basic',
+        description: 'Travel light with our most affordable fare. Essential services for your journey.',
+        price: calculateSeatClassPrice(flight.price, className, flight, 'basic'),
         icon: getSeatClassIcon('economy'),
-        features: getSeatClassFeatures('economy'),
+        features: [
+          '7kg Carry-on baggage',
+          'Standard seat (assigned at check-in)',
+          'Non-refundable',
+          'Changeable with fee'
+        ],
         ml_predicted: flight.ml_predicted
-      },
-      { 
-        name: 'Business', 
-        description: getSeatClassDescription('business'), 
-        price: calculateSeatClassPrice(flight.price, 'business', flight), 
-        icon: getSeatClassIcon('business'),
-        features: getSeatClassFeatures('business'),
+      });
+
+      // 2. Economy Premium
+      finalClasses.push({
+        name: 'Economy Premium',
+        fare_family: 'premium',
+        description: 'The smart choice. Includes checked baggage and free seat selection.',
+        price: calculateSeatClassPrice(flight.price, className, flight, 'premium'),
+        icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10', // Box/Baggage icon
+        features: [
+          '7kg Carry-on baggage',
+          '20kg Checked baggage included',
+          'Free Standard Seat selection',
+          'Rebookable with reduced fee',
+          'Priority check-in'
+        ],
         ml_predicted: flight.ml_predicted
-      },
-      { 
-        name: 'First Class', 
-        description: getSeatClassDescription('first'), 
-        price: calculateSeatClassPrice(flight.price, 'first', flight), 
-        icon: getSeatClassIcon('first'),
-        features: getSeatClassFeatures('first'),
-        ml_predicted: flight.ml_predicted
-      }
-    ];
-  }
-  
-  return seatClasses;
+      });
+    } else {
+      // For other classes, use standard mapping
+      finalClasses.push({
+        name: className,
+        fare_family: 'basic',
+        description: sc.description || getSeatClassDescription(className),
+        price: sc.price || calculateSeatClassPrice(flight.price, className, flight, 'basic'),
+        icon: getSeatClassIcon(className),
+        features: sc.features || getSeatClassFeatures(className),
+        ml_predicted: sc.ml_predicted || flight.ml_predicted
+      });
+    }
+  });
+
+  return finalClasses;
 };
 
 // Helper function to get seat class description
@@ -2800,5 +2886,20 @@ input[type="number"] {
 
 .flight-card-enter {
   animation: fadeInUp 0.3s ease-out;
+}
+.flight-list-move,
+.flight-list-enter-active,
+.flight-list-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.flight-list-enter-from,
+.flight-list-leave-to {
+  opacity: 0;
+  transform: translateY(15px);
+}
+
+.flight-list-leave-active {
+  position: absolute;
 }
 </style>

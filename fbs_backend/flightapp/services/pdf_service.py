@@ -253,16 +253,27 @@ class BoardingPassPDFService:
         c.drawString(stub_x + 0.15*inch, route_stub_y - 0.16*inch, origin)
         c.drawRightString(stub_x + stub_width - 0.15*inch, route_stub_y - 0.16*inch, destination)
         
-        # === BARCODE ===
+        # === QR CODE ===
         barcode_y = 0.45*inch
         barcode_height = 0.55*inch
         
-        # Generate barcode
+        # Generate QR code
         barcode_value = f"{booking_detail.id}{flight_number}{origin}{destination}{seat_number}"
-        barcode = code128.Code128(barcode_value, barHeight=barcode_height, barWidth=0.01*inch)
         
-        # Draw barcode
-        barcode.drawOn(c, stub_x + 0.1*inch, barcode_y - 0.1*inch)
+        from reportlab.graphics.barcode.qr import QrCodeWidget
+        from reportlab.graphics.shapes import Drawing
+        
+        qr_code = QrCodeWidget(barcode_value)
+        b = qr_code.getBounds()
+        w = b[2]-b[0]
+        h = b[3]-b[1]
+        
+        size = 0.65*inch
+        d = Drawing(size, size, transform=[size/w, 0, 0, size/h, 0, 0])
+        d.add(qr_code)
+        
+        # Draw QR code
+        renderPDF.draw(d, c, stub_x + 0.1*inch, barcode_y - 0.2*inch)
         
         # Barcode number below
         c.setFillColor(text_secondary)
@@ -353,6 +364,28 @@ class BoardingPassPDFService:
         c.setFillColor(white)
         c.setFont("Courier-Bold", 18)
         c.drawString(ref_x + 0.15*inch, height - 0.85*inch, booking_ref)
+        
+        # === ITINERARY QR CODE ===
+        from reportlab.graphics.barcode.qr import QrCodeWidget
+        from reportlab.graphics.shapes import Drawing
+        
+        qr_code = QrCodeWidget(booking_ref)
+        b = qr_code.getBounds()
+        w = b[2]-b[0]
+        h = b[3]-b[1]
+        
+        # Give QR Code a white background box
+        qr_size = 0.9 * inch
+        qr_x = width - 4.2*inch
+        qr_y = height - 1.2*inch
+        c.setFillColor(white)
+        c.roundRect(qr_x, qr_y, qr_size, qr_size, 4, fill=1, stroke=0)
+        
+        # Draw QR over the white background
+        d = Drawing(qr_size, qr_size, transform=[qr_size/w, 0, 0, qr_size/h, 0, 0])
+        d.add(qr_code)
+        renderPDF.draw(d, c, qr_x, qr_y)
+
         
         # === BOOKING INFO SECTION ===
         y_pos = height - 1.8*inch

@@ -85,10 +85,38 @@
             <option value="United Kingdom">United Kingdom</option>
           </select>
           <span v-if="showErrors && !form.nationality" class="small-error">Nationality is required</span>
+          <p v-if="requiresPassport" class="text-[9px] text-pink-500/80 font-bold mt-1 flex items-center gap-1">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            Passport Identification Required
+          </p>
+          <p v-else-if="form.nationality === 'Philippines'" class="text-[9px] text-emerald-500 font-bold mt-1 uppercase tracking-tighter">
+            Local ID Accepted (Domestic Flights)
+          </p>
         </div>
         <div class="field col-2">
-          <label>Passport Number</label>
-          <input v-model="form.passport" type="text" placeholder="Passport No." @input="debounceEmit">
+          <label>Passport Number <span class="required" v-if="requiresPassport">*</span></label>
+          <input v-model="form.passport" type="text" placeholder="Passport No." @input="debounceEmit" :class="{ 'error-border': showErrors && requiresPassport && !form.passport }">
+          <span v-if="showErrors && requiresPassport && !form.passport" class="small-error">Passport is required for international travel</span>
+        </div>
+      </div>
+
+      <div class="form-row mt-3">
+        <div class="field col-2">
+          <label>Passport Expiry <span class="required" v-if="requiresPassport">*</span></label>
+          <div class="expiry-grid flex gap-2">
+            <select v-model="form.expiryDay" @change="emitData" :class="{ 'error-border': showErrors && requiresPassport && !form.expiryDay }" class="w-1/3">
+              <option value="">Day</option>
+              <option v-for="d in 31" :key="d" :value="d">{{ d }}</option>
+            </select>
+            <select v-model="form.expiryMonth" @change="emitData" :class="{ 'error-border': showErrors && requiresPassport && !form.expiryMonth }" class="w-1/3">
+              <option value="">Month</option>
+              <option v-for="(m, i) in months" :key="i" :value="i+1">{{ m }}</option>
+            </select>
+            <input v-model="form.expiryYear" type="number" placeholder="Year" :min="new Date().getFullYear()" @input="debounceEmit" :class="{ 'error-border': showErrors && requiresPassport && !form.expiryYear }" class="w-1/3">
+          </div>
+          <span v-if="showErrors && requiresPassport && !passportStatus.isValid" class="small-error">
+            {{ passportStatus.message }}
+          </span>
         </div>
       </div>
 
@@ -189,9 +217,49 @@ const form = reactive({
     dobYear: '',
     nationality: 'Philippines',
     passport: '',
+    expiryDay: '',
+    expiryMonth: '',
+    expiryYear: '',
     phDiscountType: 'none',
     phDiscountId: '',
     associatedAdult: null
+});
+
+const requiresPassport = computed(() => {
+  // 1. Mandatory for ANY international flight segment
+  if (bookingStore.isInternational) return true;
+  
+  // 2. Mandatory for non-Philippine nationals even on domestic flights (simulation standard)
+  return form.nationality && form.nationality !== 'Philippines';
+});
+
+const passportStatus = computed(() => {
+  if (!form.expiryDay || !form.expiryMonth || !form.expiryYear) return { isValid: false, message: 'Complete date required', type: 'error' };
+  
+  const expDate = new Date(form.expiryYear, form.expiryMonth - 1, form.expiryDay);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // 1. Check if actually expired
+  if (expDate <= today) {
+    return { isValid: false, message: 'Passport has expired', type: 'error' };
+  }
+
+  // 2. Check 6-month rule for international travel
+  if (bookingStore.isInternational) {
+    const sixMonthsFromNow = new Date();
+    sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+    
+    if (expDate < sixMonthsFromNow) {
+      return { 
+        isValid: false, 
+        message: 'Must be valid for 6 months (Int\'l Law)', 
+        type: 'warning' 
+      };
+    }
+  }
+
+  return { isValid: true, message: '', type: 'success' };
 });
 
 // Validation Regex
@@ -280,7 +348,13 @@ const isFormValid = computed(() => {
   
   if (props.type === 'Infant' && !form.associatedAdult) return false;
   
-  // Validate PH Discount ID if claimed
+  // 1. Validate Passport if required (International flight or Foreign National)
+  if (requiresPassport.value) {
+    if (!form.passport || !form.passport.trim()) return false;
+    if (!passportStatus.value.isValid) return false;
+  }
+
+  // 2. Validate PH Discount ID if claimed
   if (props.type === 'Adult' && form.phDiscountType !== 'none' && !form.phDiscountId.trim()) return false;
   
   return basicValid;
@@ -339,6 +413,20 @@ const loadSavedData = () => {
     form.passport = savedPassenger.value.passportNumber || '';
     form.phDiscountType = savedPassenger.value.phDiscountType || 'none';
     form.phDiscountId = savedPassenger.value.phDiscountId || '';
+
+    // Parse passport expiry
+    if (savedPassenger.value.passportExpiry) {
+      try {
+        const expiry = new Date(savedPassenger.value.passportExpiry);
+        if (!isNaN(expiry.getTime())) {
+          form.expiryDay = expiry.getDate();
+          form.expiryMonth = expiry.getMonth() + 1;
+          form.expiryYear = expiry.getFullYear();
+        }
+      } catch (error) {
+        console.error('Error parsing passport expiry:', error);
+      }
+    }
     
     // Parse date of birth - FIXED: Check for dateOfBirth field
     if (savedPassenger.value.dateOfBirth) {
@@ -390,6 +478,9 @@ const resetForm = () => {
   form.dobYear = '';
   form.nationality = 'Philippines';
   form.passport = '';
+  form.expiryDay = '';
+  form.expiryMonth = '';
+  form.expiryYear = '';
   form.phDiscountType = 'none';
   form.phDiscountId = '';
   form.associatedAdult = null;
@@ -490,6 +581,9 @@ const emitData = () => {
     dateOfBirth: dateOfBirth,
     nationality: form.nationality,
     passportNumber: form.passport.trim(),
+    passportExpiry: form.expiryYear && form.expiryMonth && form.expiryDay 
+                   ? `${form.expiryYear}-${form.expiryMonth.toString().padStart(2, '0')}-${form.expiryDay.toString().padStart(2, '0')}` 
+                   : '',
     phDiscountType: form.phDiscountType,
     phDiscountId: form.phDiscountId.trim(),
     type: props.type,
@@ -611,11 +705,13 @@ input:focus, select:focus {
   border-color: #FF579A;
   outline: none;
 }
-input:invalid, select:invalid {
-  border-color: #ef4444;
+.expiry-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 5px;
 }
 .mt-3 { 
-  margin-top: 7px; 
+  margin-top: 10px; 
 }
 
 /* Age Display */

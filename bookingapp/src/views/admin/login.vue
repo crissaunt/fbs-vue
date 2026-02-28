@@ -14,7 +14,7 @@
     <header class="bg-[#F9FAFB]  p-4 shadow-md relative flex items-center space-x-3">
       <img :src="headerLogo" alt="CSU Logo" class="ml-4 h-15 w-15">
       <div>
-        <h1 class="unbounded-none text-[#FF579A] text-[15px]">Caraga State University</h1>
+        <h1 class="poppins font-bold text-[#FF579A] text-[15px]">Caraga State University</h1>
         <p class="poppins-none text-[#FF579A] text-[10px]">Cabadbaran City</p>
         <p class="font-extralight text-black poppins-none text-[10px] mb-1">
           T. Curato St., Cabadbaran City, Agusan del Norte, 8604
@@ -48,7 +48,7 @@
       <!-- Right Side (Login Form) -->
       <div class="w-1/2 flex items-center justify-center">
         <div class="bg-white p-6 rounded shadow-md w-full max-w-sm">
-          <h2 class="text-xl font-bold mb-4 text-center unbounded">Login</h2>
+          <h2 class="text-xl font-bold mb-4 text-center poppins">Login</h2>
           <p class="poppins-small text-[#FF579A] text-center mb-3">Please enter your information</p>
 
           <form @submit.prevent="login" class="space-y-3">

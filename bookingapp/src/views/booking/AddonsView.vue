@@ -1,483 +1,461 @@
-<template>
-  <div class="pal-bg pb-20 lg:pb-0">
+﻿<template>
+  <div class="min-h-screen bg-gray-50 pb-24 lg:pb-6">
     <BookingStatusHeader />
-    <div class="container pal-layout">
-      <main class="main-content">
-        <div class="trip-type-header">
-          <h2 class="page-title">Flight Add-ons</h2>
-          <div class="trip-type-badge" :class="{ 'round-trip': bookingStore.isRoundTrip, 'one-way': !bookingStore.isRoundTrip }">
-            {{ tripTypeInfo }}
-          </div>
-        </div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex flex-col lg:flex-row gap-6 items-start">
 
-        <!-- Show flight summary -->
-        <div v-if="flightInfo.length > 0" class="flight-summary-card">
-          <div class="flight-summary-header">
-            <h3>Your Flights</h3>
-          </div>
-          <div class="flight-summary-body">
-            <div v-for="flight in flightInfo" :key="flight.type" class="flight-item">
-              <div class="flight-type">{{ flight.type }}</div>
-              <div class="flight-details">
-                <span class="flight-number">{{ flight.flight }}</span>
-                <span class="flight-route">{{ flight.route }}</span>
-              </div>
-              <div class="flight-price">₱{{ flight.price.toLocaleString() }}</div>
-            </div>
-          </div>
-        </div>
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 min-w-0 space-y-5">
 
-        <!-- Visual Roadmap Indicator -->
-        <div v-if="segmentRoadmap.length > 1" class="visual-roadmap">
-          <div v-for="(seg, idx) in segmentRoadmap" :key="seg.key" class="roadmap-item">
-            <div class="roadmap-dot" :class="{ 'done': seg.isComplete, 'active': activeSegment === seg.key }">
-              <span v-if="seg.isComplete">✅</span>
-              <span v-else>{{ idx + 1 }}</span>
+          <!-- Page Header -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Customize Your Trip</h1>
+              <p class="text-sm text-gray-500 mt-0.5">Enhance your journey with our premium services</p>
             </div>
-            <div class="roadmap-info">
-              <div class="roadmap-label">{{ seg.label }}</div>
-              <div class="roadmap-status">
-                <span :class="{ 'check-done': seg.baggageDone }">🧳</span>
-                <span :class="{ 'check-done': seg.mealsDone }">🍱</span>
-                <span :class="{ 'check-done': seg.seatsDone }">💺</span>
-              </div>
-            </div>
-            <div v-if="idx < segmentRoadmap.length - 1" class="roadmap-connector"></div>
-          </div>
-        </div>
-
-        <div class="square-tabs-container">
-          <div class="square-tabs-grid">
-            <div 
-              @click="currentTab = 'baggage'"
-              :class="['square-tab', { active: currentTab === 'baggage' }]"
-            >
-              <div class="tab-icon">🧳</div>
-              <div class="tab-label">Baggage</div>
-            </div>
-            
-            <div 
-              @click="$router.push({ name: 'SeatSelection' })"
-              :class="['square-tab seat-tab', { active: $route.name === 'SeatSelection' }]"
-            >
-              <div class="tab-icon">💺</div>
-              <div class="tab-label">Seats</div>
-            </div>
-            
-            <div 
-              @click="currentTab = 'meals'"
-              :class="['square-tab', { active: currentTab === 'meals' }]"
-            >
-              <div class="tab-icon">🍱</div>
-              <div class="tab-label">Meals</div>
-            </div>
-            
-            <div 
-              @click="currentTab = 'wheelchair'"
-              :class="['square-tab', { active: currentTab === 'wheelchair' }]"
-            >
-              <div class="tab-icon">♿</div>
-              <div class="tab-label">Assistance</div>
-            </div>
-          </div>
-          
-          <div class="active-tab-indicator" :style="indicatorStyle"></div>
-        </div>
-
-        <div class="addon-workspace">
-          <div v-if="isLoading" class="loading-state">
-            <p>Fetching available services for your flight...</p>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wide w-fit"
+              :class="bookingStore.isRoundTrip ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-pink-50 text-pink-600 border border-pink-200'">
+              {{ tripTypeInfo }}
+            </span>
           </div>
 
-          <template v-else>
-            <!-- Insurance Section (always visible above tabs content) -->
-            <div class="tab-pane insurance-pane">
-              <h3>Travel Insurance</h3>
-              <p class="insurance-intro">
-                Protect your trip with travel insurance. Covers medical emergencies, trip interruptions, and lost baggage.
-              </p>
-              <div v-if="insurancePlans && insurancePlans.length" class="insurance-grid">
-                <div
-                  v-for="plan in insurancePlans"
-                  :key="plan.id"
-                  class="insurance-card"
-                  :class="{ selected: selectedInsurancePlanId === plan.id }"
-                >
-                  <div class="insurance-header">
-                    <div>
-                      <h4>{{ plan.name }}</h4>
-                      <p class="insurance-provider">
-                        Provided by {{ plan.provider_name || 'Our Insurance Partner' }}
-                      </p>
-                    </div>
-                    <div class="insurance-price">
-                      ₱{{ parseFloat(plan.retail_price).toLocaleString() }}
-                    </div>
-                  </div>
-
-                  <p class="insurance-description">
-                    {{ plan.description || 'Recommended coverage for medical, baggage, and trip interruptions.' }}
-                  </p>
-
-                  <p v-if="plan.coverage_summary" class="insurance-coverage">
-                    {{ plan.coverage_summary }}
-                  </p>
-
-                  <div class="insurance-actions">
-                    <button
-                      v-if="selectedInsurancePlanId === plan.id"
-                      class="insurance-toggle-btn remove"
-                      @click="removeInsurance"
-                    >
-                      Remove
-                    </button>
-                    <button
-                      v-else
-                      class="insurance-toggle-btn"
-                      @click="selectInsurance(plan)"
-                    >
-                      Add
-                    </button>
-                  </div>
+          <!-- Flight Strip Banner -->
+          <div v-if="flightInfo.length > 0" class="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Your Flights</p>
+            <div class="flex flex-wrap gap-4">
+              <div v-for="flight in flightInfo" :key="flight.type" class="flex items-center gap-3 flex-1 min-w-[200px]">
+                <div class="w-8 h-8 rounded-sm flex items-center justify-center flex-shrink-0"
+                  :class="flight.type === 'Return' ? 'bg-blue-100' : 'bg-pink-100'">
+                  <svg class="w-4 h-4" :class="flight.type === 'Return' ? 'text-blue-600' : 'text-pink-600'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
                 </div>
-              </div>
-
-              <p v-else class="insurance-unavailable">
-                Travel insurance is not available for this itinerary.
-              </p>
-            </div>
-
-            <!-- Baggage Tab - Card Layout -->
-            <div v-if="currentTab === 'baggage'" class="tab-pane">
-              <h3>Select Extra Baggage</h3>
-
-              <div v-for="segment in flightSegments" :key="segment.key" class="segment-block">
-                <div class="segment-notice">
-                  <span class="notice-icon">
-                    <span v-if="segment.key === 'depart'">✈️</span>
-                    <span v-else-if="segment.key === 'return'">🔄</span>
-                    <span v-else>📍</span>
-                  </span>
-                  <span><strong>{{ segment.label }}</strong> ({{ segment.flight }})</span>
+                <div class="flex-1 min-w-0">
+                  <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">{{ flight.type }}</p>
+                  <p class="text-sm font-bold text-gray-900 truncate">{{ flight.route }}</p>
+                  <p class="text-xs text-gray-500">{{ flight.flight }}</p>
                 </div>
-                
-                <div v-for="p in eligiblePassengers" :key="p.key" class="p-addon-row">
-                  <div class="p-info">
-                    <strong>{{ p.firstName }} {{ p.lastName }}</strong> ({{ p.type }})
-                    
-                    <button 
-                      v-if="getBaggageSelection(p.key, segment.key) && segmentRoadmap.length > 1"
-                      class="copy-addon-btn"
-                      @click="handleCopyAddon('baggage', p)"
-                      title="Copy this selection to all flights"
-                    >
-                      <span>🔄 Apply to all flights</span>
-                    </button>
+                <p class="text-sm font-bold text-pink-500 flex-shrink-0">&#8369;{{ flight.price.toLocaleString() }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Segment Roadmap -->
+          <div v-if="segmentRoadmap.length > 1" class="bg-white rounded-xl border border-gray-100 shadow-sm px-5 py-4">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Add-on Progress</p>
+            <div class="flex items-center">
+              <template v-for="(seg, idx) in segmentRoadmap" :key="seg.key">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all"
+                    :class="seg.isComplete ? 'bg-green-500 border-green-500 text-white' : activeSegment === seg.key ? 'border-pink-500 text-pink-500 bg-white' : 'border-gray-300 text-gray-400 bg-white'">
+                    <svg v-if="seg.isComplete" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                    <span v-else>{{ idx + 1 }}</span>
                   </div>
-                  <div class="option-grid">
-                    <div 
-                      v-for="opt in baggageOptions" 
-                      :key="opt.id"
-                      :class="['opt-card', { selected: getBaggageSelection(p.key, segment.key)?.id === opt.id }]"
-                      @click="selectBaggageDirect(p, opt, segment.key, $event)"
-                    >
-                      <span class="weight">{{ opt.formatted_weight }}</span>
-                      <span class="price">₱{{ parseFloat(opt.price).toLocaleString() }}</span>
+                  <div>
+                    <p class="text-xs font-semibold text-gray-800">{{ seg.label }}</p>
+                    <div class="flex gap-1 mt-0.5">
+                      <span :class="seg.baggageDone ? 'opacity-100' : 'opacity-25 grayscale'" class="text-xs">&#x1F9F3;</span>
+                      <span :class="seg.mealsDone ? 'opacity-100' : 'opacity-25 grayscale'" class="text-xs">&#x1F371;</span>
+                      <span :class="seg.seatsDone ? 'opacity-100' : 'opacity-25 grayscale'" class="text-xs">&#x1F4BA;</span>
                     </div>
                   </div>
                 </div>
-              </div>
+                <div v-if="idx < segmentRoadmap.length - 1" class="flex-1 h-px bg-gray-200 mx-3"></div>
+              </template>
+            </div>
+          </div>
+
+          <!-- TABS CARD -->
+          <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            <!-- Tab Nav -->
+            <div class="flex border-b border-gray-100">
+              <button @click="currentTab = 'baggage'"
+                :class="['flex-1 flex flex-col items-center gap-1 py-4 px-2 text-xs font-semibold transition-all relative', currentTab === 'baggage' ? 'text-pink-600 bg-pink-50/60' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50']">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+                <span>Baggage</span>
+                <div v-if="currentTab === 'baggage'" class="absolute bottom-0 inset-x-0 h-0.5 bg-pink-500"></div>
+              </button>
+              <button @click="$router.push({ name: 'SeatSelection' })"
+                class="flex-1 flex flex-col items-center gap-1 py-4 px-2 text-xs font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-all relative">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
+                <span>Seats</span>
+                <span class="absolute top-2 right-2 text-[9px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded font-bold">Go</span>
+              </button>
+              <button @click="currentTab = 'meals'"
+                :class="['flex-1 flex flex-col items-center gap-1 py-4 px-2 text-xs font-semibold transition-all relative', currentTab === 'meals' ? 'text-pink-600 bg-pink-50/60' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50']">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                <span>Meals</span>
+                <div v-if="currentTab === 'meals'" class="absolute bottom-0 inset-x-0 h-0.5 bg-pink-500"></div>
+              </button>
+              <button @click="currentTab = 'wheelchair'"
+                :class="['flex-1 flex flex-col items-center gap-1 py-4 px-2 text-xs font-semibold transition-all relative', currentTab === 'wheelchair' ? 'text-pink-600 bg-pink-50/60' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50']">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                <span>Assistance</span>
+                <div v-if="currentTab === 'wheelchair'" class="absolute bottom-0 inset-x-0 h-0.5 bg-pink-500"></div>
+              </button>
             </div>
 
-            <!-- Meals Tab - Card Layout -->
-            <div v-if="currentTab === 'meals'" class="tab-pane">
-              <h3>Select In-flight Meals</h3>
+            <!-- Tab Content -->
+            <div class="p-5">
+              <!-- Loading -->
+              <div v-if="isLoading" class="flex flex-col items-center justify-center py-16 gap-3">
+                <div class="w-10 h-10 border-4 border-pink-100 border-t-pink-500 rounded-full animate-spin"></div>
+                <p class="text-sm text-gray-400">Loading available services...</p>
+              </div>
 
-              <div v-for="segment in flightSegments" :key="segment.key" class="segment-block">
-                <div class="segment-notice">
-                  <span class="notice-icon">
-                    <span v-if="segment.key === 'depart'">✈️</span>
-                    <span v-else-if="segment.key === 'return'">🔄</span>
-                    <span v-else>📍</span>
-                  </span>
-                  <span><strong>{{ segment.label }}</strong> ({{ segment.flight }})</span>
-                </div>
-                
-                <div v-for="p in eligiblePassengers" :key="p.key" class="p-addon-row">
-                  <div class="p-info"><strong>{{ p.firstName }} {{ p.lastName }}</strong> ({{ p.type }})
-                    
-                    <button 
-                      v-if="getMealSelection(p.key, segment.key) && segmentRoadmap.length > 1"
-                      class="copy-addon-btn"
-                      @click="handleCopyAddon('meals', p)"
-                      title="Copy this selection to all flights"
-                    >
-                      <span>🔄 Apply to all flights</span>
-                    </button>
-</div>
-                  <div class="meal-options-grid">
-                    <!-- No Meal Option -->
-                    <div 
-                      :class="['meal-card', { selected: !getMealSelection(p.key, segment.key) }]"
-                      @click="selectMealDirect(p, null, segment.key, $event)"
-                    >
-                      <div class="meal-icon">🚫</div>
-                      <div class="meal-details">
-                        <div class="meal-name">No Meal</div>
-                        <div class="meal-price">No additional cost</div>
+              <template v-else>
+                <!-- INSURANCE -->
+                <div v-if="insurancePlans && insurancePlans.length" class="mb-5">
+                  <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Travel Protection</p>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div v-for="plan in insurancePlans" :key="plan.id"
+                      @click="selectedInsurancePlanId === plan.id ? removeInsurance() : selectInsurance(plan)"
+                      :class="['relative cursor-pointer rounded-sm border-2 p-4 transition-all hover:shadow-md', selectedInsurancePlanId === plan.id ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 bg-white hover:border-gray-300']">
+                      <div v-if="selectedInsurancePlanId === plan.id" class="absolute top-3 right-3 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                        <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
                       </div>
-                    </div>
-                    
-                    <!-- Meal Options -->
-                    <div 
-                      v-for="meal in mealOptions" 
-                      :key="meal.id"
-                      :class="['meal-card', { selected: getMealSelection(p.key, segment.key)?.id === meal.id }]"
-                      @click="selectMealDirect(p, meal, segment.key, $event)"
-                    >
-                      <div class="meal-icon">
-                        <span v-if="meal.meal_type === 'vegetarian'">🥬</span>
-                        <span v-else-if="meal.meal_type === 'vegan'">🌱</span>
-                        <span v-else-if="meal.meal_type === 'halal'">☪️</span>
-                        <span v-else-if="meal.meal_type === 'kosher'">✡️</span>
-                        <span v-else-if="meal.meal_type === 'child'">👶</span>
-                        <span v-else-if="meal.meal_type === 'infant'">🍼</span>
-                        <span v-else>🍽️</span>
-                      </div>
-                      <div class="meal-details">
-                        <div class="meal-name">{{ meal.name }}</div>
-                        <div class="meal-type">{{ meal.get_meal_type_display }}</div>
-                        <div class="meal-description">{{ meal.description }}</div>
-                        <div v-if="meal.calories" class="meal-calories">{{ meal.calories }} calories</div>
-                        <div class="meal-price">₱{{ parseFloat(meal.price).toLocaleString() }}</div>
-                      </div>
-                      <div v-if="meal.allergens" class="meal-allergens">
-                        <small>⚠️ Contains: {{ meal.allergens }}</small>
+                      <div class="flex items-start gap-3">
+                        <div class="w-9 h-9 rounded-sm bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                          <svg class="w-5 h-5 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        </div>
+                        <div class="flex-1 min-w-0 pr-6">
+                          <div class="flex items-baseline justify-between gap-2">
+                            <h4 class="text-sm font-bold text-gray-900 truncate">{{ plan.name }}</h4>
+                            <span class="text-sm font-black text-emerald-600 flex-shrink-0">&#8369;{{ parseFloat(plan.retail_price).toLocaleString() }}</span>
+                          </div>
+                          <p class="text-[11px] text-gray-500 mt-0.5">By {{ plan.provider_name || "Our Insurance Partner" }}</p>
+                          <p class="text-xs text-gray-600 mt-1.5 line-clamp-2">{{ plan.description || "Covers medical, baggage loss &amp; trip interruptions." }}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
+                  <div class="border-t border-dashed border-gray-200 mt-5"></div>
                 </div>
-              </div>
-            </div>
 
-            <!-- Assistance Tab - Card Layout -->
-            <div v-if="currentTab === 'wheelchair'" class="tab-pane">
-              <h3>Select Special Assistance</h3>
-
-              <div v-for="segment in flightSegments" :key="segment.key" class="segment-block">
-                <div class="segment-notice">
-                  <span class="notice-icon">
-                    <span v-if="segment.key === 'depart'">✈️</span>
-                    <span v-else-if="segment.key === 'return'">🔄</span>
-                    <span v-else>📍</span>
-                  </span>
-                  <span><strong>{{ segment.label }}</strong> ({{ segment.flight }})</span>
-                </div>
-                
-                <div v-for="p in eligiblePassengers" :key="p.key" class="p-addon-row">
-                  <div class="p-info"><strong>{{ p.firstName }} {{ p.lastName }}</strong> ({{ p.type }})
-                    
-                    <button 
-                      v-if="getAssistanceSelection(p.key, segment.key) && segmentRoadmap.length > 1"
-                      class="copy-addon-btn"
-                      @click="handleCopyAddon('wheelchair', p)"
-                      title="Copy this selection to all flights"
-                    >
-                      <span>🔄 Apply to all flights</span>
-                    </button>
-</div>
-                  <div class="assistance-options-grid">
-                    <!-- No Assistance Option -->
-                    <div 
-                      :class="['assistance-card', { selected: !getAssistanceSelection(p.key, segment.key) }]"
-                      @click="selectAssistanceDirect(p, null, segment.key, $event)"
-                    >
-                      <div class="assistance-icon">🚶</div>
-                      <div class="assistance-details">
-                        <div class="assistance-name">No Assistance Needed</div>
-                        <div class="assistance-description">I can manage without special assistance</div>
-                      </div>
+                <!-- BAGGAGE TAB -->
+                <div v-if="currentTab === 'baggage'" class="space-y-6">
+                  <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-gray-700">Extra Baggage Allowance</p>
+                    <p class="text-xs text-gray-500 mt-0.5">Standard cabin bag included. Select extra checked baggage per passenger.</p>
+                  </div>
+                  <div v-for="segment in flightSegments" :key="segment.key" class="space-y-4">
+                    <div class="flex items-center gap-2 py-2 px-3 rounded-sm" :class="segment.key === 'return' ? 'bg-blue-50 border border-blue-100' : 'bg-pink-50 border border-pink-100'">
+                      <span class="text-sm">{{ segment.key === "depart" ? "✈️" : segment.key === "return" ? "🔄" : "📍" }}</span>
+                      <span class="text-xs font-bold text-gray-700">{{ segment.label }}</span>
+                      <span class="text-xs text-gray-500">· {{ segment.flight }}</span>
                     </div>
-                    
-                    <!-- Assistance Options -->
-                    <div 
-                      v-for="service in assistanceOptions" 
-                      :key="service.id"
-                      :class="['assistance-card', { selected: getAssistanceSelection(p.key, segment.key) === service.id, free: service.price === 0 }]"
-                      @click="selectAssistanceDirect(p, service, segment.key, $event)"
-                    >
-                      <div class="assistance-icon">
-                        <span v-if="service.service_type === 'wheelchair'">♿</span>
-                        <span v-else-if="service.service_type === 'boarding'">👵</span>
-                        <span v-else-if="service.service_type === 'medical'">🏥</span>
-                        <span v-else-if="service.service_type === 'unaccompanied_minor'">👦</span>
-                        <span v-else-if="service.service_type === 'pet'">🐕</span>
-                        <span v-else>🛂</span>
+                    <div v-for="p in eligiblePassengers" :key="p.key" class="rounded-sm border border-gray-100 bg-gray-50/60 p-4">
+                      <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                          <div class="w-7 h-7 rounded-full bg-[#003870] flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
+                            {{ p.firstName?.charAt(0) }}{{ p.lastName?.charAt(0) }}
+                          </div>
+                          <div>
+                            <p class="text-sm font-semibold text-gray-900">{{ p.firstName }} {{ p.lastName }}</p>
+                            <p class="text-[10px] text-gray-500 uppercase tracking-wide">{{ p.type }}</p>
+                          </div>
+                        </div>
+                        <button v-if="getBaggageSelection(p.key, segment.key) && segmentRoadmap.length > 1"
+                          class="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-1 rounded-md hover:bg-blue-100 transition-colors"
+                          @click="handleCopyAddon('baggage', p)">Apply to all flights</button>
                       </div>
-                      <div class="assistance-details">
-                        <div class="assistance-name">{{ service.name }}</div>
-                        <div class="assistance-type">{{ service.get_service_type_display }}</div>
-                        <div class="assistance-description">{{ service.description }}</div>
-                        <div class="assistance-notice">{{ service.advance_notice_text }}</div>
-                        <div v-if="service.special_requirements" class="assistance-requirements">
-                          <small>📋 {{ service.special_requirements }}</small>
+                      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <div v-for="opt in baggageOptions" :key="opt.id"
+                          @click="selectBaggageDirect(p, opt, segment.key, $event)"
+                          :class="['relative cursor-pointer rounded-sm border-2 p-3 text-center transition-all hover:-translate-y-0.5 hover:shadow-sm', getBaggageSelection(p.key, segment.key)?.id === opt.id ? 'border-pink-500 bg-pink-50' : 'border-gray-200 bg-white hover:border-pink-300']">
+                          <div v-if="getBaggageSelection(p.key, segment.key)?.id === opt.id" class="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center">
+                            <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                          </div>
+                          
+                          <!-- Included Badge for Premium -->
+                          <div v-if="bookingStore.fareFamilies[segment.key] === 'premium' && opt.weight_kg <= 20" 
+                            class="absolute top-1 left-1 bg-emerald-100 text-emerald-700 text-[8px] font-black px-1 rounded">
+                            INCLUDED
+                          </div>
+
+                          <div class="text-2xl mb-1">&#x1F9F3;</div>
+                          <p class="text-sm font-black text-gray-900">{{ opt.formatted_weight }}</p>
+                          <p class="text-xs font-bold mt-0.5" 
+                            :class="bookingStore.fareFamilies[segment.key] === 'premium' && opt.weight_kg <= 20 ? 'text-emerald-600' : 'text-pink-500'">
+                            {{ bookingStore.fareFamilies[segment.key] === 'premium' && opt.weight_kg <= 20 ? 'FREE' : '₱' + parseFloat(opt.price).toLocaleString() }}
+                          </p>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </template>
-        </div>
-        <div class="footer-nav">
-          <button class="btn-back" @click="$router.back()">BACK</button>
-          <button class="btn-continue hidden lg:block" @click="saveAndContinue">CONTINUE TO REVIEW</button>
-        </div>
-      </main>
-      
-      <MobileBookingFooter 
-        button-text="Continue to Review" 
-        @next="saveAndContinue" 
-      />
 
-      <aside class="sidebar">
-        <BookingTimer variant="sidebar" />
-        <div class="summary-card sticky">
-          <div class="summary-header">Price Breakdown</div>
-          <div class="summary-body">
-            <!-- Show flight breakdown -->
-            <div v-if="flightInfo.length > 0" class="flight-breakdown">
-              <!-- Adults Breakdown -->
-              <div class="price-line" v-if="bookingStore.passengerCount.adults > 0">
-                <span>{{ bookingStore.passengerCount.adults }} Adult(s) (Total Base Fare)</span> 
-                <AnimatedNumber :value="bookingStore.grandTotalForAdults" prefix="₱" />
-              </div>
-              
-              <!-- Children Breakdown -->
-              <div class="price-line" v-if="bookingStore.passengerCount.children > 0">
-                <span>{{ bookingStore.passengerCount.children }} Child(ren) (Total Base Fare)</span> 
-                <AnimatedNumber :value="bookingStore.grandTotalForChildren" prefix="₱" />
-              </div>
+                <!-- MEALS TAB -->
+                <div v-if="currentTab === 'meals'" class="space-y-6">
+                  <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-gray-700">In-Flight Meal Selection</p>
+                    <p class="text-xs text-gray-500 mt-0.5">Pre-order your meal for a guaranteed selection. Available meals vary by route.</p>
+                  </div>
+                  <div v-for="segment in flightSegments" :key="segment.key" class="space-y-4">
+                    <div class="flex items-center gap-2 py-2 px-3 rounded-sm" :class="segment.key === 'return' ? 'bg-blue-50 border border-blue-100' : 'bg-pink-50 border border-pink-100'">
+                      <span class="text-sm">{{ segment.key === "depart" ? "✈️" : segment.key === "return" ? "🔄" : "📍" }}</span>
+                      <span class="text-xs font-bold text-gray-700">{{ segment.label }}</span>
+                      <span class="text-xs text-gray-500">· {{ segment.flight }}</span>
+                    </div>
+                    <div v-for="p in eligiblePassengers" :key="p.key" class="rounded-sm border border-gray-100 bg-gray-50/60 p-4">
+                      <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                          <div class="w-7 h-7 rounded-full bg-[#003870] flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
+                            {{ p.firstName?.charAt(0) }}{{ p.lastName?.charAt(0) }}
+                          </div>
+                          <div>
+                            <p class="text-sm font-semibold text-gray-900">{{ p.firstName }} {{ p.lastName }}</p>
+                            <p class="text-[10px] text-gray-500 uppercase tracking-wide">{{ p.type }}</p>
+                          </div>
+                        </div>
+                        <button v-if="getMealSelection(p.key, segment.key) && segmentRoadmap.length > 1"
+                          class="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-1 rounded-md hover:bg-blue-100 transition-colors"
+                          @click="handleCopyAddon('meals', p)">Apply to all flights</button>
+                      </div>
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div @click="selectMealDirect(p, null, segment.key, $event)"
+                          :class="['relative cursor-pointer rounded-sm border-2 p-3 flex items-center gap-3 transition-all', !getMealSelection(p.key, segment.key) ? 'border-pink-500 bg-pink-50' : 'border-gray-200 bg-white hover:border-pink-300']">
+                          <div v-if="!getMealSelection(p.key, segment.key)" class="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center">
+                            <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                          </div>
+                          <span class="text-2xl">&#x1F6AB;</span>
+                          <div><p class="text-sm font-bold text-gray-800">No Meal</p><p class="text-[10px] text-gray-500">No additional cost</p></div>
+                        </div>
+                        <div v-for="meal in mealOptions" :key="meal.id"
+                          @click="selectMealDirect(p, meal, segment.key, $event)"
+                          :class="['relative cursor-pointer rounded-sm border-2 p-3 flex items-start gap-3 transition-all hover:-translate-y-0.5', getMealSelection(p.key, segment.key)?.id === meal.id ? 'border-pink-500 bg-pink-50' : 'border-gray-200 bg-white hover:border-pink-300']">
+                          <div v-if="getMealSelection(p.key, segment.key)?.id === meal.id" class="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center">
+                            <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                          </div>
+                          <div class="text-2xl flex-shrink-0">
+                            <span v-if="meal.meal_type === 'vegetarian'">&#x1F96C;</span>
+                            <span v-else-if="meal.meal_type === 'vegan'">&#x1F331;</span>
+                            <span v-else-if="meal.meal_type === 'halal'">&#x262A;&#xFE0F;</span>
+                            <span v-else-if="meal.meal_type === 'kosher'">&#x2721;&#xFE0F;</span>
+                            <span v-else-if="meal.meal_type === 'child'">&#x1F476;</span>
+                            <span v-else>&#x1F37D;&#xFE0F;</span>
+                          </div>
+                          <div class="flex-1 min-w-0">
+                            <p class="text-sm font-bold text-gray-900">{{ meal.name }}</p>
+                            <div class="flex flex-wrap gap-1 mt-1">
+                              <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase rounded"
+                                :class="['vegetarian','vegan'].includes(meal.meal_type) ? 'bg-green-100 text-green-700' : meal.meal_type === 'halal' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'">
+                                {{ meal.get_meal_type_display || meal.meal_type }}
+                              </span>
+                              <span v-if="meal.calories" class="text-[10px] text-gray-400">{{ meal.calories }} kcal</span>
+                            </div>
+                            <p v-if="meal.allergens" class="text-[10px] text-amber-600 mt-1">&#x26A0;&#xFE0F; {{ meal.allergens }}</p>
+                            <p class="text-sm font-black text-pink-500 mt-1.5">&#8369;{{ parseFloat(meal.price).toLocaleString() }}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-              <!-- Infants Breakdown (50% Base Fare) -->
-              <div class="price-line infant-line" v-if="bookingStore.passengerCount.infants > 0">
-                <span>{{ bookingStore.passengerCount.infants }} Infant(s) (50% Base Fare)</span> 
-                <AnimatedNumber :value="bookingStore.grandTotalForInfants" prefix="₱" />
-              </div>
-            </div>
-
-            <div class="price-line" v-if="totalSeats > 0" id="sidebar-seats">
-              <span>Seat Selection Fee</span> 
-              <AnimatedNumber :value="totalSeats" prefix="₱" />
-            </div>
-
-            <div class="price-line" v-if="totalBaggage > 0" id="sidebar-baggage">
-              <span>Baggage</span> 
-              <AnimatedNumber :value="totalBaggage" prefix="₱" />
-            </div>
-
-            <div class="price-line" v-if="totalMeals > 0" id="sidebar-meals">
-              <span>Meals</span> 
-              <AnimatedNumber :value="totalMeals" prefix="₱" />
-            </div>
-
-            <div class="price-line" v-if="totalAssistance > 0" id="sidebar-assistance">
-              <span>Assistance</span> 
-              <AnimatedNumber :value="totalAssistance" prefix="₱" />
-            </div>
-
-            <div class="price-line" v-if="insurancePrice > 0" id="sidebar-insurance">
-              <span>Travel Insurance</span> 
-              <AnimatedNumber :value="insurancePrice" prefix="₱" />
-            </div>
-
-            <hr>
-
-            <div class="total-row" id="sidebar-total">
-              <span>Subtotal</span>
-              <span class="final-amt">
-                <AnimatedNumber :value="addonsSubtotal" prefix="₱" />
-              </span>
+                <!-- ASSISTANCE TAB -->
+                <div v-if="currentTab === 'wheelchair'" class="space-y-6">
+                  <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-gray-700">Special Assistance</p>
+                    <p class="text-xs text-gray-500 mt-0.5">We coordinate with ground staff to ensure your comfort throughout the journey.</p>
+                  </div>
+                  <div v-for="segment in flightSegments" :key="segment.key" class="space-y-4">
+                    <div class="flex items-center gap-2 py-2 px-3 rounded-sm" :class="segment.key === 'return' ? 'bg-blue-50 border border-blue-100' : 'bg-pink-50 border border-pink-100'">
+                      <span class="text-sm">{{ segment.key === "depart" ? "✈️" : segment.key === "return" ? "🔄" : "📍" }}</span>
+                      <span class="text-xs font-bold text-gray-700">{{ segment.label }}</span>
+                      <span class="text-xs text-gray-500">· {{ segment.flight }}</span>
+                    </div>
+                    <div v-for="p in eligiblePassengers" :key="p.key" class="rounded-sm border border-gray-100 bg-gray-50/60 p-4">
+                      <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                          <div class="w-7 h-7 rounded-full bg-[#003870] flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
+                            {{ p.firstName?.charAt(0) }}{{ p.lastName?.charAt(0) }}
+                          </div>
+                          <div>
+                            <p class="text-sm font-semibold text-gray-900">{{ p.firstName }} {{ p.lastName }}</p>
+                            <p class="text-[10px] text-gray-500 uppercase tracking-wide">{{ p.type }}</p>
+                          </div>
+                        </div>
+                        <button v-if="getAssistanceSelection(p.key, segment.key) && segmentRoadmap.length > 1"
+                          class="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-1 rounded-md hover:bg-blue-100 transition-colors"
+                          @click="handleCopyAddon('wheelchair', p)">Apply to all flights</button>
+                      </div>
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div @click="selectAssistanceDirect(p, null, segment.key, $event)"
+                          :class="['relative cursor-pointer rounded-sm border-2 p-3 flex items-center gap-3 transition-all', !getAssistanceSelection(p.key, segment.key) ? 'border-pink-500 bg-pink-50' : 'border-gray-200 bg-white hover:border-pink-300']">
+                          <div v-if="!getAssistanceSelection(p.key, segment.key)" class="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center">
+                            <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                          </div>
+                          <span class="text-2xl">&#x1F6B6;</span>
+                          <div><p class="text-sm font-bold text-gray-800">No Assistance Needed</p><p class="text-[10px] text-gray-500">I can manage independently</p></div>
+                        </div>
+                        <div v-for="service in assistanceOptions" :key="service.id"
+                          @click="selectAssistanceDirect(p, service, segment.key, $event)"
+                          :class="['relative cursor-pointer rounded-sm border-2 p-3 flex items-start gap-3 transition-all hover:-translate-y-0.5', getAssistanceSelection(p.key, segment.key) === service.id ? 'border-pink-500 bg-pink-50' : service.price === 0 ? 'border-emerald-200 bg-emerald-50/40 hover:border-emerald-400' : 'border-gray-200 bg-white hover:border-pink-300']">
+                          <div v-if="getAssistanceSelection(p.key, segment.key) === service.id" class="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center">
+                            <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                          </div>
+                          <div class="text-2xl flex-shrink-0">
+                            <span v-if="service.service_type === 'wheelchair'">&#x267F;</span>
+                            <span v-else-if="service.service_type === 'boarding'">&#x1F475;</span>
+                            <span v-else-if="service.service_type === 'medical'">&#x1F3E5;</span>
+                            <span v-else-if="service.service_type === 'unaccompanied_minor'">&#x1F466;</span>
+                            <span v-else-if="service.service_type === 'pet'">&#x1F415;</span>
+                            <span v-else>&#x1F6C2;</span>
+                          </div>
+                          <div class="flex-1 min-w-0">
+                            <div class="flex items-start justify-between gap-1">
+                              <p class="text-sm font-bold text-gray-900">{{ service.name }}</p>
+                              <span v-if="service.price === 0" class="text-[9px] font-black uppercase bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded flex-shrink-0">FREE</span>
+                            </div>
+                            <p class="text-[10px] text-gray-500 italic mt-0.5">{{ service.get_service_type_display }}</p>
+                            <p class="text-xs text-gray-600 mt-1">{{ service.description }}</p>
+                            <p v-if="service.advance_notice_text" class="text-[10px] text-amber-600 mt-1">&#x23F0; {{ service.advance_notice_text }}</p>
+                            <p v-if="service.price > 0" class="text-sm font-black text-pink-500 mt-1.5">&#8369;{{ parseFloat(service.price).toLocaleString() }}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </template>
             </div>
           </div>
-        </div>
-      </aside>
-    </div>
 
-    <!-- Confirmation Modal -->
-    <div v-if="showConfirmationModal" class="modal-overlay" @click.self="closeConfirmationModal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>{{ modalTitle }}</h3>
-          <button class="modal-close" @click="closeConfirmationModal">×</button>
-        </div>
-        
-        <div class="modal-body">
-          <div v-if="modalType === 'baggage'">
-            <p><strong>Passenger:</strong> {{ modalData.passenger.firstName }} {{ modalData.passenger.lastName }} ({{ modalData.passenger.type }})</p>
-            <p><strong>Flight:</strong> {{ activeSegmentLabel }}</p>
-            <template v-if="modalData.option">
-              <p><strong>Baggage:</strong> {{ modalData.option.formatted_weight }} Extra Baggage</p>
-              <p><strong>Price:</strong> ₱{{ parseFloat(modalData.option.price).toLocaleString() }}</p>
-              <p class="modal-note">This baggage will be added to your booking and cannot be changed after payment.</p>
-            </template>
-            <template v-else>
-              <p><strong>Action:</strong> Remove Baggage Selection</p>
-              <p class="modal-note warning">You are removing the selected baggage for this passenger. This action cannot be undone.</p>
-            </template>
+          <!-- Footer Nav -->
+          <div class="flex items-center justify-between pt-2">
+            <button @click="$router.back()" class="flex items-center gap-2 px-5 py-2.5 border border-gray-300 rounded-sm text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+              Back
+            </button>
+            <button @click="saveAndContinue" class="hidden lg:flex items-center gap-2 px-6 py-2.5 bg-[#FF579A] hover:bg-[#FF4081] text-white rounded-sm text-sm font-bold shadow-lg shadow-pink-200 transition-all active:scale-[0.98]">
+              Continue to Review
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+            </button>
           </div>
-          
-          <div v-if="modalType === 'meal'">
-            <p><strong>Passenger:</strong> {{ modalData.passenger.firstName }} {{ modalData.passenger.lastName }}</p>
-            <p><strong>Flight:</strong> {{ modalData.segment === 'depart' ? 'Depart Flight' : 'Return Flight' }}</p>
-            <template v-if="modalData.option">
-              <p><strong>Meal:</strong> {{ modalData.option.name }}</p>
-              <p><strong>Type:</strong> {{ modalData.option.get_meal_type_display }}</p>
-              <p><strong>Description:</strong> {{ modalData.option.description }}</p>
-              <p v-if="modalData.option.calories"><strong>Calories:</strong> {{ modalData.option.calories }}</p>
-              <p v-if="modalData.option.allergens"><strong>Allergens:</strong> {{ modalData.option.allergens }}</p>
-              <p><strong>Price:</strong> ₱{{ parseFloat(modalData.option.price).toLocaleString() }}</p>
-              <p class="modal-note">Meals cannot be changed within 24 hours of departure.</p>
-            </template>
-            <template v-else>
-              <p><strong>Action:</strong> No Meal Selected</p>
-              <p class="modal-note">You are selecting no meal for this passenger.</p>
-            </template>
+        </main>
+
+        <!-- STICKY SIDEBAR -->
+        <aside class="w-full lg:w-72 xl:w-80 flex-shrink-0">
+          <BookingTimer variant="sidebar" />
+          <div class="sticky top-5 space-y-3 mt-3">
+            <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div class="bg-gradient-to-r from-[#003870] to-[#004f9e] px-5 py-3.5">
+                <p class="text-xs font-bold uppercase tracking-widest text-white/70">Price Breakdown</p>
+              </div>
+              <div class="p-5 space-y-2.5">
+                <div v-if="bookingStore.passengerCount.adults > 0" class="flex justify-between items-center">
+                  <span class="text-xs text-gray-500">{{ bookingStore.passengerCount.adults }} Adult(s) Base</span>
+                  <AnimatedNumber :value="bookingStore.grandTotalForAdults" prefix="&#8369;" class="text-xs font-semibold text-gray-900" />
+                </div>
+                <div v-if="bookingStore.passengerCount.children > 0" class="flex justify-between items-center">
+                  <span class="text-xs text-gray-500">{{ bookingStore.passengerCount.children }} Child(ren)</span>
+                  <AnimatedNumber :value="bookingStore.grandTotalForChildren" prefix="&#8369;" class="text-xs font-semibold text-gray-900" />
+                </div>
+                <div v-if="bookingStore.passengerCount.infants > 0" class="flex justify-between items-center">
+                  <span class="text-xs text-gray-500">{{ bookingStore.passengerCount.infants }} Infant(s)</span>
+                  <AnimatedNumber :value="bookingStore.grandTotalForInfants" prefix="&#8369;" class="text-xs font-semibold text-gray-900" />
+                </div>
+                <div v-if="totalSeats > 0 || totalBaggage > 0 || totalMeals > 0 || totalAssistance > 0 || insurancePrice > 0" class="border-t border-dashed border-gray-100 pt-2.5 space-y-2.5">
+                  <div v-if="totalSeats > 0 || isAnySegmentPremium" id="sidebar-seats" class="flex justify-between items-center">
+                    <span class="text-xs text-gray-500 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>Seat Selection</span>
+                    <span v-if="totalSeats === 0 && isAnySegmentPremium" class="text-[10px] font-bold text-emerald-600">INCLUDED</span>
+                    <AnimatedNumber v-else :value="totalSeats" prefix="&#8369;" class="text-xs font-semibold text-gray-900" />
+                  </div>
+                  <div v-if="totalBaggage > 0 || isAnySegmentPremium" id="sidebar-baggage" class="flex justify-between items-center">
+                    <span class="text-xs text-gray-500 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-pink-400 flex-shrink-0"></span>Baggage</span>
+                    <span v-if="totalBaggage === 0 && isAnySegmentPremium" class="text-[10px] font-bold text-emerald-600">INCLUDED</span>
+                    <AnimatedNumber v-else :value="totalBaggage" prefix="&#8369;" class="text-xs font-semibold text-gray-900" />
+                  </div>
+                  <div v-if="totalMeals > 0" id="sidebar-meals" class="flex justify-between items-center">
+                    <span class="text-xs text-gray-500 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>Meals</span>
+                    <AnimatedNumber :value="totalMeals" prefix="&#8369;" class="text-xs font-semibold text-gray-900" />
+                  </div>
+                  <div v-if="totalAssistance > 0" id="sidebar-assistance" class="flex justify-between items-center">
+                    <span class="text-xs text-gray-500 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"></span>Assistance</span>
+                    <AnimatedNumber :value="totalAssistance" prefix="&#8369;" class="text-xs font-semibold text-gray-900" />
+                  </div>
+                  <div v-if="insurancePrice > 0" id="sidebar-insurance" class="flex justify-between items-center">
+                    <span class="text-xs text-gray-500 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></span>Insurance</span>
+                    <AnimatedNumber :value="insurancePrice" prefix="&#8369;" class="text-xs font-semibold text-gray-900" />
+                  </div>
+                </div>
+                <div class="border-t border-gray-100 pt-3">
+                  <div id="sidebar-total" class="flex justify-between items-center">
+                    <span class="text-sm font-bold text-gray-700">Subtotal</span>
+                    <AnimatedNumber :value="addonsSubtotal" prefix="&#8369;" class="text-lg font-black text-pink-500" />
+                  </div>
+                  <p class="text-[10px] text-gray-400 mt-1">Taxes shown at review</p>
+                </div>
+              </div>
+            </div>
+            <button @click="saveAndContinue" class="w-full py-3.5 bg-[#FF579A] hover:bg-[#FF4081] text-white rounded-sm text-sm font-bold shadow-lg shadow-pink-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+              Continue to Review
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+            </button>
           </div>
-          
-          <div v-else-if="modalType === 'assistance'">
-            <p><strong>Passenger:</strong> {{ modalData.passenger.firstName }} {{ modalData.passenger.lastName }}</p>
-            <p><strong>Flight:</strong> {{ modalData.segment === 'depart' ? 'Depart Flight' : 'Return Flight' }}</p>
-            <template v-if="modalData.option">
-              <p><strong>Service:</strong> {{ modalData.option.name }}</p>
-              <p><strong>Type:</strong> {{ modalData.option.get_service_type_display }}</p>
-              <p><strong>Description:</strong> {{ modalData.option.description }}</p>
-              <p><strong>Notice Required:</strong> {{ modalData.option.advance_notice_text }}</p>
-              <p v-if="modalData.option.special_requirements"><strong>Requirements:</strong> {{ modalData.option.special_requirements }}</p>
-              <p v-if="modalData.option.price > 0">
-                <strong>Price:</strong> ₱{{ parseFloat(modalData.option.price).toLocaleString() }}
-              </p>
-              <p v-else>
-                <strong>Price:</strong> Free service
-              </p>
-              <p class="modal-note">Please ensure you arrive at the airport 2 hours before departure for assistance services.</p>
-            </template>
-            <template v-else>
-              <p><strong>Action:</strong> No Assistance Selected</p>
-              <p class="modal-note">You are selecting no special assistance for this passenger.</p>
-            </template>
-          </div>
-        </div>
-        
-        <div class="modal-footer">
-          <button class="modal-cancel" @click="closeConfirmationModal">Cancel</button>
-          <button class="modal-confirm" @click="confirmSelection">Confirm Selection</button>
-        </div>
+        </aside>
       </div>
     </div>
-    
-    <!-- Animation Component -->
+
+    <MobileBookingFooter button-text="Continue to Review" @next="saveAndContinue" />
+
+    <!-- CONFIRMATION MODAL -->
+    <Transition name="fade">
+      <div v-if="showConfirmationModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4" @click.self="closeConfirmationModal">
+        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+          <div class="relative px-6 py-5 border-b border-gray-100">
+            <h3 class="text-base font-bold text-gray-900">{{ modalTitle }}</h3>
+            <button @click="closeConfirmationModal" class="absolute right-4 top-4 w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+              <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <div class="px-6 py-5 space-y-3">
+            <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-sm">
+              <div class="w-9 h-9 rounded-full bg-[#003870] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                {{ modalData.passenger?.firstName?.charAt(0) }}{{ modalData.passenger?.lastName?.charAt(0) }}
+              </div>
+              <div>
+                <p class="text-sm font-semibold text-gray-900">{{ modalData.passenger?.firstName }} {{ modalData.passenger?.lastName }}</p>
+                <p class="text-xs text-gray-500">{{ modalData.passenger?.type }}</p>
+              </div>
+            </div>
+            <template v-if="modalType === 'baggage'">
+              <div v-if="modalData.option" class="flex items-center justify-between p-3 rounded-sm border border-pink-100 bg-pink-50">
+                <div class="flex items-center gap-2"><span class="text-xl">&#x1F9F3;</span><span class="text-sm font-bold text-gray-900">{{ modalData.option.formatted_weight }} Extra Baggage</span></div>
+                <span class="text-sm font-black text-pink-500">&#8369;{{ parseFloat(modalData.option.price).toLocaleString() }}</span>
+              </div>
+              <p v-if="modalData.option" class="text-xs text-amber-600 bg-amber-50 rounded-sm p-3">&#x26A0;&#xFE0F; Baggage cannot be changed after payment.</p>
+              <p v-else class="text-xs text-red-600 bg-red-50 rounded-sm p-3">&#x26A0;&#xFE0F; You are removing the baggage selection.</p>
+            </template>
+            <template v-if="modalType === 'meal'">
+              <div v-if="modalData.option" class="flex items-start gap-3 p-3 rounded-sm border border-pink-100 bg-pink-50">
+                <span class="text-xl">&#x1F37D;&#xFE0F;</span>
+                <div><p class="text-sm font-bold text-gray-900">{{ modalData.option.name }}</p><p class="text-sm font-black text-pink-500 mt-1">&#8369;{{ parseFloat(modalData.option.price).toLocaleString() }}</p></div>
+              </div>
+              <p class="text-xs text-amber-600 bg-amber-50 rounded-sm p-3">&#x23F0; Meals cannot be changed within 24 hours of departure.</p>
+            </template>
+            <template v-if="modalType === 'assistance'">
+              <div v-if="modalData.option" class="flex items-start gap-3 p-3 rounded-sm border border-pink-100 bg-pink-50">
+                <span class="text-xl">&#x267F;</span>
+                <div>
+                  <p class="text-sm font-bold text-gray-900">{{ modalData.option.name }}</p>
+                  <p class="text-sm font-black mt-1" :class="modalData.option.price > 0 ? 'text-pink-500' : 'text-emerald-600'">
+                    {{ modalData.option.price > 0 ? "&#8369;" + parseFloat(modalData.option.price).toLocaleString() : "FREE" }}
+                  </p>
+                </div>
+              </div>
+              <p class="text-xs text-blue-600 bg-blue-50 rounded-sm p-3">&#x2139;&#xFE0F; Please arrive 2 hours before departure for assistance check-in.</p>
+            </template>
+          </div>
+          <div class="px-6 py-4 border-t border-gray-100 flex items-center gap-3">
+            <button @click="closeConfirmationModal" class="flex-1 py-2.5 rounded-sm border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
+            <button @click="confirmSelection" class="flex-1 py-2.5 rounded-sm bg-[#FF579A] hover:bg-[#FF4081] text-white text-sm font-bold shadow-sm transition-all active:scale-[0.98]">Confirm</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
     <FlyingIcon ref="flyingIconRef" />
   </div>
 </template>
@@ -496,34 +474,19 @@ import MobileBookingFooter from '@/components/booking/MobileBookingFooter.vue';
 const bookingStore = useBookingStore();
 const router = useRouter();
 const route = useRoute();
-
 const currentTab = ref('baggage');
-// activeSegment is no longer used for tab UI, but we keep it for fallback if needed inside modal state.
-const activeSegment = ref('depart'); 
+const activeSegment = ref('depart');
 const isLoading = ref(true);
-
-// Modal state
 const showConfirmationModal = ref(false);
-const modalType = ref(''); // 'baggage', 'meal', 'assistance'
+const modalType = ref('');
 const modalTitle = ref('');
-const modalData = ref({
-  passenger: null,
-  option: null,
-  passengerKey: '',
-  isDeselecting: false,
-  segment: 'depart'
-});
-
+const modalData = ref({ passenger: null, option: null, passengerKey: '', isDeselecting: false, segment: 'depart' });
 const instance = ref(null);
 const flyingIconRef = ref(null);
-
-// API Data
 const baggageOptions = ref([]);
 const mealOptions = ref([]);
 const assistanceOptions = ref([]);
 const insurancePlans = ref([]);
-
-// Update selectedAddons structure to support both depart and return for round trips
 const selectedAddons = reactive({
   baggage: {},
   meals: {},
@@ -531,29 +494,25 @@ const selectedAddons = reactive({
   seats: bookingStore.addons?.seats || {},
   insurance: bookingStore.addons?.insurance || { selectedPlanId: null, price: 0 }
 });
+const backendBreakdown = ref(null);
 
-// Sync local state with store
 const syncSelectionsFromStore = () => {
   const tripType = bookingStore.tripType;
   const segments = [];
-  
   if (tripType === 'multi_city' || tripType === 'multi-city') {
     bookingStore.multiCitySegments.forEach((_, idx) => segments.push(idx.toString()));
   } else {
     segments.push('depart');
     if (tripType === 'round_trip' || tripType === 'round-trip') segments.push('return');
   }
-
   segments.forEach(seg => {
     if (!selectedAddons.baggage[seg]) selectedAddons.baggage[seg] = {};
     if (!selectedAddons.meals[seg]) selectedAddons.meals[seg] = {};
     if (!selectedAddons.wheelchair[seg]) selectedAddons.wheelchair[seg] = {};
-    
     selectedAddons.baggage[seg] = { ...bookingStore.addons.baggage?.[seg] };
     selectedAddons.meals[seg] = { ...bookingStore.addons.meals?.[seg] };
     selectedAddons.wheelchair[seg] = { ...bookingStore.addons.wheelchair?.[seg] };
   });
-
   selectedAddons.seats = bookingStore.addons?.seats ? { ...bookingStore.addons.seats } : {};
   selectedAddons.insurance = {
     selectedPlanId: bookingStore.addons?.insurance?.selectedPlanId || null,
@@ -561,1176 +520,180 @@ const syncSelectionsFromStore = () => {
   };
 };
 
-// Add trip type info
-const tripTypeInfo = computed(() => {
-  return bookingStore.isRoundTrip ? 'Round Trip' : 'One Way';
-});
+const tripTypeInfo = computed(() => bookingStore.isRoundTrip ? 'Round Trip' : 'One Way');
 
-// Flight segments for all trip types
 const flightSegments = computed(() => {
   const tripType = bookingStore.tripType;
-  
   if (tripType === 'multi_city' || tripType === 'multi-city') {
     return bookingStore.multiCitySegments.map((seg, idx) => ({
-      key: idx.toString(),
-      label: `Flight ${idx + 1}`,
-      flight: seg.selectedFlight?.flight_number || 'N/A',
-      route: `${seg.origin} → ${seg.destination}`
+      key: idx.toString(), label: `Flight ${idx + 1}`, flight: seg.selectedFlight?.flight_number || 'N/A'
     }));
   }
-
-  const segments = [
-    {
-      key: 'depart',
-      label: 'Depart Flight',
-      flight: bookingStore.selectedOutbound?.flight_number || 'N/A'
-    }
-  ];
-  
-  if (bookingStore.isRoundTrip) {
-    segments.push({
-      key: 'return',
-      label: 'Return Flight',
-      flight: bookingStore.selectedReturn?.flight_number || 'N/A'
-    });
-  }
-  
+  const segments = [{ key: 'depart', label: 'Depart Flight', flight: bookingStore.selectedOutbound?.flight_number || 'N/A' }];
+  if (bookingStore.isRoundTrip) segments.push({ key: 'return', label: 'Return Flight', flight: bookingStore.selectedReturn?.flight_number || 'N/A' });
   return segments;
 });
 
-// Active segment label
 const activeSegmentLabel = computed(() => {
-  const segment = flightSegments.value.find(s => s.key === activeSegment.value);
-  return segment ? segment.label : 'Flight';
+  const s = flightSegments.value.find(s => s.key === activeSegment.value);
+  return s ? s.label : 'Flight';
 });
 
-// Sync local state with store
-// This helper was moved and is now defined above.
-
-// Flight info computed
 const flightInfo = computed(() => {
   const info = [];
   const tripType = bookingStore.tripType;
-
   if (tripType === 'multi_city' || tripType === 'multi-city') {
     bookingStore.multiCitySegments.forEach((seg, idx) => {
-      if (seg.selectedFlight) {
-        info.push({
-          type: `Flight ${idx + 1}`,
-          flight: seg.selectedFlight.flight_number,
-          route: `${seg.selectedFlight.origin} → ${seg.selectedFlight.destination}`,
-          price: parseFloat(seg.selectedFlight.price || 0)
-        });
-      }
+      if (seg.selectedFlight) info.push({ type: `Flight ${idx + 1}`, flight: seg.selectedFlight.flight_number, route: `${seg.selectedFlight.origin} -> ${seg.selectedFlight.destination}`, price: parseFloat(seg.selectedFlight.price || 0) });
     });
     return info;
   }
-  
-  if (bookingStore.selectedOutbound) {
-    info.push({
-      type: 'Outbound',
-      flight: bookingStore.selectedOutbound.flight_number,
-      route: `${bookingStore.selectedOutbound.origin} → ${bookingStore.selectedOutbound.destination}`,
-      price: parseFloat(bookingStore.selectedOutbound.price || 0)
-    });
-  }
-  
-  if (bookingStore.isRoundTrip && bookingStore.selectedReturn) {
-    info.push({
-      type: 'Return',
-      flight: bookingStore.selectedReturn.flight_number,
-      route: `${bookingStore.selectedReturn.origin} → ${bookingStore.selectedReturn.destination}`,
-      price: parseFloat(bookingStore.selectedReturn.price || 0)
-    });
-  }
-  
+  if (bookingStore.selectedOutbound) info.push({ type: 'Outbound', flight: bookingStore.selectedOutbound.flight_number, route: `${bookingStore.selectedOutbound.origin} -> ${bookingStore.selectedOutbound.destination}`, price: parseFloat(bookingStore.selectedOutbound.price || 0) });
+  if (bookingStore.isRoundTrip && bookingStore.selectedReturn) info.push({ type: 'Return', flight: bookingStore.selectedReturn.flight_number, route: `${bookingStore.selectedReturn.origin} -> ${bookingStore.selectedReturn.destination}`, price: parseFloat(bookingStore.selectedReturn.price || 0) });
   return info;
 });
 
-// Helper to get selection for current segment
-const getBaggageSelection = (passengerKey, segment) => {
-  return selectedAddons.baggage[segment]?.[passengerKey] || null;
-};
+const getBaggageSelection = (passengerKey, segment) => selectedAddons.baggage[segment]?.[passengerKey] || null;
+const getMealSelection = (passengerKey, segment) => selectedAddons.meals[segment]?.[passengerKey] || null;
+const getAssistanceSelection = (passengerKey, segment) => selectedAddons.wheelchair[segment]?.[passengerKey] || null;
+const selectedInsurancePlanId = computed(() => bookingStore.addons?.insurance?.selectedPlanId || null);
+const insurancePrice = computed(() => bookingStore.insurancePrice);
 
-const getMealSelection = (passengerKey, segment) => {
-  return selectedAddons.meals[segment]?.[passengerKey] || null;
-};
-
-const getAssistanceSelection = (passengerKey, segment) => {
-  return selectedAddons.wheelchair[segment]?.[passengerKey] || null;
-};
-
-const selectedInsurancePlanId = computed(() => {
-  return bookingStore.addons?.insurance?.selectedPlanId || null;
-});
-
-const insurancePrice = computed(() => {
-  return bookingStore.insurancePrice;
-});
-
-// Roadmap logic: track completion for each segment
 const segmentRoadmap = computed(() => {
-  const segments = flightSegments.value;
-  const pax = bookingStore.passengers;
-  
-  return segments.map(seg => {
+  return flightSegments.value.map(seg => {
     const segKey = seg.key;
+    const pax = bookingStore.passengers;
     const baggageDone = pax.every(p => !!bookingStore.addons.baggage[segKey]?.[p.key]);
     const mealsDone = pax.every(p => !!bookingStore.addons.meals[segKey]?.[p.key]);
     const seatsDone = pax.every(p => !!bookingStore.addons.seats[segKey]?.[p.key]);
-    const assistanceDone = pax.every(p => !!bookingStore.addons.wheelchair[segKey]?.[p.key]);
-    
-    return {
-      ...seg,
-      baggageDone,
-      mealsDone,
-      seatsDone,
-      assistanceDone,
-      isComplete: baggageDone && mealsDone && seatsDone
-    };
+    return { ...seg, baggageDone, mealsDone, seatsDone, isComplete: baggageDone && mealsDone && seatsDone };
   });
 });
 
-const handleCopyAddon = (type, passenger) => {
-  bookingStore.copyAddonToAllSegments(type, passenger.key, activeSegment.value);
-  // Optional: show a mini toast or notification
-  console.log(`📋 Copied ${type} for ${passenger.firstName} to all segments`);
-};
-
-const selectInsurance = (plan) => {
-  if (!plan) return;
-  bookingStore.selectInsurancePlan(plan.id, plan.retail_price);
-  selectedAddons.insurance = {
-    selectedPlanId: plan.id,
-    price: parseFloat(plan.retail_price) || 0
-  };
-};
-
-const removeInsurance = () => {
-  bookingStore.clearInsurance();
-  selectedAddons.insurance = { selectedPlanId: null, price: 0 };
-};
+const handleCopyAddon = (type, passenger) => { bookingStore.copyAddonToAllSegments(type, passenger.key, activeSegment.value); };
+const selectInsurance = (plan) => { if (!plan) return; bookingStore.selectInsurancePlan(plan.id, plan.retail_price); selectedAddons.insurance = { selectedPlanId: plan.id, price: parseFloat(plan.retail_price) || 0 }; };
+const removeInsurance = () => { bookingStore.clearInsurance(); selectedAddons.insurance = { selectedPlanId: null, price: 0 }; };
 
 onMounted(async () => {
   try {
-    // First, migrate store to new format
     bookingStore.migrateAddonsToNewFormat();
-    
     const airlineId = bookingStore.selectedOutbound?.airline_id || bookingStore.selectedOutbound?.airline;
-    
     const [bagRes, mealRes, assistRes, insuranceRes] = await Promise.all([
       addonService.getBaggageOptions(airlineId),
       addonService.getMealOptions(airlineId),
       addonService.getAssistanceServices(airlineId),
       api.get('/flightapp/api/insurance-plans/').catch(() => null)
     ]);
-    
-    // Handle paginated responses (response.data.results) or flat arrays (response.data)
     baggageOptions.value = bagRes.data.results || bagRes.data || [];
     mealOptions.value = mealRes.data.results || mealRes.data || [];
     assistanceOptions.value = assistRes.data.results || assistRes.data || [];
-
     if (insuranceRes && insuranceRes.data) {
       const data = insuranceRes.data;
       insurancePlans.value = Array.isArray(data) ? data : (data?.results || []);
-    } else {
-      insurancePlans.value = [];
-    }
-
-    // Load existing selections from store if they exist
-    console.log("📦 Loading existing add-ons from store...");
+    } else { insurancePlans.value = []; }
     syncSelectionsFromStore();
-    
-    console.log("✅ Final selectedAddons:", selectedAddons);
-  } catch (error) {
-    console.error("Failed to load add-ons:", error);
-  } finally {
-    isLoading.value = false;
-  }
+  } catch (error) { console.error('Failed to load add-ons:', error); } finally { isLoading.value = false; }
 });
 
-// Helper for dynamic price lookup
-const findPrice = (list, id) => {
-  const item = list.find(i => i.id === id);
-  return item ? parseFloat(item.price) : 0;
-};
+const getOptionById = (list, id) => list.find(i => i.id === id) || null;
 
-const getOptionById = (list, id) => {
-  return list.find(i => i.id === id) || null;
-};
-
-// Direct selection handlers for cards - UPDATED with store calls
 const selectBaggageDirect = (passenger, option, segment, event) => {
   const passengerKey = passenger.key;
-  const currentSelection = getBaggageSelection(passengerKey, segment);
-  
-  // Check if already selected (compare by ID)
-  if (currentSelection && currentSelection.id === option.id) {
-    // Deselect
+  const cur = getBaggageSelection(passengerKey, segment);
+  if (cur && cur.id === option.id) {
     selectedAddons.baggage[segment][passengerKey] = null;
     bookingStore.removeBaggageAddon(passengerKey, segment);
-    console.log(`❌ Removed baggage for passenger ${passengerKey} on ${segment}`);
   } else {
-    // Select - store full object
-    const baggageObj = {
-      id: option.id,
-      price: parseFloat(option.price) || 0,
-      formatted_weight: option.formatted_weight,
-      name: option.formatted_weight
-    };
-    selectedAddons.baggage[segment][passengerKey] = baggageObj;
-    bookingStore.updateBaggageAddon(passengerKey, baggageObj, segment);
-    if (event && flyingIconRef.value) flyingIconRef.value.fly(event.currentTarget, '#sidebar-baggage', '🧳');
-    console.log(`✅ Added ${option.formatted_weight} baggage for passenger ${passengerKey} on ${segment}: ₱${option.price}`);
+    const obj = { id: option.id, price: parseFloat(option.price) || 0, formatted_weight: option.formatted_weight, name: option.formatted_weight };
+    selectedAddons.baggage[segment][passengerKey] = obj;
+    bookingStore.updateBaggageAddon(passengerKey, obj, segment);
+    if (event && flyingIconRef.value) flyingIconRef.value.fly(event.currentTarget, '#sidebar-baggage', 'bag');
   }
-  // Phase 11: Background sync to preserve progress
   bookingStore.snapshotToServer();
 };
 
 const selectMealDirect = (passenger, option, segment, event) => {
   const passengerKey = passenger.key;
-  const currentSelection = getMealSelection(passengerKey, segment);
-  
+  const cur = getMealSelection(passengerKey, segment);
   if (!option) {
-    // Select "No Meal"
     selectedAddons.meals[segment][passengerKey] = null;
     bookingStore.removeMealAddon(passengerKey, segment);
-    console.log(`❌ No meal for passenger ${passengerKey} on ${segment}`);
+  } else if (cur && cur.id === option.id) {
+    selectedAddons.meals[segment][passengerKey] = null;
+    bookingStore.removeMealAddon(passengerKey, segment);
   } else {
-    // Check if already selected (compare by ID)
-    if (currentSelection && currentSelection.id === option.id) {
-      // Deselect if already selected
-      selectedAddons.meals[segment][passengerKey] = null;
-      bookingStore.removeMealAddon(passengerKey, segment);
-      console.log(`❌ Removed meal for passenger ${passengerKey} on ${segment}`);
-    } else {
-      // Select new meal - store full object
-      const mealObj = {
-        id: option.id,
-        price: parseFloat(option.price) || 0,
-        name: option.name,
-        meal_type: option.meal_type,
-        description: option.description
-      };
-      selectedAddons.meals[segment][passengerKey] = mealObj;
-      bookingStore.updateMealAddon(passengerKey, mealObj, segment);
-      if (event && flyingIconRef.value && option) flyingIconRef.value.fly(event.currentTarget, '#sidebar-meals', '🍱');
-      console.log(`✅ Added ${option.name} meal for passenger ${passengerKey} on ${segment}: ₱${option.price}`);
-    }
+    const obj = { id: option.id, price: parseFloat(option.price) || 0, name: option.name, meal_type: option.meal_type, description: option.description };
+    selectedAddons.meals[segment][passengerKey] = obj;
+    bookingStore.updateMealAddon(passengerKey, obj, segment);
+    if (event && flyingIconRef.value && option) flyingIconRef.value.fly(event.currentTarget, '#sidebar-meals', 'meal');
   }
-  // Phase 11: Background sync to preserve progress
   bookingStore.snapshotToServer();
 };
 
 const selectAssistanceDirect = (passenger, option, segment, event) => {
   const passengerKey = passenger.key;
-  
   if (!option) {
-    // Select "No Assistance"
     selectedAddons.wheelchair[segment][passengerKey] = null;
     bookingStore.removeAssistanceAddon(passengerKey, segment);
-    console.log(`❌ No assistance for passenger ${passengerKey} on ${segment}`);
+  } else if (getAssistanceSelection(passengerKey, segment) === option.id) {
+    selectedAddons.wheelchair[segment][passengerKey] = null;
+    bookingStore.removeAssistanceAddon(passengerKey, segment);
   } else {
-    // Select assistance
-    if (getAssistanceSelection(passengerKey, segment) === option.id) {
-      // Deselect if already selected
-      selectedAddons.wheelchair[segment][passengerKey] = null;
-      bookingStore.removeAssistanceAddon(passengerKey, segment);
-      console.log(`❌ Removed assistance for passenger ${passengerKey} on ${segment}`);
-    } else {
-      // Select new assistance - store ID only
-      selectedAddons.wheelchair[segment][passengerKey] = option.id;
-      bookingStore.updateAssistanceAddon(passengerKey, option.id, segment);
-      if (event && flyingIconRef.value && option) flyingIconRef.value.fly(event.currentTarget, '#sidebar-assistance', '♿');
-      console.log(`✅ Added ${option.name} assistance for passenger ${passengerKey} on ${segment}: ${option.price > 0 ? '₱' + option.price : 'Free'}`);
-    }
+    selectedAddons.wheelchair[segment][passengerKey] = option.id;
+    bookingStore.updateAssistanceAddon(passengerKey, option.id, segment);
+    if (event && flyingIconRef.value && option) flyingIconRef.value.fly(event.currentTarget, '#sidebar-assistance', 'assist');
   }
-  // Phase 11: Background sync to preserve progress
   bookingStore.snapshotToServer();
 };
 
-// Confirmation Modal Functions - UPDATED with store calls
-const showMealConfirmation = (passenger, option, segment) => {
-  const passengerKey = passenger.key;
-  const currentSelection = getMealSelection(passengerKey, segment);
-  let currentOption = null;
-  
-  if (currentSelection && typeof currentSelection === 'object') {
-    currentOption = getOptionById(mealOptions.value, currentSelection.id);
-  } else if (currentSelection) {
-    currentOption = getOptionById(mealOptions.value, currentSelection);
-  }
-  
-  modalType.value = 'meal';
-  modalTitle.value = option ? 'Confirm Meal Selection' : 'Remove Meal Selection';
-  modalData.value = {
-    passenger,
-    option: option,
-    passengerKey: passenger.key,
-    isDeselecting: !option && currentOption,
-    segment: segment
-  };
-  showConfirmationModal.value = true;
-};
-
-const showAssistanceConfirmation = (passenger, option, segment) => {
-  const passengerKey = passenger.key;
-  const currentOption = getOptionById(assistanceOptions.value, getAssistanceSelection(passengerKey, segment));
-  
-  modalType.value = 'assistance';
-  modalTitle.value = option ? 'Confirm Assistance Service' : 'Remove Assistance Service';
-  modalData.value = {
-    passenger,
-    option: option,
-    passengerKey: passenger.key,
-    isDeselecting: !option && currentOption,
-    segment: segment
-  };
-  showConfirmationModal.value = true;
-};
+const showMealConfirmation = (passenger, option, segment) => { modalType.value = 'meal'; modalTitle.value = option ? 'Confirm Meal Selection' : 'Remove Meal'; modalData.value = { passenger, option, passengerKey: passenger.key, isDeselecting: false, segment }; showConfirmationModal.value = true; };
+const showAssistanceConfirmation = (passenger, option, segment) => { modalType.value = 'assistance'; modalTitle.value = option ? 'Confirm Assistance' : 'Remove Assistance'; modalData.value = { passenger, option, passengerKey: passenger.key, isDeselecting: false, segment }; showConfirmationModal.value = true; };
 
 const closeConfirmationModal = () => {
   showConfirmationModal.value = false;
-  
-  // Reset modal data
   modalData.value = { passenger: null, option: null, passengerKey: '', isDeselecting: false, segment: 'depart' };
   modalType.value = '';
   modalTitle.value = '';
 };
 
 const confirmSelection = () => {
-  const { passengerKey, option, isDeselecting, segment } = modalData.value;
-  
+  const { passengerKey, option, segment } = modalData.value;
   if (modalType.value === 'meal') {
-    if (!option) {
-      // Remove meal selection
-      selectedAddons.meals[segment][passengerKey] = null;
-      bookingStore.removeMealAddon(passengerKey, segment);
-      console.log(`❌ Removed meal for passenger ${passengerKey} on ${segment}`);
-    } else {
-      // Select meal - store as object
-      const mealObj = {
-        id: option.id,
-        price: parseFloat(option.price) || 0,
-        name: option.name,
-        meal_type: option.meal_type,
-        description: option.description
-      };
-      selectedAddons.meals[segment][passengerKey] = mealObj;
-      bookingStore.updateMealAddon(passengerKey, mealObj, segment);
-      console.log(`✅ Added ${option.name} meal for passenger ${passengerKey} on ${segment}: ₱${option.price}`);
-    }
+    if (!option) { selectedAddons.meals[segment][passengerKey] = null; bookingStore.removeMealAddon(passengerKey, segment); }
+    else { const obj = { id: option.id, price: parseFloat(option.price) || 0, name: option.name, meal_type: option.meal_type, description: option.description }; selectedAddons.meals[segment][passengerKey] = obj; bookingStore.updateMealAddon(passengerKey, obj, segment); }
+  } else if (modalType.value === 'assistance') {
+    if (!option) { selectedAddons.wheelchair[segment][passengerKey] = null; bookingStore.removeAssistanceAddon(passengerKey, segment); }
+    else { selectedAddons.wheelchair[segment][passengerKey] = option.id; bookingStore.updateAssistanceAddon(passengerKey, option.id, segment); }
   }
-  else if (modalType.value === 'assistance') {
-    if (!option) {
-      // Remove assistance selection
-      selectedAddons.wheelchair[segment][passengerKey] = null;
-      bookingStore.removeAssistanceAddon(passengerKey, segment);
-      console.log(`❌ Removed assistance for passenger ${passengerKey} on ${segment}`);
-    } else {
-      // Select assistance
-      selectedAddons.wheelchair[segment][passengerKey] = option.id;
-      bookingStore.updateAssistanceAddon(passengerKey, option.id, segment);
-      console.log(`✅ Added ${option.name} assistance for passenger ${passengerKey} on ${segment}: ${option.price > 0 ? '₱' + option.price : 'Free'}`);
-    }
-  }
-  
-  // Phase 11: Background sync after modal confirmation
   bookingStore.snapshotToServer();
   closeConfirmationModal();
 };
 
-// Computed Properties
-const eligiblePassengers = computed(() => {
-  return bookingStore.passengers.filter(p => p.type !== 'Infant');
-});
-
-// Indicator Position Logic
+const eligiblePassengers = computed(() => bookingStore.passengers.filter(p => p.type !== 'Infant'));
 const indicatorStyle = computed(() => {
   const tabs = ['baggage', 'seat', 'meals', 'wheelchair'];
-  const activeTab = currentTab.value === 'seat' ? 'seat' : currentTab.value;
-  const currentIndex = tabs.indexOf(activeTab);
-  return {
-    left: `${(currentIndex * 100 / 4) + 12.5}%`,
-    transform: 'translateX(-50%)'
-  };
+  const idx = tabs.indexOf(currentTab.value);
+  return { left: `${(idx * 100 / 4) + 12.5}%`, transform: 'translateX(-50%)' };
 });
-
-// Updated Base Fare Calculation for all trip types
 const baseFare = computed(() => bookingStore.combinedBasePriceTotal);
-
-// Updated totals to include all segments
 const totalBaggage = computed(() => bookingStore.totalBaggagePrice);
 const totalMeals = computed(() => bookingStore.totalMealsPrice);
-
 const totalAssistance = computed(() => bookingStore.totalAssistancePrice);
-
-// FIXED: Calculate seat total correctly using seat_price across all segments
 const totalSeats = computed(() => bookingStore.totalSeatsPrice);
-
-const taxesPrice = computed(() => {
-  // If backend provided taxes, use them. Otherwise estimate 12%
-  if (backendBreakdown.value && backendBreakdown.value.taxes) {
-    return parseFloat(backendBreakdown.value.taxes);
-  }
-  return bookingStore.totalTaxes;
+const isAnySegmentPremium = computed(() => {
+  return Object.values(bookingStore.fareFamilies).some(f => f === 'premium');
 });
-// Subtotal excluding taxes
+const taxesPrice = computed(() => bookingStore.totalTaxes);
 const addonsSubtotal = computed(() => {
-  return bookingStore.combinedBasePriceTotal + 
-         bookingStore.totalBaggagePrice + 
-         bookingStore.totalMealsPrice + 
-         bookingStore.totalSeatsPrice + 
-         bookingStore.totalAssistancePrice + 
-         bookingStore.insurancePrice;
+  return (totalBaggage.value || 0) + (totalMeals.value || 0) + (totalSeats.value || 0) + 
+         (totalAssistance.value || 0) + (bookingStore.insurancePrice || 0);
 });
-
-// Keep grandTotal for other uses if needed, or remove
 const grandTotal = computed(() => bookingStore.grandTotal);
-
-const saveAndContinue = () => {
-  // ...
-
-  // --- DEBUG LOG START ---
-  console.group("🛒 ADD-ONS PURCHASE SUMMARY");
-  console.log("Trip Type:", tripTypeInfo.value);
-
-  // Show flight info
-  console.log("✈️ FLIGHT DETAILS:");
-  flightInfo.value.forEach(flight => {
-    console.log(`  ${flight.type}: ${flight.flight} (${flight.route}) - ₱${flight.price.toLocaleString()}`);
-  });
-
-  // Check seat data structure
-  console.log("💺 SEAT SELECTIONS:");
-  const seatsState = selectedAddons.seats || {};
-  const isSegmented = typeof seatsState === 'object' && (seatsState.depart || seatsState.return);
-
-  const logSeatEntries = (entries, segmentLabel) => {
-    if (!entries || entries.length === 0) return;
-    console.log(`  Segment: ${segmentLabel}`);
-    entries.forEach(([passengerKey, seat]) => {
-      if (!seat || typeof seat !== 'object') return;
-
-      console.log(`    Passenger ${passengerKey}:`, {
-        seat_code: seat.seat_code,
-        seat_price: seat.seat_price,
-        seat_total_price: seat.seat_total_price,
-        final_price: seat.final_price,
-        seat_class: seat.seat_class?.name
-      });
-    });
-  };
-
-  if (isSegmented) {
-    const departEntries = Object.entries(seatsState.depart || {});
-    const returnEntries = Object.entries(seatsState.return || {});
-    if (departEntries.length === 0 && returnEntries.length === 0) {
-      console.log("  No seats selected");
-    } else {
-      logSeatEntries(departEntries, 'depart');
-      logSeatEntries(returnEntries, 'return');
-    }
-  } else {
-    const flatEntries = Object.entries(seatsState);
-    if (flatEntries.length === 0) {
-      console.log("  No seats selected");
-    } else {
-      logSeatEntries(flatEntries, 'all');
-    }
-  }
-
-  // Calculate individual totals
-  const baggageTotal = totalBaggage.value;
-  const mealsTotal = totalMeals.value;
-  const assistanceTotal = totalAssistance.value;
-  const seatExtrasTotal = totalSeats.value; // This uses the fixed calculation
-  const baseFareTotal = baseFare.value;
-  const insuranceTotal = insurancePrice.value;
-  
-  const receipt = {
-    "Base Fare": `₱${baseFareTotal.toLocaleString()}`,
-    "Seat Selection": `₱${seatExtrasTotal.toLocaleString()}`,
-    "Baggage": `₱${baggageTotal.toLocaleString()}`,
-    "Meals": `₱${mealsTotal.toLocaleString()}`,
-    "Assistance": `₱${assistanceTotal.toLocaleString()}`,
-    "Travel Insurance": `₱${insuranceTotal.toLocaleString()}`
-  };
-  
-  console.table(receipt);
-  
-  // Summary of totals
-  console.log("📊 TOTALS SUMMARY:");
-  console.log("Add-ons Total:", `₱${(baggageTotal + mealsTotal + assistanceTotal + seatExtrasTotal + insuranceTotal).toLocaleString()}`);
-  console.log("Flight Base Total:", `₱${baseFareTotal.toLocaleString()}`);
-  console.log("Store Grand Total:", `₱${bookingStore.grandTotal.toLocaleString()}`);
-  console.log("Calculated Grand Total:", `₱${grandTotal.value.toLocaleString()}`);
-  
-  // Verify seat price calculation
-  console.log("🔍 SEAT PRICE VERIFICATION:");
-  console.log("totalSeats computed value:", totalSeats.value);
-  
-  console.groupEnd();
-  // --- DEBUG LOG END ---
-
-  router.push({ name: 'ReviewBooking' });
-};
+const saveAndContinue = () => { router.push({ name: 'ReviewBooking' }); };
 </script>
 
 <style scoped>
-/* Updated color theme to #FF579A */
-.pal-bg { background: #f4f7f9; min-height: 100vh; padding: 40px 0; }
-.pal-layout { display: grid; grid-template-columns: 1fr 350px; gap: 30px; max-width: 1200px; margin: 0 auto; }
-.page-title { color: #FF579A; font-weight: 800; margin-bottom: 25px; font-size: 1.8rem; }
-
-.square-tabs-container { position: relative; margin-bottom: 30px; background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-.square-tabs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; position: relative; z-index: 2; }
-.square-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 15px; background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; text-align: center; min-height: 100px; }
-.square-tab.active { background: linear-gradient(135deg, #FF579A 0%, #FF4081 100%); border-color: #FF579A; color: white; }
-.square-tab.seat-tab { border-style: dashed; }
-.tab-icon { font-size: 1.8rem; margin-bottom: 8px; }
-.tab-label { font-weight: 600; font-size: 0.95rem; }
-.active-tab-indicator { position: absolute; bottom: 0; left: 0; width: 25%; height: 4px; background: #FF579A; border-radius: 2px; transition: left 0.4s ease; z-index: 1; }
-
-.addon-workspace { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea; min-height: 400px; }
-.loading-state { display: flex; align-items: center; justify-content: center; height: 200px; color: #666; }
-
-.tab-pane h3 { color: #FF579A; margin-bottom: 25px; font-size: 1.3rem; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; }
-
-.insurance-pane {
-  margin-bottom: 25px;
-}
-
-.insurance-intro {
-  color: #666;
-  margin-bottom: 15px;
-  line-height: 1.5;
-}
-
-.insurance-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 15px;
-}
-
-.insurance-card {
-  border: 2px solid #e0e0e0;
-  padding: 18px;
-  border-radius: 10px;
-  background: white;
-  transition: all 0.2s ease;
-}
-
-.insurance-card.selected {
-  border-color: #FF579A;
-  background: #FFF0F7;
-}
-
-.insurance-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.insurance-header h4 {
-  margin: 0;
-  color: #FF579A;
-  font-size: 1.05rem;
-}
-
-.insurance-provider {
-  margin: 6px 0 0 0;
-  color: #777;
-  font-size: 0.85rem;
-}
-
-.insurance-price {
-  font-weight: 800;
-  color: #FF579A;
-  white-space: nowrap;
-}
-
-.insurance-description {
-  color: #555;
-  margin: 10px 0;
-  line-height: 1.4;
-  font-size: 0.9rem;
-}
-
-.insurance-coverage {
-  margin: 0 0 12px 0;
-  color: #666;
-  font-size: 0.85rem;
-  background: #f8f9fa;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #eee;
-}
-
-.insurance-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.insurance-toggle-btn {
-  padding: 10px 14px;
-  background: #FF579A;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.insurance-toggle-btn.remove {
-  background: #666;
-}
-
-.insurance-unavailable {
-  color: #888;
-  font-style: italic;
-}
-
-/* Baggage Grid Styles */
-.option-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px; }
-.opt-card { border: 2px solid #e0e0e0; padding: 20px 15px; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s; background: white; }
-.opt-card.selected { border-color: #FF579A; background: #FFF0F7; font-weight: bold; }
-.opt-card .weight { display: block; font-size: 1.1rem; margin-bottom: 8px; font-weight: 700; color: #FF579A; }
-.opt-card .price { display: block; color: #FF579A; font-weight: 700; }
-
-/* Meal Grid Styles */
-.meal-options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px; }
-.meal-card { border: 2px solid #e0e0e0; padding: 15px; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: white; display: flex; flex-direction: column; min-height: 180px; }
-.meal-card.selected { border-color: #FF579A; background: #FFF0F7; }
-.meal-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-.meal-icon { font-size: 2rem; text-align: center; margin-bottom: 10px; }
-.meal-details { flex: 1; }
-.meal-name { font-weight: 700; color: #FF579A; margin-bottom: 5px; font-size: 1rem; }
-.meal-type { font-size: 0.85rem; color: #666; margin-bottom: 8px; font-style: italic; }
-.meal-description { font-size: 0.9rem; color: #555; margin-bottom: 8px; line-height: 1.3; }
-.meal-calories { font-size: 0.8rem; color: #888; margin-bottom: 8px; }
-.meal-price { font-weight: 700; color: #FF579A; font-size: 1.1rem; margin-top: auto; }
-.meal-allergens { font-size: 0.75rem; color: #FF4081; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #eee; }
-
-/* Assistance Grid Styles */
-.assistance-options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px; }
-.assistance-card { border: 2px solid #e0e0e0; padding: 15px; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: white; display: flex; flex-direction: column; min-height: 200px; }
-.assistance-card.selected { border-color: #FF579A; background: #FFF0F7; }
-.assistance-card.free { border-color: #28a745; }
-.assistance-card.free.selected { background: #e8f5e9; }
-.assistance-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-.assistance-icon { font-size: 2rem; text-align: center; margin-bottom: 10px; }
-.assistance-details { flex: 1; }
-.assistance-name { font-weight: 700; color: #FF579A; margin-bottom: 5px; font-size: 1rem; }
-.assistance-type { font-size: 0.85rem; color: #666; margin-bottom: 8px; font-style: italic; }
-.assistance-description { font-size: 0.9rem; color: #555; margin-bottom: 8px; line-height: 1.3; }
-.assistance-notice { font-size: 0.8rem; color: #888; margin-bottom: 8px; }
-.assistance-requirements { font-size: 0.75rem; color: #666; margin-bottom: 8px; }
-.assistance-price { font-weight: 700; color: #FF579A; font-size: 1.1rem; margin-top: auto; }
-.assistance-card.free .assistance-price { color: #28a745; }
-
-/* Common Styles */
-.p-addon-row { margin-bottom: 30px; padding-bottom: 25px; border-bottom: 1px solid #eee; }
-.p-info { margin-bottom: 15px; font-size: 1rem; }
-
-.footer-nav { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaeaea; }
-.btn-back { padding: 15px 30px; background: #666; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
-.btn-continue { padding: 15px 40px; background: #FF579A; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; }
-
-.summary-card { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eaeaea; }
-.sticky { position: sticky; top: 20px; }
-.summary-header { background: #FF579A; color: white; padding: 20px; text-align: center; font-weight: 700; border-radius: 12px 12px 0 0; }
-.summary-body { padding: 25px; }
-.price-line { display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed #eee; font-size: 0.95rem; }
-.total-row { display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 2px solid #eee; font-size: 1.2rem; font-weight: 700; }
-.final-amt { color: #FF579A; font-size: 1.5rem; font-weight: 900; }
-
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 500px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  animation: modalSlideIn 0.3s ease;
-}
-
-@keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #eee;
-  background: #FF579A;
-  color: white;
-  border-radius: 12px 12px 0 0;
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 1.3rem;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: white;
-  cursor: pointer;
-  line-height: 1;
-}
-
-.modal-body {
-  padding: 25px;
-}
-
-.modal-body p {
-  margin: 10px 0;
-  line-height: 1.6;
-}
-
-.modal-note {
-  font-size: 0.9rem;
-  color: #666;
-  font-style: italic;
-  padding: 10px;
-  background: #f9f9f9;
-  border-radius: 6px;
-  margin-top: 15px !important;
-}
-
-.modal-note.warning {
-  color: #FF4081;
-  background: #FFE6F1;
-  border-left: 4px solid #FF4081;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 20px;
-  border-top: 1px solid #eee;
-}
-
-.modal-cancel {
-  padding: 10px 20px;
-  background: #666;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.modal-confirm {
-  padding: 10px 20px;
-  background: #FF579A;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 700;
-}
-
-/* Add new styles for trip type header */
-.trip-type-header {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.trip-type-badge {
-  padding: 5px 15px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.trip-type-badge.round-trip {
-  background: #FFE6F1;
-  color: #FF579A;
-  border: 2px solid #FF579A;
-}
-
-.trip-type-badge.one-way {
-  background: #FCE4EC;
-  color: #E91E63;
-  border: 2px solid #E91E63;
-}
-
-/* Flight summary card styles */
-.flight-summary-card {
-  background: white;
-  border-radius: 12px;
-  margin-bottom: 25px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  border: 1px solid #eaeaea;
-}
-
-.flight-summary-header {
-  background: #f8f9fa;
-  padding: 15px 20px;
-  border-bottom: 1px solid #eee;
-  border-radius: 12px 12px 0 0;
-}
-
-.flight-summary-header h3 {
-  margin: 0;
-  color: #FF579A;
-  font-size: 1.2rem;
-}
-
-.flight-summary-body {
-  padding: 20px;
-}
-
-.flight-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px dashed #eee;
-}
-
-.flight-item:last-child {
-  border-bottom: none;
-}
-
-.flight-type {
-  font-weight: bold;
-  color: #FF579A;
-  min-width: 80px;
-}
-
-.flight-details {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.flight-number {
-  font-weight: bold;
-  color: #333;
-}
-
-.flight-route {
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.flight-price {
-  font-weight: bold;
-  color: #FF579A;
-  min-width: 100px;
-  text-align: right;
-}
-
-/* Update summary card styles */
-.flight-line {
-  font-size: 0.9rem;
-  padding: 5px 0;
-}
-
-.passenger-line {
-  color: #666;
-  font-style: italic;
-  padding: 5px 0 10px 0;
-  border-bottom: 1px dashed #eee;
-  margin-bottom: 10px;
-}
-
-/* Add new styles for flight segment tabs */
-.flight-segment-tabs {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 25px;
-  background: white;
-  padding: 15px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
-
-.segment-tab {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px 15px;
-  background: #f8f9fa;
-  border: 2px solid #e9ecef;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-}
-
-.segment-tab.active {
-  background: linear-gradient(135deg, #FF579A 0%, #FF4081 100%);
-  border-color: #FF579A;
-  color: white;
-}
-
-.segment-icon {
-  font-size: 1.8rem;
-  margin-bottom: 8px;
-}
-
-.segment-label {
-  font-weight: 600;
-  font-size: 1rem;
-  margin-bottom: 5px;
-}
-
-.segment-flight {
-  font-size: 0.85rem;
-  opacity: 0.8;
-  font-family: monospace;
-}
-
-.segment-notice {
-  background: #FFE6F1;
-  padding: 12px 15px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border-left: 4px solid #FF579A;
-}
-
-.notice-icon {
-  font-size: 1.2rem;
-}
-
-/* Visual Roadmap Styles */
-.visual-roadmap {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: white;
-  padding: 25px;
-  border-radius: 12px;
-  margin-bottom: 30px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-  border: 1px solid #eaeaea;
-}
-
-.roadmap-item {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  position: relative;
-}
-
-.roadmap-dot {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  color: #888;
-  border: 2px solid #e0e0e0;
-  z-index: 2;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-}
-
-.roadmap-dot.active {
-  background: white;
-  border-color: #FF579A;
-  color: #FF579A;
-  box-shadow: 0 0 0 4px rgba(255, 87, 154, 0.1);
-}
-
-.roadmap-dot.done {
-  background: #FF579A;
-  border-color: #FF579A;
-  color: white;
-}
-
-.roadmap-info {
-  margin-left: 12px;
-  display: flex;
-  flex-direction: column;
-}
-
-.roadmap-label {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #333;
-  white-space: nowrap;
-}
-
-.roadmap-status {
-  display: flex;
-  gap: 4px;
-  margin-top: 2px;
-}
-
-.roadmap-status span {
-  font-size: 0.75rem;
-  opacity: 0.3;
-  filter: grayscale(1);
-}
-
-.roadmap-status span.check-done {
-  opacity: 1;
-  filter: grayscale(0);
-}
-
-.roadmap-connector {
-  flex: 1;
-  height: 2px;
-  background: #e0e0e0;
-  margin: 0 15px;
-  z-index: 1;
-}
-
-/* Copy Addon Button Styles */
-.copy-addon-btn {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  background: #f0f7ff;
-  color: #007bff;
-  border: 1px solid #cce5ff;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  margin-left: 10px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  vertical-align: middle;
-}
-
-.copy-addon-btn:hover {
-  background: #007bff;
-  color: white;
-  border-color: #007bff;
-}
-
-.copy-addon-btn span {
-  display: inline-block;
-}
-
-.p-info {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .trip-type-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-  
-  .flight-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 5px;
-  }
-  
-  .flight-price {
-    text-align: left;
-    min-width: auto;
-  }
-}
-
-@media (max-width: 992px) {
-  .pal-layout { grid-template-columns: 1fr; }
-  .square-tabs-grid { grid-template-columns: repeat(2, 1fr); }
-  .active-tab-indicator { width: 50%; }
-  
-  .option-grid,
-  .meal-options-grid,
-  .assistance-options-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .modal-content {
-    width: 95%;
-    margin: 10px;
-  }
-  
-  .modal-footer {
-    flex-direction: column;
-  }
-  
-  .modal-cancel, .modal-confirm {
-    width: 100%;
-  }
-  
-  .flight-segment-tabs {
-    flex-direction: column;
-  }
-  
-  .segment-tab {
-    flex-direction: row;
-    gap: 15px;
-    text-align: left;
-    justify-content: flex-start;
-  }
-  
-  .segment-icon {
-    margin-bottom: 0;
-  }
-}
-
-@media (max-width: 1200px) {
-  .pal-layout { 
-    grid-template-columns: 1fr 350px; 
-  }
-}
-
-@media (max-width: 768px) {
-  .segment-tab {
-    padding: 15px 10px;
-  }
-  
-  .segment-label {
-    font-size: 0.9rem;
-  }
-  
-  .segment-flight {
-    font-size: 0.8rem;
-  }
-}
+.pal-bg { background: #f4f7f9; min-height: 100vh; }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; transform: scale(0.97); }
 </style>

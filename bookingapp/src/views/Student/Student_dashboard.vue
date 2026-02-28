@@ -161,6 +161,25 @@
                 </button>
               </div>
 
+              <!-- Practice Check-in (DCS) Button -->
+              <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg p-5 text-white shadow-lg hover:shadow-xl transition-all">
+                <div class="flex items-center gap-3 mb-3">
+                  <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-2xl">
+                    🖥️
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-bold">Practice Agent Check-in</h3>
+                    <p class="text-xs opacity-90">Access the Departure Control System (DCS)</p>
+                  </div>
+                </div>
+                <button 
+                  @click="startPracticeCheckin"
+                  class="w-full bg-white text-indigo-600 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-50 transition-colors shadow-sm"
+                >
+                  Start Agent Check-in
+                </button>
+              </div>
+
               <StudentSectionInfo 
                 :section="section" 
                 :total-activities="activities.length" 
@@ -577,6 +596,12 @@ export default {
       if (this.practiceBookings.length === 0) {
         this.loadPracticeBookings();
       }
+    },
+
+    startPracticeCheckin() {
+      console.log('🖥️ Starting DCS Simulation');
+      // Redirect to DCS Dashboard
+      this.$router.push('/dcs/dashboard');
     },
 
     async openComparisonModal(activity) {

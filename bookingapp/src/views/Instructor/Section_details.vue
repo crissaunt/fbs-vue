@@ -161,7 +161,7 @@
                     <!-- Dropdown Menu -->
                     <div 
                       v-if="activityDropdowns[activity.id]"
-                      class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200"
+                      class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50 border border-gray-200"
                     >
                       <button 
                         @click="openDeleteModal(activity)"
@@ -203,7 +203,7 @@
     <!-- Delete Confirmation Modal -->
     <Transition name="modal-fade">
       <div v-if="showDeleteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md mx-4">
           <!-- Warning Icon -->
           <div class="flex justify-center mb-6">
             <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
@@ -248,7 +248,7 @@
     <!-- Success Modal -->
     <Transition name="success-fade">
       <div v-if="showSuccessModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4 transform transition-all">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md mx-4 transform transition-all">
           <div class="flex justify-center mb-6">
             <div class="success-checkmark">
               <div class="check-icon">
@@ -277,7 +277,7 @@
 
     <!-- Enroll Student Modal -->
     <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/50">
-      <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div class="bg-white rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
         <div class="bg-white p-6 text-black flex justify-between items-center">
           <h3 class="text-xl font-bold">Enroll Student</h3>
           <button @click="isModalOpen = false" class="hover:rotate-90 transition-transform">
@@ -293,12 +293,12 @@
               v-model="studentNumberInput"
               type="text" 
               placeholder="e.g. 21-0001"
-              class="w-full p-4 border-2 border-gray-100 rounded-xl focus:border-[#FF579A] outline-none transition-all text-lg font-medium"
+              class="w-full p-4 border-2 border-gray-100 rounded-lg focus:border-[#FF579A] outline-none transition-all text-lg font-medium"
             />
           </div>
           <div class="flex gap-4">
-            <button @click="isModalOpen = false" class="flex-1 py-3 text-gray-400 font-bold hover:bg-gray-200 rounded-xl transition-colors uppercase text-xs">Cancel</button>
-            <button @click="submitEnrollment" :disabled="loading" class="flex-1 py-3 bg-[#FF579A] text-white font-bold rounded-xl shadow-lg hover:bg-green-700 transition-colors uppercase text-xs">
+            <button @click="isModalOpen = false" class="flex-1 py-3 text-gray-400 font-bold hover:bg-gray-200 rounded-lg transition-colors uppercase text-xs">Cancel</button>
+            <button @click="submitEnrollment" :disabled="loading" class="flex-1 py-3 bg-[#FF579A] text-white font-bold rounded-lg shadow-lg hover:bg-green-700 transition-colors uppercase text-xs">
               {{ loading ? 'Enrolling...' : 'Enroll Student' }}
             </button>
           </div>

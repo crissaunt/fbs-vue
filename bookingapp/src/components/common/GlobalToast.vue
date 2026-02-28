@@ -11,7 +11,7 @@
       <div
         v-for="notification in notificationStore.notifications"
         :key="notification.id"
-        class="pointer-events-auto p-4 rounded-sm shadow-xl border flex items-start gap-3 bg-white"
+        class="pointer-events-auto p-4 rounded-lg shadow-xl border flex items-start gap-3 bg-white"
         :class="{
           'border-emerald-200 bg-emerald-50': notification.type === 'success',
           'border-red-200 bg-red-50': notification.type === 'error',

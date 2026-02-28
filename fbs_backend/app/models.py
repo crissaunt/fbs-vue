@@ -117,6 +117,7 @@ class Country(models.Model):
 class Airline(models.Model):
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=10, unique=True)
+    logo = models.ImageField(upload_to='airline_logos/', null=True, blank=True)
 
     def __str__(self):
         return f"{self.code} - {self.name}"
@@ -603,6 +604,18 @@ class Seat(models.Model):
     
     # Many-to-Many link for dynamic requirements
     requirements = models.ManyToManyField(SeatRequirement, blank=True)
+    
+    # Soft Lock Fields (Simulation of 2026 Reservation Lock)
+    locked_at = models.DateTimeField(null=True, blank=True)
+    locked_until = models.DateTimeField(null=True, blank=True)
+    locked_by_session = models.CharField(max_length=100, null=True, blank=True)
+    
+    @property
+    def is_locked(self):
+        """Check if seat is currently locked by another session"""
+        if not self.locked_until:
+            return False
+        return self.locked_until > timezone.now()
     
     # Price adjustments
     price_adjustment_auto = models.DecimalField(
@@ -1386,6 +1399,7 @@ class PassengerInfo(models.Model):
     title = models.CharField(max_length=10, choices=TITLE_CHOICES, default="MR")  # Changed from gender to title
     date_of_birth = models.DateField(null=True, blank=True)  # Make optional
     passport_number = models.CharField(max_length=50, blank=True, null=True)
+    passport_expiry = models.DateField(null=True, blank=True)
     nationality = models.CharField(max_length=100, null=True, blank=True)
     passenger_type = models.CharField(max_length=10, choices=TYPE_CHOICES, default="Adult")
     
@@ -1481,6 +1495,14 @@ class Booking(models.Model):
         null=True, 
         blank=True,
         help_text="The activity code that was used for this booking"
+    )
+    
+    # Session tracking for seat locks
+    booking_session_id = models.CharField(
+        max_length=100, 
+        null=True, 
+        blank=True,
+        help_text="Temporary session ID used to hold seat locks"
     )
     
     class Meta:

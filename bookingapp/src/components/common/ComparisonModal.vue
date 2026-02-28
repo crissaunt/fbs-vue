@@ -22,7 +22,7 @@
             </div>
             
             <!-- Unified Score & Breakdown -->
-            <div v-if="grade !== null" class="flex items-center gap-12 bg-[#F8FAFC] p-8 rounded-[32px] border border-[#F1F5F9]">
+            <div v-if="grade !== null" class="flex items-center gap-12 bg-[#F8FAFC] p-8 rounded-xl border border-[#F1F5F9]">
               <div class="text-center border-r border-[#E2E8F0] pr-12">
                 <p class="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest mb-1">Total Score</p>
                 <div class="flex items-baseline justify-center">
@@ -98,7 +98,7 @@
               </h3>
               
               <div class="grid grid-cols-2 gap-8">
-                <div v-for="(p, idx) in matches.passenger_details" :key="idx" class="p-8 border border-[#F1F5F9] rounded-[24px] hover:border-[#111827]/10 transition-all">
+                <div v-for="(p, idx) in matches.passenger_details" :key="idx" class="p-8 border border-[#F1F5F9] rounded-xl hover:border-[#111827]/10 transition-all">
                   <div class="flex justify-between items-center mb-8 pb-4 border-b border-[#F1F5F9]">
                     <span class="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em]">P{{ idx + 1 }} • Verification Card</span>
                     <span class="px-3 py-1 bg-[#F8FAFC] rounded-full text-[10px] font-black text-[#64748B] uppercase">ID: 00{{ idx + 1 }}</span>
@@ -128,7 +128,7 @@
       <!-- Minimalist Footer -->
       <div class="p-12 bg-white flex justify-end gap-6 border-t border-[#F1F5F9]">
         <button class="text-[13px] font-bold text-[#64748B] hover:text-[#111827] transition-all px-4" @click="closeModal">Discard</button>
-        <button class="bg-[#111827] text-white px-10 py-4 rounded-2xl text-[13px] font-bold hover:shadow-2xl hover:-translate-y-1 transition-all active:scale-95 shadow-xl shadow-[#111827]/10" @click="saveAndClose">Confirm Analysis</button>
+        <button class="bg-[#111827] text-white px-10 py-4 rounded-lg text-[13px] font-bold hover:shadow-2xl hover:-translate-y-1 transition-all active:scale-95 shadow-xl shadow-[#111827]/10" @click="saveAndClose">Confirm Analysis</button>
       </div>
     </div>
   </div>
@@ -449,7 +449,7 @@ const calculatedScore = computed(() => {
 .modal-content {
   position: relative;
   background: #ffffff;
-  border-radius: 32px;
+  border-radius: 12px;
   width: 100%;
   max-width: 1200px;
   max-height: 95vh;

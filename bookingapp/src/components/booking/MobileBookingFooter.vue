@@ -88,12 +88,12 @@ const isVisible = computed(() => {
 .total-info .amount {
   font-size: 18px;
   font-weight: 800;
-  color: #003870;
+  color: #FF579A;
 }
 
 .next-btn {
   flex: 1;
-  background: linear-gradient(135deg, #003870 0%, #0056b3 100%);
+  background: linear-gradient(135deg, #FF579A 0%, #0056b3 100%);
   color: white;
   border: none;
   border-radius: 12px;

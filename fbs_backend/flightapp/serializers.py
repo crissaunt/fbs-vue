@@ -644,6 +644,7 @@ class CreateBookingSerializer(serializers.Serializer):
     activity_code = serializers.CharField(max_length=8, required=False, allow_null=True, allow_blank=True)
     is_practice = serializers.BooleanField(required=False, default=False)
     insurance_plan_id = serializers.IntegerField(required=False, allow_null=True)
+    booking_session_id = serializers.CharField(max_length=100, required=False, allow_null=True)
     
     def validate(self, data):
         """Custom validation for booking data"""

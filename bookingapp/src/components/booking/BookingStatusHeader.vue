@@ -39,13 +39,12 @@ const currentStepIndex = computed(() => {
 <style scoped>
 .booking-progress-container {
   background: white;
-  padding: 20px 0;
+  padding: 12px 0;
   border-bottom: 1px solid #e2e8f0;
-  margin-bottom: 30px;
   position: sticky;
   top: 0;
   z-index: 50;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
 }
 
 .progress-steps {
@@ -139,7 +138,7 @@ const currentStepIndex = computed(() => {
   }
   
   .booking-progress-container {
-    padding: 15px 0;
+    padding: 8px 0;
   }
   
   .step-connector {

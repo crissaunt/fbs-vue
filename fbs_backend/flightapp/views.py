@@ -535,9 +535,9 @@ def predict_flight_price(request):
         }, status=400)
 
 # In views.py - Update the SeatViewSet class
-class SeatViewSet(viewsets.ReadOnlyModelViewSet):
+class SeatViewSet(viewsets.ModelViewSet):
     """
-    API endpoint that allows seats to be viewed based on a schedule.
+    API endpoint that allows seats to be viewed, locked and unlocked.
     """
     serializer_class = SeatSerializer
     queryset = Seat.objects.all()
@@ -594,6 +594,88 @@ class SeatViewSet(viewsets.ReadOnlyModelViewSet):
             }
         
         return response
+
+    @action(detail=True, methods=['post'], url_path='lock')
+    def lock(self, request, pk=None):
+        """Lock a seat for selection"""
+        try:
+            seat = self.get_object()
+            session_id = request.data.get('session_id')
+            duration = int(request.data.get('duration', 15))
+            
+            if not session_id:
+                session_id = request.session.session_key
+                if not session_id:
+                    request.session.save()
+                    session_id = request.session.session_key
+            
+            # 1. Check if permanently booked
+            is_permanently_booked = BookingDetail.objects.filter(
+                seat=seat,
+                status__in=['pending', 'confirmed', 'checkin', 'boarding', 'completed']
+            ).exists()
+            
+            if is_permanently_booked:
+                return Response({
+                    'success': False,
+                    'error': 'This seat is already fully booked'
+                }, status=status.HTTP_409_CONFLICT)
+            
+            # 2. Check if already locked by someone else
+            if seat.is_locked and seat.locked_by_session != session_id:
+                return Response({
+                    'success': False, 
+                    'error': 'Seat is temporarily reserved by another passenger'
+                }, status=status.HTTP_423_LOCKED)
+                
+            # Lock the seat
+            now = timezone.now()
+            seat.locked_at = now
+            seat.locked_until = now + timedelta(minutes=duration)
+            seat.locked_by_session = session_id
+            seat.save()
+            
+            # Re-read to ensure fresh state
+            serializer = self.get_serializer(seat)
+            
+            return Response({
+                'success': True, 
+                'message': f'Seat {seat.seat_number} reserved for {duration} minutes',
+                'locked_until': seat.locked_until,
+                'is_locked_by_me': True,
+                'seat': serializer.data
+            })
+        except Exception as e:
+            logger.error(f"Error locking seat {pk}: {str(e)}")
+            return Response({'success': False, 'error': str(e)}, status=500)
+
+    @action(detail=True, methods=['post'], url_path='unlock')
+    def unlock(self, request, pk=None):
+        """Unlock a seat manually"""
+        try:
+            seat = self.get_object()
+            session_id = request.data.get('session_id')
+            
+            if not session_id:
+                session_id = request.session.session_key
+            
+            # Only allow unlocking if locked by the same session or if it's already expired
+            if seat.locked_by_session == session_id or not seat.is_locked:
+                seat.locked_at = None
+                seat.locked_until = None
+                seat.locked_by_session = None
+                seat.save()
+                return Response({
+                    'success': True,
+                    'message': f'Seat {seat.seat_number} is now available'
+                })
+            else:
+                return Response({
+                    'success': False,
+                    'error': 'You do not have permission to release this reservation'
+                }, status=status.HTTP_403_FORBIDDEN)
+        except Exception as e:
+            return Response({'success': False, 'error': str(e)}, status=500)
 
 class MealOptionViewSet(AirlineFilterMixin, viewsets.ReadOnlyModelViewSet):
     queryset = MealOption.objects.all()
@@ -1270,7 +1352,8 @@ def create_booking(request):
                 total_amount=Decimal('0.00'),  # Always start at 0; _update_booking_totals sets the real value
                 is_practice=is_practice,
                 activity_code_used=activity_code.strip().upper() if activity_code else None,
-                activity=activity_to_link
+                activity=activity_to_link,
+                booking_session_id=data.get('booking_session_id')
             )
             
             print(f"DEBUG: Booking created with ID: {booking.id} (total pending backend calculation)")
@@ -1667,6 +1750,7 @@ def _create_passengers(passengers_data):
             date_of_birth = pax_data.get('date_of_birth', '')
             nationality = pax_data.get('nationality', 'Philippines')
             passport_number = pax_data.get('passport_number', '')
+            passport_expiry = pax_data.get('passport_expiry', '')
             passenger_type = pax_data.get('type', 'Adult')
             ph_discount_type = pax_data.get('ph_discount_type', 'none')
             
@@ -1694,6 +1778,20 @@ def _create_passengers(passengers_data):
                     except:
                         print(f"    Could not parse date, using None")
                         dob_parsed = None
+
+            # Parse passport expiry
+            expiry_parsed = None
+            if passport_expiry:
+                try:
+                    clean_expiry = str(passport_expiry).split('T')[0]
+                    expiry_parsed = datetime.strptime(clean_expiry, '%Y-%m-%d').date()
+                    print(f"    Passport expiry parsed: {expiry_parsed}")
+                except Exception as e:
+                    print(f"    ERROR parsing passport expiry: {e}")
+                    try:
+                        expiry_parsed = datetime.strptime(str(passport_expiry), '%Y-%m-%d').date()
+                    except:
+                        expiry_parsed = None
             
             print(f"    Creating PassengerInfo...")
             
@@ -1706,6 +1804,7 @@ def _create_passengers(passengers_data):
                 date_of_birth=dob_parsed,
                 nationality=nationality,
                 passport_number=passport_number,
+                passport_expiry=expiry_parsed,
                 passenger_type=passenger_type,
                 ph_discount_type=ph_discount_type
             )
@@ -1773,19 +1872,40 @@ def _create_booking_detail(booking, passenger, segment, passenger_data=None, seg
             print(f"  Seat data for this passenger: {seat_data}")
             
             try:
+                # 1. Fetch seat with row-level lock
                 if isinstance(seat_data, int):
-                    seat = Seat.objects.select_related('seat_class').get(id=seat_data)
+                    seat = Seat.objects.select_for_update().get(id=seat_data)
                 elif isinstance(seat_data, dict) and seat_data.get('id'):
-                    seat = Seat.objects.select_related('seat_class').get(id=seat_data['id'])
+                    seat = Seat.objects.select_for_update().get(id=seat_data['id'])
                 
                 if seat:
-                    seat.is_available = False
-                    seat.save()
-                    seat_class = seat.seat_class
-                    print(f"  Seat assigned: {seat.seat_number}")
+                    # 2. Check if seat is PERMANENTLY booked already (by someone else)
+                    is_permanently_booked = BookingDetail.objects.filter(
+                        seat=seat,
+                        status__in=['pending', 'confirmed', 'checkin', 'boarding', 'completed']
+                    ).exclude(booking=booking).exists()
                     
+                    if is_permanently_booked:
+                        raise Exception(f"Seat {seat.seat_number} has already been booked by another passenger.")
+                        
+                    # 3. Check if seat is TEMPORARILY locked (by someone else)
+                    # If it's locked, it MUST be locked by THIS session
+                    if seat.is_locked and seat.locked_by_session != booking.booking_session_id:
+                        raise Exception(f"Seat {seat.seat_number} is currently reserved by another passenger.")
+                    
+                    print(f"  Seat {seat.seat_number} claimed for session {booking.booking_session_id}")
+                    
+                    # 4. Success - The seat is now permanently linked to this booking
+                    # We can clear the soft lock fields as the BookingDetail now serves as the permanent lock
+                    seat.locked_until = None
+                    seat.locked_by_session = None
+                    seat.is_available = False # Model still uses this for legacy checks
+                    seat.save()
+                    
+                    seat_class = seat.seat_class
             except Seat.DoesNotExist:
-                print(f"  WARNING: Seat not found")
+                print(f"  ERROR: Seat with ID {seat_data} not found")
+                seat = None
         
         # If no seat selected, get default seat class
         if not seat_class:

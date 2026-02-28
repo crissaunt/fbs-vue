@@ -200,7 +200,8 @@ export const bookingService = {
       },
       insurance_plan_id: bookingStore.addons?.insurance?.selectedPlanId || null,
       activity_code: bookingStore.activityCode || null,
-      is_practice: bookingStore.isPractice || false
+      is_practice: bookingStore.isPractice || false,
+      booking_session_id: bookingStore.bookingSessionId || null
     };
 
     if (isMultiCity) {
