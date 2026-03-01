@@ -328,6 +328,7 @@ class Schedule(models.Model):
     arrival_time = models.DateTimeField()
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Open')
+    gate = models.CharField(max_length=10, blank=True, null=True, default='Gate 7')
     
     # ============ NEW FIELDS FOR ML PRICING ============
     ml_base_price = models.DecimalField(
@@ -2121,14 +2122,69 @@ class Payment(models.Model):
 # CHECK-IN DETAIL
 # ============================================================
 class CheckInDetail(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('checked-in', 'Checked-In'),
+        ('boarding', 'Boarding'),
+        ('completed', 'Completed'),
+    ]
+
     booking_detail = models.ForeignKey(BookingDetail, on_delete=models.CASCADE, related_name="checkins")
     check_in_time = models.DateTimeField(auto_now_add=True)
     boarding_pass = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Baggage Info
     baggage_count = models.PositiveIntegerField(default=0)
     baggage_weight = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+    
+    # Counter/Agent Info (DCS)
+    check_in_counter = models.CharField(max_length=50, blank=True, null=True)
+    agent_id = models.IntegerField(blank=True, null=True)
+    
+    # Boarding Info
+    gate_number = models.CharField(max_length=20, blank=True, null=True)
+    sequence_number = models.PositiveIntegerField(blank=True, null=True)
+    
+    # Status & Compliance
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    has_declared_safety = models.BooleanField(default=False)
+    special_instructions = models.TextField(blank=True, null=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Check-In {self.id} (Booking {self.booking_detail.booking.id})"
+
+    def generate_boarding_pass(self):
+        """Helper to generate a unique boarding pass identifier."""
+        if not self.boarding_pass:
+            from django.utils import timezone
+            timestamp = timezone.now().strftime('%Y%m%d%H%M')
+            self.boarding_pass = f"BP-{self.id}-{timestamp}"
+            self.save(update_fields=['boarding_pass'])
+        return self.boarding_pass
+
+    @property
+    def passenger_name(self):
+        return self.booking_detail.passenger.get_full_name()
+
+    @property
+    def flight_number(self):
+        return self.booking_detail.schedule.flight.flight_number
+
+    @property
+    def route(self):
+        return str(self.booking_detail.schedule.flight.route)
+
+    @property
+    def departure_time(self):
+        return self.booking_detail.schedule.departure_time
+
+    @property
+    def seat_number(self):
+        return self.booking_detail.seat.seat_number if self.booking_detail.seat else "TBA"
 
 
 # ============================================================

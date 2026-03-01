@@ -539,6 +539,7 @@ class CheckInDetailSerializer(serializers.ModelSerializer):
             'seat_assignment',
             'gate_number',
             'status',
+            'has_declared_safety',
             'special_instructions',
             'created_at',
             'updated_at',
@@ -574,15 +575,17 @@ class CheckInDetailSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         """Create a new check-in record"""
-        # Set status to checked-in by default
-        validated_data['status'] = 'checked-in'
+        # Set status to checked-in by default if not provided
+        if 'status' not in validated_data:
+            validated_data['status'] = 'checked-in'
+        
+        instance = super().create(validated_data)
         
         # Generate boarding pass if not provided
-        if 'boarding_pass' not in validated_data or not validated_data['boarding_pass']:
-            instance = CheckInDetail(**validated_data)
-            validated_data['boarding_pass'] = instance.generate_boarding_pass()
+        if not instance.boarding_pass:
+            instance.generate_boarding_pass()
         
-        return super().create(validated_data)
+        return instance
 
 
 class CheckInListSerializer(serializers.ModelSerializer):

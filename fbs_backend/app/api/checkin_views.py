@@ -119,12 +119,78 @@ class CheckInDetailViewSet(viewsets.ModelViewSet):
             return Response({'status': 'updated'})
         return Response({'error': 'status required'}, status=400)
     
+    @action(detail=False, methods=['post'])
+    def lookup(self, request):
+        pnr = request.data.get('pnr')
+        last_name = request.data.get('last_name')
+        
+        if not pnr or not last_name:
+            return Response({'error': 'PNR and last name are required'}, status=400)
+            
+        bookings = BookingDetail.objects.filter(
+            booking__pnr=pnr.upper(),
+            passenger__last_name__iexact=last_name
+        ).select_related('passenger', 'schedule__flight__route', 'schedule__flight__airline')
+        
+        if not bookings.exists():
+            return Response({'error': 'No matching booking found'}, status=404)
+            
+        # Serialize the booking details for the passenger to choose
+        data = []
+        for b in bookings:
+            data.append({
+                'id': b.id,
+                'passenger_name': b.passenger.get_full_name(),
+                'flight_number': b.schedule.flight.flight_number,
+                'origin': b.schedule.flight.route.origin_airport.city,
+                'destination': b.schedule.flight.route.destination_airport.city,
+                'departure_time': b.schedule.departure_time,
+                'status': b.status,
+                'is_checked_in': b.checkins.exists()
+            })
+            
+        return Response(data)
+
+    @action(detail=False, methods=['post'])
+    def self_checkin(self, request):
+        booking_detail_id = request.data.get('booking_detail_id')
+        has_declared_safety = request.data.get('has_declared_safety', False)
+        
+        if not booking_detail_id:
+            return Response({'error': 'Booking detail ID required'}, status=400)
+            
+        if not has_declared_safety:
+            return Response({'error': 'Safety declaration is required'}, status=400)
+            
+        try:
+            booking_detail = BookingDetail.objects.get(id=booking_detail_id)
+            
+            # Use serializer for validation and creation
+            serializer = self.get_serializer(data={
+                'booking_detail_id': booking_detail_id,
+                'has_declared_safety': True,
+                'status': 'checked-in',
+                'gate_number': booking_detail.schedule.gate or 'Gate 7'
+            })
+            
+            if serializer.is_valid():
+                checkin = serializer.save()
+                # Update booking detail status
+                booking_detail.status = 'checkin'
+                booking_detail.save(update_fields=['status'])
+                
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+        except BookingDetail.DoesNotExist:
+            return Response({'error': 'Booking not found'}, status=404)
+
     @action(detail=False, methods=['get'])
     def export(self, request):
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="checkins.csv"'
         writer = csv.writer(response)
-        writer.writerow(['ID', 'Passenger', 'Flight', 'Status'])
+        writer.writerow(['ID', 'Passenger', 'Flight', 'Status', 'Gate', 'Time'])
         for c in self.get_queryset():
-            writer.writerow([c.id, c.passenger_name, c.flight_number, c.status])
+            writer.writerow([c.id, c.passenger_name, c.flight_number, c.status, c.gate_number, c.check_in_time])
         return response

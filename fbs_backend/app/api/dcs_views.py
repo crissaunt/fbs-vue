@@ -28,7 +28,7 @@ def get_dcs_flights(request):
             'destination': sched.flight.route.destination_airport.code if sched.flight and sched.flight.route else 'N/A',
             'departure_time': sched.departure_time,
             'arrival_time': sched.arrival_time,
-            'gate': getattr(sched, 'gate', 'TBA'),
+            'gate': sched.gate or 'TBA',
             'status': sched.status,
             'booked_count': BookingDetail.objects.filter(schedule=sched).count(),
             'total_seats': sched.seats.count() or 1, # Avoid div by zero
@@ -78,7 +78,7 @@ def get_dcs_manifest(request, schedule_id):
             'origin': schedule.flight.route.origin_airport.code if schedule.flight and schedule.flight.route else 'N/A',
             'destination': schedule.flight.route.destination_airport.code if schedule.flight and schedule.flight.route else 'N/A',
             'departure_time': schedule.departure_time,
-            'gate': getattr(schedule, 'gate', 'TBA'),
+            'gate': schedule.gate or 'TBA',
         },
         'manifest': manifest
     })
@@ -91,6 +91,8 @@ def process_dcs_checkin(request):
     Supports baggage pooling by accepting a list of passengers and a total weight.
     """
     passenger_data = request.data.get('passengers', [])
+    agent_id = request.data.get('agent_id')
+    check_in_counter = request.data.get('check_in_counter', 'Counter 1')
     
     # Legacy support (if only one ID is sent)
     if not passenger_data:
@@ -103,6 +105,7 @@ def process_dcs_checkin(request):
 
     results = []
     checkin_details = []
+    from app.models import CheckInDetail
     
     for entry in passenger_data:
         try:
@@ -110,12 +113,33 @@ def process_dcs_checkin(request):
             weight = float(entry.get('actual_weight', 0))
             
             detail = BookingDetail.objects.get(id=detail_id)
+            
+            # Create or update CheckInDetail record
+            checkin, created = CheckInDetail.objects.update_or_create(
+                booking_detail=detail,
+                defaults={
+                    'baggage_weight': weight,
+                    'status': 'checked-in',
+                    'check_in_counter': check_in_counter,
+                    'agent_id': agent_id,
+                    'gate_number': detail.schedule.gate or 'Gate 7'
+                }
+            )
+            
+            # Generate boarding pass if missing
+            if not checkin.boarding_pass:
+                checkin.generate_boarding_pass()
+            
+            # Update booking detail status
             detail.status = 'checkin'
-            # In a real system, you'd store the actual weight per bag here
-            detail.save()
+            detail.save(update_fields=['status'])
 
             checkin_details.append(detail)
-            results.append({'id': detail_id, 'status': 'checkin'})
+            results.append({
+                'id': detail_id, 
+                'status': 'checkin',
+                'boarding_pass': checkin.boarding_pass
+            })
         except BookingDetail.DoesNotExist:
             continue
         except Exception as e:

@@ -159,7 +159,7 @@ class ScheduleSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'flight_number', 'airline_name', 'airline_code',
             'origin', 'origin_city', 'destination', 'destination_city',
-            'departure_time', 'arrival_time', 'price', 'status', 
+            'departure_time', 'arrival_time', 'price', 'status', 'gate',
             'flight_duration', 'available_classes', 'seat_classes', 
             'available_seats', 'is_domestic',
             # ML pricing fields
