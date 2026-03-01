@@ -183,12 +183,11 @@
       </div>
     </div>
     
-    <!-- Seat Classes Modal -->
     <SeatClassModal 
       :show="showSeatClassesModal"
       :flight="selectedFlightForSeats"
       :seatClasses="availableSeatClasses"
-      @select-class="handleSeatClassSelection"
+      @select-class="handleInlineSeatClassSelection({ flight: selectedFlightForSeats, seatClass: $event })"
       @close="cancelSeatClassSelection"
     />
     

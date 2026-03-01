@@ -283,7 +283,7 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
                 # If ML prediction returns 0, use fallback
                 if price <= 0:
                     print(f"[WARN] ML returned 0 for {s.flight.flight_number}, using fallback")
-                    price = 5000  # Fallback price
+                    price = float(s.flight.route.base_price) if s.flight.route.base_price else 5000.0
                 s.ml_base_price = Decimal(str(price))
                 s.ml_price_updated_at = now
             
@@ -304,7 +304,8 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             }
             
             # Get base price - use ml_base_price or fallback
-            base_price = float(schedule.ml_base_price) if schedule.ml_base_price else 5000.0
+            fallback_price = float(schedule.flight.route.base_price) if schedule.flight and schedule.flight.route and schedule.flight.route.base_price else 5000.0
+            base_price = float(schedule.ml_base_price) if schedule.ml_base_price else fallback_price
             
             # Prepare context for "Turbo" pricing (no DB hits inside)
             pricing_context = {
@@ -321,7 +322,9 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             # ============ ROUNDING LOGIC ============
             final_price = dynamic_pricing.round_price(pricing_result['final_price'])
             base_price = dynamic_pricing.round_price(pricing_result['base_price'])
-            ml_base = float(schedule.ml_base_price) if schedule.ml_base_price else 5000.0
+            
+            fallback_price = float(schedule.flight.route.base_price) if schedule.flight and schedule.flight.route and schedule.flight.route.base_price else 5000.0
+            ml_base = float(schedule.ml_base_price) if schedule.ml_base_price else fallback_price
             rounded_ml_base = dynamic_pricing.round_price(ml_base)
             
             # Inject dynamic results

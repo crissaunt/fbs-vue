@@ -341,19 +341,20 @@ class DynamicPricingService:
             import math
             
             # Use the config's "critical" factor to scale how aggressive the daily surge gets
-            max_surge = 1.20 # default +120%
+            max_surge = 2.80 # default +280% (Allows prices to hit 7k-9k easily on a 2500 base)
             if config and hasattr(config, 'days_factor_critical'):
                 config_surge = float(config.days_factor_critical) - 1.0
-                # Scale up config values to be more aggressive for daily math: a configured 1.25 (25%)
-                # becomes a steep day-0 multiplier, adjusting the exponential formula.
-                max_surge = max(config_surge * 2.5, 0.50)
+                max_surge = max(config_surge * 4.0, 1.50)
                 
-            if days_until <= 60:
-                # Math: e^(-0.15 * days) creates a beautifully sharp increase in the last 14 days
-                curve = 1.0 + max_surge * math.exp(-0.15 * days_until)
+            if days_until <= 30:
+                # Math: e^(-0.10 * days) creates a beautifully sharp increase in the last 14 days
+                curve = 1.0 + max_surge * math.exp(-0.10 * days_until)
+            elif days_until <= 60:
+                # Moderate increase between 30 and 60 days
+                curve = 1.0 + (max_surge * 0.15) * (1 - (days_until - 30) / 30)
             else:
-                # Early bird discount — gradually increases the further out (min 0.90)
-                curve = 0.95 - 0.05 * min((days_until - 60) / 60, 1.0)
+                # Early bird discount — drops significantly the further out (up to 40% off)
+                curve = 0.95 - 0.35 * min((days_until - 60) / 120, 1.0)
                 
             factor *= curve
         except Exception as e:
@@ -512,12 +513,14 @@ class DynamicPricingService:
                         elif occupancy_rate < float(config.occupancy_low_threshold):
                             return float(config.occupancy_factor_low)
                         # Fallback heuristic
-                        if occupancy_rate > 0.8:
-                            return 1.30 # Almost full, huge markup
+                        if occupancy_rate > 0.90:
+                            return 1.80 # 80% markup for strictly last few seats
+                        elif occupancy_rate > 0.8:
+                            return 1.45 # 45% markup for almost full
                         elif occupancy_rate > 0.6:
-                            return 1.15
+                            return 1.20
                         elif occupancy_rate < 0.2:
-                            return 0.85 # Empty floor, major discount
+                            return 0.70 # Empty floor, 30% discount
         except Exception as e:
             logger.warning(f"Error parsing occupancy config or state: {e}")
         
