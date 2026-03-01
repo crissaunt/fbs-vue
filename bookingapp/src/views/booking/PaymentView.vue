@@ -9,15 +9,13 @@
     <!-- Main Container -->
     <div class="relative max-w-6xl mx-auto">
       <BookingStatusHeader />
-      <!-- Loading State -->
-      <div v-if="loading" class="bg-white rounded-lg border border-gray-100 shadow-xl p-12 text-center max-w-lg mx-auto mt-20">
-        <div class="relative inline-flex mb-8">
-          <div class="w-20 h-20 border-4 border-pink-50 rounded-md animate-pulse"></div>
-          <div class="absolute inset-0 w-20 h-20 border-4 border-[#FF579A] border-t-transparent rounded-md animate-spin"></div>
-        </div>
-        <h3 class="text-2xl font-black text-gray-900 mb-2 uppercase tracking-tight">{{ loadingMessage }}</h3>
-        <p class="text-gray-400 text-sm font-medium">Please do not refresh or close this window.</p>
-      </div>
+      <!-- Content States -->
+      <LoadingOverlay 
+        v-if="loading"
+        :show="true" 
+        :title="loadingMessage || 'Securing Payment'"
+        subtitle="Please do not refresh or close this window."
+      />
 
       <!-- Session Expired -->
       <div v-else-if="!isSessionValid" class="bg-white rounded-lg border border-gray-100 shadow-xl p-12 text-center max-w-lg mx-auto mt-20">
@@ -281,6 +279,7 @@ import { useBookingStore } from '@/stores/booking';
 import { useRouter, useRoute } from 'vue-router';
 import api from '@/services/booking/api';
 import BookingStatusHeader from '@/components/booking/BookingStatusHeader.vue';
+import LoadingOverlay from '@/components/common/LoadingOverlay.vue';
 
 const bookingStore = useBookingStore();
 const router = useRouter();

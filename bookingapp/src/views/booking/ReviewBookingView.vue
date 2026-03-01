@@ -307,10 +307,13 @@
       </aside>
     </div>
 
-    <MobileBookingFooter 
-      button-text="Proceed to Payment" 
-      :loading="isProcessing"
       @next="handleConfirmBooking" 
+    />
+
+    <LoadingOverlay 
+      :show="isProcessing" 
+      title="Finalizing Your Booking"
+      subtitle="Just a few seconds while we create your official reservation."
     />
   </div>
 </template>
@@ -326,6 +329,7 @@ import BookingTimer from '@/components/booking/BookingTimer.vue';
 import BookingStatusHeader from '@/components/booking/BookingStatusHeader.vue';
 import MobileBookingFooter from '@/components/booking/MobileBookingFooter.vue';
 import AnimatedNumber from '@/components/common/AnimatedNumber.vue';
+import LoadingOverlay from '@/components/common/LoadingOverlay.vue';
 
 const bookingStore = useBookingStore();
 const router = useRouter();

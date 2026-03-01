@@ -74,110 +74,219 @@
         </div>
       </div>
       
-      <!-- Schedule Info -->
-      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-3">
+      <!-- Schedule Info - NEW VISUAL TIMELINE -->
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-4 mt-2 px-2">
         <!-- Departure -->
-        <div class="flex-1">
-          <div class="text-2xl font-bold text-gray-900 mb-1">{{ formatTime(flight.departure_time) }}</div>
-          <div class="text-gray-700">{{ flight.origin }}</div>
-          <div class="text-sm text-green-500">{{ flight.origin_airport_code }}</div>
+        <div class="text-right w-24 shrink-0">
+          <div class="text-2xl font-black text-gray-900 leading-none">{{ formatTime(flight.departure_time) }}</div>
+          <div class="text-sm font-bold text-gray-500 mt-1">{{ flight.origin_airport_code }}</div>
         </div>
         
-        <!-- Duration -->
-        <div class="flex flex-col items-center">
-          <div class="w-full h-px bg-gray-300 mb-1"></div>
-          <div class="text-sm text-gray-600">{{ flight.flight_duration || formatDuration(flight.duration_minutes) }}</div>
-          <div class="w-full h-px bg-gray-300 mt-2"></div>
+        <!-- Visual Timeline -->
+        <div class="flex-1 flex flex-col items-center justify-center relative min-w-[150px]">
+          <div class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-widest">
+            {{ flight.flight_duration || formatDuration(flight.duration_minutes) }}
+          </div>
+          
+          <!-- The Line -->
+          <div class="w-full relative flex items-center justify-center h-2">
+            <!-- connecting line -->
+            <div class="absolute left-0 right-0 h-[2px] bg-gray-300"></div>
+            
+            <!-- Origin Dot -->
+            <div class="absolute left-0 w-2 h-2 rounded-full border-2 border-pink-500 bg-white z-10"></div>
+            
+            <!-- Layover Dots (if any) -->
+            <div v-if="(flight.total_stops || 0) > 0" class="w-3 h-3 rounded-full bg-orange-200 border-2 border-orange-500 z-10 shadow-sm relative group cursor-help">
+               <!-- Tooltip for stop -->
+               <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-gray-800 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap z-50">
+                 {{ flight.total_stops }} Stop(s)
+               </div>
+            </div>
+            <div v-else class="text-pink-300 z-10 bg-white px-1">
+              <svg class="w-4 h-4 transform rotate-90" fill="currentColor" viewBox="0 0 20 20">
+                 <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
+              </svg>
+            </div>
+            
+            <!-- Destination Dot -->
+            <div class="absolute right-0 w-2 h-2 rounded-full border-2 border-pink-500 bg-pink-500 z-10"></div>
+          </div>
         </div>
         
         <!-- Arrival -->
-        <div class="flex-1 text-right">
-          <div class="text-2xl font-bold text-gray-900 mb-1">{{ formatTime(flight.arrival_time) }}</div>
-          <div class="text-gray-700">{{ flight.destination }}</div>
-          <div class="text-sm text-green-500">{{ flight.destination_airport_code }}</div>
+        <div class="text-left w-24 shrink-0">
+          <div class="text-2xl font-black text-gray-900 leading-none">{{ formatTime(flight.arrival_time) }}</div>
+          <div class="text-sm font-bold text-gray-500 mt-1">{{ flight.destination_airport_code }}</div>
         </div>
       </div>
       
-      <!-- Flight Details -->
-      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
-        <div class="space-y-2">
-          <div v-if="flight.available_seats !== undefined" class="flex items-center text-sm">
-            <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-            </svg>
-            <span class="text-gray-700 text-xs" :class="{ 'text-orange-500 font-semibold': flight.available_seats < 10 }">
-              {{ flight.available_seats }} seats available
-            </span>
+      <!-- Footer: Amenities & Actions -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-gray-100 bg-gray-50/50 -mx-6 px-6 -mb-3 pb-3 rounded-b-lg">
+        
+        <!-- Amenity Icons Preview -->
+        <div class="flex items-center gap-4 text-gray-500">
+          <div class="flex items-center gap-1.5" title="Personal Item Included">
+             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+             <span class="text-[10px] font-medium hidden sm:inline">Included</span>
+          </div>
+          <div class="flex items-center gap-1.5" title="USB Power">
+             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          </div>
+          <div class="flex items-center gap-1.5" title="Standard Legroom">
+             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+             <span class="text-[10px] font-medium hidden sm:inline">29" Pitch</span>
           </div>
           
-          <!-- Display seat classes -->
-          <div v-if="flight.seat_classes && flight.seat_classes.length" class="text-xs text-gray-600">
-            Classes: {{ formatSeatClasses(flight.seat_classes) }}
-          </div>
-          
-          <!-- Selected Indicator -->
-          <div v-if="isSelected" class="text-sm text-pink-600 font-medium mt-1 animate-pulse">
-            ✓ Selected: {{ selectedClassName }}
+          <div class="flex items-center gap-1.5 ml-2">
+             <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+             <span :class="['text-[10px] font-bold uppercase tracking-widest', (flight.available_seats || 0) < 10 ? 'text-orange-500 animate-pulse' : 'text-gray-500']">
+                {{ flight.available_seats ?? 0 }} Seats Available
+             </span>
           </div>
         </div>
         
-        <div class="flex space-x-2">
+        <div class="flex space-x-3 items-center">
+          <!-- Selected Indicator Text -->
+          <div v-if="isSelected" class="text-[11px] text-pink-600 font-bold uppercase tracking-wider mr-2">
+            ✓ {{ selectedClassName }}
+          </div>
+          
           <template v-if="isSelected">
-            <button class="px-6 py-3 bg-green-500 text-white rounded-md font-medium whitespace-nowrap">
+            <button class="px-5 py-2 bg-green-500 text-white rounded font-bold shadow-sm shadow-green-200 text-sm">
               ✓ {{ selectionLabel }}
             </button>
             <button @click="$emit('select-flight', flight)" 
-              class="px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium whitespace-nowrap">
-              Change Selection
+              class="px-4 py-2 border-2 border-gray-200 text-gray-600 rounded hover:bg-gray-100 transition-colors font-bold text-sm">
+              {{ isExpanded ? 'Cancel' : 'Change' }}
             </button>
           </template>
           <template v-else>
+            <!-- Expanding indicator instead of direct select if not handling inline yet -->
             <button @click="$emit('select-flight', flight)" 
-              class="px-4 py-2 bg-pink-500 cursor-pointer text-white text-sm rounded-md hover:bg-pink-600 transition-colors font-medium whitespace-nowrap">
-              {{ selectButtonText }}
+              class="px-6 py-2.5 bg-pink-500 cursor-pointer text-white text-sm rounded-md shadow-md shadow-pink-200 hover:bg-pink-600 hover:-translate-y-0.5 transition-all font-bold whitespace-nowrap flex items-center gap-2">
+              {{ isExpanded ? 'Close' : selectButtonText }}
+              <svg class="w-4 h-4 transition-transform duration-200" :class="isExpanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
             </button>
           </template>
         </div>
       </div>
+      
+      <!-- INLINE EXPANDED FARE FAMILIES -->
+      <div v-show="isExpanded" class="mt-4 pt-4 border-t border-gray-100 animate-in slide-in-from-top-4 fade-in duration-300">
+        <h4 class="text-sm font-bold text-gray-800 mb-4 px-2">Select your fare type</h4>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Render Seat Classes passed from parent -->
+          <div v-for="seatClass in parsedSeatClasses" :key="seatClass.name" 
+               class="border-2 rounded-lg p-5 flex flex-col transition-all cursor-pointer relative overflow-hidden"
+               :class="hoveredClass === seatClass.name ? 'border-pink-500 shadow-md transform -translate-y-1' : 'border-gray-200 hover:border-pink-300'"
+               @mouseenter="hoveredClass = seatClass.name"
+               @mouseleave="hoveredClass = null"
+               @click="$emit('select-seat-class', { flight, seatClass })">
+               
+            <!-- Decorative Banner for Premium -->
+            <div v-if="seatClass.fare_family === 'premium'" class="absolute top-0 right-0 bg-pink-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">
+              BEST VALUE
+            </div>
+               
+            <div class="flex justify-between items-start mb-2">
+              <div>
+                <h3 class="font-black text-gray-900 text-lg">{{ seatClass.name }}</h3>
+                <p class="text-xs text-gray-500 mt-1 line-clamp-2 h-8">{{ seatClass.description }}</p>
+              </div>
+              <div class="w-10 h-10 rounded-full bg-pink-50 flex items-center justify-center shrink-0 text-pink-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="seatClass.icon"></path>
+                </svg>
+              </div>
+            </div>
+            
+            <div class="text-2xl font-black text-pink-600 my-4">
+              ₱{{ Number(seatClass.price).toLocaleString() }}
+            </div>
+            
+            <ul class="space-y-3 mb-6 flex-1">
+              <li v-for="(feature, idx) in seatClass.features" :key="idx" class="flex items-start text-sm text-gray-700">
+                <svg class="w-4 h-4 text-green-500 mr-2 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span class="leading-tight">{{ feature }}</span>
+              </li>
+            </ul>
+            
+            <button class="w-full py-3 rounded-md font-bold text-sm transition-colors"
+                    :class="hoveredClass === seatClass.name ? 'bg-pink-500 text-white shadow-md shadow-pink-200' : 'bg-pink-50 text-pink-600'">
+              Select {{ seatClass.name }}
+            </button>
+          </div>
+        </div>
+      </div>
+      
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { format } from 'date-fns';
 
 const props = defineProps({
   flight: Object,
   isRoundTrip: Boolean,
+  isMultiCity: Boolean,
   selectionPhase: String,
   selectedOutbound: Object,
   selectedReturn: Object,
+  selectedSegmentFlight: Object,
   selectButtonText: String,
   mlPricingEnabled: Boolean,
   showPricingDetails: Boolean,
-  selectedPriceId: String
+  selectedPriceId: String,
+  parsedSeatClasses: Array // New Array passed down from parent view
 });
 
-defineEmits(['select-flight', 'view-pricing']);
+const emit = defineEmits(['select-flight', 'view-pricing', 'select-seat-class', 'expand']);
+
+const isExpanded = computed(() => {
+  return props.parsedSeatClasses && props.parsedSeatClasses.length > 0;
+});
+const hoveredClass = ref(null);
+
+const isFlightMatch = (flightA, flightB) => {
+  if (!flightA || !flightB) return false;
+  // Use ID if available, otherwise fallback to flight_number + departure_time combination
+  if (flightA.id && flightB.id) {
+    return flightA.id === flightB.id;
+  }
+  return flightA.flight_number === flightB.flight_number && 
+         flightA.departure_time === flightB.departure_time;
+};
 
 const isSelected = computed(() => {
+  if (props.isMultiCity) {
+    return isFlightMatch(props.selectedSegmentFlight, props.flight);
+  }
   if (props.isRoundTrip) {
     if (props.selectionPhase === 'outbound') {
-      return props.selectedOutbound?.flight_number === props.flight.flight_number;
+      return isFlightMatch(props.selectedOutbound, props.flight);
     } else {
-      return props.selectedReturn?.flight_number === props.flight.flight_number;
+      return isFlightMatch(props.selectedReturn, props.flight);
     }
   }
-  return props.selectedOutbound?.flight_number === props.flight.flight_number;
+  return isFlightMatch(props.selectedOutbound, props.flight);
 });
 
 const selectedClassName = computed(() => {
-  const selected = props.selectionPhase === 'return' ? props.selectedReturn : props.selectedOutbound;
+  let selected = props.selectedOutbound;
+  if (props.isMultiCity) selected = props.selectedSegmentFlight;
+  else if (props.isRoundTrip && props.selectionPhase === 'return') selected = props.selectedReturn;
+  
   return selected?.selected_seat_class || selected?.seat_class || 'Not selected';
 });
 
 const selectionLabel = computed(() => {
+  if (props.isMultiCity) return 'Flight Selected';
   if (!props.isRoundTrip) return 'Flight Selected';
   return props.selectionPhase === 'outbound' ? 'Outbound Selected' : 'Return Selected';
 });

@@ -457,6 +457,12 @@
     </Transition>
 
     <FlyingIcon ref="flyingIconRef" />
+
+    <LoadingOverlay 
+      :show="isNavigating" 
+      title="Preparing Your Review"
+      subtitle="Just a moment while we bundle your selections."
+    />
   </div>
 </template>
 <script setup>
@@ -470,6 +476,7 @@ import AnimatedNumber from '@/components/common/AnimatedNumber.vue';
 import FlyingIcon from '@/components/common/FlyingIcon.vue';
 import BookingStatusHeader from '@/components/booking/BookingStatusHeader.vue';
 import MobileBookingFooter from '@/components/booking/MobileBookingFooter.vue';
+import LoadingOverlay from '@/components/common/LoadingOverlay.vue';
 
 const bookingStore = useBookingStore();
 const router = useRouter();
@@ -477,6 +484,7 @@ const route = useRoute();
 const currentTab = ref('baggage');
 const activeSegment = ref('depart');
 const isLoading = ref(true);
+const isNavigating = ref(false);
 const showConfirmationModal = ref(false);
 const modalType = ref('');
 const modalTitle = ref('');
@@ -689,7 +697,12 @@ const addonsSubtotal = computed(() => {
          (totalAssistance.value || 0) + (bookingStore.insurancePrice || 0);
 });
 const grandTotal = computed(() => bookingStore.grandTotal);
-const saveAndContinue = () => { router.push({ name: 'ReviewBooking' }); };
+const saveAndContinue = () => { 
+  isNavigating.value = true;
+  setTimeout(() => {
+    router.push({ name: 'ReviewBooking' }); 
+  }, 800);
+};
 </script>
 
 <style scoped>
