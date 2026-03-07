@@ -54,6 +54,26 @@ class DcsService {
             schedule_id: scheduleId
         });
     }
+
+    /**
+     * Assign a seat to a passenger during DCS check-in
+     * @param {number} bookingDetailId 
+     * @param {number} seatId 
+     */
+    async assignSeat(bookingDetailId, seatId) {
+        return await api.post('api/dcs/assign-seat/', {
+            booking_detail_id: bookingDetailId,
+            seat_id: seatId
+        });
+    }
+
+    /**
+     * Get available seats for a schedule
+     * @param {number} scheduleId 
+     */
+    async getAvailableSeats(scheduleId) {
+        return await api.get(`flightapp/api/seats/?schedule=${scheduleId}`);
+    }
 }
 
 export const dcsService = new DcsService();

@@ -138,6 +138,38 @@ class SeatClass(models.Model):
         return f"{self.name} (x{self.price_multiplier}) - {self.airline.code if self.airline else ''}"
 
 
+class FareBundle(models.Model):
+    """Model for defining fare families/bundles (Basic, Standard, Flex)"""
+    seat_class = models.ForeignKey(SeatClass, on_delete=models.CASCADE, related_name="fare_bundles", help_text="e.g. Economy")
+    name = models.CharField(max_length=50, help_text="e.g. Basic, Standard / Value, Flex / Plus")
+    type_code = models.CharField(max_length=20, help_text="e.g. basic, standard, flex")
+    markup_fee = models.DecimalField(max_digits=8, decimal_places=2, default=0.00, help_text="Flat fee added to the base class price")
+    description = models.TextField(blank=True, null=True)
+    icon_svg = models.TextField(blank=True, null=True, help_text="SVG path or full SVG string for the icon")
+    is_active = models.BooleanField(default=True)
+    display_order = models.IntegerField(default=0)
+    
+    class Meta:
+        ordering = ['display_order', 'markup_fee']
+        unique_together = ("seat_class", "type_code")
+
+    def __str__(self):
+        return f"{self.name} (+₱{self.markup_fee}) - {self.seat_class.name}"
+
+
+class FareBundleFeature(models.Model):
+    """Features belonging strictly to a Fare Bundle (e.g. 20kg Baggage, Flexible Cancellations)"""
+    fare_bundle = models.ForeignKey(FareBundle, on_delete=models.CASCADE, related_name="bundle_features")
+    feature_text = models.CharField(max_length=200)
+    is_active = models.BooleanField(default=True)
+    display_order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['display_order']
+
+    def __str__(self):
+        return f"{self.fare_bundle.name} - {self.feature_text}"
+
 
 class Aircraft(models.Model):
     model = models.CharField(max_length=100)
@@ -2130,6 +2162,7 @@ class CheckInDetail(models.Model):
     ]
 
     booking_detail = models.ForeignKey(BookingDetail, on_delete=models.CASCADE, related_name="checkins")
+    student = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='checkin_actions')
     check_in_time = models.DateTimeField(auto_now_add=True)
     boarding_pass = models.CharField(max_length=100, blank=True, null=True)
     

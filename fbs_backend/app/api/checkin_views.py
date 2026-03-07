@@ -170,6 +170,7 @@ class CheckInDetailViewSet(viewsets.ModelViewSet):
                 'booking_detail_id': booking_detail_id,
                 'has_declared_safety': True,
                 'status': 'checked-in',
+                'student': request.user.id if request.user.is_authenticated else None,
                 'gate_number': booking_detail.schedule.gate or 'Gate 7'
             })
             

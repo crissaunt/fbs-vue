@@ -208,23 +208,32 @@
                             <p class="text-[10px] text-gray-500 uppercase tracking-wide">{{ p.type }}</p>
                           </div>
                         </div>
-                        <button v-if="getMealSelection(p.key, segment.key) && segmentRoadmap.length > 1"
-                          class="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-1 rounded-md hover:bg-blue-100 transition-colors"
-                          @click="handleCopyAddon('meals', p)">Apply to all flights</button>
-                      </div>
-                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <div @click="selectMealDirect(p, null, segment.key, $event)"
-                          :class="['relative cursor-pointer rounded-sm border-2 p-3 flex items-center gap-3 transition-all', !getMealSelection(p.key, segment.key) ? 'border-pink-500 bg-pink-50' : 'border-gray-200 bg-white hover:border-pink-300']">
-                          <div v-if="!getMealSelection(p.key, segment.key)" class="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center">
-                            <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
-                          </div>
-                          <span class="text-2xl">&#x1F6AB;</span>
-                          <div><p class="text-sm font-bold text-gray-800">No Meal</p><p class="text-[10px] text-gray-500">No additional cost</p></div>
+                        <div class="flex items-center gap-2">
+                          <button v-if="getMealSelection(p.key, segment.key).length > 0"
+                            class="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded-md hover:bg-red-100 transition-colors"
+                            @click="selectMealDirect(p, null, segment.key, $event)">Clear All</button>
+                          <button v-if="getMealSelection(p.key, segment.key).length > 0 && segmentRoadmap.length > 1"
+                            class="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-1 rounded-md hover:bg-blue-100 transition-colors"
+                            @click="handleCopyAddon('meals', p)">Apply to all flights</button>
                         </div>
+                      </div>
+
+                      <!-- Selected Meals List -->
+                      <div v-if="getMealSelection(p.key, segment.key).length > 0" class="mb-4 flex flex-wrap gap-2">
+                         <div v-for="m in getMealSelection(p.key, segment.key)" :key="m.id" 
+                           class="flex items-center gap-2 bg-pink-100 text-pink-700 px-2 py-1 rounded-full text-[10px] font-bold border border-pink-200">
+                           <span>{{ m.name }}</span>
+                           <button @click.stop="bookingStore.removeMealAddon(p.key, m.id, segment.key); syncSelectionsFromStore()" class="hover:text-pink-900">
+                             <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                           </button>
+                         </div>
+                      </div>
+
+                      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                         <div v-for="meal in mealOptions" :key="meal.id"
                           @click="selectMealDirect(p, meal, segment.key, $event)"
-                          :class="['relative cursor-pointer rounded-sm border-2 p-3 flex items-start gap-3 transition-all hover:-translate-y-0.5', getMealSelection(p.key, segment.key)?.id === meal.id ? 'border-pink-500 bg-pink-50' : 'border-gray-200 bg-white hover:border-pink-300']">
-                          <div v-if="getMealSelection(p.key, segment.key)?.id === meal.id" class="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center">
+                          :class="['relative cursor-pointer rounded-sm border-2 p-3 flex items-start gap-3 transition-all hover:-translate-y-0.5', getMealSelection(p.key, segment.key).some(m => m.id === meal.id) ? 'border-pink-500 bg-pink-50' : 'border-gray-200 bg-white hover:border-pink-300']">
+                          <div v-if="getMealSelection(p.key, segment.key).some(m => m.id === meal.id)" class="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center z-10">
                             <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
                           </div>
                           <div class="text-2xl flex-shrink-0">
@@ -236,15 +245,13 @@
                             <span v-else>&#x1F37D;&#xFE0F;</span>
                           </div>
                           <div class="flex-1 min-w-0">
-                            <p class="text-sm font-bold text-gray-900">{{ meal.name }}</p>
+                            <p class="text-sm font-bold text-gray-900 line-clamp-1">{{ meal.name }}</p>
                             <div class="flex flex-wrap gap-1 mt-1">
                               <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase rounded"
                                 :class="['vegetarian','vegan'].includes(meal.meal_type) ? 'bg-green-100 text-green-700' : meal.meal_type === 'halal' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'">
                                 {{ meal.get_meal_type_display || meal.meal_type }}
                               </span>
-                              <span v-if="meal.calories" class="text-[10px] text-gray-400">{{ meal.calories }} kcal</span>
                             </div>
-                            <p v-if="meal.allergens" class="text-[10px] text-amber-600 mt-1">&#x26A0;&#xFE0F; {{ meal.allergens }}</p>
                             <p class="text-sm font-black text-pink-500 mt-1.5">&#8369;{{ parseFloat(meal.price).toLocaleString() }}</p>
                           </div>
                         </div>
@@ -518,7 +525,13 @@ const syncSelectionsFromStore = () => {
     if (!selectedAddons.meals[seg]) selectedAddons.meals[seg] = {};
     if (!selectedAddons.wheelchair[seg]) selectedAddons.wheelchair[seg] = {};
     selectedAddons.baggage[seg] = { ...bookingStore.addons.baggage?.[seg] };
-    selectedAddons.meals[seg] = { ...bookingStore.addons.meals?.[seg] };
+    
+    // Ensure meals are arrays
+    const storedMeals = bookingStore.addons.meals?.[seg] || {};
+    Object.keys(storedMeals).forEach(pKey => {
+      selectedAddons.meals[seg][pKey] = Array.isArray(storedMeals[pKey]) ? [...storedMeals[pKey]] : [];
+    });
+    
     selectedAddons.wheelchair[seg] = { ...bookingStore.addons.wheelchair?.[seg] };
   });
   selectedAddons.seats = bookingStore.addons?.seats ? { ...bookingStore.addons.seats } : {};
@@ -562,7 +575,9 @@ const flightInfo = computed(() => {
 });
 
 const getBaggageSelection = (passengerKey, segment) => selectedAddons.baggage[segment]?.[passengerKey] || null;
-const getMealSelection = (passengerKey, segment) => selectedAddons.meals[segment]?.[passengerKey] || null;
+const getMealSelection = (passengerKey, segment) => {
+  return selectedAddons.meals[segment]?.[passengerKey] || [];
+};
 const getAssistanceSelection = (passengerKey, segment) => selectedAddons.wheelchair[segment]?.[passengerKey] || null;
 const selectedInsurancePlanId = computed(() => bookingStore.addons?.insurance?.selectedPlanId || null);
 const insurancePrice = computed(() => bookingStore.insurancePrice);
@@ -622,19 +637,30 @@ const selectBaggageDirect = (passenger, option, segment, event) => {
 
 const selectMealDirect = (passenger, option, segment, event) => {
   const passengerKey = passenger.key;
-  const cur = getMealSelection(passengerKey, segment);
   if (!option) {
-    selectedAddons.meals[segment][passengerKey] = null;
-    bookingStore.removeMealAddon(passengerKey, segment);
-  } else if (cur && cur.id === option.id) {
-    selectedAddons.meals[segment][passengerKey] = null;
-    bookingStore.removeMealAddon(passengerKey, segment);
+    // Clear all meals
+    selectedAddons.meals[segment][passengerKey] = [];
+    bookingStore.clearMealsForPassenger(passengerKey, segment);
   } else {
-    const obj = { id: option.id, price: parseFloat(option.price) || 0, name: option.name, meal_type: option.meal_type, description: option.description };
-    selectedAddons.meals[segment][passengerKey] = obj;
-    bookingStore.updateMealAddon(passengerKey, obj, segment);
-    if (event && flyingIconRef.value && option) flyingIconRef.value.fly(event.currentTarget, '#sidebar-meals', 'meal');
+    // Toggle meal: check if already in array
+    const meals = getMealSelection(passengerKey, segment);
+    const exists = meals.some(m => m.id === option.id);
+    
+    if (exists) {
+      bookingStore.removeMealAddon(passengerKey, option.id, segment);
+    } else {
+      const obj = { 
+        id: option.id, 
+        price: parseFloat(option.price) || 0, 
+        name: option.name, 
+        meal_type: option.meal_type, 
+        description: option.description 
+      };
+      bookingStore.updateMealAddon(passengerKey, obj, segment);
+      if (event && flyingIconRef.value) flyingIconRef.value.fly(event.currentTarget, '#sidebar-meals', 'meal');
+    }
   }
+  syncSelectionsFromStore();
   bookingStore.snapshotToServer();
 };
 

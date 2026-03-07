@@ -35,7 +35,7 @@ export const useBookingStore = defineStore('booking', {
     // UPDATED: Segments are now keys (0, 1, 2... or 'depart', 'return')
     addons: {
       baggage: {},     // { segmentIndexOrKey: { passengerKey: baggageObject } }
-      meals: {},       // { segmentIndexOrKey: { passengerKey: mealObject } }
+      meals: {},       // { segmentIndexOrKey: { passengerKey: [mealObject1, mealObject2, ...] } }
       wheelchair: {},  // { segmentIndexOrKey: { passengerKey: assistanceId } }
       seats: {},       // { segmentIndexOrKey: { passengerKey: seatObject } }
       insurance: {
@@ -182,9 +182,13 @@ export const useBookingStore = defineStore('booking', {
       activeSegments.forEach((seg, index) => {
         const segKey = this.isMultiCity ? index.toString() : seg.type;
         const segmentMeals = meals[segKey] || {};
-        Object.values(segmentMeals).forEach(meal => {
-          if (meal && typeof meal === 'object' && meal.price !== undefined) {
-            total += (parseFloat(meal.price) || 0);
+        Object.values(segmentMeals).forEach(mealArray => {
+          if (Array.isArray(mealArray)) {
+            mealArray.forEach(meal => {
+              if (meal && typeof meal === 'object' && meal.price !== undefined) {
+                total += (parseFloat(meal.price) || 0);
+              }
+            });
           }
         });
       });
@@ -402,6 +406,14 @@ export const useBookingStore = defineStore('booking', {
         const segmentSeats = state.addons.seats[segmentKey] || {};
         return state.passengers.every(p => segmentSeats[p.key]);
       });
+    },
+
+    // NEW: Get the date of the last flight segment for document validation
+    lastTravelDate(state) {
+      const segments = this.allSegments;
+      if (segments.length === 0) return null;
+      const lastSeg = segments[segments.length - 1];
+      return lastSeg.selectedFlight?.departure_time || null;
     },
 
     // NEW: Check if session should be cleared for home page
@@ -862,12 +874,35 @@ export const useBookingStore = defineStore('booking', {
       if (!this.addons.meals[segment]) {
         this.addons.meals[segment] = {};
       }
-      this.addons.meals[segment][passengerKey] = mealData;
+
+      // Initialize as array if not already
+      if (!Array.isArray(this.addons.meals[segment][passengerKey])) {
+        this.addons.meals[segment][passengerKey] = [];
+      }
+
+      // Check if meal already exists (to avoid exact duplicates)
+      const existingIdx = this.addons.meals[segment][passengerKey].findIndex(m => m.id === mealData.id);
+      if (existingIdx === -1) {
+        this.addons.meals[segment][passengerKey].push(mealData);
+        console.log(`🍽️ Meal added for ${segment}:`, mealData.name);
+      } else {
+        console.log(`🍽️ Meal ${mealData.name} already selected.`);
+      }
     },
 
-    removeMealAddon(passengerKey, segment = 'depart') {
-      if (this.addons.meals[segment] && this.addons.meals[segment][passengerKey]) {
-        delete this.addons.meals[segment][passengerKey];
+    removeMealAddon(passengerKey, mealId, segment = 'depart') {
+      if (this.addons.meals[segment] && Array.isArray(this.addons.meals[segment][passengerKey])) {
+        const idx = this.addons.meals[segment][passengerKey].findIndex(m => m.id === mealId);
+        if (idx !== -1) {
+          const removed = this.addons.meals[segment][passengerKey].splice(idx, 1);
+          console.log(`❌ Meal removed for ${segment}:`, removed[0].name);
+        }
+      }
+    },
+
+    clearMealsForPassenger(passengerKey, segment = 'depart') {
+      if (this.addons.meals[segment]) {
+        this.addons.meals[segment][passengerKey] = [];
       }
     },
 

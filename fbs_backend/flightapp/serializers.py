@@ -173,17 +173,38 @@ class SeatSerializer(serializers.ModelSerializer):
     seat_code = serializers.SerializerMethodField()
     seat_class_name = serializers.ReadOnlyField(source='seat_class.name')
     features = serializers.SerializerMethodField()
+    is_locked = serializers.ReadOnlyField()
+    is_locked_by_me = serializers.SerializerMethodField()
+    
+    is_booked = serializers.SerializerMethodField()
     
     class Meta:
         model = Seat
         fields = [
             'id', 'seat_code', 'seat_number', 'row', 'column', 'is_available', 
-            'final_price', 'seat_class', 'seat_class_name',
+            'is_booked', 'final_price', 'seat_class', 'seat_class_name',
             'is_window', 'is_aisle', 'has_extra_legroom', 'is_exit_row', 
             'is_wheelchair_accessible', 'has_bassinet', 'has_nut_allergy', 
             'is_unaccompanied_minor', 'is_bulkhead', 'price_adjustment_manual',
-            'features'
+            'features', 'is_locked', 'is_locked_by_me'
         ]
+    
+    def get_is_booked(self, obj):
+        # Check if permanently booked
+        from app.models import BookingDetail
+        # We check for booked seats for this specific schedule
+        return BookingDetail.objects.filter(
+            seat=obj,
+            schedule=obj.schedule,
+            status__in=['pending', 'confirmed', 'checkin', 'boarding', 'completed']
+        ).exists()
+    
+    def get_is_locked_by_me(self, obj):
+        # We expect session_id to be passed in context
+        session_id = self.context.get('session_id')
+        if not session_id or not obj.locked_by_session:
+            return False
+        return obj.locked_by_session == session_id and obj.is_locked
     
     def get_seat_class(self, obj):
         if obj.seat_class:
@@ -456,6 +477,17 @@ class CreatePassengerSerializer(serializers.Serializer):
         default=""
     )
     
+    passport_expiry = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default=""
+    )
+    passportExpiry = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default=""
+    )
+    
     type = serializers.CharField(max_length=10, default="Adult")
     passenger_type = serializers.CharField(
         max_length=10, 
@@ -499,6 +531,8 @@ class CreatePassengerSerializer(serializers.Serializer):
             'date_of_birth': 'date_of_birth',
             'passportNumber': 'passport_number',
             'passport_number': 'passport_number',
+            'passportExpiry': 'passport_expiry',
+            'passport_expiry': 'passport_expiry',
             'phDiscountType': 'ph_discount_type',
             'ph_discount_type': 'ph_discount_type',
         }
@@ -580,6 +614,7 @@ class CreatePassengerSerializer(serializers.Serializer):
             fields.pop('middleName', None)
             fields.pop('dateOfBirth', None)
             fields.pop('passportNumber', None)
+            fields.pop('passportExpiry', None)
         
         return fields
 
@@ -673,6 +708,65 @@ class CreateBookingSerializer(serializers.Serializer):
         else:
             if not data.get('selectedOutbound'):
                 raise serializers.ValidationError("Outbound flight is required")
+
+        # Document Validation: 6-month Passport Expiry Check for International Flights
+        last_travel_date_str = None
+        is_international = False
+        ph_airports = ['MNL', 'CEB', 'DVO', 'ILO', 'BCD', 'PPS', 'TAC', 'LGP', 'CGY', 'MPH', 'USU', 'GES', 'KLO', 'ZAM', 'CYP', 'DPL', 'TUG', 'SFS', 'LAO', 'VAC']
+
+        if trip_type in ['multi_city', 'multi-city']:
+            segments = data.get('segments', [])
+            if segments:
+                last_segment = segments[-1].get('selectedFlight', {})
+                last_travel_date_str = last_segment.get('departure_time')
+                for seg in segments:
+                    fl = seg.get('selectedFlight', {})
+                    if fl.get('origin') not in ph_airports or fl.get('destination') not in ph_airports:
+                        is_international = True
+        elif trip_type == 'round_trip':
+            ret = data.get('selectedReturn', {})
+            out = data.get('selectedOutbound', {})
+            last_travel_date_str = ret.get('departure_time')
+            if out.get('origin') not in ph_airports or out.get('destination') not in ph_airports or ret.get('origin') not in ph_airports or ret.get('destination') not in ph_airports:
+                is_international = True
+        else:
+            out = data.get('selectedOutbound', {})
+            last_travel_date_str = out.get('departure_time')
+            if out.get('origin') not in ph_airports or out.get('destination') not in ph_airports:
+                is_international = True
+
+        if is_international:
+            from datetime import datetime, timedelta
+            last_travel_date = datetime.now()
+            if last_travel_date_str:
+                try:
+                    last_travel_date = datetime.fromisoformat(last_travel_date_str.replace('Z', '+00:00'))
+                except Exception:
+                    pass
+
+            six_months_from_travel = last_travel_date + timedelta(days=180)
+            
+            for passenger in data['passengers']:
+                if passenger.get('nationality', 'Philippines') == 'Philippines' and not passenger.get('passport_number'):
+                     # If they specify Philippines without a passport on an international flight, usually blocked, 
+                     # but we primarily enforce the date range check via `passport_expiry` here if provided.
+                     pass
+                     
+                expiry = passenger.get('passport_expiry') or passenger.get('passportExpiry')
+                if not expiry:
+                    raise serializers.ValidationError(
+                        f"Passport expiry is required for international travel for passenger {passenger.get('first_name')}."
+                    )
+                try:
+                    expiry_date = datetime.strptime(expiry, '%Y-%m-%d')
+                    if expiry_date.date() < six_months_from_travel.date():
+                        raise serializers.ValidationError(
+                            f"Passport for {passenger.get('first_name')} must be valid for at least 6 months from the date of travel."
+                        )
+                except ValueError:
+                    raise serializers.ValidationError(
+                        f"Invalid passport expiry date format for {passenger.get('first_name')}."
+                    )
         
         return data
 # ============================================================

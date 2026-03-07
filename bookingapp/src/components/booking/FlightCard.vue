@@ -174,19 +174,55 @@
       
       <!-- INLINE EXPANDED FARE FAMILIES -->
       <div v-show="isExpanded" class="mt-4 pt-4 border-t border-gray-100 animate-in slide-in-from-top-4 fade-in duration-300">
-        <h4 class="text-sm font-bold text-gray-800 mb-4 px-2">Select your fare type</h4>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Tabbed Headers -->
+        <div class="flex flex-row overflow-x-auto mb-6 bg-gray-50/50 -mx-6 px-6" v-if="availableTravelClasses.length > 0">
+          <button 
+            v-for="tClass in availableTravelClasses" 
+            :key="tClass"
+            @click="selectedTravelClass = tClass"
+            class="flex-1 py-3 px-4 text-left border-t-4 transition-colors min-w-[140px] border-r border-r-white"
+            :class="[
+              selectedTravelClass === tClass 
+                ? (getTabColor(tClass) === 'blue' ? 'border-blue-500 bg-blue-100/50' : 
+                   getTabColor(tClass) === 'rose' ? 'border-rose-400 bg-rose-100/50' : 
+                   'border-yellow-500 bg-yellow-100/50')
+                : (getTabColor(tClass) === 'blue' ? 'border-blue-200 bg-blue-50/40 text-gray-500 hover:bg-blue-100/40' : 
+                   getTabColor(tClass) === 'rose' ? 'border-rose-200 bg-rose-50/40 text-gray-500 hover:bg-rose-100/40' : 
+                   'border-yellow-200 bg-yellow-50/40 text-gray-500 hover:bg-yellow-100/40')
+            ]"
+          >
+            <div class="flex justify-between items-end">
+              <div>
+                <div class="font-medium" :class="selectedTravelClass === tClass ? 'text-blue-900 text-sm' : 'text-gray-600 text-sm'">{{ tClass }}</div>
+                <div class="text-xs mt-1" :class="selectedTravelClass === tClass ? 'text-blue-800' : 'text-gray-500'">From PHP</div>
+                <div class="font-black mt-0.5" :class="selectedTravelClass === tClass ? 'text-blue-900 text-base' : 'text-gray-700 text-base'">
+                  {{ Number(getLowestPrice(tClass)).toLocaleString() }}
+                </div>
+              </div>
+              <svg class="w-4 h-4 mb-1" :class="selectedTravelClass === tClass ? 'text-blue-900' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+          </button>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 px-2">
           <!-- Render Seat Classes passed from parent -->
-          <div v-for="seatClass in parsedSeatClasses" :key="seatClass.name" 
+          <div v-for="seatClass in groupedClasses[selectedTravelClass]" :key="seatClass.name" 
                class="border-2 rounded-lg p-5 flex flex-col transition-all cursor-pointer relative overflow-hidden"
-               :class="hoveredClass === seatClass.name ? 'border-pink-500 shadow-md transform -translate-y-1' : 'border-gray-200 hover:border-pink-300'"
+               :class="[
+                 seatClass.fare_family === 'flex' ? 'border-yellow-500 hover:border-yellow-400 hover:-translate-y-1 shadow-sm' : 
+                   (hoveredClass === seatClass.name ? 'border-pink-500 shadow-md transform -translate-y-1' : 'border-gray-200 hover:border-pink-300')
+               ]"
                @mouseenter="hoveredClass = seatClass.name"
                @mouseleave="hoveredClass = null"
                @click="$emit('select-seat-class', { flight, seatClass })">
                
-            <!-- Decorative Banner for Premium -->
-            <div v-if="seatClass.fare_family === 'premium'" class="absolute top-0 right-0 bg-pink-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">
+            <!-- Recommended Banner for Flex -->
+            <div v-if="seatClass.fare_family === 'flex'" class="absolute -top-1 -right-1 bg-yellow-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">
+              RECOMMENDED
+            </div>
+            <!-- Decorative Banner for Premium (Fallback) -->
+            <div v-else-if="seatClass.fare_family === 'premium'" class="absolute -top-1 -right-1 bg-pink-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">
               BEST VALUE
             </div>
                
@@ -228,7 +264,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { format } from 'date-fns';
 
 const props = defineProps({
@@ -252,6 +288,51 @@ const isExpanded = computed(() => {
   return props.parsedSeatClasses && props.parsedSeatClasses.length > 0;
 });
 const hoveredClass = ref(null);
+
+// NEW: Group seat classes by travel class and logic for tabs
+const groupedClasses = computed(() => {
+  if (!props.parsedSeatClasses) return {};
+  return props.parsedSeatClasses.reduce((acc, sc) => {
+    let tClass = sc.travel_class;
+    // Fallback if travel_class is missing, parse from name
+    if (!tClass) {
+      if (sc.name.toLowerCase().includes('economy')) tClass = 'Economy';
+      else if (sc.name.toLowerCase().includes('business')) tClass = 'Business';
+      else if (sc.name.toLowerCase().includes('first')) tClass = 'First Class';
+      else tClass = 'Economy';
+    }
+    
+    // Capitalize properly
+    tClass = tClass.charAt(0).toUpperCase() + tClass.slice(1);
+    
+    if (!acc[tClass]) acc[tClass] = [];
+    acc[tClass].push(sc);
+    return acc;
+  }, {});
+});
+
+const availableTravelClasses = computed(() => Object.keys(groupedClasses.value));
+const selectedTravelClass = ref('');
+
+// Switch to first tab safely
+watch(() => isExpanded.value, (newVal) => {
+  if (newVal && availableTravelClasses.value.length > 0 && !selectedTravelClass.value) {
+    selectedTravelClass.value = availableTravelClasses.value[0];
+  }
+});
+
+const getTabColor = (tClass) => {
+  const c = tClass.toLowerCase();
+  if (c.includes('premium')) return 'rose';
+  if (c.includes('business') || c.includes('first')) return 'yellow';
+  return 'blue';
+};
+
+const getLowestPrice = (tClass) => {
+  const classes = groupedClasses.value[tClass] || [];
+  if (classes.length === 0) return 0;
+  return Math.min(...classes.map(c => Number(c.price)));
+};
 
 const isFlightMatch = (flightA, flightB) => {
   if (!flightA || !flightB) return false;

@@ -6,6 +6,29 @@ from django.utils import timezone
 from app.models import Schedule, BookingDetail
 from decimal import Decimal
 
+def _get_passenger_ssrs(booking_detail):
+    """Helper to extract SSRs (Meals, Assistance, Premium) from booking detail"""
+    ssrs = {
+        'meal': None,
+        'assistance': None,
+        'is_premium': False,
+        'details': []
+    }
+    
+    for addon in booking_detail.addons.all():
+        if addon.is_meal and addon.meal_option:
+            ssrs['meal'] = addon.meal_option.name
+            ssrs['details'].append(f"Meal: {addon.meal_option.name}")
+        elif addon.is_assistance and addon.assistance_service:
+            ssrs['assistance'] = addon.assistance_service.name
+            ssrs['details'].append(f"Assist: {addon.assistance_service.name}")
+        
+        # Check for premium indicators
+        if addon.included:
+            ssrs['is_premium'] = True
+            
+    return ssrs
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_dcs_flights(request):
@@ -16,8 +39,16 @@ def get_dcs_flights(request):
     ).select_related('flight__route__origin_airport', 'flight__route__destination_airport').order_by('departure_time')[:20]
     
     data = []
+    from django.db.models import Sum
+    from app.models import CheckInDetail
+    
     for sched in schedules:
         airline = sched.flight.airline if sched.flight else None
+        
+        # Calculate totals for Weight & Balance
+        checked_in_count = BookingDetail.objects.filter(schedule=sched, status='checkin').count()
+        total_baggage_weight = CheckInDetail.objects.filter(booking_detail__schedule=sched).aggregate(total=Sum('baggage_weight'))['total'] or 0
+        
         data.append({
             'id': sched.id,
             'flight_number': sched.flight.flight_number if sched.flight else 'N/A',
@@ -31,7 +62,9 @@ def get_dcs_flights(request):
             'gate': sched.gate or 'TBA',
             'status': sched.status,
             'booked_count': BookingDetail.objects.filter(schedule=sched).count(),
-            'total_seats': sched.seats.count() or 1, # Avoid div by zero
+            'checked_in_count': checked_in_count,
+            'total_baggage_weight': float(total_baggage_weight),
+            'total_seats': sched.seats.count() or 1,
         })
     
     return Response(data)
@@ -61,6 +94,9 @@ def get_dcs_manifest(request, schedule_id):
                 allowed_weight = addon.baggage_option.weight_kg
                 baggage_name = addon.baggage_option.name
         
+        # Get SSRs
+        ssrs = _get_passenger_ssrs(d)
+        
         manifest.append({
             'booking_detail_id': d.id,
             'pnr': d.booking.pnr,
@@ -70,6 +106,7 @@ def get_dcs_manifest(request, schedule_id):
             'status': d.status,
             'allowed_baggage_weight': allowed_weight,
             'baggage_allowance_name': baggage_name,
+            'ssrs': ssrs,
         })
         
     return Response({
@@ -122,6 +159,7 @@ def process_dcs_checkin(request):
                     'status': 'checked-in',
                     'check_in_counter': check_in_counter,
                     'agent_id': agent_id,
+                    'student': request.user if request.user.is_authenticated else None,
                     'gate_number': detail.schedule.gate or 'Gate 7'
                 }
             )
@@ -185,6 +223,9 @@ def get_dcs_pnr_details(request, pnr, schedule_id):
                 allowed_weight = addon.baggage_option.weight_kg
                 baggage_name = addon.baggage_option.name
 
+        # Get SSRs
+        ssrs = _get_passenger_ssrs(d)
+
         passengers.append({
             'booking_detail_id': d.id,
             'pnr': d.booking.pnr,
@@ -194,6 +235,7 @@ def get_dcs_pnr_details(request, pnr, schedule_id):
             'status': d.status,
             'allowed_baggage_weight': allowed_weight,
             'baggage_allowance_name': baggage_name,
+            'ssrs': ssrs,
         })
 
     # Get schedule info from the first record
@@ -234,6 +276,7 @@ def get_dcs_passenger_details(request, booking_detail_id):
             'status': d.status,
             'allowed_baggage_weight': allowed_weight,
             'baggage_allowance_name': baggage_name,
+            'ssrs': _get_passenger_ssrs(d),
             'schedule': {
                 'id': d.schedule.id,
                 'flight_number': d.schedule.flight.flight_number if d.schedule.flight else 'N/A',
@@ -304,6 +347,7 @@ def scan_qr_lookup(request):
             'status': d.status,
             'allowed_baggage_weight': allowed_weight,
             'baggage_allowance_name': baggage_name,
+            'ssrs': _get_passenger_ssrs(d),
         })
 
     return Response({
@@ -311,6 +355,54 @@ def scan_qr_lookup(request):
         'passengers': results,
         'message': f'Found {len(results)} passenger(s) for PNR {qr_value}'
     })
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def assign_dcs_seat(request):
+    """Assign a seat to a passenger during DCS check-in"""
+    booking_detail_id = request.data.get('booking_detail_id')
+    seat_id = request.data.get('seat_id')
+    
+    if not booking_detail_id or not seat_id:
+        return Response({'error': 'Missing booking_detail_id or seat_id'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    try:
+        from app.models import Seat, BookingDetail
+        detail = BookingDetail.objects.get(id=booking_detail_id)
+        seat = Seat.objects.get(id=seat_id, schedule=detail.schedule)
+        
+        # Check if seat is available
+        if not seat.is_available:
+            # Check if it's already assigned to THIS passenger (no action needed)
+            if detail.seat == seat:
+                return Response({'success': True, 'message': 'Seat already assigned to this passenger'})
+            return Response({'error': 'Seat is not available'}, status=status.HTTP_409_CONFLICT)
+            
+        # Release old seat if any
+        if detail.seat:
+            old_seat = detail.seat
+            old_seat.is_available = True
+            old_seat.save()
+            
+        # Assign new seat
+        detail.seat = seat
+        detail.save()
+        
+        # Mark seat as unavailable
+        seat.is_available = False
+        seat.save()
+        
+        return Response({
+            'success': True, 
+            'message': f'Seat {seat.seat_number} assigned to {detail.passenger.get_full_name()}',
+            'seat_number': seat.seat_number
+        })
+    except BookingDetail.DoesNotExist:
+        return Response({'error': 'Passenger not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Seat.DoesNotExist:
+        return Response({'error': 'Seat not found or doesn\'t belong to this flight'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

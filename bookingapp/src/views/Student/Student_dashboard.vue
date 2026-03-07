@@ -178,6 +178,12 @@
                 >
                   Start Agent Check-in
                 </button>
+                <button 
+                  @click="openCheckinHistory"
+                  class="w-full mt-2 bg-white text-indigo-600 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-50 transition-colors shadow-sm"
+                >
+                  View Check-in History
+                </button>
               </div>
 
               <StudentSectionInfo 
@@ -324,6 +330,98 @@
         </div>
       </div>
     </BaseModal>
+    <!-- Check-in History Modal -->
+    <BaseModal 
+      :is-open="showCheckinHistory" 
+      @close="showCheckinHistory = false"
+    >
+      <div class="flex flex-col h-[500px] max-h-[80vh]">
+        <!-- Modal Header -->
+        <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50 flex-shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🎟️</span>
+            <h3 class="text-lg font-bold text-gray-900">Agent Check-in History</h3>
+          </div>
+          <button 
+            @click="showCheckinHistory = false" 
+            class="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500 hover:text-gray-700"
+          >
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="p-6 overflow-y-auto flex-1 bg-white">
+          <div v-if="checkinHistory.length === 0" class="flex flex-col items-center justify-center py-20 text-center">
+            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-3xl mb-4 grayscale opacity-50">
+              🛄
+            </div>
+            <p class="text-gray-500 font-medium">No check-in records found.</p>
+            <p class="text-sm text-gray-400 mt-1">Check-in some passengers in the DCS to see them here!</p>
+          </div>
+          
+          <ul v-else class="space-y-4">
+            <li 
+              v-for="record in checkinHistory" 
+              :key="record.id" 
+              class="border border-gray-100 rounded-xl p-4 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all shadow-sm group"
+            >
+              <div class="flex justify-between items-start gap-4">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded leading-none">
+                      {{ record.boarding_pass || 'NO-BP' }}
+                    </span>
+                    <span class="text-xs text-gray-400">
+                      {{ formatDate(record.check_in_time) }}
+                    </span>
+                  </div>
+                  <h4 class="font-bold text-gray-900 mb-1 group-hover:text-indigo-700 transition-colors">
+                    {{ record.passenger_name }} — {{ record.flight_number }}
+                  </h4>
+                  <p class="text-xs text-gray-600 font-medium mb-2">{{ record.route_summary }}</p>
+                  
+                  <div class="flex flex-wrap gap-x-4 gap-y-1">
+                    <div class="flex items-center gap-1.5 text-[11px] text-gray-500">
+                      <span class="opacity-70">💺</span>
+                      Seat: {{ record.seat_number }}
+                    </div>
+                    <div class="flex items-center gap-1.5 text-[11px] text-gray-500">
+                      <span class="opacity-70">⚖️</span>
+                      {{ record.baggage_weight }}kg
+                    </div>
+                    <div class="flex items-center gap-1.5 text-[11px] text-gray-500">
+                      <span class="opacity-70">📍</span>
+                      {{ record.counter }}
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="flex flex-col items-end gap-2">
+                  <span 
+                    class="px-3 py-1 bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm"
+                  >
+                    {{ record.status }}
+                  </span>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="px-6 py-4 bg-gray-50 border-t flex justify-end flex-shrink-0">
+          <button 
+            @click="showCheckinHistory = false"
+            class="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors shadow-sm text-sm"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>
 
@@ -392,7 +490,9 @@ export default {
       isLoadingBooking: false,
       comparisonError: null,
       showPracticeBookings: false,
-      practiceBookings: []
+      practiceBookings: [],
+      showCheckinHistory: false,
+      checkinHistory: []
     }
   },
   computed: {
@@ -595,6 +695,24 @@ export default {
       this.showPracticeBookings = true;
       if (this.practiceBookings.length === 0) {
         this.loadPracticeBookings();
+      }
+    },
+
+    async loadCheckinHistory() {
+      try {
+        const resp = await studentDashboardService.getCheckinHistory();
+        this.checkinHistory = resp.data.checkin_history || [];
+        console.log('✅ Loaded check-in history', this.checkinHistory);
+      } catch (e) {
+        console.error('Failed to load check-in history', e);
+        this.notificationStore.error('Could not load check-in history');
+      }
+    },
+
+    openCheckinHistory() {
+      this.showCheckinHistory = true;
+      if (this.checkinHistory.length === 0) {
+        this.loadCheckinHistory();
       }
     },
 

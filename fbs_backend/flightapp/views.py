@@ -173,7 +173,7 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             'seat_class'
         ).order_by('row', 'column')
         
-        serializer = SeatSerializer(seats, many=True)
+        serializer = SeatSerializer(seats, many=True, context={'session_id': request.query_params.get('session_id')})
         
         return Response({
             'success': True,
@@ -184,6 +184,122 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             'seats': serializer.data,
             'total_seats': len(serializer.data),
             'available_seats': seats.filter(is_available=True).count()
+        })
+
+    @action(detail=False, methods=['get'], url_path='price-calendar')
+    def price_calendar(self, request):
+        """Get the lowest price for each day in a date range for a specific route"""
+        origin = request.query_params.get('origin')
+        destination = request.query_params.get('destination')
+        start_date_str = request.query_params.get('start_date')
+        end_date_str = request.query_params.get('end_date')
+
+        if not origin or not destination or not start_date_str or not end_date_str:
+            return Response({
+                'error': 'origin, destination, start_date, and end_date are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return Response({
+                'error': 'Invalid date format. Use YYYY-MM-DD'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Pre-fetch context data for pricing
+        user = request.user if request.user.is_authenticated else None
+        session_id = request.query_params.get('session_id') or request.session.session_key
+        if not session_id:
+            request.session.save()
+            session_id = request.session.session_key
+
+        from app.models import PricingConfiguration
+        config = PricingConfiguration.load()
+        user_factor = dynamic_pricing.get_user_factor(user, None)
+
+        # Get all schedules for the route and date range
+        schedules = Schedule.objects.filter(
+            flight__route__origin_airport__code=origin,
+            flight__route__destination_airport__code=destination,
+            departure_time__date__range=[start_date, end_date],
+            status='Open'
+        ).select_related(
+            'flight__airline',
+            'flight__route__origin_airport',
+            'flight__route__destination_airport'
+        )
+
+        # Group schedules by date
+        from collections import defaultdict
+        schedules_by_date = defaultdict(list)
+        for s in schedules:
+            schedules_by_date[s.departure_time.date()].append(s)
+
+        # Calculate occupancy for these schedules
+        occupancy_data = Seat.objects.filter(schedule__in=schedules).values('schedule_id').annotate(
+            available=Count('id', filter=Q(is_available=True)),
+            total=Count('id')
+        )
+        occupancy_map = {item['schedule_id']: (1 - (item['available'] / item['total'])) if item['total'] > 0 else 1.0 
+                        for item in occupancy_data}
+
+        # Prepare calendar data
+        calendar_data = []
+        current_date = start_date
+        while current_date <= end_date:
+            daily_schedules = schedules_by_date.get(current_date, [])
+            
+            if daily_schedules:
+                min_price = float('inf')
+                for s in daily_schedules:
+                    # Pricing context
+                    fallback_price = float(s.flight.route.base_price) if s.flight.route.base_price else 5000.0
+                    base_price = float(s.ml_base_price) if s.ml_base_price else fallback_price
+                    
+                    pricing_context = {
+                        'config': config,
+                        'user_factor': user_factor,
+                        'occupancy_factor': self._get_occ_factor(occupancy_map.get(s.id, 1.0), config),
+                        'base_price': base_price
+                    }
+                    
+                    # Mock flight data for pricing
+                    f_data = {
+                        'schedule_id': s.id,
+                        'flight_number': s.flight.flight_number,
+                        'departure_time': s.departure_time.isoformat(),
+                        'origin': origin,
+                        'destination': destination,
+                    }
+                    
+                    price_result = dynamic_pricing.get_price_for_user(
+                        f_data, user, session_id, context=pricing_context
+                    )
+                    
+                    price = dynamic_pricing.round_price(price_result['final_price'])
+                    if price < min_price:
+                        min_price = price
+                
+                calendar_data.append({
+                    'date': current_date.isoformat(),
+                    'price': min_price,
+                    'available': True
+                })
+            else:
+                calendar_data.append({
+                    'date': current_date.isoformat(),
+                    'price': None,
+                    'available': False
+                })
+                
+            current_date += timedelta(days=1)
+
+        return Response({
+            'success': True,
+            'origin': origin,
+            'destination': destination,
+            'calendar': calendar_data
         })
 
     @action(detail=True, methods=['get', 'post'], url_path='repair-seats')
@@ -546,6 +662,12 @@ class SeatViewSet(viewsets.ModelViewSet):
     queryset = Seat.objects.all()
     permission_classes = [permissions.AllowAny]
     pagination_class = None # Disable pagination for seat map
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        # Handle session_id from either query params or request body
+        context['session_id'] = self.request.query_params.get('session_id') or self.request.data.get('session_id')
+        return context
 
     def get_queryset(self):
         queryset = Seat.objects.all().select_related(
@@ -1979,7 +2101,11 @@ def _create_booking_detail(booking, passenger, segment, passenger_data=None, seg
             
         # Add seat adjustment if any
         if seat and hasattr(seat, 'price_adjustment') and seat.price_adjustment:
-            base_price += seat.price_adjustment
+            fare_family = selected_flight.get('fare_family', 'basic')
+            if fare_family != 'premium':
+                base_price += seat.price_adjustment
+            else:
+                print(f"    Skipping seat adjustment for Premium fare")
         
         # Create booking detail
         booking_detail = BookingDetail.objects.create(
@@ -1994,7 +2120,8 @@ def _create_booking_detail(booking, passenger, segment, passenger_data=None, seg
         )
         
         # Add add-ons
-        _add_addons_to_booking_detail(booking_detail, segment_addons, passenger_data or {})
+        fare_family = selected_flight.get('fare_family', 'basic')
+        _add_addons_to_booking_detail(booking_detail, segment_addons, passenger_data or {}, fare_family=fare_family)
         
         return booking_detail
         
@@ -2005,7 +2132,7 @@ def _create_booking_detail(booking, passenger, segment, passenger_data=None, seg
         return None
 
 # In flightapp/views.py, update the _add_addons_to_booking_detail function:
-def _add_addons_to_booking_detail(booking_detail, segment_addons, passenger_data):
+def _add_addons_to_booking_detail(booking_detail, segment_addons, passenger_data, fare_family='basic'):
     """Add selected add-ons to booking detail with segment support"""
     addons_to_link = []
     
@@ -2023,67 +2150,77 @@ def _add_addons_to_booking_detail(booking_detail, segment_addons, passenger_data
         if isinstance(baggage_data, dict) and baggage_data.get('id'):
             try:
                 baggage_option = BaggageOption.objects.get(id=baggage_data['id'])
+                
+                # Is this baggage included in the fare family?
+                is_premium = fare_family == 'premium'
+                addon_price = Decimal('0.00') if is_premium else baggage_option.price
+                
                 addon, created = AddOn.objects.get_or_create(
                     baggage_option=baggage_option,
                     defaults={
                         'name': f"Extra Baggage {baggage_option.formatted_weight}",
-                        'price': baggage_option.price,
+                        'price': addon_price,
                         'airline': airline,
+                        'included': is_premium
                     }
                 )
                 addons_to_link.append(addon)
-                print(f"DEBUG: Added baggage addon: {baggage_option.name}")
+                print(f"DEBUG: Added baggage addon: {baggage_option.name} (Price: {addon_price})")
             except BaggageOption.DoesNotExist:
                 print(f"DEBUG: Baggage option with ID {baggage_data['id']} not found")
         elif isinstance(baggage_data, int):
             try:
                 baggage_option = BaggageOption.objects.get(id=baggage_data)
+                
+                # Is this baggage included in the fare family?
+                is_premium = fare_family == 'premium'
+                addon_price = Decimal('0.00') if is_premium else baggage_option.price
+                
                 addon, created = AddOn.objects.get_or_create(
                     baggage_option=baggage_option,
                     defaults={
                         'name': f"Extra Baggage {baggage_option.formatted_weight}",
-                        'price': baggage_option.price,
+                        'price': addon_price,
                         'airline': airline,
+                        'included': is_premium
                     }
                 )
                 addons_to_link.append(addon)
-                print(f"DEBUG: Added baggage addon: {baggage_option.name}")
+                print(f"DEBUG: Added baggage addon: {baggage_option.name} (Price: {addon_price})")
             except BaggageOption.DoesNotExist:
                 print(f"DEBUG: Baggage option with ID {baggage_data} not found")
     
-    # Meal add-on
-    meal_data = segment_addons.get('meals', {}).get(passenger_key)
-    if meal_data:
-        if isinstance(meal_data, dict) and meal_data.get('id'):
-            try:
-                meal_option = MealOption.objects.get(id=meal_data['id'])
-                addon, created = AddOn.objects.get_or_create(
-                    meal_option=meal_option,
-                    defaults={
-                        'name': f"Meal: {meal_option.name}",
-                        'price': meal_option.price,
-                        'airline': airline,
-                    }
-                )
-                addons_to_link.append(addon)
-                print(f"DEBUG: Added meal addon: {meal_option.name}")
-            except MealOption.DoesNotExist:
-                print(f"DEBUG: Meal option with ID {meal_data['id']} not found")
-        elif isinstance(meal_data, int):
-            try:
-                meal_option = MealOption.objects.get(id=meal_data)
-                addon, created = AddOn.objects.get_or_create(
-                    meal_option=meal_option,
-                    defaults={
-                        'name': f"Meal: {meal_option.name}",
-                        'price': meal_option.price,
-                        'airline': airline,
-                    }
-                )
-                addons_to_link.append(addon)
-                print(f"DEBUG: Added meal addon: {meal_option.name}")
-            except MealOption.DoesNotExist:
-                print(f"DEBUG: Meal option with ID {meal_data} not found")
+    # Meal add-on - UPDATED for multiple meals
+    meals_data = segment_addons.get('meals', {}).get(passenger_key)
+    if meals_data:
+        # Convert to list if it's a single item for uniform processing
+        if not isinstance(meals_data, list):
+            meals_data = [meals_data]
+            
+        for meal_item in meals_data:
+            meal_id = None
+            if isinstance(meal_item, dict) and meal_item.get('id'):
+                meal_id = meal_item['id']
+            elif isinstance(meal_item, (int, str)):
+                meal_id = meal_item
+                
+            if meal_id:
+                try:
+                    meal_option = MealOption.objects.get(id=meal_id)
+                    addon, created = AddOn.objects.get_or_create(
+                        meal_option=meal_option,
+                        # We use get_or_create, but notice if the same meal is added multiple times 
+                        # for different segments/passengers, we link the same AddOn record.
+                        defaults={
+                            'name': f"Meal: {meal_option.name}",
+                            'price': meal_option.price,
+                            'airline': airline,
+                        }
+                    )
+                    addons_to_link.append(addon)
+                    print(f"DEBUG: Added meal addon: {meal_option.name}")
+                except MealOption.DoesNotExist:
+                    print(f"DEBUG: Meal option with ID {meal_id} not found")
     
     # Assistance service
     service_id = segment_addons.get('wheelchair', {}).get(passenger_key)
@@ -2166,6 +2303,7 @@ def _apply_taxes(booking, booking_details):
             except Exception as e:
                 print(f"Error applying tax {tax.name}: {e}")
                 continue
+
 
         # Ensure VAT is applied fallback-style even if DPSC/Others exist
         if not has_vat_applied:
@@ -3559,34 +3697,47 @@ def check_booking_status(request, booking_id):
 @permission_classes([AllowAny])
 def get_seat_class_features(request):
     """
-    API endpoint to get seat class features from database
+    API endpoint to get seat class features and fare bundles from database
     """
     try:
+        from app.models import SeatClass, SeatClassFeature, FareBundle
+        from app.serializers import FareBundleSerializer
         # Get all seat classes
         seat_classes = SeatClass.objects.all()
         
         features_data = {}
+        bundles_data = {}
         for seat_class in seat_classes:
-            # Get features for this seat class
+            # 1. Get basic features
             class_features = SeatClassFeature.objects.filter(
-                seat_class=seat_class
+                seat_class=seat_class, is_active=True
             ).order_by('display_order').values_list('feature', flat=True)
             
+            class_key = seat_class.name.lower().replace(' ', '_')
             if class_features.exists():
-                features_data[seat_class.name.lower().replace(' ', '_')] = list(class_features)
-            # Don't add empty arrays - only add if features exist
+                features_data[class_key] = list(class_features)
+
+            # 2. Get Fare Bundles for this class
+            bundles = FareBundle.objects.filter(
+                seat_class=seat_class, is_active=True
+            ).prefetch_related('bundle_features').order_by('display_order')
+            
+            if bundles.exists():
+                bundles_data[class_key] = FareBundleSerializer(bundles, many=True).data
         
         return Response({
             'success': True,
-            'data': features_data
+            'data': features_data,
+            'bundles': bundles_data
         })
         
     except Exception as e:
         print(f"Error loading seat class features: {str(e)}")
         # Return empty data instead of error
         return Response({
-            'success': True,
-            'data': {}
+            'success': False,
+            'data': {},
+            'bundles': {}
         })
     
 
@@ -4107,15 +4258,19 @@ def calculate_booking_price(request):
         if trip_type in ['multi_city', 'multi-city']:
             segments = data.get('segments', [])
         else:
+            # Normalize round-trip identifiers (frontend may use dash or underscore)
+            is_round_trip = trip_type in ['round_trip', 'round-trip']
             if data.get('selectedOutbound'):
                 segments.append({
                     'selectedFlight': data.get('selectedOutbound'),
-                    'addons': data.get('addons', {})
+                    'addons': data.get('addons', {}),
+                    'type': 'depart'
                 })
-            if trip_type == 'round_trip' and data.get('selectedReturn'):
+            if is_round_trip and data.get('selectedReturn'):
                 segments.append({
                     'selectedFlight': data.get('selectedReturn'),
-                    'addons': data.get('return_addons', {})
+                    'addons': data.get('return_addons', {}),
+                    'type': 'return'
                 })
         
         # 2. Extract IDs helper
@@ -4134,6 +4289,15 @@ def calculate_booking_price(request):
                     target_data = cat_data[segment_key]
                 
                 def _process_item(item_val, pax_key):
+                    if item_val is None:
+                        return
+                        
+                    # Handle multiple items (e.g., list of meal IDs)
+                    if isinstance(item_val, list):
+                        for sub_item in item_val:
+                            _process_item(sub_item, pax_key)
+                        return
+
                     if isinstance(item_val, (int, str)):
                         ids.append({'type': category, 'id': item_val, 'passenger_key': pax_key})
                     elif isinstance(item_val, dict):
@@ -4143,6 +4307,10 @@ def calculate_booking_price(request):
                         # Or maybe it's the seat object which has 'seat_id' or just 'id'
                         elif item_val.get('seat_id'):
                             ids.append({'type': category, 'id': item_val['seat_id'], 'passenger_key': pax_key})
+                
+                if not isinstance(target_data, dict):
+                    print(f"[WARN] target_data for {category} is not a dict: {type(target_data)}")
+                    continue
 
                 for k, v in target_data.items():
                     # If v is another dict and doesn't look like an addon object (no ID/price), 
@@ -4155,7 +4323,7 @@ def calculate_booking_price(request):
             return ids
 
         # 3. Estimate Taxes helper
-        def estimate_taxes_for_segment(schedule_data, passengers, segment_addons_data=None, segment_key=None, tax_breakdown=None):
+        def estimate_taxes_for_segment(schedule_data, passengers, segment_addons_data=None, segment_key=None, tax_breakdown=None, fare_family='basic', base_price_override=None):
             if not schedule_data:
                 return Decimal('0.00')
 
@@ -4182,7 +4350,7 @@ def calculate_booking_price(request):
             total_taxes = Decimal('0.00')
             applied_any_tax = False
             
-            segment_price = Decimal(str(schedule_data.get('price', 0)))
+            segment_price = base_price_override if base_price_override is not None else Decimal(str(schedule_data.get('price', 0)))
             
             for pax in passengers:
                 pax_type = pax.get('type', 'adult').lower()
@@ -4257,7 +4425,6 @@ def calculate_booking_price(request):
             
             # ADDON VAT: Always apply 12% VAT to paid addons (matches frontend totalTaxes)
             if segment_addons_data:
-                addons_base_total = Decimal('0.00')
                 all_segment_addons = extract_ids(segment_addons_data, segment_key)
                 for item in all_segment_addons:
                     try:
@@ -4275,14 +4442,19 @@ def calculate_booking_price(request):
                             else:
                                 price = Decimal(str(item.get('price', 0)))
                         
-                        addons_base_total += price
+                        # Mark as included if premium
+                        is_premium = fare_family == 'premium'
+                        if is_premium and item['type'] in ['baggage', 'seats']:
+                            price = Decimal('0.00')
+                        
+                        if price > 0:
+                            addon_vat = (price * Decimal('0.12')).quantize(Decimal('0.01'))
+                            total_taxes += addon_vat
+                            label = "Value Added Tax (VAT)"
+                            tax_breakdown[label] = tax_breakdown.get(label, Decimal('0.00')) + addon_vat
+                            
                     except Exception as e:
                         print(f"[WARN] Addon base price error in tax estimate: {e}")
-                
-                addon_vat = (addons_base_total * Decimal('0.12')).quantize(Decimal('0.01'))
-                total_taxes += addon_vat
-                label = "Value Added Tax (VAT)"
-                tax_breakdown[label] = tax_breakdown.get(label, Decimal('0.00')) + addon_vat
 
             return total_taxes
 
@@ -4301,7 +4473,32 @@ def calculate_booking_price(request):
                 else: segment_key = str(idx)
 
             # Base Fare calculation per passenger
-            outbound_price = Decimal(str(selected_flight.get('price', 0)))
+            fare_type = selected_flight.get('seat_class') or selected_flight.get('class_type', 'Economy')
+            
+            # Use backend multiplier logic for authoritative pricing
+            def get_authoritative_multiplier(name):
+                if not name: return 1.0
+                normalized = name.strip()
+                sc = SeatClass.objects.filter(name__iexact=normalized).first()
+                if not sc and "class" in normalized.lower():
+                    base_name = normalized.lower().replace("class", "").strip()
+                    sc = SeatClass.objects.filter(name__iexact=base_name).first()
+                return float(sc.price_multiplier) if sc else 1.0
+
+            multiplier = get_authoritative_multiplier(fare_type)
+            schedule_id = selected_flight.get('schedule_id') or selected_flight.get('id')
+            
+            try:
+                schedule_obj = Schedule.objects.get(id=schedule_id)
+                if multiplier == 1.0:
+                    outbound_price = Decimal(str(selected_flight.get('price', 0)))
+                else:
+                    ml_base = float(schedule_obj.ml_base_price) if schedule_obj.ml_base_price else float(schedule_obj.price)
+                    raw_seat_price = Decimal(str(ml_base)) * Decimal(str(multiplier))
+                    outbound_price = Decimal(str(dynamic_pricing.round_seat_class_price(raw_seat_price)))
+            except Schedule.DoesNotExist:
+                outbound_price = Decimal(str(selected_flight.get('price', 0)))
+
             segment_base_fare = Decimal('0.00')
             
             for pax in passengers:
@@ -4319,7 +4516,16 @@ def calculate_booking_price(request):
             breakdown['base_fare'] += segment_base_fare
             
             # Taxes
-            breakdown['taxes'] += estimate_taxes_for_segment(selected_flight, passengers, segment.get('addons', {}), segment_key, overall_tax_breakdown)
+            fare_family = selected_flight.get('fare_family', 'basic')
+            breakdown['taxes'] += estimate_taxes_for_segment(
+                selected_flight, 
+                passengers, 
+                segment.get('addons', {}), 
+                segment_key, 
+                overall_tax_breakdown, 
+                fare_family=fare_family,
+                base_price_override=outbound_price
+            )
             
             # Addons
             segment_addons = segment.get('addons', {})
@@ -4344,6 +4550,11 @@ def calculate_booking_price(request):
                             print(f"[WARN] Seat ID {item['id']} not found, using provided price if available")
                             price = Decimal(str(item.get('price', 0)))
                     
+                    # Zero out for premium
+                    fare_family = selected_flight.get('fare_family', 'basic')
+                    if fare_family == 'premium' and item['type'] in ['baggage', 'seats']:
+                        price = Decimal('0.00')
+                        
                     breakdown['addons'] += price
                 except Exception as e:
                     print(f"[WARN] Price calculation error for addon {item}: {e}")

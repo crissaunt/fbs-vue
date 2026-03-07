@@ -59,3 +59,22 @@ Preventing overbooking and maintaining data consistency is a critical challenge 
 1. Studies on Machine Learning in Revenue Management (predicting airline ticket prices using regression algorithms).
 2. Advanced Database System concepts on Transactional Locking (Pessimistic vs Optimistic Control, ACID properties).
 3. Industry standards on Airline Check-in, PNR Generation, and the Passenger Service System (PSS) architecture.
+
+---
+
+## 4. Departure Control System (DCS) & Check-in Flow
+
+The DCS manages the transition from reserved seat to authorized passenger boarding. The system enforces a rigorous multi-step security and operational protocol.
+
+### Phase 5: The 6-Step Check-in Protocol
+1. **Presence (Party Verification)**: The agent identifies which members of a booking party are physically present at the counter using the PNR manifest link.
+2. **Dossier (Dossier Review)**: Physical inspection of travel credentials (Passports, Visas, IDs). The agent must verify that the physical documents match the system's identity vault.
+3. **Clearance (Security Sync)**: Individual security authorization for each passenger. Each member must be cleared individually before the system allows synchronization with the central manifest.
+4. **Measured Load (Aggregate Load)**: Combined weight measurement for aircraft trim optimization. The system calculates total pool allowance and handles excess fee collection revenue protocols if necessary.
+5. **Slot Assign (Slot Assignment)**: Operational cabin position designation. Selecting a slot (seat) updates the central manifest in real-time, locking the inventory for the flight.
+6. **Audit (Final Summary)**: A final system handshake that validates all previous steps. Upon execution, the manifest slot is locked, and digital boarding passes are dispatched for bulk output.
+
+### System Integration
+- **Manifest Link**: The DCS is directly linked to the flight manifest, ensuring that check-in status is instantly reflected on the Flight Dashboard and Manifest Views.
+- **Real-time Sync**: Transitions between steps (e.g., from Dossier to Clearance) are gated by system checks, preventing protocol violations.
+- **Operational Optimization**: The "Aggregate Load" step feeds directly into the airline's weight and balance calculations for fuel efficiency.

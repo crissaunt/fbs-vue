@@ -2083,6 +2083,56 @@ def get_student_practice_bookings(request):
         )
 
 
+@api_view(['GET'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_student_checkin_history(request):
+    """
+    Get all check-in records performed by the authenticated student.
+    """
+    try:
+        from app.models import CheckInDetail
+        checkins = CheckInDetail.objects.filter(
+            student=request.user
+        ).select_related(
+            'booking_detail__passenger',
+            'booking_detail__schedule__flight__route__origin_airport',
+            'booking_detail__schedule__flight__route__destination_airport'
+        ).order_by('-check_in_time')
+        
+        checkin_history_data = []
+        for checkin in checkins:
+            booking_detail = checkin.booking_detail
+            schedule = booking_detail.schedule
+            flight = schedule.flight
+            route = flight.route
+            
+            checkin_history_data.append({
+                "id": checkin.id,
+                "boarding_pass": checkin.boarding_pass,
+                "passenger_name": checkin.booking_detail.passenger.get_full_name(),
+                "flight_number": flight.flight_number,
+                "route_summary": f"{route.origin_airport.code} ✈ {route.destination_airport.code}",
+                "departure_time": schedule.departure_time.isoformat(),
+                "check_in_time": checkin.check_in_time.isoformat(),
+                "status": checkin.status,
+                "baggage_weight": float(checkin.baggage_weight),
+                "counter": checkin.check_in_counter,
+                "seat_number": booking_detail.seat.seat_number if booking_detail.seat else "TBA"
+            })
+            
+        return Response({
+            "checkin_history": checkin_history_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        traceback.print_exc()
+        return Response(
+            {"error": f"Failed to load check-in history: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
 # ==========================================
 # ADMIN: LMS OVERVIEW STATS
 # ==========================================

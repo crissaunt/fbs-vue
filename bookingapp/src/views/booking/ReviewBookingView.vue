@@ -163,7 +163,15 @@
                     </div>
                   </td>
                   <td>{{ getSeatLabel(p.key, segment.key) }}</td>
-                  <td>{{ getBaggageLabel(p.key, segment.key) }}</td>
+                  <td>
+                    <div v-for="item in getBaggageBreakdown(p.key, segment.key)" :key="item.type" class="baggage-item-mini">
+                      <span class="baggage-icon">{{ item.icon }}</span>
+                      <div class="baggage-info">
+                        <span class="baggage-text">{{ item.label }}</span>
+                        <span :class="['baggage-status', item.status.toLowerCase()]">{{ item.status }}</span>
+                      </div>
+                    </div>
+                  </td>
                   <td>{{ getMealLabel(p.key, segment.key) }}</td>
                   <td>{{ getAssistanceLabel(p.key, segment.key) }}</td>
                 </tr>
@@ -296,8 +304,12 @@
             <div class="total-row">
               <span>Grand Total</span>
               <span class="final-amt">
-                <AnimatedNumber :value="grandTotal" prefix="₱" />
+                <span v-if="isCalculatingPrice" class="total-loading">Calculating...</span>
+                <AnimatedNumber v-else :value="grandTotal" prefix="₱" />
               </span>
+            </div>
+            <div v-if="isUsingFrontendEstimate && !isCalculatingPrice" class="estimate-warning">
+              ⚠️ Estimate — exact total confirmed at booking
             </div>
             <div class="passenger-count">
               <small>{{ payingPassengerCount }} paying passengers</small>
@@ -352,46 +364,6 @@ onMounted(async () => {
   try {
 
     bookingStore.loadBookingFromStorage();
-    
-    // Debug: Log current store state
-    console.log('📊 ========== PINIA STORE STATE ==========');
-    console.log('🎫 Trip Type:', bookingStore.tripType, '(Round Trip:', bookingStore.isRoundTrip + ')');
-    console.log('📋 Booking ID:', bookingStore.booking_id);
-    console.log('📋 Booking Reference:', bookingStore.booking_reference);
-    console.log('📋 Booking Status:', bookingStore.booking_status);
-    console.log('💰 Booking Total:', bookingStore.booking_total);
-    // Debug: Log current store state
-    console.log('📊 ========== PINIA STORE STATE ==========');
-    console.log('🎫 Trip Type:', bookingStore.tripType, '(Round Trip:', bookingStore.isRoundTrip + ')');
-    
-    // Flight data
-    console.log('✈️ Outbound Flight:', bookingStore.selectedOutbound);
-    console.log('🔄 Return Flight:', bookingStore.selectedReturn);
-    
-    // Passenger data
-    console.log('👥 Passenger Count:', bookingStore.passengerCount);
-    console.log('📋 Passengers:', JSON.parse(JSON.stringify(bookingStore.passengers)));
-    
-    // Contact info
-    console.log('📞 Contact Info:', JSON.parse(JSON.stringify(bookingStore.contactInfo)));
-    
-    // Add-ons (deep clone to avoid reactivity issues)
-    console.log('🎯 Add-ons Structure:', JSON.parse(JSON.stringify(bookingStore.addons)));
-    
-    // Financial calculations
-    console.log('💰 Financial Summary:');
-    console.log('  - Combined Base Price:', bookingStore.combinedBasePrice);
-    console.log('  - Total Add-ons Price:', bookingStore.totalAddonsPrice);
-    console.log('  - Grand Total (computed):', bookingStore.grandTotal);
-    console.log('  - Booking Total (stored):', bookingStore.booking_total);
-    
-    // Session info
-    const sessionStatus = bookingStore.checkSession();
-    console.log('⏰ Session Status:', sessionStatus);
-    
-    console.log('📊 ========== END PINIA STORE ==========');
-
-    // Rest of your existing code...
     bookingStore.migrateAddonsToNewFormat();
     
     const airlineId = bookingStore.selectedOutbound?.airline_code || bookingStore.selectedOutbound?.airline;
@@ -442,6 +414,12 @@ const fetchBackendPrice = async () => {
       backendTaxDetails.value = response.tax_details || null;
       console.log('✅ Backend price confirmed:', response.total_amount);
       console.log('📑 Tax Details:', backendTaxDetails.value);
+      
+      // Warn if there's a significant mismatch with frontend estimate
+      const diff = Math.abs(response.total_amount - bookingStore.grandTotal);
+      if (diff > 50) {
+        console.warn(`⚠️ Price mismatch: Frontend=${bookingStore.grandTotal}, Backend=${response.total_amount}, Diff=${diff}`);
+      }
     }
   } catch (error) {
     console.error('Error fetching backend price:', error);
@@ -471,44 +449,55 @@ const getOptionById = (list, id) => {
   return list.find(item => item.id == id);
 };
 
-const getBaggageLabel = (passengerKey, segment = 'depart') => {
+const getBaggageBreakdown = (passengerKey, segment = 'depart') => {
   const p = bookingStore.passengers.find(p => p.key === passengerKey);
-  if (p?.type === 'Infant') return 'Incl. in Adult Allowance';
+  if (p?.type === 'Infant') {
+    return [
+      { type: 'hand-carry', label: 'Incl. in Adult Allowance', status: 'Included', icon: '🎒' }
+    ];
+  }
 
   const isPremium = bookingStore.fareFamilies[segment] === 'premium';
   const baggage = bookingStore.addons?.baggage?.[segment]?.[passengerKey];
   
-  if (!baggage) {
-    return isPremium ? 'Included (20kg)' : 'Standard (7kg hand-carry only)';
+  const breakdown = [
+    { type: 'hand-carry', label: '1 x 7kg Carry-on', status: 'Included', icon: '🎒' }
+  ];
+
+  if (isPremium) {
+    let weightLabel = '20kg Checked Baggage';
+    if (baggage) {
+      const option = baggageOptions.value.find(o => o.id == (baggage.id || baggage));
+      weightLabel = option ? option.formatted_weight : (typeof baggage === 'object' ? baggage.formatted_weight : '20kg Checked Baggage');
+    }
+    breakdown.push({ type: 'checked', label: weightLabel, status: 'Included', icon: '🧳' });
+  } else if (baggage) {
+    const option = baggageOptions.value.find(o => o.id == (baggage.id || baggage));
+    const labelText = option ? option.formatted_weight : (typeof baggage === 'object' ? baggage.formatted_weight : 'Extra Baggage');
+    breakdown.push({ type: 'checked', label: labelText, status: 'Purchased', icon: '🧳' });
+  } else {
+    breakdown.push({ type: 'checked', label: 'No Checked Baggage', status: 'None', icon: '🧳' });
   }
-  
-  if (typeof baggage === 'object' && baggage.formatted_weight) {
-    const price = isPremium && parseFloat(baggage.weight_kg || 0) <= 20 ? 0 : parseFloat(baggage.price);
-    return `${baggage.formatted_weight} (₱${price.toLocaleString()})`;
-  }
-  
-  const option = baggageOptions.value.find(o => o.id == baggage);
-  if (option) {
-    const price = isPremium && parseFloat(option.weight_kg || 0) <= 20 ? 0 : parseFloat(option.price);
-    return `${option.formatted_weight} (₱${price.toLocaleString()})`;
-  }
-  
-  return isPremium ? 'Included (20kg)' : 'Standard (7kg hand-carry only)';
+
+  return breakdown;
 };
 
 const getMealLabel = (passengerKey, segment = 'depart') => {
   const p = bookingStore.passengers.find(p => p.key === passengerKey);
   if (p?.type === 'Infant') return 'Not Available';
 
-  const meal = bookingStore.addons?.meals?.[segment]?.[passengerKey];
-  if (!meal) return 'No meal';
+  const meals = bookingStore.addons?.meals?.[segment]?.[passengerKey];
+  if (!meals || (Array.isArray(meals) && meals.length === 0)) return 'No meal';
   
-  if (typeof meal === 'object' && meal.name) {
-    return meal.name;
-  }
+  const mealArray = Array.isArray(meals) ? meals : [meals];
   
-  const option = mealOptions.value.find(m => m.id == meal);
-  return option ? option.name : 'Pre-ordered Meal';
+  const labels = mealArray.map(m => {
+    if (typeof m === 'object' && m.name) return m.name;
+    const option = mealOptions.value.find(opt => opt.id == (m.id || m));
+    return option ? option.name : 'Pre-ordered Meal';
+  });
+  
+  return labels.join(', ');
 };
 
 const getAssistanceLabel = (passengerKey, segment = 'depart') => {
@@ -540,6 +529,10 @@ const getSeatLabel = (passengerKey, segmentKey = 'depart') => {
   
   const seatCode = seat.seat_code || 'N/A';
   const price = isPremium ? 0 : (parseFloat(seat.seat_price) || 0);
+  
+  if (isPremium) {
+    return `${seatCode} (Included)`;
+  }
   
   return `${seatCode} (₱${price.toLocaleString()})`;
 };
@@ -655,14 +648,18 @@ const taxesPrice = computed(() => {
   return bookingStore.totalTaxes;
 });
 
+const isBackendTotalLoaded = computed(() => backendTotal.value !== null && !isNaN(backendTotal.value));
+
 const grandTotal = computed(() => {
-  // Use backend confirmed total if available
-  if (backendTotal.value !== null && !isNaN(backendTotal.value)) {
+  // Use backend confirmed total if available — this is the authoritative total
+  if (isBackendTotalLoaded.value) {
     return backendTotal.value;
   }
-  // Otherwise use the store's computed grandTotal as fallback
+  // Fallback: frontend estimate (may be incomplete for round-trip/multi-city)
   return bookingStore.grandTotal;
 });
+
+const isUsingFrontendEstimate = computed(() => !isBackendTotalLoaded.value);
 
 // Validation function
 const validateBooking = () => {
@@ -1274,6 +1271,23 @@ const handleBookingError = (error) => {
   margin-top: 10px;
 }
 
+.estimate-warning {
+  text-align: center;
+  margin-top: 8px;
+  font-size: 0.72rem;
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  padding: 5px 8px;
+}
+
+.total-loading {
+  font-size: 1rem;
+  color: #999;
+  font-style: italic;
+}
+
 .mt-3 {
   margin-top: 15px;
 }
@@ -1329,5 +1343,75 @@ const handleBookingError = (error) => {
 @keyframes dot-pulse {
   0%, 80%, 100% { transform: scale(0); }
   40% { transform: scale(1.0); }
+}
+
+/* Baggage Breakdown Styles */
+.baggage-item-mini {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #edf2f7;
+  transition: all 0.2s ease;
+}
+
+.baggage-item-mini:hover {
+  background: white;
+  border-color: #cbd5e0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.baggage-item-mini:last-child {
+  margin-bottom: 0;
+}
+
+.baggage-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.baggage-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.baggage-text {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #2d3748;
+  line-height: 1.2;
+}
+
+.baggage-status {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  width: fit-content;
+  letter-spacing: 0.5px;
+}
+
+.baggage-status.included {
+  background: #e6fffa;
+  color: #0d9488;
+  border: 1px solid #b2f5ea;
+}
+
+.baggage-status.purchased {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #dbeafe;
+}
+
+.baggage-status.none {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fee2e2;
+  opacity: 0.8;
 }
 </style>

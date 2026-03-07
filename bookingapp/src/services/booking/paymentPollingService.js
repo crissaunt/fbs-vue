@@ -2,6 +2,16 @@
 import api from './api.js';
 
 export const paymentPollingService = {
+  async runFullPaymentCheck(bookingId) {
+    const fullResponse = await api.get(`flightapp/check-payment-status/${bookingId}/`);
+    return {
+      success: fullResponse.data.success !== false,
+      paid: fullResponse.data.paid === true,
+      data: fullResponse.data,
+      immediate: false
+    };
+  },
+
   /**
    * Simple polling for booking status
    * Returns immediately if booking is confirmed
@@ -23,7 +33,30 @@ export const paymentPollingService = {
         console.log(`🔄 Polling booking status (attempt ${attempts}/${maxAttempts})...`);
 
         // Use the simple endpoint that doesn't search PayMongo
-        const response = await api.get(`flightapp/check-booking-status/${bookingId}/`);
+        let response;
+        try {
+          response = await api.get(`flightapp/check-booking-status/${bookingId}/`);
+        } catch (simpleError) {
+          // If simple endpoint returns 404 or other error, fall back to full status check.
+          // This avoids hard-failing polling on transient or route-level issues.
+          const fallback = await this.runFullPaymentCheck(bookingId);
+          onProgress({
+            attempt: attempts,
+            maxAttempts,
+            data: fallback.data
+          });
+
+          if (fallback.paid) {
+            return {
+              success: true,
+              paid: true,
+              data: fallback.data,
+              attempts
+            };
+          }
+
+          response = { data: fallback.data };
+        }
 
         onProgress({
           attempt: attempts,
@@ -82,27 +115,25 @@ export const paymentPollingService = {
     try {
       console.log(`🔍 Checking payment status for booking ${bookingId}...`);
 
-      // Try the simple endpoint first
-      const simpleResponse = await api.get(`flightapp/check-booking-status/${bookingId}/`);
+      try {
+        // Try the simple endpoint first
+        const simpleResponse = await api.get(`flightapp/check-booking-status/${bookingId}/`);
 
-      if (simpleResponse.data.paid || simpleResponse.data.booking_status === 'Confirmed') {
-        return {
-          success: true,
-          paid: true,
-          data: simpleResponse.data,
-          immediate: true
-        };
+        if (simpleResponse.data.paid || simpleResponse.data.booking_status === 'Confirmed') {
+          return {
+            success: true,
+            paid: true,
+            data: simpleResponse.data,
+            immediate: true
+          };
+        }
+      } catch (simpleError) {
+        // Continue to full check below.
+        console.warn('Simple booking-status check failed, using full payment status check.');
       }
 
-      // If not confirmed, try the full check
-      const fullResponse = await api.get(`flightapp/check-payment-status/${bookingId}/`);
-
-      return {
-        success: fullResponse.data.success !== false,
-        paid: fullResponse.data.paid === true,
-        data: fullResponse.data,
-        immediate: false
-      };
+      // Always try full check as fallback/verification path.
+      return await this.runFullPaymentCheck(bookingId);
 
     } catch (error) {
       console.error('Payment check error:', error);

@@ -25,7 +25,7 @@ from .api.extra_services_views import (
     PlanCoverageViewSet, MealCategoryViewSet, MealOptionViewSet,
     AssistanceServiceViewSet, BaggageOptionViewSet, PricingConfigurationViewSet
 )
-from .api.dcs_views import get_dcs_flights, get_dcs_manifest, process_dcs_checkin, scan_qr_lookup, get_dcs_passenger_details, get_dcs_pnr_details, download_boarding_pass_view
+from .api.dcs_views import get_dcs_flights, get_dcs_manifest, process_dcs_checkin, scan_qr_lookup, get_dcs_passenger_details, get_dcs_pnr_details, download_boarding_pass_view, assign_dcs_seat
 
 
 # Create a router and register our viewsets
@@ -92,6 +92,7 @@ urlpatterns = [
     path('dcs/pnr/<str:pnr>/<int:schedule_id>/', get_dcs_pnr_details, name='dcs_pnr_details'),
     path('dcs/boarding-pass/<int:booking_detail_id>/', download_boarding_pass_view, name='dcs_boarding_pass'),
     path('dcs/scan-qr/', scan_qr_lookup, name='dcs_scan_qr'),
+    path('dcs/assign-seat/', assign_dcs_seat, name='dcs_assign_seat'),
     
     # Include all the router-generated CRUD URLs
     path('', include(router.urls)),

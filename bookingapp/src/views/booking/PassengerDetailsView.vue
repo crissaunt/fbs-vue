@@ -299,8 +299,19 @@ const calculateTotal = () => {
 
 const isPassengerComplete = (index) => {
   const key = `pax_${index}`;
+  
+  // Use the form validation directly if we have it
+  if (passengerValidation.value[key] !== undefined) {
+    return passengerValidation.value[key];
+  }
+
   const data = passengers.value.find(p => p.key === key) || bookingStore.passengers.find(p => p.key === key);
   if (!data) return false;
+  
+  // If the data object itself has the isValid flag from emit
+  if (data.isValid !== undefined) {
+      return data.isValid;
+  }
   
   const hasBasicInfo = !!(data.firstName?.trim() && data.lastName?.trim() && data.dateOfBirth);
   if (data.type === 'Infant') {
@@ -361,7 +372,17 @@ const saveAllPassengersToStore = async () => {
 const handleContinueToAddons = async () => {
   if (await saveAllPassengersToStore()) {
     bookingStore.snapshotToServer();
-    router.push({ name: 'Addons' });
+    
+    // REDIRECTION LOGIC: If any segment is "Premium", go directly to Seat Selection
+    // This aligns with real-world premium-first booking flows.
+    const hasPremium = Object.values(bookingStore.fareFamilies).some(fare => fare === 'premium');
+    
+    if (hasPremium) {
+      console.log('💎 Premium fare detected! Redirecting directly to Seat Selection...');
+      router.push({ name: 'SeatSelection' });
+    } else {
+      router.push({ name: 'Addons' });
+    }
   }
 };
 

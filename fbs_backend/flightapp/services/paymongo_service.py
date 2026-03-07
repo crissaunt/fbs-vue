@@ -63,9 +63,9 @@ class PayMongoService:
             print(f"\n? Creating checkout session for booking {booking_id}")
             print(f"   Amount: {amount} PHP ({amount_in_centavos} centavos)")
             
-            # IMPORTANT: Your webhook URL must be accessible from the internet
-            # Use ngrok for local development: https://ngrok.com/
-            webhook_url = "http://localhost:8000/api/paymongo-webhook/"  # Update with your actual public URL
+            frontend_base = getattr(settings, 'WEBSITE_URL', 'http://localhost:5173').rstrip('/')
+            backend_base = config('BACKEND_PUBLIC_URL', default='http://localhost:8000').rstrip('/')
+            webhook_url = f"{backend_base}/flightapp/paymongo-webhook/"
             
             payload = {
                 "data": {
@@ -79,8 +79,8 @@ class PayMongoService:
                         }],
                         "payment_method_types": ["card", "gcash", "grab_pay"],
                         "description": description,
-                        "success_url": f"http://localhost:5173/payment-callback?booking_id={booking_id}&payment_success=true",
-                        "cancel_url": f"http://localhost:5173/payment-callback?booking_id={booking_id}&payment_success=false",
+                        "success_url": f"{frontend_base}/payment-callback?booking_id={booking_id}&payment_success=true",
+                        "cancel_url": f"{frontend_base}/payment-callback?booking_id={booking_id}&payment_success=false",
                         "metadata": {
                             "booking_id": str(booking_id),
                             "booking_reference": f"BK{booking_id:08d}"
@@ -229,6 +229,7 @@ class PayMongoService:
             
             url = f"{self.api_url}/sources"
             
+            frontend_base = getattr(settings, 'WEBSITE_URL', 'http://localhost:5173').rstrip('/')
             payload = {
                 "data": {
                     "attributes": {
@@ -236,8 +237,8 @@ class PayMongoService:
                         "currency": "PHP",
                         "type": type,
                         "redirect": {
-                            "success": redirect_success or "http://localhost:5173/payment/success",
-                            "failed": redirect_failed or "http://localhost:5173/payment/failed"
+                            "success": redirect_success or f"{frontend_base}/payment/success",
+                            "failed": redirect_failed or f"{frontend_base}/payment/failed"
                         }
                     }
                 }
@@ -275,11 +276,12 @@ class PayMongoService:
         try:
             url = f"{self.api_url}/payment_intents/{intent_id}/attach"
             
+            frontend_base = getattr(settings, 'WEBSITE_URL', 'http://localhost:5173').rstrip('/')
             payload = {
                 "data": {
                     "attributes": {
                         "payment_method": payment_method_id,
-                        "return_url": return_url or "http://localhost:5173/payment/return"
+                        "return_url": return_url or f"{frontend_base}/payment/return"
                     }
                 }
             }

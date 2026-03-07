@@ -280,13 +280,28 @@ class CountrySerializer(serializers.ModelSerializer):
 
 
 # ==========================================
-# SEAT CLASS FEATURE
+# SEAT CLASS FEATURE & FARE BUNDLES
 # ==========================================
+from .models import FareBundle, FareBundleFeature
+
 class SeatClassFeatureSerializer(serializers.ModelSerializer):
     seat_class_name = serializers.ReadOnlyField(source='seat_class.name')
     class Meta:
         model = SeatClassFeature
         fields = ['id', 'seat_class', 'seat_class_name', 'feature', 'icon', 'display_order', 'is_active']
+
+class FareBundleFeatureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FareBundleFeature
+        fields = ['id', 'feature_text', 'display_order', 'is_active']
+
+class FareBundleSerializer(serializers.ModelSerializer):
+    features = FareBundleFeatureSerializer(source='bundle_features', many=True, read_only=True)
+    
+    class Meta:
+        model = FareBundle
+        fields = ['id', 'seat_class', 'name', 'type_code', 'markup_fee', 'description', 'icon_svg', 'display_order', 'is_active', 'features']
+
 
 
 # ==========================================

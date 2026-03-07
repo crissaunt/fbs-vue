@@ -37,6 +37,21 @@
         <!-- Left Column - Booking details & Summary -->
         <div class="lg:col-span-8 space-y-6">
           
+          <!-- Retry Alert Banner -->
+          <div v-if="isRetrying" class="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-5 flex items-start shadow-sm mb-6">
+            <div class="flex-shrink-0 mt-0.5">
+              <svg class="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3 text-sm">
+              <h3 class="font-bold text-amber-800">Action Required: Payment Not Completed</h3>
+              <p class="mt-1 text-amber-700 font-medium">
+                Your previous payment attempt was unsuccessful or cancelled. Don't worry, we've saved your entire booking securely! Your seats are reserved while your session is active.
+              </p>
+            </div>
+          </div>
+
           <!-- Premium Amount Display -->
           <div class="relative overflow-hidden bg-white rounded-lg border border-gray-100 shadow-sm p-1">
             <div class="absolute top-0 right-0 p-4">
@@ -290,6 +305,7 @@ const loadingMessage = ref("");
 const showToast = ref(false);
 const toastMessage = ref("");
 const hasAgreedToTerms = ref(false);
+const isRetrying = ref(false);
 
 // Computed properties
 const bookingId = computed(() => bookingStore.booking_id);
@@ -480,8 +496,14 @@ const checkPaymentCallback = () => {
   const success = urlParams.get('success');
   const error = urlParams.get('error');
   const bookingId = urlParams.get('booking_id');
+  const isRetry = route.query.retry === 'true' || route.query.retry === true || urlParams.get('retry');
   
-  if (success === 'true' && bookingId) {
+  if (isRetry) {
+    isRetrying.value = true;
+    showToastMessage('Payment was not completed. Your booking is safely held, please retry payment.', 5000);
+    // Clean up query but keep state
+    router.replace({ ...route, query: { ...route.query, retry: undefined } });
+  } else if (success === 'true' && bookingId) {
     showToastMessage('Payment successful! Your booking has been confirmed.');
     window.history.replaceState({}, document.title, window.location.pathname);
   } else if (error) {

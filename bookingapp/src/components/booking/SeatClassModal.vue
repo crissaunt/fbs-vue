@@ -29,14 +29,34 @@
           </div>
         </div>
         
+        <!-- NEW: Travel Class Tabs -->
+        <div class="flex border-b border-gray-200 mb-6 space-x-8" v-if="!selectedClassPendingAck && availableTravelClasses.length > 0">
+          <button 
+            v-for="tClass in availableTravelClasses" 
+            :key="tClass"
+            @click="selectedTravelClass = tClass"
+            :class="selectedTravelClass === tClass ? 'border-pink-500 text-pink-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-lg transition-colors capitalize"
+          >
+            {{ tClass }}
+          </button>
+        </div>
+
         <div v-if="!selectedClassPendingAck" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div v-for="(seatClass, index) in seatClasses" :key="index" 
+          <div v-for="(seatClass, index) in groupedClasses[selectedTravelClass]" :key="index" 
             @click="selectClassForAck(seatClass)"
-            class="border-2 border-gray-200 hover:border-pink-500 rounded-lg p-6 cursor-pointer transition-all duration-200 hover:shadow-lg group flex flex-col h-full">
+            class="relative border-2 rounded-lg p-6 cursor-pointer transition-all duration-200 hover:shadow-lg group flex flex-col h-full"
+            :class="[
+              seatClass.fare_family === 'flex' ? 'border-yellow-500 hover:border-yellow-400' : 'border-gray-200 hover:border-pink-500'
+            ]">
             
+            <div v-if="seatClass.fare_family === 'flex'" class="absolute -top-3 left-6 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded shadow-sm">
+              Recommended
+            </div>
+
             <div class="flex justify-between items-start mb-4">
-              <div class="p-2 bg-pink-50 rounded-md group-hover:bg-pink-100 transition-colors">
-                <svg class="w-6 h-6 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="p-2 rounded-md transition-colors" :class="seatClass.fare_family === 'flex' ? 'bg-yellow-50 group-hover:bg-yellow-100' : 'bg-pink-50 group-hover:bg-pink-100'">
+                <svg class="w-6 h-6" :class="seatClass.fare_family === 'flex' ? 'text-yellow-600' : 'text-pink-500'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="seatClass.icon" />
                 </svg>
               </div>
@@ -58,7 +78,9 @@
               <div class="text-2xl font-bold text-gray-900">₱{{ Number(seatClass.price).toLocaleString() }}</div>
               <div class="text-xs text-gray-500">per person</div>
               
-              <button class="w-full mt-4 py-2 bg-pink-500 text-white rounded-md font-medium group-hover:bg-pink-600 transition-colors">
+              <button 
+                class="w-full mt-4 py-2 text-white rounded-md font-medium transition-colors"
+                :class="seatClass.fare_family === 'flex' ? 'bg-yellow-500 group-hover:bg-yellow-600' : 'bg-pink-500 group-hover:bg-pink-600'">
                 Select {{ seatClass.name }}
               </button>
             </div>
@@ -141,7 +163,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 
 const props = defineProps({
   show: Boolean,
@@ -155,9 +177,39 @@ const emit = defineEmits(['select-class', 'close']);
 const selectedClassPendingAck = ref(null);
 const hasAcknowledgedRules = ref(false);
 
+// NEW: Group seat classes by travel class
+const groupedClasses = computed(() => {
+  if (!props.seatClasses) return {};
+  return props.seatClasses.reduce((acc, sc) => {
+    let tClass = sc.travel_class;
+    // Fallback if travel_class is missing, parse from name
+    if (!tClass) {
+      if (sc.name.toLowerCase().includes('economy')) tClass = 'Economy';
+      else if (sc.name.toLowerCase().includes('business')) tClass = 'Business';
+      else if (sc.name.toLowerCase().includes('first')) tClass = 'First Class';
+      else tClass = 'Economy';
+    }
+    
+    // Capitalize properly
+    tClass = tClass.charAt(0).toUpperCase() + tClass.slice(1);
+    
+    if (!acc[tClass]) acc[tClass] = [];
+    acc[tClass].push(sc);
+    return acc;
+  }, {});
+});
+
+const availableTravelClasses = computed(() => Object.keys(groupedClasses.value));
+const selectedTravelClass = ref('');
+
 // Reset state when modal closes
 watch(() => props.show, (newVal) => {
-  if (!newVal) {
+  if (newVal) {
+    // When opened, select the first available travel class tab
+    if (availableTravelClasses.value.length > 0) {
+      selectedTravelClass.value = availableTravelClasses.value[0];
+    }
+  } else {
     selectedClassPendingAck.value = null;
     hasAcknowledgedRules.value = false;
   }

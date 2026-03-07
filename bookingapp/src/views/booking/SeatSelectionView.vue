@@ -775,6 +775,9 @@ const getSeatStatus = (seat) => {
   // 3. Check if occupied/booked/locked by someone else
   if (seat.is_booked) return 'occupied';
   
+  // 3.1 Check if locked (soft-lock) by someone else
+  if (seat.is_locked && !seat.is_locked_by_me) return 'occupied';
+  
   // 4. Check if permanently unavailable
   if (!seat.is_available) return 'occupied';
   
@@ -997,19 +1000,19 @@ const confirmSeats = () => {
       switchFlightSegment((currentIdx + 1).toString());
     } else {
       // Done
-      router.back();
+      router.push({ name: 'Addons' });
     }
   } else if (bookingStore.isRoundTrip) {
     if (activeFlightSegment.value === 'depart') {
       // Move to return seat selection
       switchFlightSegment('return');
     } else {
-      // Both segments are complete, go back to add-ons
-      router.back();
+      // Both segments are complete, go to add-ons
+      router.push({ name: 'Addons' });
     }
   } else {
     // One-way trip is complete
-    router.back();
+    router.push({ name: 'Addons' });
   }
 };
 

@@ -2,6 +2,17 @@
   <div class="min-h-screen bg-gray-50 pb-20 lg:pb-0">
     <BookingStatusHeader />
     
+    <!-- Price Calendar Modal -->
+    <div v-if="showPriceCalendar" class="fixed inset-0 bg-black/60 backdrop-blur-md z-[60] flex items-center justify-center p-4">
+      <PriceCalendar 
+        :origin="phaseRouteInfo.origin"
+        :destination="phaseRouteInfo.destination"
+        :initialDate="phaseRouteInfo.date"
+        @close="showPriceCalendar = false"
+        @select="handleCalendarDateSelect"
+      />
+    </div>
+
     <!-- Edit Search Modal -->
     <div v-if="showEditSearch" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -644,7 +655,18 @@
         
         <!-- Main Content -->
         <main class="flex-1 min-w-0">
-          <!-- 7-Day Date Selector -->
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-bold text-gray-500 uppercase tracking-widest">Select Departure Date</h3>
+            <button 
+              @click="openPriceCalendar"
+              class="flex items-center gap-2 px-3 py-1.5 bg-pink-50 text-pink-600 rounded-md hover:bg-pink-100 transition-colors text-xs font-bold uppercase tracking-tight"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Month View (Low Fares)
+            </button>
+          </div>
           <DateNavigator 
             :weekDays="dateSelector.weekDays"
             :weekRange="formatWeekRange"
@@ -934,10 +956,23 @@ import { format, parseISO, isSameDay, addDays, subDays, startOfWeek, endOfWeek, 
 // Components
 import FlightFilterSidebar from '@/components/booking/FlightFilterSidebar.vue';
 import DateNavigator from '@/components/booking/DateNavigator.vue';
+import PriceCalendar from '@/components/booking/PriceCalendar.vue';
 import FlightCard from '@/components/booking/FlightCard.vue';
 import SeatClassModal from '@/components/booking/SeatClassModal.vue';
 import BookingStatusHeader from '@/components/booking/BookingStatusHeader.vue';
 import LoadingOverlay from '@/components/common/LoadingOverlay.vue';
+
+const showPriceCalendar = ref(false);
+
+const openPriceCalendar = () => {
+  showPriceCalendar.value = true;
+};
+
+const handleCalendarDateSelect = (date) => {
+  showPriceCalendar.value = false;
+  // Use the existing selectDay method to fetch flights for the new date
+  selectDay({ dateString: date });
+};
 
 const route = useRoute();
 const router = useRouter();
@@ -1181,11 +1216,17 @@ const sessionWatcher = ref(null);
 // ============ NEW: ML PRICING METHODS ============
 
 // Load seat class features and ML pricing info
+const fareBundlesData = ref({});
+
 const loadSeatClassFeatures = async () => {
   try {
     const response = await flightService.getSeatClassFeatures();
     if (response.data && response.data.data) {
       seatClassFeatures.value = response.data.data;
+      if (response.data.bundles) {
+        fareBundlesData.value = response.data.bundles;
+        console.log('✅ Fare bundles loaded from DB:', fareBundlesData.value);
+      }
       console.log('✅ Seat class features loaded:', seatClassFeatures.value);
       
       // Update filter options dynamically
@@ -1290,9 +1331,11 @@ const calculateSeatClassPrice = (basePrice, className, flight = null, fareFamily
     price = Math.round(basePrice * multiplier);
   }
 
-  // Add Premium Fare Family markup (e.g., +₱1,200 for bundled baggage/seat)
-  if (fareFamily === 'premium') {
+  // Add Fare Family markup based on the bundle tier
+  if (fareFamily === 'standard') {
     price += 1200;
+  } else if (fareFamily === 'premium' || fareFamily === 'flex') {
+    price += 2500;
   }
 
   return price;
@@ -1609,46 +1652,88 @@ const extractSeatClassesFromFlight = (flight) => {
     const isEconomy = className.toLowerCase().includes('economy');
 
     if (isEconomy) {
-      // Split Economy into Basic and Premium
-      // 1. Economy Basic
-      finalClasses.push({
-        name: 'Economy Basic',
-        fare_family: 'basic',
-        description: 'Travel light with our most affordable fare. Essential services for your journey.',
-        price: calculateSeatClassPrice(flight.price, className, flight, 'basic'),
-        icon: getSeatClassIcon('economy'),
-        features: [
-          '7kg Carry-on baggage',
-          'Standard seat (assigned at check-in)',
-          'Non-refundable',
-          'Changeable with fee'
-        ],
-        ml_predicted: flight.ml_predicted
-      });
+      // Split Economy into Bundles if available from backend
+      const classKey = className.toLowerCase().replace(' ', '_');
+      const backendBundles = fareBundlesData.value[classKey];
 
-      // 2. Economy Premium
-      finalClasses.push({
-        name: 'Economy Premium',
-        fare_family: 'premium',
-        description: 'The smart choice. Includes checked baggage and free seat selection.',
-        price: calculateSeatClassPrice(flight.price, className, flight, 'premium'),
-        icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10', // Box/Baggage icon
-        features: [
-          '7kg Carry-on baggage',
-          '20kg Checked baggage included',
-          'Free Standard Seat selection',
-          'Rebookable with reduced fee',
-          'Priority check-in'
-        ],
-        ml_predicted: flight.ml_predicted
-      });
+      if (backendBundles && backendBundles.length > 0) {
+        // Map backend bundles
+        backendBundles.forEach(bundle => {
+          finalClasses.push({
+            travel_class: className,
+            name: bundle.name,
+            fare_family: bundle.type_code,
+            description: bundle.description,
+            price: calculateSeatClassPrice(flight.price, className, flight, bundle.type_code) + Number(bundle.markup_fee),
+            icon: bundle.icon_svg || 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+            features: bundle.features.map(f => f.feature_text),
+            ml_predicted: flight.ml_predicted
+          });
+        });
+      } else {
+        // Fallback to hardcoded bundles if no backend bundles exist
+        
+        // 1. Economy Saver
+        finalClasses.push({
+          travel_class: className,
+          name: 'Economy Saver',
+          fare_family: 'basic',
+          description: 'Travel light with our most affordable fare. Essential services for your journey.',
+          price: calculateSeatClassPrice(flight.price, className, flight, 'basic'),
+          icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', // Person icon
+          features: [
+            '7kg Carry-on baggage only',
+            'Standard seat (assigned at check-in)',
+            'Non-refundable',
+            'High change fee'
+          ],
+          ml_predicted: flight.ml_predicted
+        });
+
+        // 2. Economy Value
+        finalClasses.push({
+          travel_class: className,
+          name: 'Economy Value',
+          fare_family: 'standard',
+          description: 'The smart choice. Includes checked baggage and free standard seat selection.',
+          price: calculateSeatClassPrice(flight.price, className, flight, 'standard'),
+          icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10', // Box/Baggage icon
+          features: [
+            '7kg Carry-on baggage',
+            '20kg Checked baggage included',
+            'Free Standard Seat selection',
+            'Rebookable with reduced fee',
+            'Priority check-in'
+          ],
+          ml_predicted: flight.ml_predicted
+        });
+        
+        // 3. Economy Flex
+        finalClasses.push({
+          travel_class: className,
+          name: 'Economy Flex',
+          fare_family: 'premium',
+          description: 'Maximum flexibility and comfort. Premium priority perks and fully refundable.',
+          price: calculateSeatClassPrice(flight.price, className, flight, 'premium'),
+          icon: 'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z', // Star icon
+          features: [
+            '7kg Carry-on baggage',
+            '30kg Checked baggage included',
+            'Free Premium Seat selection',
+            'Free cancellations (Refundable)',
+            'No change fee (Fare diff applies)'
+          ],
+          ml_predicted: flight.ml_predicted
+        });
+      }
     } else {
       // For other classes, use standard mapping
       finalClasses.push({
+        travel_class: className,
         name: className,
-        fare_family: 'basic',
+        fare_family: 'premium',
         description: sc.description || getSeatClassDescription(className),
-        price: sc.price || calculateSeatClassPrice(flight.price, className, flight, 'basic'),
+        price: sc.price || calculateSeatClassPrice(flight.price, className, flight, 'premium'),
         icon: getSeatClassIcon(className),
         features: sc.features || getSeatClassFeatures(className),
         ml_predicted: sc.ml_predicted || flight.ml_predicted
@@ -1746,7 +1831,15 @@ const getSeatClassFeatures = (className) => {
 
 // Handle seat class selection from inline FlightCard
 const handleInlineSeatClassSelection = ({ flight, seatClass }) => {
-  console.log('✅ Selected seat class inline:', seatClass.name);
+  console.log('✅ Selected seat class inline:', seatClass.name, 'Travel Class:', seatClass.travel_class);
+  
+  // Construct the full class name (e.g., "Economy Saver" or "Business Flex")
+  // Avoid duplication if the seat class name already includes the travel class
+  const travelClass = seatClass.travel_class || 'Economy';
+  const name = seatClass.name || '';
+  const fullClassName = name.toLowerCase().includes(travelClass.toLowerCase()) 
+    ? name 
+    : `${travelClass} ${name}`;
   
   // Create a flight object with seat class info
   const flightWithSeatClass = {
@@ -1756,6 +1849,8 @@ const handleInlineSeatClassSelection = ({ flight, seatClass }) => {
     base_price: flight.base_price || flight.price,
     seat_class: seatClass.name,
     selected_seat_class: seatClass.name,
+    fare_family: seatClass.fare_family || 'basic',
+    class_type: fullClassName, // Set the specific bundle as the class type for the backend
     seat_class_details: seatClass,
     seat_class_features: seatClass.features,
     ml_predicted: seatClass.ml_predicted || flight.ml_predicted
@@ -2526,7 +2621,6 @@ const fetchFlights = async () => {
     const searchDateStr = phaseRouteInfo.value.date;
     const searchDate = new Date(searchDateStr);
     
-    // Use currentWeekStart if it exists for the range, otherwise fallback to search date
     // This allows re-fetching when navigating via prev/next week
     const rangeAnchorDate = dateSelector.value.currentWeekStart || startOfWeek(searchDate, { weekStartsOn: 0 });
     

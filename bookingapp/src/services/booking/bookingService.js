@@ -130,11 +130,11 @@ export const bookingService = {
       });
     }
 
-    // Extract meal addons for depart flight
+    // Extract meal addons for depart flight - UPDATED for multiple meals
     if (bookingStore.addons?.meals?.depart) {
-      Object.entries(bookingStore.addons.meals.depart).forEach(([key, meal]) => {
-        if (meal && meal.id) {
-          formattedAddons.meals[key] = meal.id;
+      Object.entries(bookingStore.addons.meals.depart).forEach(([key, meals]) => {
+        if (Array.isArray(meals) && meals.length > 0) {
+          formattedAddons.meals[key] = meals.map(m => m.id);
         }
       });
     }
@@ -165,10 +165,12 @@ export const bookingService = {
           if (baggage && baggage.id) returnAddons.baggage[key] = baggage.id;
         });
       }
-      // Return meals
+      // Return meals - UPDATED for multiple meals
       if (bookingStore.addons?.meals?.return) {
-        Object.entries(bookingStore.addons.meals.return).forEach(([key, meal]) => {
-          if (meal && meal.id) returnAddons.meals[key] = meal.id;
+        Object.entries(bookingStore.addons.meals.return).forEach(([key, meals]) => {
+          if (Array.isArray(meals) && meals.length > 0) {
+            returnAddons.meals[key] = meals.map(m => m.id);
+          }
         });
       }
       // Return assistance
@@ -201,7 +203,8 @@ export const bookingService = {
       insurance_plan_id: bookingStore.addons?.insurance?.selectedPlanId || null,
       activity_code: bookingStore.activityCode || null,
       is_practice: bookingStore.isPractice || false,
-      booking_session_id: bookingStore.bookingSessionId || null
+      booking_session_id: bookingStore.bookingSessionId || null,
+      fare_families: bookingStore.fareFamilies || {}
     };
 
     if (isMultiCity) {
@@ -222,8 +225,10 @@ export const bookingService = {
           });
         }
         if (bookingStore.addons?.meals?.[segKey]) {
-          Object.entries(bookingStore.addons.meals[segKey]).forEach(([paxKey, meal]) => {
-            if (meal && meal.id) segAddons.meals[paxKey] = meal.id;
+          Object.entries(bookingStore.addons.meals[segKey]).forEach(([paxKey, meals]) => {
+            if (Array.isArray(meals) && meals.length > 0) {
+              segAddons.meals[paxKey] = meals.map(m => m.id);
+            }
           });
         }
         if (bookingStore.addons?.wheelchair?.[segKey]) {
@@ -248,7 +253,8 @@ export const bookingService = {
             class_type: seg.selectedFlight?.class_type || 'Economy',
             price: parseFloat(seg.selectedFlight?.price) || 0,
             airline: seg.selectedFlight?.airline,
-            airline_code: seg.selectedFlight?.airline_code
+            airline_code: seg.selectedFlight?.airline_code,
+            fare_family: bookingStore.fareFamilies?.[segKey] || 'basic'
           },
           addons: segAddons
         };
@@ -266,7 +272,8 @@ export const bookingService = {
         destination: getAirportCode(bookingStore.selectedOutbound.destination),
         departure_time: bookingStore.selectedOutbound.departure_time,
         airline: bookingStore.selectedOutbound.airline,
-        airline_code: bookingStore.selectedOutbound.airline_code
+        airline_code: bookingStore.selectedOutbound.airline_code,
+        fare_family: bookingStore.fareFamilies?.['depart'] || 'basic'
       } : null;
 
       bookingData.selectedReturn = bookingStore.selectedReturn ? {
@@ -277,7 +284,8 @@ export const bookingService = {
         class_type: bookingStore.selectedReturn.class_type || 'Economy',
         origin: getAirportCode(bookingStore.selectedReturn.origin),
         destination: getAirportCode(bookingStore.selectedReturn.destination),
-        departure_time: bookingStore.selectedReturn.departure_time
+        departure_time: bookingStore.selectedReturn.departure_time,
+        fare_family: bookingStore.fareFamilies?.['return'] || 'basic'
       } : null;
 
       bookingData.addons = formattedAddons;

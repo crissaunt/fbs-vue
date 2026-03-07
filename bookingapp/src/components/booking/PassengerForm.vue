@@ -210,17 +210,47 @@
         <div v-if="requiresPassport || form.passport" class="space-y-2">
           <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5 ml-1">Passport Expiry</label>
           <div class="grid grid-cols-3 md:grid-cols-6 gap-3">
-            <select v-model="form.expiryDay" @change="emitData" class="w-full h-11 px-3 bg-white border border-slate-200 rounded-lg text-sm font-medium focus:border-rose-500 outline-none">
-              <option value="">Day</option>
-              <option v-for="d in 31" :key="d" :value="d">{{ d }}</option>
-            </select>
-            <select v-model="form.expiryMonth" @change="emitData" class="col-span-2 w-full h-11 px-3 bg-white border border-slate-200 rounded-lg text-sm font-medium focus:border-rose-500 outline-none">
-              <option value="">Month</option>
-              <option v-for="(m, i) in months" :key="i" :value="i+1">{{ m }}</option>
-            </select>
-            <input v-model="form.expiryYear" type="number" placeholder="Year" :min="new Date().getFullYear()" @input="debounceEmit" class="md:col-span-2 w-full h-11 px-4 bg-white border border-slate-200 rounded-lg text-sm font-medium focus:border-rose-500 outline-none">
+            <div class="relative">
+              <select 
+                v-model="form.expiryDay" 
+                @change="emitData" 
+                class="w-full h-11 px-3 rounded-lg text-sm font-medium focus:border-rose-500 outline-none transition-colors appearance-none"
+                :class="[(showErrors || (form.expiryDay && form.expiryMonth && form.expiryYear)) && (requiresPassport || form.passport) && !passportStatus.isValid ? 'border-2 border-rose-500 bg-rose-50 text-rose-700' : 'border border-slate-200 bg-white hover:border-slate-300 focus:ring-2 focus:ring-rose-500/20']"
+              >
+                <option value="">Day</option>
+                <option v-for="d in 31" :key="d" :value="d">{{ d }}</option>
+              </select>
+              <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+              </div>
+            </div>
+            
+            <div class="col-span-2 relative">
+              <select 
+                v-model="form.expiryMonth" 
+                @change="emitData" 
+                class="w-full h-11 px-3 rounded-lg text-sm font-medium focus:border-rose-500 outline-none transition-colors appearance-none"
+                :class="[(showErrors || (form.expiryDay && form.expiryMonth && form.expiryYear)) && (requiresPassport || form.passport) && !passportStatus.isValid ? 'border-2 border-rose-500 bg-rose-50 text-rose-700' : 'border border-slate-200 bg-white hover:border-slate-300 focus:ring-2 focus:ring-rose-500/20']"
+              >
+                <option value="">Month</option>
+                <option v-for="(m, i) in months" :key="i" :value="i+1">{{ m }}</option>
+              </select>
+              <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+              </div>
+            </div>
+            
+            <input 
+              v-model="form.expiryYear" 
+              type="number" 
+              placeholder="Year" 
+              :min="new Date().getFullYear()" 
+              @input="debounceEmit" 
+              class="md:col-span-2 w-full h-11 px-4 rounded-lg text-sm font-medium focus:border-rose-500 outline-none transition-colors"
+              :class="[(showErrors || (form.expiryDay && form.expiryMonth && form.expiryYear)) && (requiresPassport || form.passport) && !passportStatus.isValid ? 'border-2 border-rose-500 bg-rose-50 text-rose-700 placeholder-rose-300' : 'border border-slate-200 bg-white hover:border-slate-300 focus:ring-2 focus:ring-rose-500/20']"
+            >
           </div>
-          <p v-if="showErrors && requiresPassport && !passportStatus.isValid" class="text-[10px] text-rose-500 font-bold mt-1">
+          <p v-if="(showErrors || (form.expiryDay && form.expiryMonth && form.expiryYear)) && (requiresPassport || form.passport) && !passportStatus.isValid" class="text-[10px] text-rose-500 font-bold mt-1">
             {{ passportStatus.message }}
           </p>
         </div>
@@ -383,18 +413,16 @@ const passportStatus = computed(() => {
     return { isValid: false, message: 'Passport has expired', type: 'error' };
   }
 
-  // 2. Check 6-month rule for international travel
-  if (bookingStore.isInternational) {
-    const sixMonthsFromNow = new Date();
-    sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
-    
-    if (expDate < sixMonthsFromNow) {
-      return { 
-        isValid: false, 
-        message: 'Must be valid for 6 months (Int\'l Law)', 
-        type: 'warning' 
-      };
-    }
+  const travelDate = bookingStore.lastTravelDate ? new Date(bookingStore.lastTravelDate) : new Date();
+  const sixMonthsFromTravel = new Date(travelDate);
+  sixMonthsFromTravel.setMonth(sixMonthsFromTravel.getMonth() + 6);
+  
+  if (expDate < sixMonthsFromTravel) {
+    return { 
+      isValid: false, 
+      message: 'Passport must be valid for at least 6 months from travel', 
+      type: 'warning' 
+    };
   }
 
   return { isValid: true, message: '', type: 'success' };
@@ -486,9 +514,9 @@ const isFormValid = computed(() => {
   
   if (props.type === 'Infant' && !form.associatedAdult) return false;
   
-  // 1. Validate Passport if required (International flight or Foreign National)
-  if (requiresPassport.value) {
-    if (!form.passport || !form.passport.trim()) return false;
+  // 1. Validate Passport if required OR if user provided one
+  if (requiresPassport.value || form.passport) {
+    if (requiresPassport.value && (!form.passport || !form.passport.trim())) return false;
     if (!passportStatus.value.isValid) return false;
   }
 

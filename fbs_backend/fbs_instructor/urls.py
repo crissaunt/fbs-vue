@@ -76,6 +76,7 @@ urlpatterns = [
 
     # ? NEW: Practice Bookings History
     path('student/practice-bookings/', views.get_student_practice_bookings, name='student_practice_bookings'),
+    path('student/checkin-history/', views.get_student_checkin_history, name='student_checkin_history'),
 
     # Admin LMS Overview
     path('admin/lms-overview/', admin_lms_overview, name='admin_lms_overview'),
