@@ -55,7 +55,7 @@ router.register(r'add-ons', AddOnTypeViewSet, basename='addon')
 # BOOKING & PASSENGER
 router.register(r'booking-details', BookingDetailViewSet, basename='bookingdetail')
 router.register(r'passengers', PassengerInfoViewSet, basename='passenger')
-router.register(r'checkins', CheckInDetailViewSet, basename='checkin')
+router.register(r'check-ins', CheckInDetailViewSet, basename='checkin')
 router.register(r'bookings', BookingViewSet, basename='booking')
 router.register(r'payments', PaymentViewSet, basename='payment')
 

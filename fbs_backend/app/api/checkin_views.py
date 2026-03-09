@@ -24,8 +24,8 @@ class CheckInDetailViewSet(viewsets.ModelViewSet):
     
     serializer_class = CheckInDetailSerializer
     pagination_class = None
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'flight_number', 'check_in_counter']
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    # filterset_fields = ['status', 'check_in_counter']
     search_fields = [
         'booking_detail__passenger__first_name',
         'booking_detail__passenger__last_name',
@@ -34,6 +34,8 @@ class CheckInDetailViewSet(viewsets.ModelViewSet):
     ]
     permission_classes = [AllowAny]
     
+
+
     def get_serializer_class(self):
         if self.action == 'list':
             return CheckInListSerializer
