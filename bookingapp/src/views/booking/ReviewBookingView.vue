@@ -245,19 +245,19 @@
               <!-- Adults Breakdown -->
               <div class="price-line" v-if="bookingStore.passengerCount.adults > 0">
                 <span>{{ bookingStore.passengerCount.adults }} Adult(s) (Total Base Fare)</span> 
-                <AnimatedNumber :value="bookingStore.grandTotalForAdults" prefix="₱" />
+                <AnimatedNumber :value="adultTotalLine" prefix="₱" />
               </div>
               
               <!-- Children Breakdown -->
               <div class="price-line" v-if="bookingStore.passengerCount.children > 0">
                 <span>{{ bookingStore.passengerCount.children }} Child(ren) (Total Base Fare)</span> 
-                <AnimatedNumber :value="bookingStore.grandTotalForChildren" prefix="₱" />
+                <AnimatedNumber :value="childTotalLine" prefix="₱" />
               </div>
               
               <!-- Infants Breakdown (50% Base Fare) -->
               <div class="price-line infant-line" v-if="bookingStore.passengerCount.infants > 0">
                 <span>{{ bookingStore.passengerCount.infants }} Infant(s) (50% Base Fare)</span> 
-                <AnimatedNumber :value="bookingStore.grandTotalForInfants" prefix="₱" />
+                <AnimatedNumber :value="infantTotalLine" prefix="₱" />
               </div>
 
               
@@ -401,7 +401,7 @@ onMounted(async () => {
   }
 });
 
-// Not called anymore — kept for reference in case we need it later.
+// Called on mount to confirm the backend total before the user proceeds to payment.
 const fetchBackendPrice = async () => {
   if (!hasFlightData.value) return;
   
@@ -409,6 +409,7 @@ const fetchBackendPrice = async () => {
   try {
     const response = await bookingService.calculatePrice(bookingStore);
     if (response.success) {
+      bookingStore.setBackendBreakdown(response);
       backendTotal.value = response.total_amount;
       backendBreakdown.value = response.breakdown;
       backendTaxDetails.value = response.tax_details || null;
@@ -428,14 +429,19 @@ const fetchBackendPrice = async () => {
   }
 };
 
-const taxesLine = computed(() => {
-  if (!backendBreakdown.value) return null;
-  return backendBreakdown.value.taxes || 0;
+const adultTotalLine = computed(() => {
+  if (backendBreakdown.value?.adult_base) return backendBreakdown.value.adult_base;
+  return bookingStore.grandTotalForAdults;
 });
 
-const insuranceLine = computed(() => {
-  if (!backendBreakdown.value) return null;
-  return backendBreakdown.value.insurance || 0;
+const childTotalLine = computed(() => {
+  if (backendBreakdown.value?.child_base) return backendBreakdown.value.child_base;
+  return bookingStore.grandTotalForChildren;
+});
+
+const infantTotalLine = computed(() => {
+  if (backendBreakdown.value?.infant_base) return backendBreakdown.value.infant_base;
+  return bookingStore.grandTotalForInfants;
 });
 
 // Helper functions
@@ -811,7 +817,7 @@ const confirmBooking = async () => {
         booking_id: response.booking_id,
         booking_reference: response.booking_reference || `CSUCC${String(response.booking_id).padStart(8, '0')}`,
         status: response.status || 'pending',
-        total_amount: response.total_amount || bookingStore.grandTotal
+        total_amount: response.total_amount  // Backend is sole source of truth — never fallback to frontend estimate
       });
       
       // 4. Also set individual fields (for backward compatibility)

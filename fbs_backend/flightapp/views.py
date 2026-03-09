@@ -53,6 +53,44 @@ class AirlineFilterMixin:
         
         return queryset
 
+def get_shared_seat_class_multiplier(airline, seat_class_name):
+    """Unified logic to fetch seat class multiplier across search and booking."""
+    if not seat_class_name:
+        return 1.0
+    
+    # Normalize name: "Economy Class" -> "Economy"
+    name = seat_class_name.strip()
+    if "class" in name.lower():
+        name = name.lower().replace("class", "").strip().capitalize()
+    
+    try:
+        from app.models import SeatClass
+        from django.core.cache import cache
+        
+        # Cache key includes airline if provided
+        airline_id = airline.id if hasattr(airline, 'id') else airline if isinstance(airline, (int, str)) else 'gen'
+        cache_key = f"sc_mult_{airline_id}_{name}"
+        multiplier = cache.get(cache_key)
+        
+        if multiplier is None:
+            # 1. Try airline-specific
+            sc = None
+            if airline:
+                if hasattr(airline, 'id'):
+                    sc = SeatClass.objects.filter(airline=airline, name__iexact=name).first()
+                else:
+                    sc = SeatClass.objects.filter(airline_id=airline, name__iexact=name).first()
+            
+            if not sc:
+                sc = SeatClass.objects.filter(name__iexact=name).first()
+                
+            multiplier = float(sc.price_multiplier) if sc else 1.0
+            cache.set(cache_key, multiplier, 3600)
+            
+        return multiplier
+    except Exception:
+        return 1.0
+
 class CountryViewSet(viewsets.ReadOnlyModelViewSet):
     """
     A read-only viewset that provides 'list' and 'retrieve' actions.
@@ -461,9 +499,12 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             if 'seat_classes' in flight_item:
                 for seat_class in flight_item['seat_classes']:
                     seat_class_name = seat_class.get('name', 'Economy')
-                    raw_seat_price = ml_base * self.get_seat_class_multiplier(seat_class_name)
+                    # APPLY DYNAMIC PRICE (pricing_result['final_price']) TO SEAT CLASS
+                    # This ensures discounts/surges are reflected in the search results
+                    multiplier = get_shared_seat_class_multiplier(schedule.flight.airline, seat_class_name)
+                    raw_seat_price = pricing_result['final_price'] * multiplier
                     
-                    seat_class['base_price'] = rounded_ml_base
+                    seat_class['base_price'] = base_price
                     seat_class['price'] = dynamic_pricing.round_seat_class_price(raw_seat_price)
                     seat_class['raw_price'] = float(raw_seat_price)
         
@@ -488,39 +529,7 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
     # ===================================================================
     
     def get_seat_class_multiplier(self, seat_class_name):
-        """Get multiplier for seat class from database"""
-        if not seat_class_name:
-            return 1.0
-            
-        normalized = seat_class_name.strip()
-        cache_key = f"seat_multiplier_{normalized.lower().replace(' ', '_')}"
-        
-        # Check cache
-        cached_val = cache.get(cache_key)
-        if cached_val is not None:
-            return float(cached_val)
-            
-        try:
-            # 1. Exact match
-            sc = SeatClass.objects.filter(name__iexact=normalized).first()
-            if sc:
-                val = float(sc.price_multiplier)
-                cache.set(cache_key, val, 3600)
-                return val
-                
-            # 2. Try removing "Class" suffix
-            if "class" in normalized.lower():
-                base_name = normalized.lower().replace("class", "").strip()
-                sc = SeatClass.objects.filter(name__iexact=base_name).first()
-                if sc:
-                    val = float(sc.price_multiplier)
-                    cache.set(cache_key, val, 3600)
-                    return val
-                    
-        except Exception as e:
-            print(f"Error fetching seat multiplier: {e}")
-            
-        return 1.0
+        return get_shared_seat_class_multiplier(None, seat_class_name)
     
     def track_search_demand(self, request, queryset):
         """Track search queries for demand-based pricing"""
@@ -734,31 +743,36 @@ class SeatViewSet(viewsets.ModelViewSet):
                     request.session.save()
                     session_id = request.session.session_key
             
-            # 1. Check if permanently booked
-            is_permanently_booked = BookingDetail.objects.filter(
-                seat=seat,
-                status__in=['pending', 'confirmed', 'checkin', 'boarding', 'completed']
-            ).exists()
-            
-            if is_permanently_booked:
-                return Response({
-                    'success': False,
-                    'error': 'This seat is already fully booked'
-                }, status=status.HTTP_409_CONFLICT)
-            
-            # 2. Check if already locked by someone else
-            if seat.is_locked and seat.locked_by_session != session_id:
-                return Response({
-                    'success': False, 
-                    'error': 'Seat is temporarily reserved by another passenger'
-                }, status=status.HTTP_423_LOCKED)
+            # Use atomic transaction with select_for_update to prevent race conditions
+            with transaction.atomic():
+                # Re-fetch seat with row-level lock
+                seat = Seat.objects.select_for_update().get(id=seat.id)
                 
-            # Lock the seat
-            now = timezone.now()
-            seat.locked_at = now
-            seat.locked_until = now + timedelta(minutes=duration)
-            seat.locked_by_session = session_id
-            seat.save()
+                # 1. Check if permanently booked
+                is_permanently_booked = BookingDetail.objects.filter(
+                    seat=seat,
+                    status__in=['pending', 'confirmed', 'checkin', 'boarding', 'completed']
+                ).exists()
+                
+                if is_permanently_booked:
+                    return Response({
+                        'success': False,
+                        'error': 'This seat is already fully booked'
+                    }, status=status.HTTP_409_CONFLICT)
+                
+                # 2. Check if already locked by someone else
+                if seat.is_locked and seat.locked_by_session != session_id:
+                    return Response({
+                        'success': False, 
+                        'error': 'Seat is temporarily reserved by another passenger'
+                    }, status=status.HTTP_423_LOCKED)
+                    
+                # Lock the seat
+                now = timezone.now()
+                seat.locked_at = now
+                seat.locked_until = now + timedelta(minutes=duration)
+                seat.locked_by_session = session_id
+                seat.save()
             
             # Re-read to ensure fresh state
             serializer = self.get_serializer(seat)
@@ -2041,7 +2055,7 @@ def _create_booking_detail(booking, passenger, segment, passenger_data=None, seg
             ).first()
         
         # Calculate base price - DO NOT TRUST FRONTEND
-        session_id = getattr(booking, 'session_id', None) or "booking_creation"
+        session_id = booking.booking_session_id or "booking_creation"
         user = booking.user
         
         flight_pricing_data = {
@@ -2064,30 +2078,14 @@ def _create_booking_detail(booking, passenger, segment, passenger_data=None, seg
             session_id=session_id
         )
 
-        fare_type = selected_flight.get('class_type', 'Economy')
+        fare_type = selected_flight.get('seat_class') or selected_flight.get('class_type', 'Economy')
 
-        def get_multiplier(name):
-            if not name:
-                return 1.0
-            normalized = name.strip()
-            sc = SeatClass.objects.filter(name__iexact=normalized).first()
-            if not sc and "class" in normalized.lower():
-                base_name = normalized.lower().replace("class", "").strip()
-                sc = SeatClass.objects.filter(name__iexact=base_name).first()
-            return float(sc.price_multiplier) if sc else 1.0
+        multiplier = get_shared_seat_class_multiplier(schedule.flight.airline, fare_type)
 
-        multiplier = get_multiplier(fare_type)
-
-        if multiplier == 1.0:
-            frontend_price = selected_flight.get('price')
-            if frontend_price is not None:
-                base_price = Decimal(str(frontend_price))
-            else:
-                base_price = Decimal(str(dynamic_pricing.round_price(price_data['final_price'])))
-        else:
-            ml_base = float(schedule.ml_base_price) if schedule.ml_base_price else float(schedule.price)
-            raw_seat_price = Decimal(str(ml_base)) * Decimal(str(multiplier))
-            base_price = Decimal(str(dynamic_pricing.round_seat_class_price(raw_seat_price)))
+        # SECURITY: Always calculate price on backend, do not trust frontend 'price'
+        ml_base = float(price_data.get('final_price', schedule.ml_base_price or schedule.price))
+        raw_seat_price = Decimal(str(ml_base)) * Decimal(str(multiplier))
+        base_price = Decimal(str(dynamic_pricing.round_seat_class_price(raw_seat_price)))
             
         # Apply discounts
         if passenger.passenger_type and passenger.passenger_type.lower() == 'infant':
@@ -2155,13 +2153,14 @@ def _add_addons_to_booking_detail(booking_detail, segment_addons, passenger_data
                 is_premium = fare_family == 'premium'
                 addon_price = Decimal('0.00') if is_premium else baggage_option.price
                 
+                # COLLISION FIX: Include price and included in lookup
                 addon, created = AddOn.objects.get_or_create(
                     baggage_option=baggage_option,
+                    price=addon_price,
+                    included=is_premium,
                     defaults={
                         'name': f"Extra Baggage {baggage_option.formatted_weight}",
-                        'price': addon_price,
                         'airline': airline,
-                        'included': is_premium
                     }
                 )
                 addons_to_link.append(addon)
@@ -2176,13 +2175,14 @@ def _add_addons_to_booking_detail(booking_detail, segment_addons, passenger_data
                 is_premium = fare_family == 'premium'
                 addon_price = Decimal('0.00') if is_premium else baggage_option.price
                 
+                # COLLISION FIX: Include price and included in lookup
                 addon, created = AddOn.objects.get_or_create(
                     baggage_option=baggage_option,
+                    price=addon_price,
+                    included=is_premium,
                     defaults={
                         'name': f"Extra Baggage {baggage_option.formatted_weight}",
-                        'price': addon_price,
                         'airline': airline,
-                        'included': is_premium
                     }
                 )
                 addons_to_link.append(addon)
@@ -2207,13 +2207,12 @@ def _add_addons_to_booking_detail(booking_detail, segment_addons, passenger_data
             if meal_id:
                 try:
                     meal_option = MealOption.objects.get(id=meal_id)
+                    # COLLISION FIX: Include price in lookup
                     addon, created = AddOn.objects.get_or_create(
                         meal_option=meal_option,
-                        # We use get_or_create, but notice if the same meal is added multiple times 
-                        # for different segments/passengers, we link the same AddOn record.
+                        price=meal_option.price,
                         defaults={
                             'name': f"Meal: {meal_option.name}",
-                            'price': meal_option.price,
                             'airline': airline,
                         }
                     )
@@ -2227,13 +2226,14 @@ def _add_addons_to_booking_detail(booking_detail, segment_addons, passenger_data
     if service_id:
         try:
             assistance_service = AssistanceService.objects.get(id=service_id)
+            # COLLISION FIX: Include price and included in lookup
             addon, created = AddOn.objects.get_or_create(
                 assistance_service=assistance_service,
+                price=assistance_service.price,
+                included=assistance_service.is_included,
                 defaults={
                     'name': f"Assistance: {assistance_service.name}",
-                    'price': assistance_service.price,
                     'airline': airline,
-                    'included': assistance_service.is_included,
                 }
             )
             addons_to_link.append(addon)
@@ -2371,17 +2371,13 @@ def _apply_taxes(booking, booking_details):
                 # 2. Terminal Fee (DPSC) - ₱200 for Adult/Child
                 terminal_fee = Decimal('0.00')
                 if passenger_type != 'infant':
-                    # SECURE CHECK: Only apply DPSC if not already applied by DB rules
-                    if not BookingTax.objects.filter(booking=booking, tax_type__code='DPSC').exists():
-                        terminal_fee = Decimal('200.00')
-                        BookingTax.objects.create(
-                            booking=booking,
-                            tax_type=dpsc_tax,
-                            amount=terminal_fee,
-                            passenger_type=passenger_type
-                        )
-                    else:
-                        print(f"DEBUG: DPSC already applied for booking {booking.id}, skipping fallback.")
+                    terminal_fee = Decimal('200.00')
+                    BookingTax.objects.create(
+                        booking=booking,
+                        tax_type=dpsc_tax,
+                        amount=terminal_fee,
+                        passenger_type=passenger_type
+                    )
 
                 # Ensure detail.tax_amount is treated as Decimal
                 current_tax = Decimal(str(detail.tax_amount)) if detail.tax_amount else Decimal('0.00')
@@ -2468,10 +2464,7 @@ def _update_booking_totals(booking):
         print(f"\n\n=========== DEBUG: _update_booking_totals ===========")
         print(f"DEBUG: In _update_booking_totals for booking {booking.id}")
         
-        # Wait a moment to ensure all details are saved
-        import time
-        time.sleep(0.1)  # Small delay
-        
+        # No delay needed in transaction context
         # Refresh booking from database
         booking.refresh_from_db()
         
@@ -2529,19 +2522,6 @@ def _update_booking_totals(booking):
         
     except Exception as e:
         print(f"[ERR] Error in _update_booking_totals: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        booking.total_amount = calculated_total
-        booking.base_fare_total = base_fare_total
-        booking.insurance_total = insurance_total
-        booking.tax_total = tax_total
-        booking.save()
-        
-        print(f"  [OK] Booking totals saved: base={base_fare_total}, addons={addon_total}, tax={tax_total}, TOTAL={calculated_total}")
-        print(f"=========== END DEBUG: _update_booking_totals ===========\n\n")
-        
-    except Exception as e:
-        print(f"ERROR in _update_booking_totals: {str(e)}")
         import traceback
         traceback.print_exc()
         raise
@@ -2606,9 +2586,12 @@ def process_payment(request):
                 
                 # SECURITY CHECK: Verify the amount paid against the booking total
                 if abs(Decimal(str(amount_paid)) - booking.total_amount) > Decimal('1.00'):
-                    print(f"[WARN] SECURITY ALERT: Payment amount mismatch! Paid: {amount_paid}, Booking Total: {booking.total_amount}")
-                    # We log it and record the actual amount paid, but maybe we shouldn't confirm the booking automatically?
-                    # For now, we'll record it but alert in logs.
+                    print(f"[SECURITY ALERT] Payment mismatch! Paid: {amount_paid}, Required: {booking.total_amount}")
+                    return Response({
+                        'success': False,
+                        'error': f'Payment discrepancy detected. Expected {booking.total_amount}, but received {amount_paid}. This transaction has been flagged for review.',
+                        'booking_reference': booking.pnr
+                    }, status=status.HTTP_400_BAD_REQUEST)
                 
                 payment = Payment.objects.create(
                     booking=booking,
@@ -4460,6 +4443,10 @@ def calculate_booking_price(request):
 
         # 4. Iterate over segments
         overall_tax_breakdown = {}
+        total_adult_base = Decimal('0.00')
+        total_child_base = Decimal('0.00')
+        total_infant_base = Decimal('0.00')
+        
         for idx, segment in enumerate(segments):
             selected_flight = segment.get('selectedFlight')
             if not selected_flight:
@@ -4474,28 +4461,38 @@ def calculate_booking_price(request):
 
             # Base Fare calculation per passenger
             fare_type = selected_flight.get('seat_class') or selected_flight.get('class_type', 'Economy')
-            
-            # Use backend multiplier logic for authoritative pricing
-            def get_authoritative_multiplier(name):
-                if not name: return 1.0
-                normalized = name.strip()
-                sc = SeatClass.objects.filter(name__iexact=normalized).first()
-                if not sc and "class" in normalized.lower():
-                    base_name = normalized.lower().replace("class", "").strip()
-                    sc = SeatClass.objects.filter(name__iexact=base_name).first()
-                return float(sc.price_multiplier) if sc else 1.0
-
-            multiplier = get_authoritative_multiplier(fare_type)
             schedule_id = selected_flight.get('schedule_id') or selected_flight.get('id')
             
             try:
                 schedule_obj = Schedule.objects.get(id=schedule_id)
-                if multiplier == 1.0:
-                    outbound_price = Decimal(str(selected_flight.get('price', 0)))
-                else:
-                    ml_base = float(schedule_obj.ml_base_price) if schedule_obj.ml_base_price else float(schedule_obj.price)
-                    raw_seat_price = Decimal(str(ml_base)) * Decimal(str(multiplier))
-                    outbound_price = Decimal(str(dynamic_pricing.round_seat_class_price(raw_seat_price)))
+                multiplier = get_shared_seat_class_multiplier(schedule_obj.flight.airline, fare_type)
+                
+                # Fetch dynamically calculated price to perfectly match _create_booking_detail
+                flight_pricing_data = {
+                    'schedule_id': schedule_obj.id,
+                    'flight_number': schedule_obj.flight.flight_number,
+                    'airline_code': schedule_obj.flight.airline.code,
+                    'airline_name': schedule_obj.flight.airline.name,
+                    'origin': schedule_obj.flight.route.origin_airport.code,
+                    'destination': schedule_obj.flight.route.destination_airport.code,
+                    'departure_time': schedule_obj.departure_time.isoformat(),
+                    'arrival_time': schedule_obj.arrival_time.isoformat(),
+                    'total_stops': schedule_obj.flight.total_stops,
+                    'is_domestic': schedule_obj.flight.route.is_domestic,
+                }
+                
+                session_id = data.get('booking_session_id', "booking_creation")
+                user = request.user if request.user.is_authenticated else None
+                
+                price_data = dynamic_pricing.get_price_for_user(
+                    flight_pricing_data, 
+                    user=user,
+                    session_id=session_id
+                )
+                
+                ml_base = float(price_data.get('final_price', schedule_obj.ml_base_price or schedule_obj.price))
+                raw_seat_price = Decimal(str(ml_base)) * Decimal(str(multiplier))
+                outbound_price = Decimal(str(dynamic_pricing.round_seat_class_price(raw_seat_price)))
             except Schedule.DoesNotExist:
                 outbound_price = Decimal(str(selected_flight.get('price', 0)))
 
@@ -4508,8 +4505,14 @@ def calculate_booking_price(request):
                 pax_price = outbound_price
                 if pax_type == 'infant':
                     pax_price = outbound_price * Decimal('0.5')
+                    total_infant_base += pax_price
                 elif ph_discount in ['senior', 'pwd']:
                     pax_price = outbound_price * Decimal('0.8')
+                    total_adult_base += pax_price
+                elif pax_type == 'child':
+                    total_child_base += pax_price
+                else:
+                    total_adult_base += pax_price
                 
                 segment_base_fare += pax_price
                 
@@ -4558,6 +4561,11 @@ def calculate_booking_price(request):
                     breakdown['addons'] += price
                 except Exception as e:
                     print(f"[WARN] Price calculation error for addon {item}: {e}")
+
+        # Finalize passenger-type breakdowns (they were already accumulated in total_xxx_base)
+        breakdown['adult_base'] = total_adult_base
+        breakdown['child_base'] = total_child_base
+        breakdown['infant_base'] = total_infant_base
 
         # 5. Calculate Insurance (per passenger, once)
         insurance_plan_id = data.get('insurance_plan_id')
