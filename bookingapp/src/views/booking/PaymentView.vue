@@ -179,6 +179,50 @@
               <h3 class="text-xl font-bold text-gray-900 mb-2">Secure Checkout</h3>
               <p class="text-xs text-gray-400 mb-6 leading-relaxed">You will be redirected to our secure PayMongo payment gateway to complete your transaction.</p>
 
+            
+              <!-- <div v-if="priceBreakdown" class="mb-8 p-6 bg-gray-50/50 rounded-xl border border-gray-100/50 space-y-4">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Price Breakdown</p>
+                
+                <div class="space-y-2.5">
+                
+                  <div v-if="priceBreakdown.adult_base > 0" class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500 font-medium">Adult Base Fare</span>
+                    <span class="text-gray-900 font-bold">₱{{ priceBreakdown.adult_base.toLocaleString() }}</span>
+                  </div>
+                  <div v-if="priceBreakdown.child_base > 0" class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500 font-medium">Child Base Fare</span>
+                    <span class="text-gray-900 font-bold">₱{{ priceBreakdown.child_base.toLocaleString() }}</span>
+                  </div>
+                  <div v-if="priceBreakdown.infant_base > 0" class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500 font-medium">Infant Base Fare</span>
+                    <span class="text-gray-900 font-bold">₱{{ priceBreakdown.infant_base.toLocaleString() }}</span>
+                  </div>
+
+               
+                  <div v-if="priceBreakdown.taxes > 0" class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500 font-medium">Taxes & Fees</span>
+                    <span class="text-gray-900 font-bold">₱{{ priceBreakdown.taxes.toLocaleString() }}</span>
+                  </div>
+
+              
+                  <div v-if="priceBreakdown.addons > 0" class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500 font-medium">Selected Add-ons</span>
+                    <span class="text-gray-900 font-bold">₱{{ priceBreakdown.addons.toLocaleString() }}</span>
+                  </div>
+
+                  
+                  <div v-if="priceBreakdown.insurance > 0" class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500 font-medium">Travel Insurance</span>
+                    <span class="text-gray-900 font-bold">₱{{ priceBreakdown.insurance.toLocaleString() }}</span>
+                  </div>
+
+                  <div class="pt-3 mt-1 border-t border-gray-100 flex justify-between items-center">
+                    <span class="text-sm font-bold text-gray-900">Total Amount</span>
+                    <span class="text-lg font-black text-[#FF579A]">₱{{ totalAmount.toLocaleString() }}</span>
+                  </div>
+                </div>
+              </div> -->
+
               <!-- Promo Code -->
               <div class="mb-8">
                 <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Promo Code</p>
@@ -318,20 +362,30 @@ const contactName = computed(() => {
   return `${info.title || ''} ${info.firstName || ''} ${info.lastName || ''}`.trim() || 'Not specified';
 });
 
+const priceBreakdown = computed(() => bookingStore.backendBreakdown?.breakdown);
+
 const totalAmount = computed(() => {
-  // Priority 1: Amount passed as query param from Review (booking creation response.total_amount)
+  // Priority 1: Backend breakdown from Store (Authoritative - synced in Review page)
+  if (bookingStore.backendBreakdown?.total_amount) {
+    console.log('💰 PaymentView: Using Store backendBreakdown total:', bookingStore.backendBreakdown.total_amount);
+    return bookingStore.backendBreakdown.total_amount;
+  }
+  
+  // Priority 2: Amount passed as query param from Review (booking creation response.total_amount)
   const queryAmount = parseFloat(route.query.amount);
   if (Number.isFinite(queryAmount) && queryAmount > 0) {
-    console.log('💰 PaymentView: Using query amount (from booking response):', queryAmount);
+    console.log('💰 PaymentView: Using query amount:', queryAmount);
     return queryAmount;
   }
-  // Priority 2: Store's booking_total (synced from backend after booking creation)
+
+  // Priority 3: Store's booking_total (legacy sync)
   if (bookingStore.booking_total > 0) {
-    console.log('💰 PaymentView: Using Store booking_total (from backend sync):', bookingStore.booking_total);
+    console.log('💰 PaymentView: Using Store booking_total:', bookingStore.booking_total);
     return bookingStore.booking_total;
   }
-  // Priority 3: Client-computed grand total (fallback)
-  console.log('⚠️ PaymentView: No backend synced total, using Store grandTotal:', bookingStore.grandTotal);
+  
+  // Priority 4: Client-computed grand total (fallback)
+  console.log('⚠️ PaymentView: Falling back to Store grandTotal:', bookingStore.grandTotal);
   return bookingStore.grandTotal || 0;
 });
 

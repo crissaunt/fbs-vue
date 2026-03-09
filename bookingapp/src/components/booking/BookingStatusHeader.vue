@@ -1,5 +1,13 @@
 <template>
   <div class="bg-white py-2 sm:py-3 border-b border-slate-200 sticky top-0 z-50 me-auto shadow-sm mx-auto border-2">
+    <!-- Global Practice Mode Indicator -->
+    <div v-if="bookingStore.isPractice" class="absolute top-0 right-4 h-full flex items-center bg-transparent pointer-events-none">
+      <div class="flex items-center gap-2 bg-blue-50/80 backdrop-blur-sm border border-blue-200 px-3 py-1 rounded-full shadow-sm animate-pulse pointer-events-auto">
+        <span class="flex h-1.5 w-1.5 rounded-full bg-blue-500 text-blue-100 ring ring-blue-500/20"></span>
+        <span class="text-[9px] font-black text-blue-600 uppercase tracking-widest leading-none">Practice Mode</span>
+      </div>
+    </div>
+
     <div class="container mx-auto">
       <div class="flex justify-between items-center max-w-[900px] mx-auto px-5">
         <div v-for="(step, index) in steps" :key="index" class="flex items-center flex-1 last:flex-none">
@@ -38,8 +46,10 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
+import { useBookingStore } from '@/stores/booking';
 
 const route = useRoute();
+const bookingStore = useBookingStore();
 
 const steps = [
   { label: 'Selection', routes: ['SearchResults'] },

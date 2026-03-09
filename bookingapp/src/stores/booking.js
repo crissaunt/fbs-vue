@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { bookingService } from '@/services/booking/bookingService';
+import { seatService } from '@/services/booking/seatService';
 import { useNotificationStore } from './notification';
 
 export const useBookingStore = defineStore('booking', {
@@ -60,6 +61,7 @@ export const useBookingStore = defineStore('booking', {
       depart: 'basic', // 'basic' or 'premium'
       return: 'basic'
     },
+    backendBreakdown: null, // Authoritative Backend Pricing Breakdown
   }),
 
   persist: {
@@ -953,20 +955,74 @@ export const useBookingStore = defineStore('booking', {
       }
     },
 
-    // Copy seats from depart to return
-    copySeatsToReturn() {
-      if (!this.isRoundTrip) return;
+    // Copy seats from depart to return with server-side locking
+    async copySeatsToReturn() {
+      if (!this.isRoundTrip) return { success: true };
 
-      console.log('📋 Copying seats from depart to return segment');
-      this.addons.seats.return = JSON.parse(JSON.stringify(this.addons.seats.depart || {}));
+      console.log('📋 Copying seats from depart to return segment & locking on server');
+      const departSeats = this.addons.seats.depart || {};
+      const returnSeats = JSON.parse(JSON.stringify(departSeats));
+      const sessionId = this.bookingSessionId;
+      const returnScheduleId = this.selectedReturn?.id;
 
-      // Update flight segment info for return seats
-      Object.keys(this.addons.seats.return).forEach(passengerKey => {
-        if (this.addons.seats.return[passengerKey]) {
-          this.addons.seats.return[passengerKey].flight_segment = 'return';
-          this.addons.seats.return[passengerKey].schedule_id = this.selectedReturn?.id;
+      if (!returnScheduleId) {
+        console.error('❌ Cannot copy seats: No return flight selected');
+        return { success: false, error: 'No return flight selected' };
+      }
+
+      const results = [];
+      const passengerKeys = Object.keys(returnSeats);
+
+      for (const passengerKey of passengerKeys) {
+        const seat = returnSeats[passengerKey];
+        if (seat && seat.id) {
+          // Attempt to lock this seat for the return flight
+          // NOTE: In a real system, the 'seat.id' for the departure flight 
+          // might not be the same ID for the return flight even if it's the 
+          // same physical plane. However, the frontend logic seems to assume 
+          // seat objects are mapped. 
+          // CRITICAL: We need to find the seat ID in the RETURN flight map that 
+          // matches the seat_code from the departure flight.
+
+          try {
+            // First, find the matching seat in the return flight
+            const res = await seatService.getSeatsBySchedule(returnScheduleId, sessionId);
+            if (res.success) {
+              const matchingSeat = res.seats.find(s => s.seat_code === seat.seat_code);
+              if (matchingSeat && matchingSeat.is_available) {
+                const lockRes = await seatService.lockSeat(matchingSeat.id, sessionId);
+                if (lockRes.success) {
+                  returnSeats[passengerKey] = {
+                    ...seat,
+                    id: matchingSeat.id,
+                    flight_segment: 'return',
+                    schedule_id: returnScheduleId,
+                    locked_until: lockRes.locked_until
+                  };
+                  results.push({ passengerKey, success: true });
+                } else {
+                  console.warn(`⚠️ Could not lock seat ${seat.seat_code} for return:`, lockRes.error);
+                  delete returnSeats[passengerKey];
+                  results.push({ passengerKey, success: false, error: lockRes.error });
+                }
+              } else {
+                console.warn(`⚠️ Seat ${seat.seat_code} not available or not found in return flight`);
+                delete returnSeats[passengerKey];
+                results.push({ passengerKey, success: false, error: 'Seat not available' });
+              }
+            }
+          } catch (err) {
+            console.error(`❌ Error copying seat for ${passengerKey}:`, err);
+            delete returnSeats[passengerKey];
+          }
         }
-      });
+      }
+
+      this.addons.seats.return = returnSeats;
+      return {
+        success: results.every(r => r.success),
+        results
+      };
     },
 
     // NEW: Copy all add-ons to return
@@ -1041,8 +1097,21 @@ export const useBookingStore = defineStore('booking', {
       this.addons.seats.return = {};
     },
 
-    // Clear seats for a specific segment
-    clearSeatsForSegment(segment = 'depart') {
+    // Clear seats for a specific segment with server-side unlocking
+    async clearSeatsForSegment(segment = 'depart') {
+      const seatsToUnlock = this.addons.seats[segment] || {};
+      const sessionId = this.bookingSessionId;
+
+      console.log(`🧹 Clearing and unlocking all seats for ${segment} flight`);
+
+      const unlockPromises = Object.values(seatsToUnlock)
+        .filter(seat => seat && seat.id)
+        .map(seat => seatService.unlockSeat(seat.id, sessionId));
+
+      // We don't necessarily need to wait for all to finish if we want to be fast,
+      // but for reliability we'll await them all.
+      await Promise.allSettled(unlockPromises);
+
       this.addons.seats[segment] = {};
     },
 
@@ -1092,10 +1161,43 @@ export const useBookingStore = defineStore('booking', {
       console.log('✅ Booking ID and reference set:', id, this.booking_reference);
     },
 
+    setBackendBreakdown(breakdown) {
+      this.backendBreakdown = breakdown;
+      console.log('📊 Authoritative backend breakdown stored');
+    },
+
     // UPDATED: Reset booking with segmented seats
     resetBooking() {
-      console.log('🧹 Resetting booking store...');
-      localStorage.removeItem('current_booking_id');
+      console.log('🧹 Resetting booking store and clearing persistent IDs');
+
+      const keysToRemove = [
+        'current_booking_id',
+        'current_booking_reference',
+        'current_booking_total',
+        'current_booking_status',
+        'payment_session',
+        'booking',
+        'current_booking',
+        'booking-store',
+        'pinia-booking',
+        'last_booking_ref',
+        ...Array.from({ length: 10 }, (_, i) => `pax_${i + 1}`),
+        ...Array.from({ length: 15 }, (_, i) => `passenger_${i + 1}_details`),
+      ];
+
+      keysToRemove.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (error) {
+          console.warn(`Could not remove ${key}:`, error);
+        }
+      });
+
+      try {
+        sessionStorage.clear();
+      } catch (error) {
+        console.warn('Could not clear sessionStorage:', error);
+      }
 
       this.$patch({
         booking_id: null,
@@ -1132,47 +1234,19 @@ export const useBookingStore = defineStore('booking', {
             price: 0
           }
         },
+        activityCode: null,
+        isPractice: false,
+        hasActivityCodeValidation: false,
         sessionExpiry: null,
         isFreshSession: true,
-        bookingSessionId: `sess_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`,
+        fareFamilies: {
+          depart: 'basic',
+          return: 'basic'
+        },
+        backendBreakdown: null
       });
-
-      const keysToRemove = [
-        'booking',
-        'current_booking',
-        'payment_session',
-        'booking-store',
-        'pinia-booking',
-        'current_booking_id',
-        'current_booking_reference',
-        'current_booking_status',
-        'current_booking_total',
-        'last_booking_ref',
-        ...Array.from({ length: 10 }, (_, i) => `pax_${i + 1}`),
-        ...Array.from({ length: 15 }, (_, i) => `passenger_${i + 1}_details`),
-      ];
-
-      keysToRemove.forEach(key => {
-        try {
-          localStorage.removeItem(key);
-          console.log(`🗑️ Removed from localStorage: ${key}`);
-        } catch (error) {
-          console.warn(`Could not remove ${key}:`, error);
-        }
-      });
-
-      try {
-        sessionStorage.clear();
-        console.log('🗑️ Cleared sessionStorage');
-      } catch (error) {
-        console.warn('Could not clear sessionStorage:', error);
-      }
 
       console.log("✅ Booking Store has been completely reset.");
-
-      if (typeof this.$persist === 'function') {
-        this.$persist();
-      }
     },
 
     forceCompleteReset() {

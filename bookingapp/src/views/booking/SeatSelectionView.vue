@@ -960,15 +960,30 @@ const switchToReturnSegment = () => {
   }
 };
 
-const copySeatsToReturn = () => {
+const copySeatsToReturn = async () => {
   if (!bookingStore.isRoundTrip) return;
   
-  bookingStore.copySeatsToReturn();
-  notificationStore.success('Seats copied from depart to return flight!');
-  
-  // Switch to return segment to show copied seats
-  if (activeFlightSegment.value === 'depart') {
-    switchFlightSegment('return');
+  try {
+    isLoading.value = true;
+    const res = await bookingStore.copySeatsToReturn();
+    
+    if (res.success) {
+      notificationStore.success('Seats copied from depart to return flight!');
+      // Switch to return segment to show copied seats
+      if (activeFlightSegment.value === 'depart') {
+        switchFlightSegment('return');
+      }
+    } else {
+      notificationStore.warn('Some seats could not be copied because they are no longer available on the return flight.');
+      if (activeFlightSegment.value === 'depart') {
+        switchFlightSegment('return');
+      }
+    }
+  } catch (err) {
+    console.error('Copy seats error:', err);
+    notificationStore.error('An error occurred while copying seats.');
+  } finally {
+    isLoading.value = false;
   }
 };
 
@@ -981,8 +996,17 @@ const clearSegmentSeats = async () => {
   })
 
   if (confirmed) {
-    bookingStore.clearSeatsForSegment(activeFlightSegment.value);
-    console.log(`🧹 Cleared all seats for ${activeFlightSegmentLabel.value} flight`);
+    try {
+      isLoading.value = true;
+      await bookingStore.clearSeatsForSegment(activeFlightSegment.value);
+      console.log(`🧹 Cleared all seats for ${activeFlightSegmentLabel.value} flight`);
+      notificationStore.success(`Cleared all seats for ${activeFlightSegmentLabel.value} flight.`);
+    } catch (err) {
+      console.error('Clear seats error:', err);
+      notificationStore.error('Failed to clear seats.');
+    } finally {
+      isLoading.value = false;
+    }
   }
 };
 
