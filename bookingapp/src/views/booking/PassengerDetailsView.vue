@@ -294,7 +294,7 @@ const handlePassengerValidation = ({ index, isValid }) => {
 };
 
 const calculateTotal = () => {
-  return (bookingStore.grandTotalForAdults || 0) + (bookingStore.grandTotalForChildren || 0) + (bookingStore.grandTotalForInfants || 0);
+  return bookingStore.grandTotal || 0;
 };
 
 const isPassengerComplete = (index) => {

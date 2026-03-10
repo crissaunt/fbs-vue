@@ -7,9 +7,14 @@
             Welcome Home, Mabuhay!
           </h1>
           <!-- Practice Mode Badge -->
-          <div v-if="bookingStore.isPractice" class="mt-2 flex items-center gap-2 bg-blue-100/90 backdrop-blur-sm border border-blue-200 px-4 py-1.5 rounded-full shadow-sm animate-pulse">
+          <div v-if="bookingStore.isPractice" class="mt-2 flex items-center gap-2 bg-blue-100/90 backdrop-blur-sm border border-blue-200 px-4 py-1.5 rounded-full shadow-sm">
             <span class="flex h-2 w-2 rounded-full bg-blue-500"></span>
             <span class="text-[10px] font-black text-blue-700 uppercase tracking-widest">Practice Mode Active</span>
+          </div>
+          <!-- Activity Mode Badge -->
+          <div v-else-if="bookingStore.activityCode" class="mt-2 flex items-center gap-2 bg-pink-100/90 backdrop-blur-sm border border-pink-200 px-4 py-1.5 rounded-full shadow-sm">
+            <span class="flex h-2 w-2 rounded-full bg-pink-500 animate-pulse"></span>
+            <span class="text-[10px] font-black text-pink-700 uppercase tracking-widest">Activity: {{ bookingStore.activityCode }}</span>
           </div>
         </div>
         <p class="text-base mb-8 opacity-90 max-w-2xl font-medium">
@@ -49,9 +54,9 @@ onMounted(async () => {
   if (session.valid) {
     console.log('⚠️ Active booking session found. Checking if reset is needed...');
     
-    // Skip auto-reset if in practice mode or if user is an instructor
-    if (bookingStore.isPractice) {
-      console.log('🎯 Practice mode active - preserving session state');
+    // Skip auto-reset if in practice mode, activity mode, or if user is an instructor
+    if (bookingStore.hasActivityCodeValidation) {
+      console.log('🎯 Booking session active (Activity or Practice) - preserving session state');
       return;
     }
     if (userStore.isInstructor) {

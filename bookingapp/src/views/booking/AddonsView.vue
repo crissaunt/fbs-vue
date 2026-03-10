@@ -351,6 +351,8 @@
                 <p class="text-xs font-bold uppercase tracking-widest text-white/70">Price Breakdown</p>
               </div>
               <div class="p-5 space-y-2.5">
+                <!-- Base Fares -->
+                <p class="text-[9px] font-bold uppercase tracking-widest text-white/50 mb-1">Base Fares</p>
                 <div v-if="bookingStore.passengerCount.adults > 0" class="flex justify-between items-center">
                   <span class="text-xs text-gray-500">{{ bookingStore.passengerCount.adults }} Adult(s) Base</span>
                   <AnimatedNumber :value="bookingStore.grandTotalForAdults" prefix="&#8369;" class="text-xs font-semibold text-gray-900" />
@@ -360,10 +362,13 @@
                   <AnimatedNumber :value="bookingStore.grandTotalForChildren" prefix="&#8369;" class="text-xs font-semibold text-gray-900" />
                 </div>
                 <div v-if="bookingStore.passengerCount.infants > 0" class="flex justify-between items-center">
-                  <span class="text-xs text-gray-500">{{ bookingStore.passengerCount.infants }} Infant(s)</span>
+                  <span class="text-xs text-gray-500">{{ bookingStore.passengerCount.infants }} Infant(s) (50%)</span>
                   <AnimatedNumber :value="bookingStore.grandTotalForInfants" prefix="&#8369;" class="text-xs font-semibold text-gray-900" />
                 </div>
-                <div v-if="totalSeats > 0 || totalBaggage > 0 || totalMeals > 0 || totalAssistance > 0 || insurancePrice > 0" class="border-t border-dashed border-gray-100 pt-2.5 space-y-2.5">
+
+                <!-- Add-ons Breakdown -->
+                <div v-if="totalSeats > 0 || totalBaggage > 0 || totalMeals > 0 || totalAssistance > 0 || insurancePrice > 0" class="border-t border-dashed border-gray-100 pt-2.5 mt-2 space-y-2.5">
+                  <p class="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1">Add-ons</p>
                   <div v-if="totalSeats > 0 || isAnySegmentPremium" id="sidebar-seats" class="flex justify-between items-center">
                     <span class="text-xs text-gray-500 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>Seat Selection</span>
                     <span v-if="totalSeats === 0 && isAnySegmentPremium" class="text-[10px] font-bold text-emerald-600">INCLUDED</span>
@@ -387,12 +392,23 @@
                     <AnimatedNumber :value="insurancePrice" prefix="&#8369;" class="text-xs font-semibold text-gray-900" />
                   </div>
                 </div>
-                <div class="border-t border-gray-100 pt-3">
+
+                <!-- Taxes Estimate -->
+                <div class="flex justify-between items-center border-t border-dashed border-gray-100 pt-2.5 mt-2">
+                  <span class="text-xs text-gray-400 italic">Taxes &amp; Fees (est.)</span>
+                  <AnimatedNumber :value="taxesPrice" prefix="&#8369;" class="text-xs font-semibold text-gray-500" />
+                </div>
+
+                <!-- Grand Total -->
+                <div class="border-t border-gray-200 pt-3 mt-4">
                   <div id="sidebar-total" class="flex justify-between items-center">
-                    <span class="text-sm font-bold text-gray-700">Subtotal</span>
-                    <AnimatedNumber :value="addonsSubtotal" prefix="&#8369;" class="text-lg font-black text-pink-500" />
+                    <span class="text-gray-900 font-black text-lg">Total Amount</span>
+                    <span class="text-3xl font-black text-gray-900 flex items-center">
+                      <span class="text-pink-500 text-xl mr-1">₱</span>
+                      <AnimatedNumber :value="grandTotal" />
+                    </span>
                   </div>
-                  <p class="text-[10px] text-gray-400 mt-1">Taxes shown at review</p>
+                  <p class="text-[10px] text-gray-400 mt-1 text-right">Inclusive of taxes &amp; fees</p>
                 </div>
               </div>
             </div>

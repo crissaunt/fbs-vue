@@ -180,8 +180,8 @@
               <p class="text-xs text-gray-400 mb-6 leading-relaxed">You will be redirected to our secure PayMongo payment gateway to complete your transaction.</p>
 
             
-              <!-- <div v-if="priceBreakdown" class="mb-8 p-6 bg-gray-50/50 rounded-xl border border-gray-100/50 space-y-4">
-                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Price Breakdown</p>
+              <div v-if="priceBreakdown" class="mb-8 p-6 bg-gray-50/50 rounded-xl border border-gray-100/50 space-y-4">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Price Summary</p>
                 
                 <div class="space-y-2.5">
                 
@@ -216,12 +216,17 @@
                     <span class="text-gray-900 font-bold">₱{{ priceBreakdown.insurance.toLocaleString() }}</span>
                   </div>
 
-                  <div class="pt-3 mt-1 border-t border-gray-100 flex justify-between items-center">
-                    <span class="text-sm font-bold text-gray-900">Total Amount</span>
-                    <span class="text-lg font-black text-[#FF579A]">₱{{ totalAmount.toLocaleString() }}</span>
+                  <div class="border-t border-gray-200 pt-3 mt-4">
+                    <div class="flex justify-between items-center">
+                      <span class="text-gray-900 font-black text-lg">Total Amount</span>
+                      <span class="text-3xl font-black text-gray-900 flex items-center">
+                        <span class="text-pink-500 text-xl mr-1">₱</span>
+                        <AnimatedNumber :value="totalAmount" />
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div> -->
+              </div>
 
               <!-- Promo Code -->
               <div class="mb-8">

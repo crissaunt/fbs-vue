@@ -181,7 +181,7 @@ const routes = [
   {
     path: '/payment-callback',
     name: 'PaymentCallback',
-    meta: { layout: 'BookingLayout', requiresAuth: false },
+    meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true },
     component: () => import('../views/booking/PaymentCallbackView.vue')
   },
   {
@@ -319,10 +319,10 @@ router.beforeEach((to, from, next) => {
     }
   }
 
-  // 4. Prevent accessing Student Dashboard during active booking
-  if (to.path.startsWith('/student/dashboard') && bookingStore.hasActivityCodeValidation) {
-    console.log('⚠️ Active booking session detected - Blocking dashboard access');
-    notificationStore.warn('Please end your activity session before returning to the dashboard.');
+  // 4. Strict Activity Mode Protection: Only allow booking-related pages
+  if (bookingStore.hasActivityCodeValidation && !to.matched.some(record => record.meta.isBookingProtected)) {
+    console.log('⚠️ Activity mode active - Blocking navigation to non-booking page:', to.path);
+    notificationStore.warn('You are currently in an active activity session. Please complete or end your session before navigating elsewhere.');
     return next('/');
   }
 

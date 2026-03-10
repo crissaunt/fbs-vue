@@ -300,13 +300,15 @@
               </div>
             </div>
 
-            <hr>
-            <div class="total-row">
-              <span>Grand Total</span>
-              <span class="final-amt">
-                <span v-if="isCalculatingPrice" class="total-loading">Calculating...</span>
-                <AnimatedNumber v-else :value="grandTotal" prefix="₱" />
-              </span>
+            <div class="border-t border-gray-200 pt-3 mt-4">
+              <div class="flex justify-between items-center">
+                <span class="text-gray-900 font-black text-lg">Total Amount</span>
+                <span class="text-3xl font-black text-gray-900 flex items-center">
+                  <span class="text-pink-500 text-xl mr-1">₱</span>
+                  <span v-if="isCalculatingPrice" class="text-sm text-gray-400 font-normal">Calculating...</span>
+                  <AnimatedNumber v-else :value="grandTotal" />
+                </span>
+              </div>
             </div>
             <div v-if="isUsingFrontendEstimate && !isCalculatingPrice" class="estimate-warning">
               ⚠️ Estimate — exact total confirmed at booking

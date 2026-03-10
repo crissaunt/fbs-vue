@@ -119,7 +119,7 @@ class DynamicPricingService:
             return None
 
 
-    def get_price_for_user(self, flight_data, user=None, session_id=None, context=None):
+    def get_price_for_user(self, flight_data, user=None, session_id=None, context=None, is_search=False):
         """
         Generate different prices for different users/sessions
         'context' can contain pre-fetched factors to avoid DB lookups:
@@ -150,7 +150,7 @@ class DynamicPricingService:
         price *= user_factor
         
         # Session-specific factors
-        session_factor = self.get_session_factor(session_id, flight_data)
+        session_factor = self.get_session_factor(session_id, flight_data, is_search=is_search)
         price *= session_factor
         
         # Real-time demand factor
@@ -273,7 +273,7 @@ class DynamicPricingService:
         
         return 1.0
     
-    def get_session_factor(self, session_id, flight_data):
+    def get_session_factor(self, session_id, flight_data, is_search=False):
         """Different prices for each browsing session"""
         if not session_id:
             return 1.0
@@ -287,9 +287,15 @@ class DynamicPricingService:
             cache_key = f"session_flight_{session_id}_{flight_data.get('flight_number', '')}"
             
             try:
-                visit_count = cache.incr(cache_key)
+                if is_search:
+                    visit_count = cache.incr(cache_key)
+                else:
+                    visit_count = cache.get(cache_key)
+                    if visit_count is None:
+                        visit_count = 1
             except ValueError:
-                cache.set(cache_key, 1, 3600)
+                if is_search:
+                    cache.set(cache_key, 1, 3600)
                 visit_count = 1
                 
             # If visited multiple times, increase the price slightly to create urgency
