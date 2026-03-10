@@ -1581,6 +1581,7 @@ const handleSeatClassSelection = (seatClass) => {
     base_price: flightToStore.base_price || flightToStore.price,
     seat_class: seatClass.name,
     selected_seat_class: seatClass.name,
+    class_type: seatClass.name, // Ensure class_type matches backend expectation
     seat_class_details: seatClass,
     seat_class_features: seatClass.features,
     ml_predicted: seatClass.ml_predicted || flightToStore.ml_predicted

@@ -313,7 +313,7 @@ const goToSection = (id) => {
 }
 
 const handleLogout = () => {
-  localStorage.clear()
+  userStore.logout()
   router.push('/login')
 }
 

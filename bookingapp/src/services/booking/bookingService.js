@@ -78,6 +78,7 @@ export const bookingService = {
       ph_discount_type: p.phDiscountType || 'none',
       ph_discount_id: p.phDiscountId || '',
       type: p.type || 'Adult',
+      associated_adult: p.associatedAdult || null,
       key: p.key || `pax_${Math.random().toString(36).substr(2, 9)}`
     }))
 
@@ -244,7 +245,7 @@ export const bookingService = {
             origin: getAirportCode(seg.origin),
             destination: getAirportCode(seg.destination),
             departure_time: seg.selectedFlight?.departure_time,
-            class_type: seg.selectedFlight?.class_type || 'Economy',
+            class_type: seg.selectedFlight?.class_type || seg.selectedFlight?.selected_seat_class || 'Economy',
             price: parseFloat(seg.selectedFlight?.price) || 0,
             airline: seg.selectedFlight?.airline,
             airline_code: seg.selectedFlight?.airline_code
@@ -260,7 +261,7 @@ export const bookingService = {
         schedule_id: bookingStore.selectedOutbound.schedule_id || bookingStore.selectedOutbound.id,
         flight_number: bookingStore.selectedOutbound.flight_number,
         price: parseFloat(bookingStore.selectedOutbound.price) || 0,
-        class_type: bookingStore.selectedOutbound.class_type || 'Economy',
+        class_type: bookingStore.selectedOutbound.class_type || bookingStore.selectedOutbound.selected_seat_class || 'Economy',
         origin: getAirportCode(bookingStore.selectedOutbound.origin),
         destination: getAirportCode(bookingStore.selectedOutbound.destination),
         departure_time: bookingStore.selectedOutbound.departure_time,
@@ -273,7 +274,7 @@ export const bookingService = {
         schedule_id: bookingStore.selectedReturn.schedule_id || bookingStore.selectedReturn.id,
         flight_number: bookingStore.selectedReturn.flight_number,
         price: parseFloat(bookingStore.selectedReturn.price) || 0,
-        class_type: bookingStore.selectedReturn.class_type || 'Economy',
+        class_type: bookingStore.selectedReturn.class_type || bookingStore.selectedReturn.selected_seat_class || 'Economy',
         origin: getAirportCode(bookingStore.selectedReturn.origin),
         destination: getAirportCode(bookingStore.selectedReturn.destination),
         departure_time: bookingStore.selectedReturn.departure_time

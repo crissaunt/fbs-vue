@@ -52,7 +52,7 @@
           <div class="space-y-16">
             <section>
               <h3 class="text-[20px] font-bold text-[#111827] mb-8 flex items-center gap-3">
-                Core Requirements
+                Configuration Requirements
                 <span class="h-px flex-1 bg-[#F1F5F9]"></span>
               </h3>
               
@@ -88,6 +88,112 @@
                   </div>
                 </div>
               </div>
+            </section>
+
+            <!-- Trip Routing Verification (Specific UI per Trip Type) -->
+            <section>
+              <h3 class="text-[20px] font-bold text-[#111827] mb-8 flex items-center gap-3">
+                Routing Verification
+                <span class="h-px flex-1 bg-[#F1F5F9]"></span>
+              </h3>
+
+              <!-- One-Way Blocks -->
+              <div v-if="activity?.required_trip_type === 'one_way'" class="grid grid-cols-1 gap-6">
+                 <!-- Outbound Card -->
+                 <div class="p-8 border rounded-[24px] bg-white transition-all hover:shadow-sm"
+                      :class="matches.origin && matches.destination && matches.departure_date ? 'border-[#10B981]/20' : 'border-[#EF4444]/20'">
+                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-[#F1F5F9]">
+                      <span class="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em]">One-Way Itinerary</span>
+                      <span class="px-3 py-1 bg-[#F8FAFC] rounded-full text-[10px] font-black text-[#64748B] uppercase">Single Leg</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-8 items-center relative">
+                       <div class="space-y-4 relative z-10">
+                          <p class="text-[11px] font-black text-[#94A3B8] uppercase tracking-widest">Expected Routing</p>
+                          <p class="text-[16px] font-bold text-[#111827]">{{ activity.required_origin }} → {{ activity.required_destination }}</p>
+                          <p class="text-[13px] font-medium text-[#64748B]">{{ activity.required_departure_date || 'Any Date' }}</p>
+                       </div>
+                       <div class="space-y-4 relative z-10 text-right border-l border-dashed border-[#E2E8F0] pl-8"
+                            :class="matches.origin && matches.destination && matches.departure_date ? 'border-[#10B981]/30' : 'border-[#EF4444]/30'">
+                          <p class="text-[11px] font-black text-[#94A3B8] uppercase tracking-widest">Student Trajectory</p>
+                          <p class="text-[16px] font-bold" :class="matches.origin && matches.destination ? 'text-[#111827]' : 'text-[#EF4444]'">{{ actualOrigin }} → {{ actualDestination }}</p>
+                          <p class="text-[13px] font-bold" :class="matches.departure_date ? 'text-[#10B981]' : 'text-[#EF4444]'">{{ actualDepartureDate }}</p>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+
+              <!-- Round-Trip Blocks -->
+              <div v-if="activity?.required_trip_type === 'round_trip'" class="grid grid-cols-2 gap-6">
+                 <!-- Outbound Leg -->
+                 <div class="p-8 border rounded-[24px] bg-white transition-all hover:shadow-sm flex flex-col justify-between"
+                      :class="matches.origin && matches.destination && matches.departure_date ? 'border-[#10B981]/20' : 'border-[#EF4444]/20'">
+                    <div>
+                      <div class="flex justify-between items-center mb-6 pb-4 border-b border-[#F1F5F9]">
+                        <span class="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em]">Outbound Leg</span>
+                        <span class="text-[16px]">✈️</span>
+                      </div>
+                      <div class="space-y-4 mb-4">
+                        <p class="text-[11px] font-black text-[#94A3B8] uppercase tracking-widest">Expected</p>
+                        <p class="text-[14px] font-bold text-[#111827]">{{ activity.required_origin }} → {{ activity.required_destination }}</p>
+                        <p class="text-[12px] font-medium text-[#64748B]">{{ activity.required_departure_date || 'Any Date' }}</p>
+                      </div>
+                    </div>
+                    <div class="pt-4 border-t border-dashed border-[#E2E8F0] space-y-2 mt-auto text-right"
+                         :class="matches.origin && matches.destination && matches.departure_date ? 'border-[#10B981]/30' : 'border-[#EF4444]/30'">
+                        <p class="text-[11px] font-black text-[#94A3B8] uppercase tracking-widest">Booked</p>
+                        <p class="text-[14px] font-bold" :class="matches.origin && matches.destination ? 'text-[#111827]' : 'text-[#EF4444]'">{{ actualOrigin }} → {{ actualDestination }}</p>
+                        <p class="text-[12px] font-bold" :class="matches.departure_date ? 'text-[#10B981]' : 'text-[#EF4444]'">{{ actualDepartureDate }}</p>
+                    </div>
+                 </div>
+
+                 <!-- Return Leg -->
+                 <div class="p-8 border rounded-[24px] bg-white transition-all hover:shadow-sm flex flex-col justify-between"
+                      :class="matches.return_origin && matches.return_destination && matches.return_date ? 'border-[#10B981]/20' : 'border-[#EF4444]/20'">
+                    <div>
+                      <div class="flex justify-between items-center mb-6 pb-4 border-b border-[#F1F5F9]">
+                        <span class="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em]">Return Leg</span>
+                        <span class="text-[16px]">🛬</span>
+                      </div>
+                      <div class="space-y-4 mb-4">
+                        <p class="text-[11px] font-black text-[#94A3B8] uppercase tracking-widest">Expected</p>
+                        <p class="text-[14px] font-bold text-[#111827]">{{ activity.required_destination }} → {{ activity.required_origin }}</p>
+                        <p class="text-[12px] font-medium text-[#64748B]">{{ activity.required_return_date || 'Any Date' }}</p>
+                      </div>
+                    </div>
+                    <div class="pt-4 border-t border-dashed border-[#E2E8F0] space-y-2 mt-auto text-right"
+                         :class="matches.return_origin && matches.return_destination && matches.return_date ? 'border-[#10B981]/30' : 'border-[#EF4444]/30'">
+                        <p class="text-[11px] font-black text-[#94A3B8] uppercase tracking-widest">Booked</p>
+                        <p class="text-[14px] font-bold" :class="matches.return_origin && matches.return_destination ? 'text-[#111827]' : 'text-[#EF4444]'">{{ actualReturnOrigin }} → {{ actualReturnDestination }}</p>
+                        <p class="text-[12px] font-bold" :class="matches.return_date ? 'text-[#10B981]' : 'text-[#EF4444]'">{{ actualReturnDate }}</p>
+                    </div>
+                 </div>
+              </div>
+
+               <!-- Multi-City Blocks -->
+               <div v-if="activity?.required_trip_type === 'multi_city' && activity?.segments?.length" class="space-y-4">
+                  <div v-for="(seg, idx) in activity.segments" :key="idx" 
+                       class="p-6 border rounded-[20px] bg-white transition-all flex items-center justify-between gap-8"
+                       :class="matches.segments[idx]?.origin && matches.segments[idx]?.destination && matches.segments[idx]?.departure_date ? 'border-[#10B981]/20' : 'border-[#EF4444]/20'">
+                       <div class="flex-shrink-0 w-16">
+                          <span class="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em]">Leg {{ idx + 1 }}</span>
+                       </div>
+                       <div class="flex-1 space-y-1">
+                          <p class="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Expected</p>
+                          <p class="text-[14px] font-bold text-[#111827]">{{ seg.origin }} → {{ seg.destination }}</p>
+                          <p class="text-[12px] font-medium text-[#94A3B8]">{{ seg.departure_date || 'Any' }}</p>
+                       </div>
+                       <div class="w-px h-12 bg-[#F1F5F9]"></div>
+                       <div class="flex-1 space-y-1 text-right">
+                          <p class="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Booked</p>
+                          <p class="text-[14px] font-bold" :class="matches.segments[idx]?.origin && matches.segments[idx]?.destination ? 'text-[#111827]' : 'text-[#EF4444]'">
+                            {{ actualSegments[idx] ? `${actualSegments[idx].origin} → ${actualSegments[idx].destination}` : 'Missing Data' }}
+                          </p>
+                          <p class="text-[12px] font-bold" :class="matches.segments[idx]?.departure_date ? 'text-[#10B981]' : 'text-[#EF4444]'">
+                            {{ actualSegments[idx]?.departure_date || 'Missing' }}
+                          </p>
+                       </div>
+                  </div>
+               </div>
             </section>
 
             <!-- Passenger Verification (Minimalist Cards) -->
@@ -169,14 +275,30 @@ const formatTripType = (type) => {
 };
 
 const formatClass = (cls) => {
-  const map = { 'economy': 'Economy', 'premium_economy': 'Premium Economy', 'business': 'Business', 'first': 'First Class' };
-  return map[cls?.toLowerCase()] || cls || 'N/A';
+  if (!cls) return 'N/A';
+  const map = { 
+    'economy': 'Economy', 
+    'premium_economy': 'Premium Economy', 
+    'business': 'Business', 
+    'first': 'First Class',
+    'first_class': 'First Class',
+    'business_class': 'Business Class'
+  };
+  return map[cls.toLowerCase().replace(/[\s_]/g, '')] || cls;
 };
 
 // --- Data Extraction for "Your Work" ---
 const actualOrigin = computed(() => props.booking?.details?.[0]?.schedule?.origin || 'N/A');
 const actualDestination = computed(() => props.booking?.details?.[0]?.schedule?.destination || 'N/A');
-const actualClass = computed(() => props.booking?.details?.[0]?.seat_class_name || 'N/A');
+const actualClass = computed(() => {
+  if (!props.booking?.details?.length) return 'N/A';
+  // Find the outbound segment by matching required_origin (for round-trip and multi-city)
+  const reqOrigin = props.activity?.required_origin?.toLowerCase();
+  const outboundDetail = reqOrigin
+    ? props.booking.details.find(d => d.schedule?.origin?.toLowerCase() === reqOrigin)
+    : null;
+  return (outboundDetail || props.booking.details[0])?.seat_class_name || 'N/A';
+});
 
 const actualSegments = computed(() => {
   if (!props.booking?.details) return [];
@@ -195,6 +317,20 @@ const actualReturnDate = computed(() => {
         return returnLeg ? returnLeg.departure_date : 'N/A';
     }
     return 'N/A';
+});
+
+const actualReturnOrigin = computed(() => {
+  if (props.activity?.required_trip_type !== 'round_trip') return 'N/A';
+  const reqOrigin = props.activity?.required_origin?.toLowerCase();
+  const detail = props.booking?.details?.find(d => !reqOrigin || d.schedule?.destination?.toLowerCase() === reqOrigin);
+  return detail?.schedule?.origin || 'N/A';
+});
+
+const actualReturnDestination = computed(() => {
+  if (props.activity?.required_trip_type !== 'round_trip') return 'N/A';
+  const reqOrigin = props.activity?.required_origin?.toLowerCase();
+  const detail = props.booking?.details?.find(d => !reqOrigin || d.schedule?.destination?.toLowerCase() === reqOrigin);
+  return detail?.schedule?.destination || 'N/A';
 });
 const actualPaxCount = computed(() => props.booking?.details?.length || 0);
 const actualPaxTypes = computed(() => {
@@ -215,7 +351,14 @@ const matches = computed(() => {
     trip_type: props.activity.required_trip_type === props.booking.trip_type,
     origin: props.activity.required_origin?.toLowerCase() === actualOrigin.value?.toLowerCase(),
     destination: props.activity.required_destination?.toLowerCase() === actualDestination.value?.toLowerCase(),
-    travel_class: props.activity.required_travel_class?.toLowerCase() === actualClass.value?.toLowerCase(),
+    return_origin: props.activity.required_trip_type !== 'round_trip' || props.activity.required_destination?.toLowerCase() === actualReturnOrigin.value?.toLowerCase(),
+    return_destination: props.activity.required_trip_type !== 'round_trip' || props.activity.required_origin?.toLowerCase() === actualReturnDestination.value?.toLowerCase(),
+    travel_class: (
+      props.activity.required_travel_class?.toLowerCase().replace(/[\s_]/g, '') ===
+      actualClass.value?.toLowerCase().replace(/[\s_]/g, '')
+    ) || (
+      props.activity.required_travel_class?.toLowerCase() === actualClass.value?.toLowerCase()
+    ),
     pax_count: ((props.activity.required_passengers || 0) + (props.activity.required_children || 0) + (props.activity.required_infants || 0)) === actualPaxCount.value,
     departure_date: !(props.activity.required_departure_date || props.activity.departure_date) || (props.activity.required_departure_date || props.activity.departure_date) === actualDepartureDate.value,
     return_date: props.activity.required_trip_type && props.activity.required_trip_type.toLowerCase().replace('_', ' ') !== 'round trip' || !(props.activity.required_return_date || props.activity.arrival_date) || (props.activity.required_return_date || props.activity.arrival_date) === actualReturnDate.value,
@@ -247,8 +390,53 @@ const matches = computed(() => {
         gender: { expected: expected.gender?.toUpperCase(), actual: (actual?.title || actual?.gender || 'N/A').toUpperCase(), isMet: false },
         dob: { expected: expected.date_of_birth, actual: actual?.date_of_birth || 'N/A', isMet: false },
         nationality: { expected: expected.nationality, actual: actual?.nationality || 'N/A', isMet: false },
-        passport: { expected: expected.passport_number || 'None', actual: actual?.passport_number || 'None', isMet: false }
+        passport: { expected: expected.passport_number || 'None', actual: actual?.passport_number || 'None', isMet: false },
+        seating: { 
+          expected: expected.type?.toLowerCase() === 'infant' || expected.passenger_type?.toLowerCase() === 'infant'
+            ? (expected.associated_adult_index ? `Adult ${expected.associated_adult_index}` : 'Any') 
+            : 'N/A',
+          actual: expected.type?.toLowerCase() === 'infant' || expected.passenger_type?.toLowerCase() === 'infant'
+            ? (actual?.associated_adult ? `Adult ${actual?.associated_adult}` : 'None')
+            : 'N/A',
+          isMet: true 
+        },
+        addons: {
+          expected: 'None Required',
+          actual: 'N/A',
+          isMet: true
+        }
       };
+
+      // Handle Add-ons Matching
+      const passengerAddons = props.activity.activity_addons?.filter(ra => 
+        (ra.passenger?.first_name?.toLowerCase() === expected.first_name?.toLowerCase() && 
+         ra.passenger?.last_name?.toLowerCase() === expected.last_name?.toLowerCase()) ||
+        (ra.passenger_index !== undefined && props.activity.passengers.indexOf(expected) === ra.passenger_index)
+      ) || [];
+
+      if (passengerAddons.length > 0) {
+        detailMatch.addons.expected = passengerAddons.map(ra => ra.addon_name || ra.addon?.name).join(', ') || 'None';
+        
+        // Find actual addons for this specific passenger (actual is from findMatchingPassenger)
+        if (actual) {
+          // We need the booking detail for this passenger to get their actual addons
+          const passengerBookingDetail = props.booking.details.find(d => 
+            d.passenger?.first_name?.toLowerCase() === expected.first_name?.toLowerCase() &&
+            d.passenger?.last_name?.toLowerCase() === expected.last_name?.toLowerCase()
+          );
+
+          if (passengerBookingDetail) {
+            detailMatch.addons.actual = passengerBookingDetail.addons?.map(a => a.name).join(', ') || 'None';
+            detailMatch.addons.isMet = passengerAddons.every(ra => 
+              passengerBookingDetail.addons?.some(a => a.id === ra.addon_id || a.name === ra.addon_name)
+            );
+          } else {
+            detailMatch.addons.isMet = false;
+          }
+        } else {
+          detailMatch.addons.isMet = false;
+        }
+      }
 
       if (actual) {
         detailMatch.name.isMet = actual.first_name?.toLowerCase() === expected.first_name?.toLowerCase() && actual.last_name?.toLowerCase() === expected.last_name?.toLowerCase();
@@ -260,6 +448,10 @@ const matches = computed(() => {
         detailMatch.dob.isMet = actual.date_of_birth === expected.date_of_birth;
         detailMatch.nationality.isMet = actual.nationality?.toLowerCase() === expected.nationality?.toLowerCase();
         detailMatch.passport.isMet = (actual.passport_number || '').trim() === (expected.passport_number || '').trim();
+        
+        if (expected.type?.toLowerCase() === 'infant' || expected.passenger_type?.toLowerCase() === 'infant') {
+          detailMatch.seating.isMet = String(actual.associated_adult) === String(expected.associated_adult_index);
+        }
       }
 
       m.passenger_details.push(detailMatch);
@@ -287,7 +479,10 @@ const findMatchingPassenger = (expected) => {
 const comparisonRows = computed(() => {
   if (!props.activity || !props.booking) return [];
   const m = matches.value;
-  return [
+  const reqTripType = (props.activity.required_trip_type || '').toLowerCase();
+  const isMultiCity = reqTripType === 'multi_city';
+
+  const rows = [
     {
       label: 'Trip Configuration',
       priority: 'High',
@@ -305,73 +500,32 @@ const comparisonRows = computed(() => {
     {
       label: 'Cabin Selection',
       priority: 'High',
-      requirement: formatClass(props.activity.required_travel_class) + ' Class',
+      requirement: props.activity.required_travel_class || 'N/A',
       work: actualClass.value,
       isMet: m.travel_class
     },
     {
-      label: 'Financial Budget',
+      label: 'Infant Seating',
       priority: 'High',
-      requirement: 'Under $2002.00',
-      work: '$4500.00',
-      diff: '$2498.00 OVER',
-      isMet: false
-    },
-    {
-      label: 'Departure Port',
-      priority: 'Medium',
-      requirement: props.activity.required_origin,
-      work: actualOrigin.value,
-      isMet: m.origin
-    },
-    {
-      label: 'Destination Port',
-      priority: 'Medium',
-      requirement: props.activity.required_destination,
-      work: actualDestination.value,
-      isMet: m.destination
-    },
-    {
-      work: actualDepartureDate.value,
-      isMet: m.departure_date
+      requirement: props.activity.passengers?.filter(p => p.type?.toLowerCase() === 'infant').length > 0
+        ? 'Correct adult assignment'
+        : 'None required',
+      work: props.activity.passengers?.filter(p => p.type?.toLowerCase() === 'infant').length > 0
+        ? (matches.value.passenger_details?.filter(p => p.seating.expected !== 'N/A' && p.seating.isMet).length === matches.value.passenger_details?.filter(p => p.seating.expected !== 'N/A').length ? 'All assigned' : 'Wrong assignment')
+        : 'N/A',
+      isMet: matches.value.passenger_details?.filter(p => p.seating.expected !== 'N/A').every(p => p.seating.isMet)
     }
   ];
 
-  const reqTripType = (props.activity.required_trip_type || '').toLowerCase();
-  
-  if (reqTripType === 'round_trip') {
-      rows.push({ 
-        label: 'Schedule Match (Return)', 
-        priority: 'Medium', 
-        requirement: `Return on ${props.activity.required_return_date || 'Any'}`, 
-        work: actualReturnDate.value || '-', 
-        isMet: m.return_date 
-      });
-  } else if (reqTripType === 'multi_city' && props.activity.segments) {
-      props.activity.segments.forEach((seg, idx) => {
-        const actual = actualSegments.value[idx];
-        const segMatch = m.segments[idx];
-        
-        rows.push({
-          label: `Leg ${idx + 1} Route`,
-          priority: 'Medium',
-          requirement: `${seg.origin} → ${seg.destination}`,
-          work: actual ? `${actual.origin} → ${actual.destination}` : 'Not Found',
-          isMet: segMatch?.origin && segMatch?.destination
-        });
-        
-        rows.push({
-          label: `Leg ${idx + 1} Schedule`,
-          priority: 'Medium',
-          requirement: seg.departure_date,
-          work: actual?.departure_date || 'N/A',
-          isMet: segMatch?.departure_date
-        });
-      });
+  if (isMultiCity && props.activity.segments?.length) {
+    // Multi-city visuals handled in specialized block
+  } else {
+    // Round-trip & One-way explicitly handled in specialized routing block
   }
 
   return rows;
 });
+
 
 // --- Scoring & Breakdown ---
 const scoreBreakdown = computed(() => {
@@ -379,8 +533,9 @@ const scoreBreakdown = computed(() => {
   const m = matches.value;
   const total = parseFloat(props.activity.total_points || 100);
   
-  // Compliance (40%): Trip, Origin, Dest, Class
-  const complianceScore = ( (m.trip_type ? 1 : 0) + (m.origin ? 1 : 0) + (m.destination ? 1 : 0) + (m.travel_class ? 1 : 0) ) / 4 * (total * 0.4);
+  // Configuration (40%): Trip, Class (Not Routes)
+  let compPoints = (m.trip_type ? 1 : 0) + (m.travel_class ? 1 : 0);
+  const complianceScore = ( compPoints / 2 ) * (total * 0.4);
   
   // Passengers (30%): Count & Exhaustive Details
   let pDetailPoints = 0;
@@ -409,11 +564,16 @@ const scoreBreakdown = computed(() => {
   
   const completionScore = (completionMax > 0 ? (completionPoints / completionMax) : 1) * (total * 0.3);
 
+  const tripType = (props.activity.required_trip_type || '').toLowerCase();
+  let routingLabel = 'Completion';
+  if (tripType === 'one_way') routingLabel = 'One-Way Routing';
+  else if (tripType === 'round_trip') routingLabel = 'Round-Trip Schedule';
+  else if (tripType === 'multi_city') routingLabel = 'Multi-Leg Routing';
+
   return [
-    { label: 'Compliance', score: complianceScore, max: total * 0.4, color: 'bg-[#111827]' },
+    { label: 'Configuration', score: complianceScore, max: total * 0.4, color: 'bg-[#111827]' },
     { label: 'Passengers', score: passengerScore, max: total * 0.3, color: 'bg-[#111827]' },
-    { label: 'Completion', score: completionScore, max: total * 0.3, color: 'bg-[#111827]' },
-    { label: 'Budget', score: 0, max: 0, color: 'bg-[#E2E8F0]' }
+    { label: routingLabel, score: completionScore, max: total * 0.3, color: 'bg-[#111827]' }
   ];
 });
 

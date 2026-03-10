@@ -25,6 +25,9 @@ from .views import (
     bulk_enroll_students,
     clear_section_enrollments,
     admin_lms_overview,
+    get_eligible_students,
+    get_available_travel_classes,
+    get_available_addons,
 )
 
 urlpatterns = [
@@ -52,10 +55,15 @@ urlpatterns = [
     path('instructor/sections/<int:section_id>/activities/create/', create_activity, name='api_create_activity'),
     path('instructor/sections/<int:section_id>/activities/<int:activity_id>/delete/', delete_activity, name='delete_activity'),
     
+    # Travel/Add-on Lookups (route+date aware)
+    path('instructor/available-travel-classes/', get_available_travel_classes, name='get_available_travel_classes'),
+    path('instructor/available-addons/', get_available_addons, name='get_available_addons'),
+    
     # Activity Details & Activation
     path('instructor/activities/<int:activity_id>/', activity_details, name='activity-details'),
     path('instructor/activities/<int:activity_id>/submissions/', get_activity_submissions, name='activity-submissions'),
     path('instructor/activity/<int:activity_id>/activate/', activate_activity, name='activate_activity'),
+    path('instructor/activity/<int:activity_id>/eligible-students/', get_eligible_students, name='get_eligible_students'),
     path('instructor/activities/<int:activity_id>/submissions/<int:student_id>/grade/', submit_grade, name='submit-grade'),
     path('instructor/activities/<int:activity_id>/release-grades/', release_activity_grades, name='release-grades'),
 

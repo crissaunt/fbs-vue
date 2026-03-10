@@ -16,6 +16,7 @@ import { useRoute } from 'vue-router'
 // Import layouts
 import AdminLayout from '@/views/admin/adminlayout.vue'
 import InstructorLayout from '@/views/Instructor/InstructorLayout.vue'
+import StudentLayout from '@/views/Student/StudentLayout.vue'
 import BookingLayout from '@/views/booking/layout/BookingLayout.vue'
 import GlobalToast from '@/components/common/GlobalToast.vue'
 import GlobalModalManager from '@/components/common/GlobalModalManager.vue'
@@ -29,6 +30,7 @@ const route = useRoute()
 const layouts = {
   AdminLayout,
   InstructorLayout,
+  StudentLayout,
   BookingLayout
 }
 

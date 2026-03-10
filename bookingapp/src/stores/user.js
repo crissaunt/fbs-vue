@@ -100,18 +100,32 @@ export const useUserStore = defineStore('user', {
 
         logout() {
             // Call backend to logout
-            authService.logout();
-            
+            try {
+                authService.logout();
+            } catch (e) {
+                console.error("Logout error:", e);
+            }
+
             this.user = null;
             this.role = null;
             this.token = null;
             this.studentProfile = null;
             this.instructorProfile = null;
 
-            localStorage.clear();
-            sessionStorage.clear();
+            // Targeted clearing of auth-related keys only
+            const keysToRemove = [
+                'token',
+                'auth_token',
+                'user',
+                'user_data',
+                'role',
+                'isEnrolled',
+                'student_data',
+                'user-store'
+            ];
+            keysToRemove.forEach(key => localStorage.removeItem(key));
 
-            // The router will handle redirection based on auth state
+            sessionStorage.clear();
         }
     }
 });

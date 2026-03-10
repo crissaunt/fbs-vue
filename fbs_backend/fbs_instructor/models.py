@@ -143,6 +143,11 @@ class ActivityPassenger(models.Model):
     middle_name = models.CharField(max_length=100, blank=True, null=True)
     last_name = models.CharField(max_length=100)
     passenger_type = models.CharField(max_length=10, choices=[('adult', 'Adult'), ('child', 'Child'), ('infant', 'Infant')], default='adult')
+    passenger_category = models.CharField(
+        max_length=10, 
+        choices=[('none', 'Regular'), ('senior', 'Senior Citizen'), ('pwd', 'PWD')], 
+        default='none'
+    )
     gender = models.CharField(max_length=10, choices=[('mr', 'Mr.'), ('mrs', 'Mrs.')])
     date_of_birth = models.DateField()
     passport_number = models.CharField(max_length=50, blank=True, null=True)
@@ -191,6 +196,9 @@ class ActivityStudentBinding(models.Model):
     submitted_at = models.DateTimeField(null=True, blank=True)
     grade = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     feedback = models.TextField(blank=True)
+    rubric_breakdown = models.JSONField(null=True, blank=True)
+    assigned_seats = models.JSONField(null=True, blank=True)
+    is_released = models.BooleanField(default=False)
     
     class Meta:
         unique_together = ('activity', 'student')  # Prevent duplicate bindings
@@ -251,3 +259,17 @@ class UserSession(models.Model):
         count = expired.count()
         expired.delete()
         return count
+
+
+class ScheduleNotificationLog(models.Model):
+    """Tracks sent notifications to avoid duplicates"""
+    section = models.ForeignKey(Section, on_delete=models.CASCADE)
+    schedule_id = models.CharField(max_length=100)  # e.g. "Monday-09:00"
+    date_sent = models.DateField(auto_now_add=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('section', 'schedule_id', 'date_sent')
+
+    def __str__(self):
+        return f"Notif for {self.section.section_name} on {self.date_sent} at {self.schedule_id}"

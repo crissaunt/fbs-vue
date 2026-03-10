@@ -1448,9 +1448,34 @@ def create_booking(request):
             print(f"DEBUG: Updating booking totals")
             _update_booking_totals(booking)
             
-            # NOTE: Auto-grading happens in process_payment_webhook and process_payment_with_id
-            # AFTER the payment is confirmed (status = 'Confirmed'). DO NOT grade here.
-            
+            # NEW: Auto-grading trigger for direct instructor display
+            if booking.activity:
+                print(f"DEBUG: Triggering early auto-grading for activity-linked booking {booking.id}")
+                try:
+                    from fbs_instructor.views import calculate_submission_score
+                    from fbs_instructor.models import ActivityStudentBinding
+                    
+                    # Force calculation using the professional rubric logic
+                    score_data = calculate_submission_score(booking.activity, booking)
+                    
+                    # Update or create binding with the score
+                    binding, created = ActivityStudentBinding.objects.get_or_create(
+                        activity=booking.activity,
+                        student__user=booking.user
+                    )
+                    
+                    binding.grade = score_data['total']
+                    binding.rubric_breakdown = score_data['rubric_breakdown']
+                    binding.status = 'submitted'
+                    binding.submitted_at = timezone.now()
+                    binding.save()
+                    
+                    print(f"DEBUG: Early grading SUCCESS for booking {booking.id}. [Score: {score_data['total']}]")
+                except Exception as e:
+                    print(f"DEBUG: Early grading FAILED: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
+
             print(f"DEBUG: Booking creation successful!")
 
             
