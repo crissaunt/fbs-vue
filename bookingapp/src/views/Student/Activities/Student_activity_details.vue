@@ -399,6 +399,30 @@
                   </div>
                 </div>
 
+                <!-- Row 5: PWD ID Number (shown only for PWD passengers) -->
+                <div v-if="passenger.passenger_category === 'pwd' && passenger.pwd_id_number" class="mt-3">
+                  <label class="block text-[10px] font-bold text-blue-600 uppercase mb-1.5 tracking-wide">PWD ID Number*</label>
+                  <div class="px-3 py-2.5 border border-blue-300 rounded text-sm bg-blue-50 text-blue-800 font-mono">
+                    {{ passenger.pwd_id_number }}
+                  </div>
+                </div>
+
+                <!-- Row 6: Senior Citizen ID (shown only for Senior passengers) -->
+                <div v-if="passenger.passenger_category === 'senior' && passenger.senior_id_number" class="mt-3">
+                  <label class="block text-[10px] font-bold text-amber-600 uppercase mb-1.5 tracking-wide">Senior Citizen ID*</label>
+                  <div class="px-3 py-2.5 border border-amber-300 rounded text-sm bg-amber-50 text-amber-800 font-mono">
+                    {{ passenger.senior_id_number }}
+                  </div>
+                </div>
+
+                <!-- Row 7: Passport Expiry Date (shown only for non-Philippines nationality) -->
+                <div v-if="passenger.nationality && passenger.nationality.toLowerCase() !== 'philippines' && passenger.passport_expiry_date" class="mt-3">
+                  <label class="block text-[10px] font-bold text-red-600 uppercase mb-1.5 tracking-wide">Passport Expiry Date*</label>
+                  <div class="px-3 py-2.5 border border-red-300 rounded text-sm bg-red-50 text-red-800">
+                    {{ passenger.passport_expiry_date }}
+                  </div>
+                </div>
+
                 <!-- Checkboxes -->
                 <div class="space-y-2 pt-2">
                   <label class="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">

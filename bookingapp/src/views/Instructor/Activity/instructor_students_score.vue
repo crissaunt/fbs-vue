@@ -112,7 +112,7 @@
                   class="transition-colors"
                   :class="comparisonRows.find(r => r.label === 'Trip Type').isMet ? 'bg-emerald-50/10' : 'bg-red-50/10'"
                 >
-                  <td class="px-8 py-3 text-gray-400">Trip Type Check</td>
+                   <td class="px-8 py-3 text-gray-400">{{ comparisonRows.find(r => r.label === 'Trip Type').label }}</td>
                   <td class="px-8 py-3 text-gray-800">{{ comparisonRows.find(r => r.label === 'Trip Type').requirement }}</td>
                   <td class="px-8 py-3" :class="comparisonRows.find(r => r.label === 'Trip Type').isMet ? 'text-emerald-700' : 'text-red-700'">
                     {{ comparisonRows.find(r => r.label === 'Trip Type').work }}
@@ -418,9 +418,9 @@
                          </span>
                       </td>
                    </tr>
-                   <tr :class="matches.travel_class ? 'bg-emerald-50/10' : 'bg-red-50/10'">
-                      <td class="px-8 py-3 text-gray-400">Budget Compliance</td>
-                      <td class="px-8 py-3 text-gray-800 text-[10px]">{{ activity.required_travel_class }} Policy</td>
+                    <tr :class="matches.travel_class ? 'bg-emerald-50/10' : 'bg-red-50/10'">
+                      <td class="px-8 py-3 text-gray-400">Budget Compliance (Class)</td>
+                      <td class="px-8 py-3 text-gray-800 text-[10px]">{{ activity.required_travel_class && activity.required_travel_class.toLowerCase() !== 'na' ? activity.required_travel_class : 'Standard' }} Policy</td>
                       <td class="px-8 py-3" :class="matches.travel_class ? 'text-emerald-700' : 'text-red-700'">{{ actualClass }}</td>
                       <td class="px-8 py-3 pr-10 text-right">
                          <span :class="matches.travel_class ? 'text-emerald-600' : 'text-red-600'">{{ matches.travel_class ? 'COMPLIANT' : 'VIOLATION' }}</span>
@@ -974,14 +974,14 @@ const matches = computed(() => {
         travel_class: (() => {
             // Canonical normalization: remove spaces, underscores, dots, hyphens, and the word 'class' for comparison
             const norm = (s) => (s || '').toLowerCase().replace(/[\s_\-\.]/g, '').replace('class', '').trim();
-            const reqClass = norm(activity.value.required_travel_class);
+            const reqClass = norm(activity.value.required_travel_class || 'economy');
             if (!reqClass || reqClass === 'na' || reqClass === 'n/a') return true;
 
             // DYNAMIC CHECK: Every single segment must match the requirement
             if (!booking.value?.details?.length) return false;
             
             return booking.value.details.every(d => {
-                const raw = d.seat_class_name || d.seat?.seat_class_name || '';
+                const raw = d.seat_class_name || d.seat?.seat_class_name || 'economy';
                 return norm(raw) === reqClass;
             });
         })(),
@@ -1149,17 +1149,20 @@ const matches = computed(() => {
     // 2. Add-ons Verification
     if (activity.value.activity_addons?.length) {
         activity.value.activity_addons.forEach(req => {
-            const actualPassenger = findMatchingPassenger(req.passenger);
             const detail = booking.value.details?.find(d => 
                 d.passenger?.first_name?.toLowerCase() === req.passenger.first_name?.toLowerCase() &&
                 d.passenger?.last_name?.toLowerCase() === req.passenger.last_name?.toLowerCase()
             );
 
-            const isMet = detail?.addons?.some(a => a.id === req.addon_id) || false;
+            const isMet = detail?.addons?.some(a => 
+                a.id === req.addon_id || 
+                (a.name && req.addon_name && a.name.toLowerCase().trim() === req.addon_name.toLowerCase().trim())
+            ) || false;
+
             m.addons.push({
                 passengerName: `${req.passenger.first_name} ${req.passenger.last_name}`,
                 requirement: req.addon_name || req.addon?.name || 'Required Add-on',
-                actual: detail?.addons?.map(a => a.name).join(', ') || 'N/A',
+                actual: detail?.addons?.map(a => a.name).join(', ') || 'NONE',
                 isMet: isMet
             });
         });

@@ -311,6 +311,30 @@
                             {{ p.passenger_category === 'senior' ? 'Senior Citizen' : (p.passenger_category === 'pwd' ? 'PWD' : 'Regular') }}
                           </div>
                         </div>
+
+                        <!-- PWD ID Number (shown only for PWD passengers) -->
+                        <div v-if="p.passenger_category === 'pwd' && hasValue(p.pwd_id_number)">
+                          <label class="text-[9px] font-black text-blue-600 uppercase">PWD ID Number*</label>
+                          <div class="mt-1 p-3 border border-blue-200 rounded-lg text-xs bg-blue-50/50 uppercase text-blue-800 font-mono">
+                            {{ p.pwd_id_number }}
+                          </div>
+                        </div>
+
+                        <!-- Senior Citizen ID (shown only for Senior passengers) -->
+                        <div v-if="p.passenger_category === 'senior' && hasValue(p.senior_id_number)">
+                          <label class="text-[9px] font-black text-amber-600 uppercase">Senior Citizen ID*</label>
+                          <div class="mt-1 p-3 border border-amber-200 rounded-lg text-xs bg-amber-50/50 uppercase text-amber-800 font-mono">
+                            {{ p.senior_id_number }}
+                          </div>
+                        </div>
+
+                        <!-- Passport Expiry Date (shown only for non-Philippines nationality) -->
+                        <div v-if="p.nationality && p.nationality.toLowerCase() !== 'philippines' && hasValue(p.passport_expiry_date)">
+                          <label class="text-[9px] font-black text-red-500 uppercase">Passport Expiry*</label>
+                          <div class="mt-1 p-3 border border-red-200 rounded-lg text-xs bg-red-50/50 uppercase text-red-800">
+                            {{ p.passport_expiry_date }}
+                          </div>
+                        </div>
                         
                         <!-- Passport Number -->
                         <div v-if="hasValue(p.passport_number)">

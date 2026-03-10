@@ -6,11 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-<<<<<<<< HEAD:fbs_backend/app/migrations/0032_booking_submitted_at.py
-        ('app', '0031_passengerinfo_ph_discount_type'),
-========
         ('app', '0040_checkindetail_student'),
->>>>>>>> origin/doms:fbs_backend/app/migrations/0041_booking_submitted_at.py
     ]
 
     operations = [

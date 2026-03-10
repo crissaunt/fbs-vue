@@ -712,7 +712,10 @@ class CreateBookingSerializer(serializers.Serializer):
         # Document Validation: 6-month Passport Expiry Check for International Flights
         last_travel_date_str = None
         is_international = False
-        ph_airports = ['MNL', 'CEB', 'DVO', 'ILO', 'BCD', 'PPS', 'TAC', 'LGP', 'CGY', 'MPH', 'USU', 'GES', 'KLO', 'ZAM', 'CYP', 'DPL', 'TUG', 'SFS', 'LAO', 'VAC']
+        
+        # Get all Philippine airport codes directly from database for accuracy
+        from app.models import Airport
+        ph_airports = list(Airport.objects.filter(country__code='PH').values_list('code', flat=True))
 
         if trip_type in ['multi_city', 'multi-city']:
             segments = data.get('segments', [])

@@ -151,7 +151,10 @@ class ActivityPassenger(models.Model):
     gender = models.CharField(max_length=10, choices=[('mr', 'Mr.'), ('mrs', 'Mrs.')])
     date_of_birth = models.DateField()
     passport_number = models.CharField(max_length=50, blank=True, null=True)
+    passport_expiry_date = models.DateField(null=True, blank=True)
     nationality = models.CharField(max_length=100)
+    pwd_id_number = models.CharField(max_length=50, blank=True, null=True)
+    senior_id_number = models.CharField(max_length=50, blank=True, null=True)
     is_primary = models.BooleanField(default=False)
 
 class ActivityAddOn(models.Model):

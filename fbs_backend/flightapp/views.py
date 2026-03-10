@@ -1413,7 +1413,8 @@ def create_booking(request):
         # Validate request data using serializer
         serializer = CreateBookingSerializer(data=request.data)
         if not serializer.is_valid():
-            print(f"DEBUG: Serializer errors: {serializer.errors}")
+            print(f"DEBUG: [Create Booking] Serializer errors: {serializer.errors}")
+            logger.error(f"Booking Creation Error: {serializer.errors}. Payload: {request.data}")
             return Response({
                 'success': False,
                 'error': serializer.errors
@@ -1434,7 +1435,7 @@ def create_booking(request):
             
             try:
                 if activity_id:
-                    activity_to_link = Activity.objects.get(id=activity_id, is_active=True)
+                    activity_to_link = Activity.objects.get(id=activity_id, status='published')
                 else:
                     activity_to_link = Activity.objects.get(
                         activity_code=activity_code.strip().upper(),

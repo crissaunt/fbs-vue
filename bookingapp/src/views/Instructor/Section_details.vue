@@ -639,6 +639,21 @@
                               <option value="pwd">PWD</option>
                             </select>
                           </div>
+                          <!-- PWD ID Number - shown only when PWD -->
+                          <div v-if="passenger.passenger_category === 'pwd'">
+                            <label class="block text-xs font-medium text-blue-600 mb-1">PWD ID Number *</label>
+                            <input type="text" v-model="passenger.pwd_id_number" placeholder="e.g. PWD-1234567" class="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm">
+                          </div>
+                          <!-- Senior Citizen ID - shown only when Senior -->
+                          <div v-if="passenger.passenger_category === 'senior'">
+                            <label class="block text-xs font-medium text-amber-600 mb-1">Senior Citizen ID *</label>
+                            <input type="text" v-model="passenger.senior_id_number" placeholder="e.g. SC-1234567" class="w-full px-3 py-2 border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm">
+                          </div>
+                          <!-- Passport Expiry - shown only for non-Philippines nationality -->
+                          <div v-if="passenger.nationality && passenger.nationality !== 'Philippines'">
+                            <label class="block text-xs font-medium text-red-600 mb-1">Passport Expiry Date *</label>
+                            <input type="date" v-model="passenger.passport_expiry_date" class="w-full px-3 py-2 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400 text-sm">
+                          </div>
                         </div>
 
                         <!-- Per-Passenger Add-ons Selection -->
@@ -712,6 +727,21 @@
                               <option value="senior">Senior Citizen</option>
                               <option value="pwd">PWD</option>
                             </select>
+                          </div>
+                          <!-- PWD ID Number - shown only when PWD -->
+                          <div v-if="passenger.passenger_category === 'pwd'">
+                            <label class="block text-xs font-medium text-blue-600 mb-1">PWD ID Number *</label>
+                            <input type="text" v-model="passenger.pwd_id_number" placeholder="e.g. PWD-1234567" class="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm">
+                          </div>
+                          <!-- Senior Citizen ID - shown only when Senior -->
+                          <div v-if="passenger.passenger_category === 'senior'">
+                            <label class="block text-xs font-medium text-amber-600 mb-1">Senior Citizen ID *</label>
+                            <input type="text" v-model="passenger.senior_id_number" placeholder="e.g. SC-1234567" class="w-full px-3 py-2 border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm">
+                          </div>
+                          <!-- Passport Expiry - shown only for non-Philippines nationality -->
+                          <div v-if="passenger.nationality && passenger.nationality !== 'Philippines'">
+                            <label class="block text-xs font-medium text-red-600 mb-1">Passport Expiry Date *</label>
+                            <input type="date" v-model="passenger.passport_expiry_date" class="w-full px-3 py-2 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400 text-sm">
                           </div>
                         </div>
 
@@ -795,6 +825,11 @@
                               <option value="senior">Senior Citizen</option>
                               <option value="pwd">PWD</option>
                             </select>
+                          </div>
+                          <!-- Passport Expiry - shown only for non-Philippines nationality (infants can be foreign too) -->
+                          <div v-if="passenger.nationality && passenger.nationality !== 'Philippines'">
+                            <label class="block text-xs font-medium text-red-600 mb-1">Passport Expiry Date *</label>
+                            <input type="date" v-model="passenger.passport_expiry_date" class="w-full px-3 py-2 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400 text-sm">
                           </div>
                         </div>
 
@@ -1266,7 +1301,10 @@ const updatePassengerForms = () => {
       dob: '',
       nationality: '',
       passportNumber: '',
+      passport_expiry_date: '',
       passenger_category: 'none',
+      pwd_id_number: '',
+      senior_id_number: '',
       associatedAdultIndex: null, // ✅ NEW: For infants to sit on an adult's lap
       selected_addons: [],
       addon_requirements: {}
@@ -1496,6 +1534,21 @@ const generateDetailedInstructions = () => {
         detailedInstructions += `  • Seating: Must sit on the lap of Passenger ${passenger.associatedAdultIndex} (Adult)\n`;
       }
       
+      // ✅ PWD ID Number (only for PWD passengers)
+      if (pType !== 'infant' && passenger.passenger_category === 'pwd' && passenger.pwd_id_number) {
+        detailedInstructions += `  • PWD ID Number: ${passenger.pwd_id_number}\n`;
+      }
+      
+      // ✅ Senior Citizen ID Number (only for Senior passengers)
+      if (pType !== 'infant' && passenger.passenger_category === 'senior' && passenger.senior_id_number) {
+        detailedInstructions += `  • Senior Citizen ID: ${passenger.senior_id_number}\n`;
+      }
+      
+      // ✅ Passport Expiry Date (only for non-Philippines passengers)
+      if (passenger.nationality && passenger.nationality !== 'Philippines' && passenger.passport_expiry_date) {
+        detailedInstructions += `  • Passport Expiry Date: ${passenger.passport_expiry_date}\n`;
+      }
+      
       if (activityForm.require_passport && passenger.passportNumber) {
         detailedInstructions += `  • Passport Number: ${passenger.passportNumber}\n`;
       }
@@ -1536,6 +1589,19 @@ const generateDetailedInstructions = () => {
   }
   if (activityForm.require_addons && activityForm.selected_addons.length > 0) {
     detailedInstructions += `• Add-ons must be selected according to the requirements above.\n`;
+  }
+  // ✅ PWD/Senior/Passport Expiry reminders
+  const hasPwd = passengerForms.value.some(p => p.passenger_category === 'pwd');
+  const hasSenior = passengerForms.value.some(p => p.passenger_category === 'senior');
+  const hasNonPh = passengerForms.value.some(p => p.nationality && p.nationality !== 'Philippines');
+  if (hasPwd) {
+    detailedInstructions += `• PWD passengers must select the PWD discount category and provide their PWD ID number.\n`;
+  }
+  if (hasSenior) {
+    detailedInstructions += `• Senior Citizen passengers must select the Senior Citizen discount and provide their Senior ID number.\n`;
+  }
+  if (hasNonPh) {
+    detailedInstructions += `• Non-Philippine passport holders must provide a valid Passport Expiry Date.\n`;
   }
   
   return detailedInstructions;
@@ -1755,6 +1821,30 @@ const randomizeData = async () => {
       birthDate.setFullYear(birthDate.getFullYear() - age);
     }
     p.dob = birthDate.toISOString().split('T')[0];
+
+    // ✅ Generate PWD ID for PWD passengers (distinct format: PWD-XXXXXXX)
+    if (p.passenger_category === 'pwd') {
+      p.pwd_id_number = 'PWD-' + Math.floor(1000000 + Math.random() * 9000000);
+      p.senior_id_number = '';
+    } else if (p.passenger_category === 'senior') {
+      // ✅ Generate Senior Citizen ID for Senior passengers (distinct format: SC-XXXXXXX)
+      p.senior_id_number = 'SC-' + Math.floor(1000000 + Math.random() * 9000000);
+      p.pwd_id_number = '';
+    } else {
+      p.pwd_id_number = '';
+      p.senior_id_number = '';
+    }
+
+    // ✅ Generate Passport Expiry Date for non-Philippines passengers
+    if (p.nationality && p.nationality !== 'Philippines') {
+      const expiry = new Date();
+      expiry.setFullYear(expiry.getFullYear() + Math.floor(Math.random() * 8) + 2); // 2–10 years from now
+      expiry.setMonth(Math.floor(Math.random() * 12));
+      expiry.setDate(Math.floor(Math.random() * 28) + 1);
+      p.passport_expiry_date = expiry.toISOString().split('T')[0];
+    } else {
+      p.passport_expiry_date = '';
+    }
   });
 
   // ✅ Assign infants
@@ -1890,6 +1980,9 @@ const submitActivity = async () => {
         date_of_birth: p.dob,
         nationality: p.nationality,
         passport_number: p.passportNumber || "",
+        passport_expiry_date: p.passport_expiry_date || null,
+        pwd_id_number: p.pwd_id_number || "",
+        senior_id_number: p.senior_id_number || "",
         passenger_category: p.passenger_category || "none",
         associated_adult_index: p.associatedAdultIndex || null, // ✅ NEW
         selected_addons: passengerAddons
