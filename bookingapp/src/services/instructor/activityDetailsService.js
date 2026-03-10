@@ -16,7 +16,8 @@ export const activityDetailsService = {
     },
 
     /**
-     * Activate an activity and generate activity code
+     * Activate an activity and generate/reuse activity code, 
+     * optionally assigning it to specific students.
      * @param {number} activityId - Activity ID to activate
      * @param {Array<number>} studentIds - Array of student IDs to assign the activity to
      * @returns {Promise} Activation response with activity code

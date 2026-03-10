@@ -117,6 +117,7 @@ class Country(models.Model):
 class Airline(models.Model):
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=10, unique=True)
+    logo = models.ImageField(upload_to='airline_logos/', null=True, blank=True)
 
     def __str__(self):
         return f"{self.code} - {self.name}"
@@ -136,6 +137,38 @@ class SeatClass(models.Model):
     def __str__(self):
         return f"{self.name} (x{self.price_multiplier}) - {self.airline.code if self.airline else ''}"
 
+
+class FareBundle(models.Model):
+    """Model for defining fare families/bundles (Basic, Standard, Flex)"""
+    seat_class = models.ForeignKey(SeatClass, on_delete=models.CASCADE, related_name="fare_bundles", help_text="e.g. Economy")
+    name = models.CharField(max_length=50, help_text="e.g. Basic, Standard / Value, Flex / Plus")
+    type_code = models.CharField(max_length=20, help_text="e.g. basic, standard, flex")
+    markup_fee = models.DecimalField(max_digits=8, decimal_places=2, default=0.00, help_text="Flat fee added to the base class price")
+    description = models.TextField(blank=True, null=True)
+    icon_svg = models.TextField(blank=True, null=True, help_text="SVG path or full SVG string for the icon")
+    is_active = models.BooleanField(default=True)
+    display_order = models.IntegerField(default=0)
+    
+    class Meta:
+        ordering = ['display_order', 'markup_fee']
+        unique_together = ("seat_class", "type_code")
+
+    def __str__(self):
+        return f"{self.name} (+₱{self.markup_fee}) - {self.seat_class.name}"
+
+
+class FareBundleFeature(models.Model):
+    """Features belonging strictly to a Fare Bundle (e.g. 20kg Baggage, Flexible Cancellations)"""
+    fare_bundle = models.ForeignKey(FareBundle, on_delete=models.CASCADE, related_name="bundle_features")
+    feature_text = models.CharField(max_length=200)
+    is_active = models.BooleanField(default=True)
+    display_order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['display_order']
+
+    def __str__(self):
+        return f"{self.fare_bundle.name} - {self.feature_text}"
 
 
 class Aircraft(models.Model):
@@ -327,6 +360,7 @@ class Schedule(models.Model):
     arrival_time = models.DateTimeField()
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Open')
+    gate = models.CharField(max_length=10, blank=True, null=True, default='Gate 7')
     
     # ============ NEW FIELDS FOR ML PRICING ============
     ml_base_price = models.DecimalField(
@@ -477,50 +511,92 @@ class Schedule(models.Model):
 
     def save(self, *args, **kwargs):
         self.status = self.automatic_status  # Ensure status is correct before saving
+        is_new = self.pk is None
         super().save(*args, **kwargs)
+        
+        # Auto-generate seats for new schedules if they don't have any
+        if is_new:
+            transaction.on_commit(lambda: self.generate_seats())
 
-    def update_ml_price(self, save=True):
-        """Update the ML predicted price for this schedule"""
+    def generate_seats(self, config_data=None):
+        """Generate seats for this schedule based on layout config"""
+        # Get config from aircraft if not provided
+        if not config_data:
+            if self.flight and self.flight.aircraft:
+                config_data = self.flight.aircraft.get_layout_config()
+            else:
+                # Default fallback
+                config_data = {'seat_classes': [], 'total_seats': 0}
+
+        seat_classes = config_data.get('seat_classes', [])
+        if not seat_classes:
+            print(f"⚠️ No seat classes configured for schedule {self.id}")
+            return False
+            
         try:
-            # Import inside the method to avoid circular imports
-            from flightapp.ml.predictor import predictor
-            
-            # Check if model is loaded - if not, try to load it
-            if not predictor.model:
-                print(f"?? Schedule {self.id}: ML model not loaded, attempting to load...")
-                predictor.load_model()
+            with transaction.atomic():
+                # Get existing seats
+                existing_seats = Seat.objects.filter(schedule=self)
+                existing_map = {f"{s.row}-{s.column}": s for s in existing_seats}
                 
-                if not predictor.model:
-                    print(f"? Schedule {self.id}: Failed to load ML model")
-                    return False, None
-            
-            flight_data = {
-                'schedule_id': self.id,
-                'flight_number': self.flight.flight_number,
-                'airline_code': self.flight.airline.code,
-                'airline_name': self.flight.airline.name,
-                'origin': self.flight.route.origin_airport.code,
-                'destination': self.flight.route.destination_airport.code,
-                'departure_time': self.departure_time.isoformat(),
-                'arrival_time': self.arrival_time.isoformat(),
-                'total_stops': 0,
-                'is_domestic': self.flight.route.is_domestic,
-            }
-            
-            predicted_price = Decimal(str(predictor.predict_price(flight_data)))
-            self.ml_base_price = predicted_price
-            self.ml_price_updated_at = timezone.now()
-            
-            if save:
-                self.save(update_fields=['ml_base_price', 'ml_price_updated_at'])
-            
-            print(f"? Schedule {self.id}: ML price updated to ?{predicted_price:,.2f}")
-            return True, predicted_price
+                processed_seat_ids = []
+                
+                for sc_config in seat_classes:
+                    class_id = sc_config.get('class_id')
+                    rows = sc_config.get('rows', 0)
+                    columns = sc_config.get('columns', 0)
+                    start_row = sc_config.get('start_row', 1)
+                    
+                    try:
+                        seat_class = SeatClass.objects.get(id=class_id)
+                    except SeatClass.DoesNotExist:
+                        continue
+                        
+                    for r in range(rows):
+                        row_num = start_row + r
+                        
+                        for c in range(columns):
+                            col_num = c + 1
+                            col_label = chr(64 + col_num) # 1=A, 2=B, etc.
+                            
+                            seat_key = f"{row_num}-{col_label}"
+                            
+                            is_window = (col_num == 1 or col_num == columns)
+                            is_aisle = False
+                            if columns == 6:
+                                is_aisle = (col_num == 3 or col_num == 4)
+                            elif columns == 4:
+                                is_aisle = (col_num == 2 or col_num == 3)
+                                
+                            seat_data = {
+                                'schedule': self,
+                                'seat_class': seat_class,
+                                'seat_number': f"{row_num}{col_label}",
+                                'row': row_num,
+                                'column': col_label,
+                                'is_window': is_window,
+                                'is_aisle': is_aisle,
+                                'is_available': True
+                            }
+                            
+                            if seat_key in existing_map:
+                                seat = existing_map[seat_key]
+                                if seat.seat_class_id != class_id:
+                                    seat.seat_class = seat_class
+                                    seat.save()
+                                processed_seat_ids.append(seat.id)
+                            else:
+                                seat = Seat.objects.create(**seat_data)
+                                processed_seat_ids.append(seat.id)
+                
+                # Delete obsolete seats
+                Seat.objects.filter(schedule=self).exclude(id__in=processed_seat_ids).delete()
+                return True
+                
         except Exception as e:
-            print(f"? Error updating ML price for schedule {self.id}: {e}")
-            import traceback
-            traceback.print_exc()
-            return False, None
+            print(f"❌ Error generating seats for schedule {self.id}: {e}")
+            return False
+
 
 # ============================================================
 # SEAT REQUIREMENT MODEL (Prices for special seats)
@@ -561,6 +637,18 @@ class Seat(models.Model):
     
     # Many-to-Many link for dynamic requirements
     requirements = models.ManyToManyField(SeatRequirement, blank=True)
+    
+    # Soft Lock Fields (Simulation of 2026 Reservation Lock)
+    locked_at = models.DateTimeField(null=True, blank=True)
+    locked_until = models.DateTimeField(null=True, blank=True)
+    locked_by_session = models.CharField(max_length=100, null=True, blank=True)
+    
+    @property
+    def is_locked(self):
+        """Check if seat is currently locked by another session"""
+        if not self.locked_until:
+            return False
+        return self.locked_until > timezone.now()
     
     # Price adjustments
     price_adjustment_auto = models.DecimalField(
@@ -1344,6 +1432,7 @@ class PassengerInfo(models.Model):
     title = models.CharField(max_length=10, choices=TITLE_CHOICES, default="MR")  # Changed from gender to title
     date_of_birth = models.DateField(null=True, blank=True)  # Make optional
     passport_number = models.CharField(max_length=50, blank=True, null=True)
+    passport_expiry = models.DateField(null=True, blank=True)
     nationality = models.CharField(max_length=100, null=True, blank=True)
     passenger_type = models.CharField(max_length=10, choices=TYPE_CHOICES, default="Adult")
     
@@ -1444,6 +1533,14 @@ class Booking(models.Model):
         null=True, 
         blank=True,
         help_text="When the booking (activity) was submitted/confirmed"
+    )
+    
+    # Session tracking for seat locks
+    booking_session_id = models.CharField(
+        max_length=100, 
+        null=True, 
+        blank=True,
+        help_text="Temporary session ID used to hold seat locks"
     )
     
     class Meta:
@@ -2062,14 +2159,70 @@ class Payment(models.Model):
 # CHECK-IN DETAIL
 # ============================================================
 class CheckInDetail(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('checked-in', 'Checked-In'),
+        ('boarding', 'Boarding'),
+        ('completed', 'Completed'),
+    ]
+
     booking_detail = models.ForeignKey(BookingDetail, on_delete=models.CASCADE, related_name="checkins")
+    student = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='checkin_actions')
     check_in_time = models.DateTimeField(auto_now_add=True)
     boarding_pass = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Baggage Info
     baggage_count = models.PositiveIntegerField(default=0)
     baggage_weight = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+    
+    # Counter/Agent Info (DCS)
+    check_in_counter = models.CharField(max_length=50, blank=True, null=True)
+    agent_id = models.IntegerField(blank=True, null=True)
+    
+    # Boarding Info
+    gate_number = models.CharField(max_length=20, blank=True, null=True)
+    sequence_number = models.PositiveIntegerField(blank=True, null=True)
+    
+    # Status & Compliance
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    has_declared_safety = models.BooleanField(default=False)
+    special_instructions = models.TextField(blank=True, null=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Check-In {self.id} (Booking {self.booking_detail.booking.id})"
+
+    def generate_boarding_pass(self):
+        """Helper to generate a unique boarding pass identifier."""
+        if not self.boarding_pass:
+            from django.utils import timezone
+            timestamp = timezone.now().strftime('%Y%m%d%H%M')
+            self.boarding_pass = f"BP-{self.id}-{timestamp}"
+            self.save(update_fields=['boarding_pass'])
+        return self.boarding_pass
+
+    @property
+    def passenger_name(self):
+        return self.booking_detail.passenger.get_full_name()
+
+    @property
+    def flight_number(self):
+        return self.booking_detail.schedule.flight.flight_number
+
+    @property
+    def route(self):
+        return str(self.booking_detail.schedule.flight.route)
+
+    @property
+    def departure_time(self):
+        return self.booking_detail.schedule.departure_time
+
+    @property
+    def seat_number(self):
+        return self.booking_detail.seat.seat_number if self.booking_detail.seat else "TBA"
 
 
 # ============================================================

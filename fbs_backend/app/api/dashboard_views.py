@@ -6,7 +6,7 @@ from django.db.models import Q, Sum, Count, Avg
 from django.utils import timezone
 from datetime import timedelta
 from ..models import (
-    Booking, BookingDetail, PassengerInfo, Schedule, Airline, SeatClass
+    Booking, BookingDetail, PassengerInfo, Schedule, Airline, SeatClass, CheckInDetail
 )
 
 class DashboardViewSet(viewsets.ViewSet):
@@ -88,6 +88,8 @@ class DashboardViewSet(viewsets.ViewSet):
             scheduled_flights = Schedule.objects.filter(
                 departure_time__date=today
             ).count()
+
+            total_checkins = CheckInDetail.objects.count()
             
             return Response({
                 'passengersToday': passengers_today,
@@ -97,7 +99,8 @@ class DashboardViewSet(viewsets.ViewSet):
                 'totalBookings': total_bookings,
                 'pendingBookings': pending_bookings,
                 'activeFlights': active_flights,
-                'scheduledFlights': scheduled_flights
+                'scheduledFlights': scheduled_flights,
+                'totalCheckins': total_checkins
             })
         except Exception as e:
             return Response({'error': str(e)}, status=200)

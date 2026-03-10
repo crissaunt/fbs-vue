@@ -306,8 +306,8 @@ const handleActivityCodeContinue = () => {
           @click="tripType = t"
           class="cursor-pointer border-b-4 px-4 py-2 text-xs font-bold uppercase tracking-wide text-gray-500 transition"
           :class="tripType === t
-            ? 'border-[#d11241] text-[#003870]'
-            : 'border-transparent hover:text-[#003870]'"
+            ? 'border-[#D4AC0D] text-[#FF579A]'
+            : 'border-transparent hover:text-[#FF579A]'"
         >
           {{ t.replace('-', ' ') }}
         </button>
@@ -318,7 +318,7 @@ const handleActivityCodeContinue = () => {
         <span class="text-[0.65rem] font-bold uppercase tracking-wider text-gray-400">Flight Category:</span>
         <select 
           v-model="stopPreference"
-          class="cursor-pointer border-none bg-transparent py-1 text-xs font-bold text-[#003870] focus:ring-0"
+          class="cursor-pointer border-none bg-transparent py-1 text-xs font-bold text-[#FF579A] focus:ring-0"
         >
           <option value="all">Any Stops</option>
           <option value="nonstop">Non-stop</option>
@@ -333,7 +333,7 @@ const handleActivityCodeContinue = () => {
 
       <!-- FROM -->
       <div class="relative flex flex-col airport-input-container">
-        <label class="mb-1 text-[0.7rem] font-bold tracking-wide text-[#003870]">
+        <label class="mb-1 text-[0.7rem] font-bold tracking-wide text-[#FF579A]">
           FROM
         </label>
         <div class="field-container relative">
@@ -342,7 +342,7 @@ const handleActivityCodeContinue = () => {
             @input="searchAirports(fromSearch, 'from')"
             @focus="fromSearch = ''; fromResults = []"
             placeholder="e.g. MNL"
-            class="w-full rounded-[2px] border border-gray-300 bg-white px-2 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003870]"
+            class="w-full rounded-[2px] border border-gray-300 bg-white px-2 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF579A]"
           />
 
           <ul
@@ -356,7 +356,7 @@ const handleActivityCodeContinue = () => {
               class="cursor-pointer border-b border-gray-100 p-3 hover:bg-gray-50"
             >
               <div class="flex flex-wrap items-center gap-2">
-                <span class="text-lg font-extrabold text-[#003870]">{{ a.code }}</span>
+                <span class="text-lg font-extrabold text-[#FF579A]">{{ a.code }}</span>
                 <span class="font-medium text-gray-700">- {{ a.city }}</span>
                 <small class="w-full text-xs text-gray-400">{{ a.name }}</small>
               </div>
@@ -367,7 +367,7 @@ const handleActivityCodeContinue = () => {
 
       <!-- TO -->
       <div class="relative flex flex-col airport-input-container">
-        <label class="mb-1 text-[0.7rem] font-bold tracking-wide text-[#003870]">
+        <label class="mb-1 text-[0.7rem] font-bold tracking-wide text-[#FF579A]">
           TO
         </label>
         <div class="field-container relative">
@@ -376,7 +376,7 @@ const handleActivityCodeContinue = () => {
             @input="searchAirports(toSearch, 'to')"
             @focus="toSearch = ''; toResults = []"
             placeholder="Destination City/Code"
-            class="w-full rounded-[2px] border border-gray-300 bg-white px-2 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003870]"
+            class="w-full rounded-[2px] border border-gray-300 bg-white px-2 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF579A]"
           />
 
           <ul
@@ -390,7 +390,7 @@ const handleActivityCodeContinue = () => {
               class="cursor-pointer border-b border-gray-100 p-3 hover:bg-gray-50"
             >
               <div class="flex flex-wrap items-center gap-2">
-                <span class="text-lg font-extrabold text-[#003870]">{{ a.code }}</span>
+                <span class="text-lg font-extrabold text-[#FF579A]">{{ a.code }}</span>
                 <span class="font-medium text-gray-700">- {{ a.city }}</span>
                 <small class="w-full text-xs text-gray-400">{{ a.name }}</small>
               </div>
@@ -401,7 +401,7 @@ const handleActivityCodeContinue = () => {
 
       <!-- DEPARTURE -->
       <div class="flex flex-col">
-        <label class="mb-1 text-[0.7rem] font-bold tracking-wide text-[#003870]">
+        <label class="mb-1 text-[0.7rem] font-bold tracking-wide text-[#FF579A]">
           DEPARTURE
         </label>
         <VueDatePicker
@@ -419,7 +419,7 @@ const handleActivityCodeContinue = () => {
         class="flex flex-col"
         :class="tripType === 'one-way' ? 'pointer-events-none opacity-40' : ''"
       >
-        <label class="mb-1 text-[0.7rem] font-bold tracking-wide text-[#003870]">
+        <label class="mb-1 text-[0.7rem] font-bold tracking-wide text-[#FF579A]">
           RETURN
         </label>
         <VueDatePicker
@@ -436,7 +436,7 @@ const handleActivityCodeContinue = () => {
 
       <!-- PASSENGERS -->
       <div class="relative flex flex-col">
-        <label class="mb-1 text-[0.7rem] font-bold tracking-wide text-[#003870]">
+        <label class="mb-1 text-[0.7rem] font-bold tracking-wide text-[#FF579A]">
           PASSENGERS
         </label>
 
@@ -461,14 +461,14 @@ const handleActivityCodeContinue = () => {
             <div class="flex items-center gap-4">
               <button
                 @click="updateCount(type, -1)"
-                class="flex h-8 w-8 items-center justify-center rounded-full border border-[#003870] text-lg text-[#003870] hover:bg-gray-100"
+                class="flex h-8 w-8 items-center justify-center rounded-full border border-[#FF579A] text-lg text-[#FF579A] hover:bg-gray-100"
               >
                 −
               </button>
               <span>{{ val }}</span>
               <button
                 @click="updateCount(type, 1)"
-                class="flex h-8 w-8 items-center justify-center rounded-full border border-[#003870] text-lg text-[#003870] hover:bg-gray-100"
+                class="flex h-8 w-8 items-center justify-center rounded-full border border-[#FF579A] text-lg text-[#FF579A] hover:bg-gray-100"
               >
                 +
               </button>
@@ -477,7 +477,7 @@ const handleActivityCodeContinue = () => {
 
           <button
             @click="showPassengerDropdown = false"
-            class="w-full rounded-[2px] bg-[#003870] py-2 text-xs font-bold text-white"
+            class="w-full rounded-[2px] bg-[#FF579A] py-2 text-xs font-bold text-white"
           >
             DONE
           </button>
@@ -513,18 +513,18 @@ const handleActivityCodeContinue = () => {
         </button>
 
         <div class="flex-1 space-y-1 airport-input-container">
-          <label class="text-[0.65rem] font-bold text-[#003870] uppercase">Flight {{ index + 1 }} From</label>
+          <label class="text-[0.65rem] font-bold text-[#FF579A] uppercase">Flight {{ index + 1 }} From</label>
           <div class="field-container relative">
             <input
               v-model="segment.fromSearch"
               @input="searchAirports(segment.fromSearch, 'from', index)"
               @focus="segment.fromSearch = ''; segment.fromResults = []"
               placeholder="Origin"
-              class="w-full rounded-[2px] border border-gray-300 bg-white px-2 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003870]"
+              class="w-full rounded-[2px] border border-gray-300 bg-white px-2 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF579A]"
             />
             <ul v-if="segment.fromResults.length" class="absolute left-0 top-full z-[60] max-h-48 w-full overflow-y-auto border border-gray-300 bg-white shadow-xl">
               <li v-for="a in segment.fromResults" :key="a.id" @click="selectAirport(a, 'from', index)" class="cursor-pointer border-b border-gray-100 p-3 hover:bg-gray-50 flex items-center gap-2">
-                <span class="font-extrabold text-[#003870]">{{ a.code }}</span>
+                <span class="font-extrabold text-[#FF579A]">{{ a.code }}</span>
                 <span class="text-sm">- {{ a.city }}</span>
               </li>
             </ul>
@@ -532,18 +532,18 @@ const handleActivityCodeContinue = () => {
         </div>
 
         <div class="flex-1 space-y-1 airport-input-container">
-          <label class="text-[0.65rem] font-bold text-[#003870] uppercase">To</label>
+          <label class="text-[0.65rem] font-bold text-[#FF579A] uppercase">To</label>
           <div class="field-container relative">
             <input
               v-model="segment.toSearch"
               @input="searchAirports(segment.toSearch, 'to', index)"
               @focus="segment.toSearch = ''; segment.toResults = []"
               placeholder="Destination"
-              class="w-full rounded-[2px] border border-gray-300 bg-white px-2 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003870]"
+              class="w-full rounded-[2px] border border-gray-300 bg-white px-2 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF579A]"
             />
             <ul v-if="segment.toResults.length" class="absolute left-0 top-full z-[60] max-h-48 w-full overflow-y-auto border border-gray-300 bg-white shadow-xl">
               <li v-for="a in segment.toResults" :key="a.id" @click="selectAirport(a, 'to', index)" class="cursor-pointer border-b border-gray-100 p-3 hover:bg-gray-50 flex items-center gap-2">
-                <span class="font-extrabold text-[#003870]">{{ a.code }}</span>
+                <span class="font-extrabold text-[#FF579A]">{{ a.code }}</span>
                 <span class="text-sm">- {{ a.city }}</span>
               </li>
             </ul>
@@ -551,7 +551,7 @@ const handleActivityCodeContinue = () => {
         </div>
 
         <div class="flex-1 space-y-1">
-          <label class="text-[0.65rem] font-bold text-[#003870] uppercase">Departure Date</label>
+          <label class="text-[0.65rem] font-bold text-[#FF579A] uppercase">Departure Date</label>
           <VueDatePicker
             v-model="segment.date"
             :min-date="getMinDateForSegment(index)"
@@ -569,7 +569,7 @@ const handleActivityCodeContinue = () => {
         <button 
           @click="addSegment"
           v-if="multiSegments.length < 6"
-          class="flex items-center gap-2 rounded-full border-2 border-[#003870] px-6 py-2 text-sm font-bold text-[#003870] transition hover:bg-[#003870] hover:text-white"
+          class="flex items-center gap-2 rounded-full border-2 border-[#FF579A] px-6 py-2 text-sm font-bold text-[#FF579A] transition hover:bg-[#FF579A] hover:text-white"
         >
           <span>+</span> ADD FLIGHT
         </button>
@@ -577,8 +577,8 @@ const handleActivityCodeContinue = () => {
         <div class="flex flex-1 flex-col items-center gap-6 lg:flex-row lg:justify-end">
           <!-- PASSENGERS (Multi-city version) -->
           <div class="relative flex flex-col min-w-[180px]">
-            <label class="mb-1 text-[0.7rem] font-bold tracking-wide text-[#003870]">PASSENGERS</label>
-            <div @click.stop="showPassengerDropdown = !showPassengerDropdown" class="cursor-pointer rounded-[2px] border border-gray-300 bg-white px-4 py-3 text-sm shadow-sm hover:border-[#003870]">
+            <label class="mb-1 text-[0.7rem] font-bold tracking-wide text-[#FF579A]">PASSENGERS</label>
+            <div @click.stop="showPassengerDropdown = !showPassengerDropdown" class="cursor-pointer rounded-[2px] border border-gray-300 bg-white px-4 py-3 text-sm shadow-sm hover:border-[#FF579A]">
               {{ totalPassengers }} Passenger(s)
             </div>
             
@@ -586,12 +586,12 @@ const handleActivityCodeContinue = () => {
               <div v-for="(val, type) in passengers" :key="type" class="mb-4 flex items-center justify-between">
                 <span class="font-medium capitalize">{{ type }}</span>
                 <div class="flex items-center gap-4">
-                  <button @click="updateCount(type, -1)" class="flex h-8 w-8 items-center justify-center rounded-full border border-[#003870] text-[#003870] hover:bg-gray-100">−</button>
+                  <button @click="updateCount(type, -1)" class="flex h-8 w-8 items-center justify-center rounded-full border border-[#FF579A] text-[#FF579A] hover:bg-gray-100">−</button>
                   <span>{{ val }}</span>
-                  <button @click="updateCount(type, 1)" class="flex h-8 w-8 items-center justify-center rounded-full border border-[#003870] text-[#003870] hover:bg-gray-100">+</button>
+                  <button @click="updateCount(type, 1)" class="flex h-8 w-8 items-center justify-center rounded-full border border-[#FF579A] text-[#FF579A] hover:bg-gray-100">+</button>
                 </div>
               </div>
-              <button @click="showPassengerDropdown = false" class="w-full rounded-[2px] bg-[#003870] py-2 text-xs font-bold text-white">DONE</button>
+              <button @click="showPassengerDropdown = false" class="w-full rounded-[2px] bg-[#FF579A] py-2 text-xs font-bold text-white">DONE</button>
             </div>
           </div>
 

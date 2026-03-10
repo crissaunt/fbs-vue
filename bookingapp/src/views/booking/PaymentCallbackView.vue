@@ -20,6 +20,7 @@ const maxPollingAttempts = 15;
 const pollingInterval = ref(null);
 const processingStatus = ref('');
 const showIncompleteState = ref(false);
+const hasRedirected = ref(false); // Guard against double-redirects
 
 // Get parameters from URL
 const urlParams = new URLSearchParams(window.location.search);
@@ -48,6 +49,12 @@ const getLoadingMessage = () => {
 
 // Poll payment status - REDIRECTS TO SUCCESS PAGE WHEN PAID
 const pollPaymentStatus = async (bookingId) => {
+  // Stop if we've already redirected to avoid multiple navigations
+  if (hasRedirected.value) {
+    clearInterval(pollingInterval.value);
+    return;
+  }
+
   if (pollingCount.value >= maxPollingAttempts) {
     clearInterval(pollingInterval.value);
     showIncompleteState.value = true;
@@ -69,6 +76,7 @@ const pollPaymentStatus = async (bookingId) => {
     if (result.paid === true) {
       // Payment confirmed! Navigate to success page
       clearInterval(pollingInterval.value);
+      hasRedirected.value = true;
       
       // Prepare data for success page
       const bookingReference = result.data.booking_reference || `CSUCC${bookingId.toString().padStart(8, '0')}`;

@@ -60,7 +60,7 @@
 
                             <!-- Document Alert -->
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
-                                style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; margin-bottom: 32px;">
+                                style="background-color: #fefce8; border: 1px solid #fde047; border-radius: 8px; margin-bottom: 32px;">
                                 <tr>
                                     <td style="padding: 24px;">
                                         <table role="presentation" cellspacing="0" cellpadding="0" border="0"
@@ -68,51 +68,31 @@
                                             <tr>
                                                 <td width="48" valign="top" style="padding-right: 16px;">
                                                     <div
-                                                        style="width: 48px; height: 48px; background-color: #0ea5e9; border-radius: 8px; text-align: center; line-height: 48px; color: white; font-size: 24px;">
-                                                        📄
+                                                        style="width: 48px; height: 48px; background-color: #f59e0b; border-radius: 8px; text-align: center; line-height: 48px; color: white; font-size: 24px;">
+                                                        ⚠️
                                                     </div>
                                                 </td>
                                                 <td valign="top">
                                                     <h3
-                                                        style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #0369a1;">
-                                                        Travel Documents Attached</h3>
-                                                    <p style="margin: 0 0 12px 0; font-size: 14px; color: #0c4a6e;">
-                                                        Please download and print your PDF tickets or save them to your
-                                                        mobile device.</p>
+                                                        style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #92400e;">
+                                                        This is your E-Ticket — Not a Boarding Pass</h3>
+                                                    <p style="margin: 0 0 12px 0; font-size: 14px; color: #78350f;">
+                                                        Your E-Ticket/Itinerary is attached below. This confirms your
+                                                        booking, but <strong>you cannot use it to board your
+                                                            flight.</strong> You must complete <strong>check-in</strong>
+                                                        at the airport counter (24–48 hrs before departure) to receive
+                                                        your Boarding Pass.</p>
 
                                                     <!-- Attachment List -->
                                                     <table role="presentation" cellspacing="0" cellpadding="0"
                                                         border="0">
                                                         <tr>
                                                             <td
-                                                                style="font-size: 13px; color: #075985; padding: 4px 0;">
+                                                                style="font-size: 13px; color: #92400e; padding: 4px 0;">
                                                                 <span
-                                                                    style="color: #0ea5e9; margin-right: 8px;">●</span>itinerary_{{
-                                                                booking_reference }}.pdf
+                                                                    style="color: #f59e0b; margin-right: 8px;">📄</span>itinerary_{{ booking_reference }}.pdf — <em>E-Ticket / Itinerary</em>
                                                             </td>
                                                         </tr>
-                                                        {% for detail in outbound_details %}
-                                                        <tr>
-                                                            <td
-                                                                style="font-size: 13px; color: #075985; padding: 4px 0;">
-                                                                <span
-                                                                    style="color: #0ea5e9; margin-right: 8px;">●</span>boarding_pass_{{
-                                                                detail.passenger.last_name }}_{{
-                                                                detail.schedule.flight.flight_number }}.pdf
-                                                            </td>
-                                                        </tr>
-                                                        {% endfor %}
-                                                        {% for detail in return_details %}
-                                                        <tr>
-                                                            <td
-                                                                style="font-size: 13px; color: #075985; padding: 4px 0;">
-                                                                <span
-                                                                    style="color: #0ea5e9; margin-right: 8px;">●</span>boarding_pass_{{
-                                                                detail.passenger.last_name }}_{{
-                                                                detail.schedule.flight.flight_number }}.pdf
-                                                            </td>
-                                                        </tr>
-                                                        {% endfor %}
                                                     </table>
                                                 </td>
                                             </tr>
@@ -139,8 +119,7 @@
                                                 </td>
                                                 <td valign="middle" align="right" style="text-align: right;">
                                                     <div style="font-size: 14px; color: #64748b; margin-bottom: 4px;">
-                                                        Booked on <strong style="color: #334155;">{{
-                                                            booking_date|date:"F d, Y" }}</strong></div>
+                                                        Booked on <strong style="color: #334155;">{{ booking_date|date:"F d, Y" }}</strong></div>
                                                     <div style="font-size: 14px; color: #64748b;">{{ total_passengers }}
                                                         Passenger{% if total_passengers > 1 %}s{% endif %}</div>
                                                 </td>
@@ -168,22 +147,19 @@
                                         <h4
                                             style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em;">
                                             Primary Contact</h4>
-                                        <p style="margin: 0; font-size: 14px; font-weight: 600; color: #334155;">{{
-                                            contact_name }}</p>
+                                        <p style="margin: 0; font-size: 14px; font-weight: 600; color: #334155;">{{ contact_name }}</p>
                                     </td>
                                     <td width="33%" style="padding-bottom: 16px;">
                                         <h4
                                             style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em;">
                                             Email</h4>
-                                        <p style="margin: 0; font-size: 14px; font-weight: 600; color: #334155;">{{
-                                            contact_email }}</p>
+                                        <p style="margin: 0; font-size: 14px; font-weight: 600; color: #334155;">{{ contact_email }}</p>
                                     </td>
                                     <td width="33%" style="padding-bottom: 16px;">
                                         <h4
                                             style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em;">
                                             Phone</h4>
-                                        <p style="margin: 0; font-size: 14px; font-weight: 600; color: #334155;">{{
-                                            contact_phone }}</p>
+                                        <p style="margin: 0; font-size: 14px; font-weight: 600; color: #334155;">{{ contact_phone }}</p>
                                     </td>
                                 </tr>
                             </table>
@@ -273,19 +249,15 @@
                                                     <h4
                                                         style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em;">
                                                         Departure</h4>
-                                                    <div style="font-size: 20px; font-weight: 700; color: #0f172a;">{{
-                                                        detail.schedule.departure_time|date:"H:i" }}</div>
-                                                    <div style="font-size: 13px; color: #64748b; margin-top: 2px;">{{
-                                                        detail.schedule.departure_time|date:"F d, Y" }}</div>
+                                                    <div style="font-size: 20px; font-weight: 700; color: #0f172a;">{{ detail.schedule.departure_time|date:"H:i" }}</div>
+                                                    <div style="font-size: 13px; color: #64748b; margin-top: 2px;">{{ detail.schedule.departure_time|date:"F d, Y" }}</div>
                                                 </td>
                                                 <td width="50%" style="padding-left: 12px;">
                                                     <h4
                                                         style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em;">
                                                         Arrival</h4>
-                                                    <div style="font-size: 20px; font-weight: 700; color: #0f172a;">{{
-                                                        detail.schedule.arrival_time|date:"H:i" }}</div>
-                                                    <div style="font-size: 13px; color: #64748b; margin-top: 2px;">{{
-                                                        detail.schedule.arrival_time|date:"F d, Y" }}</div>
+                                                    <div style="font-size: 20px; font-weight: 700; color: #0f172a;">{{ detail.schedule.arrival_time|date:"H:i" }}</div>
+                                                    <div style="font-size: 13px; color: #64748b; margin-top: 2px;">{{ detail.schedule.arrival_time|date:"F d, Y" }}</div>
                                                 </td>
                                             </tr>
                                         </table>
@@ -402,19 +374,15 @@
                                                     <h4
                                                         style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em;">
                                                         Departure</h4>
-                                                    <div style="font-size: 20px; font-weight: 700; color: #0f172a;">{{
-                                                        detail.schedule.departure_time|date:"H:i" }}</div>
-                                                    <div style="font-size: 13px; color: #64748b; margin-top: 2px;">{{
-                                                        detail.schedule.departure_time|date:"F d, Y" }}</div>
+                                                    <div style="font-size: 20px; font-weight: 700; color: #0f172a;">{{ detail.schedule.departure_time|date:"H:i" }}</div>
+                                                    <div style="font-size: 13px; color: #64748b; margin-top: 2px;">{{ detail.schedule.departure_time|date:"F d, Y" }}</div>
                                                 </td>
                                                 <td width="50%" style="padding-left: 12px;">
                                                     <h4
                                                         style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em;">
                                                         Arrival</h4>
-                                                    <div style="font-size: 20px; font-weight: 700; color: #0f172a;">{{
-                                                        detail.schedule.arrival_time|date:"H:i" }}</div>
-                                                    <div style="font-size: 13px; color: #64748b; margin-top: 2px;">{{
-                                                        detail.schedule.arrival_time|date:"F d, Y" }}</div>
+                                                    <div style="font-size: 20px; font-weight: 700; color: #0f172a;">{{ detail.schedule.arrival_time|date:"H:i" }}</div>
+                                                    <div style="font-size: 13px; color: #64748b; margin-top: 2px;">{{ detail.schedule.arrival_time|date:"F d, Y" }}</div>
                                                 </td>
                                             </tr>
                                         </table>
@@ -478,16 +446,12 @@
                                             width="100%">
                                             <tr>
                                                 <td>
-                                                    <div style="font-weight: 600; color: #0f172a;">{{
-                                                        passenger.get_full_name }}</div>
-                                                    <div style="font-size: 13px; color: #64748b; margin-top: 2px;">{{
-                                                        passenger.title }} • {{
-                                                        passenger.nationality|default:"Philippines" }}</div>
+                                                    <div style="font-weight: 600; color: #0f172a;">{{ passenger.get_full_name }}</div>
+                                                    <div style="font-size: 13px; color: #64748b; margin-top: 2px;">{{ passenger.title }} &bull; {{ passenger.nationality|default:"Philippines" }}</div>
                                                 </td>
                                                 <td align="right">
                                                     <span
-                                                        style="font-size: 12px; font-weight: 600; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.05em;">{{
-                                                        passenger.passenger_type }}</span>
+                                                        style="font-size: 12px; font-weight: 600; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.05em;">{{ passenger.passenger_type }}</span>
                                                 </td>
                                             </tr>
                                         </table>
@@ -600,34 +564,36 @@
                                     <td style="padding: 20px;">
                                         <h4
                                             style="margin: 0 0 12px 0; font-size: 14px; font-weight: 700; color: #92400e;">
-                                            ⚠ Important Travel Information
+                                            ⚠ What You Need to Do Before Your Flight
                                         </h4>
                                         <table role="presentation" cellspacing="0" cellpadding="0" border="0"
                                             width="100%">
                                             <tr>
                                                 <td style="font-size: 14px; color: #78350f; padding-bottom: 8px;">
-                                                    • Download and save your PDF tickets from the attachments
+                                                    ✅ <strong>Done:</strong> Your booking is confirmed. Your PNR is
+                                                    <strong>{{ booking_reference }}</strong> — save this!
                                                 </td>
                                             </tr>
                                             <tr>
                                                 <td style="font-size: 14px; color: #78350f; padding-bottom: 8px;">
-                                                    • Check-in online opens 24 hours before departure
+                                                    ✈️ <strong>Next:</strong> Check in at the airport counter or kiosk
+                                                    <strong>24–48 hours before departure</strong>. Bring your PNR and a
+                                                    valid government-issued ID.
                                                 </td>
                                             </tr>
                                             <tr>
                                                 <td style="font-size: 14px; color: #78350f; padding-bottom: 8px;">
-                                                    • Arrive early: 2 hours (domestic) or 3 hours (international)
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td style="font-size: 14px; color: #78350f; padding-bottom: 8px;">
-                                                    • Present valid ID matching your booking name
+                                                    🖨️ <strong>Then:</strong> After check-in, you will receive your
+                                                    <strong>Boarding Pass</strong> — the only document accepted at the
+                                                    security gate and boarding area. It will contain your seat number,
+                                                    gate, and QR code.
                                                 </td>
                                             </tr>
                                             <tr>
                                                 <td style="font-size: 14px; color: #78350f;">
-                                                    • Keep your PNR / RECORD LOCATOR handy: <strong>{{ booking_reference
-                                                        }}</strong>
+                                                    ⏰ Arrive at the airport at least <strong>2 hours before
+                                                        departure</strong> for domestic flights. The check-in counter
+                                                    closes <strong>45 minutes before departure</strong>.
                                                 </td>
                                             </tr>
                                         </table>

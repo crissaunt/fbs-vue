@@ -1,16 +1,16 @@
 <template>
   <aside :class="['lg:w-70 flex-shrink-0', showFilters ? 'block' : 'hidden lg:block']">
-    <div class="bg-white rounded-[5px] shadow-sm border border-gray-200 p-6">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div class="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
         <h2 class="text-base font-bold text-gray-900">Filters & Sort</h2>
         <button @click="$emit('reset-filters')" 
-          class="text-xs bg-pink-500 p-1 cursor-pointer text-white hover:bg-pink-300 font-medium rounded-[2px]">
+          class="text-xs bg-pink-500 p-1 cursor-pointer text-white hover:bg-pink-300 font-medium rounded-md">
           Reset
         </button>
       </div>
       
       <!-- Flight Stats -->
-      <div class="mb-3 p-2 bg-gray-50 rounded-[2px]">
+      <div class="mb-3 p-2 bg-gray-50 rounded-md">
         <div class="space-y-2">
           <div class="flex justify-between text-xs">
             <span class="text-gray-600">Showing:</span>
@@ -31,7 +31,7 @@
       <div class="mb-3">
         <h3 class="text-xs font-semibold text-gray-300 mb-1">Sort By</h3>
         <select :value="filters.sortBy" @input="$emit('update:filters', { ...filters, sortBy: $event.target.value })"
-          class="w-full px-2 py-1 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm">
+          class="w-full px-2 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm">
           <option v-for="option in filterOptions.sortOptions" :key="option.value" :value="option.value">
             {{ option.label }}
           </option>
@@ -44,11 +44,11 @@
         <div class="flex items-center space-x-1 mb-1">
           <input :value="filters.minPrice" @input="$emit('update:filters', { ...filters, minPrice: $event.target.value })" 
             type="number" placeholder="Min" 
-            class="w-full px-1.5 py-1 border border-gray-300 rounded-sm text-xs focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+            class="w-full px-1.5 py-1 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-pink-500 focus:border-transparent">
           <span class="text-gray-400">–</span>
           <input :value="filters.maxPrice" @input="$emit('update:filters', { ...filters, maxPrice: $event.target.value })" 
             type="number" placeholder="Max" 
-            class="w-full px-1.5 py-1 border border-gray-300 rounded-sm text-xs focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+            class="w-full px-1.5 py-1 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-pink-500 focus:border-transparent">
         </div>
         <p class="text-xs text-gray-400 bg-green-50 flex justify-between px-2 py-1 text-right">
           Price:
@@ -90,7 +90,7 @@
       <div v-if="filterOptions.airlines.length > 1" class="mb-3">
         <h3 class="text-xs font-semibold text-gray-800 mb-1">Airline</h3>
         <select :value="filters.airline" @input="$emit('update:filters', { ...filters, airline: $event.target.value })"
-          class="w-full px-2 py-1 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm">
+          class="w-full px-2 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm">
           <option v-for="airline in filterOptions.airlines" :key="airline.value" :value="airline.value">
             {{ airline.label }}
           </option>
@@ -101,7 +101,7 @@
       <div class="mb-3">
         <h3 class="text-xs font-semibold text-gray-800 mb-3">Seat Class</h3>
         <select :value="filters.seatClass" @input="$emit('update:filters', { ...filters, seatClass: $event.target.value })"
-          class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm">
+          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm">
           <option v-for="seatClass in availableSeatClassOptions" :key="seatClass.value" :value="seatClass.value">
             {{ seatClass.label }}
           </option>
@@ -156,7 +156,7 @@
           <div>
             <label class="block text-xs text-gray-600 mb-2">Select Date</label>
             <select :value="dateFilter.selectedDate" @change="$emit('update:dateFilter', { ...dateFilter, selectedDate: $event.target.value })"
-              class="w-full px-2 py-1 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm">
+              class="w-full px-2 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm">
               <option v-for="date in uniqueDates" :key="date.value" :value="date.value">
                 {{ date.shortLabel }}
               </option>
@@ -165,14 +165,14 @@
           <div>
             <label class="block text-xs text-gray-600 mb-2">Date Range</label>
             <select :value="dateFilter.dateRange" @change="$emit('update:dateFilter', { ...dateFilter, dateRange: $event.target.value })"
-              class="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm">
+              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm">
               <option v-for="range in filterOptions.dateRanges" :key="range.value" :value="range.value">
                 {{ range.label }}
               </option>
             </select>
           </div>
           <button v-if="isDateFilterActive" @click="$emit('reset-date-filter')" 
-            class="w-full text-sm text-pink-500 hover:text-pink-600 font-medium py-2 border border-pink-200 rounded-sm hover:bg-pink-50">
+            class="w-full text-sm text-pink-500 hover:text-pink-600 font-medium py-2 border border-pink-200 rounded-md hover:bg-pink-50">
             Reset to Original Date
           </button>
         </div>

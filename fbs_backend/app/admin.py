@@ -290,6 +290,19 @@ class SeatClassFeatureAdmin(admin.ModelAdmin):
     list_filter = ['seat_class', 'is_active']
     search_fields = ['feature', 'seat_class__name']
 
+
+class FareBundleFeatureInline(admin.TabularInline):
+    model = FareBundleFeature
+    extra = 3
+
+@admin.register(FareBundle)
+class FareBundleAdmin(admin.ModelAdmin):
+    list_display = ['name', 'seat_class', 'type_code', 'markup_fee', 'display_order', 'is_active']
+    list_filter = ['seat_class', 'type_code', 'is_active']
+    search_fields = ['name', 'seat_class__name']
+    inlines = [FareBundleFeatureInline]
+    list_editable = ['markup_fee', 'display_order', 'is_active']
+
 @admin.register(Aircraft)
 class AircraftAdmin(admin.ModelAdmin):
     list_display = ('model', 'airline', 'capacity', 'flight_count')
