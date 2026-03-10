@@ -31,6 +31,12 @@ import InstructorStudentScore from '@/views/Instructor/Activity/instructor_stude
 import StudentDashboard from '@/views/Student/Student_dashboard.vue';
 import StudentActivityDetails from '@/views/Student/Activities/Student_activity_details.vue'
 
+// DCS Views
+import DcsLayout from '@/views/dcs/DcsLayout.vue';
+import FlightDashboardView from '@/views/dcs/FlightDashboardView.vue';
+import ManifestView from '@/views/dcs/ManifestView.vue';
+import CheckinCounterView from '@/views/dcs/CheckinCounterView.vue';
+
 const routes = [
   // 3. Use the Spread Operator (...) to include all admin routes
   ...adminRoutes,
@@ -175,7 +181,7 @@ const routes = [
   {
     path: '/payment-callback',
     name: 'PaymentCallback',
-    meta: { layout: 'BookingLayout', requiresAuth: false },
+    meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true },
     component: () => import('../views/booking/PaymentCallbackView.vue')
   },
   {
@@ -183,6 +189,33 @@ const routes = [
     name: 'BookingSuccess',
     meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true },
     component: () => import('@/views/booking/BookingSuccessView.vue')
+  },
+  {
+    path: '/dcs',
+    component: DcsLayout,
+    meta: { requiresAuth: true, role: 'student' },
+    children: [
+      {
+        path: 'dashboard',
+        name: 'DcsDashboard',
+        component: FlightDashboardView,
+        meta: { title: 'DCS | Flight Dashboard' }
+      },
+      {
+        path: 'manifest/:schedule_id',
+        name: 'DcsManifest',
+        component: ManifestView,
+        meta: { title: 'DCS | Passenger Manifest' },
+        props: true
+      },
+      {
+        path: 'checkin/:booking_detail_id',
+        name: 'DcsCheckin',
+        component: CheckinCounterView,
+        meta: { title: 'DCS | Check-in Counter' },
+        props: true
+      }
+    ]
   }
 ];
 
@@ -286,10 +319,10 @@ router.beforeEach((to, from, next) => {
     }
   }
 
-  // 4. Prevent accessing Student Dashboard during active booking
-  if (to.path.startsWith('/student/dashboard') && bookingStore.hasActivityCodeValidation) {
-    console.log('⚠️ Active booking session detected - Blocking dashboard access');
-    notificationStore.warn('Please end your activity session before returning to the dashboard.');
+  // 4. Strict Activity Mode Protection: Only allow booking-related pages
+  if (bookingStore.hasActivityCodeValidation && !to.matched.some(record => record.meta.isBookingProtected)) {
+    console.log('⚠️ Activity mode active - Blocking navigation to non-booking page:', to.path);
+    notificationStore.warn('You are currently in an active activity session. Please complete or end your session before navigating elsewhere.');
     return next('/');
   }
 

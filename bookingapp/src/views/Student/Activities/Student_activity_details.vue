@@ -230,7 +230,7 @@
             <div 
               v-for="(segment, idx) in activity.segments" 
               :key="idx"
-              class="border-2 border-[#f5c842] rounded-2xl py-4 px-8 bg-white flex items-center justify-between shadow-sm relative overflow-hidden"
+              class="border-2 border-[#f5c842] rounded-xl py-4 px-8 bg-white flex items-center justify-between shadow-sm relative overflow-hidden"
             >
               <div class="absolute left-0 top-0 bottom-0 w-2 bg-[#f5c842]"></div>
               <div class="flex items-center gap-8 flex-1">
@@ -393,7 +393,7 @@
           </div>
 
           <!-- Submission & Grading Section (Always visible for clarity) -->
-          <div class="mb-8 border-2 border-dashed border-gray-200 rounded-xl p-6 bg-gray-50/50">
+          <div class="mb-8 border-2 border-dashed border-gray-200 rounded-lg p-6 bg-gray-50/50">
             <div class="flex items-center justify-between mb-4">
               <h2 class="text-base font-bold text-gray-900 uppercase tracking-tight">Submission & Grading</h2>
               <span :class="['px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider', getStatusClass(activity.status)]">

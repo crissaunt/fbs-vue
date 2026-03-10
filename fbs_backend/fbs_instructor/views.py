@@ -873,13 +873,11 @@ def activate_activity(request, activity_id):
             section__instructor=request.user
         )
         
-        if activity.is_code_active and activity.activity_code:
-            return Response({
-                "message": "Activity is already activated",
-                "activity_code": activity.activity_code,
-                "already_active": True
-            })
+        # Get optional student IDs from the request
+        student_ids = request.data.get('student_ids', [])
+        is_partial_assignment = len(student_ids) > 0
         
+        # Generator for unique code if none exists
         if not activity.activity_code:
             max_attempts = 10
             for _ in range(max_attempts):
@@ -903,10 +901,11 @@ def activate_activity(request, activity_id):
         
         activity.save()
         
-        enrolled_students_count = Activity_Student_Bind(activity)
+        # Call with potential student_ids filtering
+        enrolled_students_count = Activity_Student_Bind(activity, student_ids=student_ids)
         
         return Response({
-            "message": "Activity Activated Successfully",
+            "message": "Activity Assigned Successfully" if is_partial_assignment else "Activity Activated Successfully",
             "activity_code": activity.activity_code,
             "already_active": False,
             "students_notified": enrolled_students_count
@@ -923,6 +922,101 @@ def activate_activity(request, activity_id):
             {"error": f"An error occurred: {str(e)}"},
             status=500
         )
+
+@api_view(['GET'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated, IsInstructor])
+def get_eligible_students(request, activity_id):
+    """
+    Get students in the section who haven't been assigned this activity yet
+    """
+    try:
+        activity = get_object_or_404(
+            Activity.objects.select_related('section'),
+            id=activity_id,
+            section__instructor=request.user
+        )
+        
+        # Get students enrolled in this section
+        enrolled = SectionEnrollment.objects.filter(
+            section=activity.section
+        ).select_related('student')
+        
+        # Get IDs of students already bound to this activity
+        already_bound_ids = ActivityStudentBinding.objects.filter(
+            activity=activity
+        ).values_list('student_id', flat=True)
+        
+        # Filter for eligible students
+        eligible = []
+        for e in enrolled:
+            if e.student.id not in already_bound_ids:
+                eligible.append({
+                    'id': e.student.id,
+                    'student_number': e.student.student_number,
+                    'first_name': e.student.first_name,
+                    'last_name': e.student.last_name,
+                    'email': e.student.email
+                })
+        
+        return Response({
+            'eligible_students': eligible
+        })
+        
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['POST'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def submit_activity(request, activity_id):
+    """
+    Mark a student's activity as submitted.
+    Called automatically after a successful booking payment.
+    """
+    try:
+        from app.models import Students
+
+        # Verify the user is a student
+        try:
+            student = Students.objects.get(user=request.user)
+        except Students.DoesNotExist:
+            return Response({'error': 'Student profile not found.'}, status=404)
+
+        # Find the activity binding for this student
+        binding = ActivityStudentBinding.objects.filter(
+            activity_id=activity_id,
+            student=student
+        ).first()
+
+        if not binding:
+            return Response({'error': 'Activity assignment not found for this student.'}, status=404)
+
+        # Only submit if not already submitted or graded
+        if binding.status in ('submitted', 'graded'):
+            return Response({
+                'message': 'Activity already submitted.',
+                'status': binding.status,
+                'submitted_at': binding.submitted_at
+            })
+
+        # Mark as submitted
+        binding.status = 'submitted'
+        binding.submitted_at = timezone.now()
+        binding.save(update_fields=['status', 'submitted_at'])
+
+        print(f"✅ Activity {activity_id} submitted by student {student.student_number}")
+
+        return Response({
+            'message': 'Activity submitted successfully.',
+            'status': binding.status,
+            'submitted_at': binding.submitted_at
+        })
+
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=500)
 
 @api_view(['POST'])
 @authentication_classes([MultiSessionTokenAuthentication])
@@ -1289,11 +1383,22 @@ def _send_activity_notification_worker(activity, enrolled_students, section):
             except Exception as e:
                 print(f"Error sending activation email to {student.email}: {str(e)}")
 
-def Activity_Student_Bind(activity):
+def Activity_Student_Bind(activity, student_ids=None):
     from .models import ActivityStudentBinding
     
     section = activity.section
-    enrolled_students = SectionEnrollment.objects.filter(section=section).select_related('student', 'student__user')
+    
+    # Filter by specific student IDs if provided, otherwise get all in section
+    if student_ids and isinstance(student_ids, list) and len(student_ids) > 0:
+        enrolled_students = SectionEnrollment.objects.filter(
+            section=section, 
+            student_id__in=student_ids
+        ).select_related('student', 'student__user')
+    else:
+        enrolled_students = SectionEnrollment.objects.filter(
+            section=section
+        ).select_related('student', 'student__user')
+        
     students_bound = 0
     
     # Process bindings synchronously (fast database operations)
@@ -2294,6 +2399,56 @@ def get_student_practice_bookings(request):
         traceback.print_exc()
         return Response(
             {"error": f"Failed to load practice bookings: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_student_checkin_history(request):
+    """
+    Get all check-in records performed by the authenticated student.
+    """
+    try:
+        from app.models import CheckInDetail
+        checkins = CheckInDetail.objects.filter(
+            student=request.user
+        ).select_related(
+            'booking_detail__passenger',
+            'booking_detail__schedule__flight__route__origin_airport',
+            'booking_detail__schedule__flight__route__destination_airport'
+        ).order_by('-check_in_time')
+        
+        checkin_history_data = []
+        for checkin in checkins:
+            booking_detail = checkin.booking_detail
+            schedule = booking_detail.schedule
+            flight = schedule.flight
+            route = flight.route
+            
+            checkin_history_data.append({
+                "id": checkin.id,
+                "boarding_pass": checkin.boarding_pass,
+                "passenger_name": checkin.booking_detail.passenger.get_full_name(),
+                "flight_number": flight.flight_number,
+                "route_summary": f"{route.origin_airport.code} ✈ {route.destination_airport.code}",
+                "departure_time": schedule.departure_time.isoformat(),
+                "check_in_time": checkin.check_in_time.isoformat(),
+                "status": checkin.status,
+                "baggage_weight": float(checkin.baggage_weight),
+                "counter": checkin.check_in_counter,
+                "seat_number": booking_detail.seat.seat_number if booking_detail.seat else "TBA"
+            })
+            
+        return Response({
+            "checkin_history": checkin_history_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        traceback.print_exc()
+        return Response(
+            {"error": f"Failed to load check-in history: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 

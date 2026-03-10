@@ -155,7 +155,7 @@
     </div>
 
     <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-      <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div class="bg-white rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
         <div class="bg-[#FF579A] p-4 text-white flex justify-between items-center">
           <h3 class="text-xs font-bold tracking-widest uppercase">Enroll Student</h3>
           <button @click="isModalOpen = false" class="hover:text-pink-100 transition-colors">
@@ -175,8 +175,8 @@
             />
           </div>
           <div class="flex gap-4">
-            <button @click="isModalOpen = false" class="flex-1 py-3 text-gray-400 font-bold hover:bg-gray-50 rounded-xl transition-colors uppercase text-xs tracking-widest">Cancel</button>
-            <button @click="submitEnrollment" :disabled="loading" class="flex-1 py-3 bg-[#0E8028] text-white font-bold rounded-xl shadow-lg hover:bg-green-700 transition-colors uppercase text-xs tracking-widest">
+            <button @click="isModalOpen = false" class="flex-1 py-3 text-gray-400 font-bold hover:bg-gray-50 rounded-lg transition-colors uppercase text-xs tracking-widest">Cancel</button>
+            <button @click="submitEnrollment" :disabled="loading" class="flex-1 py-3 bg-[#0E8028] text-white font-bold rounded-lg shadow-lg hover:bg-green-700 transition-colors uppercase text-xs tracking-widest">
               {{ loading ? 'Enrolling...' : 'Enroll Student' }}
             </button>
           </div>

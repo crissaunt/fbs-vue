@@ -2,26 +2,24 @@
   <div class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 p-4 md:p-8 relative overflow-hidden">
     <!-- Background Elements -->
     <div class="absolute inset-0 overflow-hidden pointer-events-none">
-      <div class="absolute top-0 right-0 w-1/3 h-1/3 bg-gradient-to-br from-[#FF579A]/5 to-transparent rounded-[2px] blur-3xl"></div>
-      <div class="absolute bottom-0 left-0 w-1/3 h-1/3 bg-gradient-to-tr from-gray-400/5 to-transparent rounded-[2px] blur-3xl"></div>
+      <div class="absolute top-0 right-0 w-1/3 h-1/3 bg-gradient-to-br from-[#FF579A]/5 to-transparent rounded-md blur-3xl"></div>
+      <div class="absolute bottom-0 left-0 w-1/3 h-1/3 bg-gradient-to-tr from-gray-400/5 to-transparent rounded-md blur-3xl"></div>
     </div>
 
     <!-- Main Container -->
     <div class="relative max-w-6xl mx-auto">
-      
-      <!-- Loading State -->
-      <div v-if="loading" class="bg-white rounded-[5px] border border-gray-100 shadow-xl p-12 text-center max-w-lg mx-auto mt-20">
-        <div class="relative inline-flex mb-8">
-          <div class="w-20 h-20 border-4 border-pink-50 rounded-[2px] animate-pulse"></div>
-          <div class="absolute inset-0 w-20 h-20 border-4 border-[#FF579A] border-t-transparent rounded-[2px] animate-spin"></div>
-        </div>
-        <h3 class="text-2xl font-black text-gray-900 mb-2 uppercase tracking-tight">{{ loadingMessage }}</h3>
-        <p class="text-gray-400 text-sm font-medium">Please do not refresh or close this window.</p>
-      </div>
+      <BookingStatusHeader />
+      <!-- Content States -->
+      <LoadingOverlay 
+        v-if="loading"
+        :show="true" 
+        :title="loadingMessage || 'Securing Payment'"
+        subtitle="Please do not refresh or close this window."
+      />
 
       <!-- Session Expired -->
-      <div v-else-if="!isSessionValid" class="bg-white rounded-[5px] border border-gray-100 shadow-xl p-12 text-center max-w-lg mx-auto mt-20">
-        <div class="w-20 h-20 bg-amber-50 rounded-[5px] flex items-center justify-center mx-auto mb-8 float-animation">
+      <div v-else-if="!isSessionValid" class="bg-white rounded-lg border border-gray-100 shadow-xl p-12 text-center max-w-lg mx-auto mt-20">
+        <div class="w-20 h-20 bg-amber-50 rounded-lg flex items-center justify-center mx-auto mb-8 float-animation">
           <span class="text-3xl">⏰</span>
         </div>
         <h3 class="text-2xl font-black text-gray-900 mb-3">SESSION EXPIRED</h3>
@@ -29,7 +27,7 @@
           Your secure booking session has timed out. Please restart the booking process to ensure your seat remains available.
         </p>
         <button @click="restartBooking" 
-                class="w-full bg-gray-900 hover:bg-black text-white py-4 rounded-[5px] font-bold transition-all active:scale-[0.98] shadow-lg shadow-gray-200">
+                class="w-full bg-gray-900 hover:bg-black text-white py-4 rounded-lg font-bold transition-all active:scale-[0.98] shadow-lg shadow-gray-200">
           Start New Booking
         </button>
       </div>
@@ -39,16 +37,31 @@
         <!-- Left Column - Booking details & Summary -->
         <div class="lg:col-span-8 space-y-6">
           
+          <!-- Retry Alert Banner -->
+          <div v-if="isRetrying" class="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-5 flex items-start shadow-sm mb-6">
+            <div class="flex-shrink-0 mt-0.5">
+              <svg class="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3 text-sm">
+              <h3 class="font-bold text-amber-800">Action Required: Payment Not Completed</h3>
+              <p class="mt-1 text-amber-700 font-medium">
+                Your previous payment attempt was unsuccessful or cancelled. Don't worry, we've saved your entire booking securely! Your seats are reserved while your session is active.
+              </p>
+            </div>
+          </div>
+
           <!-- Premium Amount Display -->
-          <div class="relative overflow-hidden bg-white rounded-[5px] border border-gray-100 shadow-sm p-1">
+          <div class="relative overflow-hidden bg-white rounded-lg border border-gray-100 shadow-sm p-1">
             <div class="absolute top-0 right-0 p-4">
-              <div class="flex items-center space-x-2 px-3 py-1 bg-green-50 text-green-700 rounded-[2px] text-xs font-bold border border-green-100 uppercase tracking-tighter">
-                <span class="w-1.5 h-1.5 bg-green-500 rounded-[2px] animate-pulse mr-1"></span>
+              <div class="flex items-center space-x-2 px-3 py-1 bg-green-50 text-green-700 rounded-md text-xs font-bold border border-green-100 uppercase tracking-tighter">
+                <span class="w-1.5 h-1.5 bg-green-500 rounded-md animate-pulse mr-1"></span>
                 Secure Session
               </div>
             </div>
             
-            <div class="bg-gradient-to-br from-gray-50/50 to-white p-8 rounded-[2px]">
+            <div class="bg-gradient-to-br from-gray-50/50 to-white p-8 rounded-md">
               <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
                   <h2 class="text-sm font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">Total Amount to Pay</h2>
@@ -69,7 +82,7 @@
                     <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Booking Ref</p>
                     <p class="text-xl font-mono font-black text-[#FF579A]">{{ bookingReference || 'N/A' }}</p>
                   </div>
-                  <div class="px-4 py-2 bg-amber-50 rounded-[5px] border border-amber-100 flex items-center">
+                  <div class="px-4 py-2 bg-amber-50 rounded-lg border border-amber-100 flex items-center">
                     <span class="text-amber-700 text-xs font-bold uppercase tracking-wider">{{ bookingStatus }}</span>
                   </div>
                 </div>
@@ -78,11 +91,11 @@
           </div>
 
           <!-- Trip Overview -->
-          <div class="bg-white rounded-[5px] border border-gray-100 shadow-sm overflow-hidden">
+          <div class="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
             <div class="border-b border-gray-50 px-8 py-5 flex items-center justify-between bg-gray-50/30">
               <h3 class="text-lg font-bold text-gray-800">Trip Overview</h3>
               <div class="flex items-center space-x-2">
-                <span class="text-xs font-bold px-3 py-1 bg-[#FF579A]/10 text-[#FF579A] rounded-[2px] uppercase tracking-wider">
+                <span class="text-xs font-bold px-3 py-1 bg-[#FF579A]/10 text-[#FF579A] rounded-md uppercase tracking-wider">
                   {{ tripTypeLabel }}
                 </span>
               </div>
@@ -94,7 +107,7 @@
                 <div class="space-y-6">
                   <!-- Depart -->
                   <div v-if="bookingStore.selectedOutbound" class="relative pl-8">
-                    <div class="absolute left-0 top-1 w-6 h-6 bg-pink-50 rounded-[2px] flex items-center justify-center">
+                    <div class="absolute left-0 top-1 w-6 h-6 bg-pink-50 rounded-md flex items-center justify-center">
                       <svg class="w-3 h-3 text-[#FF579A] rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                       </svg>
@@ -110,7 +123,7 @@
 
                   <!-- Return -->
                   <div v-if="bookingStore.selectedReturn" class="relative pl-8">
-                    <div class="absolute left-0 top-1 w-6 h-6 bg-blue-50 rounded-[2px] flex items-center justify-center">
+                    <div class="absolute left-0 top-1 w-6 h-6 bg-blue-50 rounded-md flex items-center justify-center">
                       <svg class="w-3 h-3 text-blue-500 -rotate-135" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                       </svg>
@@ -126,9 +139,9 @@
                 </div>
 
                 <!-- Traveler Info -->
-                <div class="bg-gray-50/50 rounded-[5px] p-6 border border-gray-100/50">
+                <div class="bg-gray-50/50 rounded-lg p-6 border border-gray-100/50">
                   <div class="flex items-center space-x-3 mb-6">
-                    <div class="w-10 h-10 bg-white shadow-sm rounded-[2px] flex items-center justify-center">
+                    <div class="w-10 h-10 bg-white shadow-sm rounded-md flex items-center justify-center">
                       <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
@@ -161,39 +174,88 @@
 
         <!-- Right Column - Payment Panel -->
         <div class="lg:col-span-4 space-y-6">
-          <div class="bg-white rounded-[5px] border border-gray-100 shadow-lg shadow-pink-100/20 overflow-hidden">
+          <div class="bg-white rounded-lg border border-gray-100 shadow-lg shadow-pink-100/20 overflow-hidden">
             <div class="p-8">
               <h3 class="text-xl font-bold text-gray-900 mb-2">Secure Checkout</h3>
               <p class="text-xs text-gray-400 mb-6 leading-relaxed">You will be redirected to our secure PayMongo payment gateway to complete your transaction.</p>
 
-              <!-- Supported Payment Methods -->
-              <div class="mb-8">
-                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Philippine Payment Methods</p>
-                <div class="flex flex-wrap gap-2">
-                  <!-- GCash Badge -->
-                  <div class="flex items-center px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-[5px]">
-                    <span class="text-blue-600 font-bold text-xs tracking-tight">GCash</span>
+            
+              <div v-if="priceBreakdown" class="mb-8 p-6 bg-gray-50/50 rounded-xl border border-gray-100/50 space-y-4">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Price Summary</p>
+                
+                <div class="space-y-2.5">
+                
+                  <div v-if="priceBreakdown.adult_base > 0" class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500 font-medium">Adult Base Fare</span>
+                    <span class="text-gray-900 font-bold">₱{{ priceBreakdown.adult_base.toLocaleString() }}</span>
                   </div>
-                  <!-- Maya Badge -->
-                  <div class="flex items-center px-3 py-1.5 bg-green-50 border border-green-100 rounded-[5px]">
-                    <span class="text-green-600 font-bold text-xs tracking-tight">Maya</span>
+                  <div v-if="priceBreakdown.child_base > 0" class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500 font-medium">Child Base Fare</span>
+                    <span class="text-gray-900 font-bold">₱{{ priceBreakdown.child_base.toLocaleString() }}</span>
                   </div>
-                  <!-- Over-the-counter Badge -->
-                  <div class="flex items-center px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-[5px]">
-                    <span class="text-gray-600 text-xs font-medium">Over-the-counter (7-Eleven, Cebuana)</span>
+                  <div v-if="priceBreakdown.infant_base > 0" class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500 font-medium">Infant Base Fare</span>
+                    <span class="text-gray-900 font-bold">₱{{ priceBreakdown.infant_base.toLocaleString() }}</span>
                   </div>
-                  <!-- Cards Badge -->
-                  <div class="flex items-center px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-[5px]">
-                    <span class="text-gray-600 text-xs font-medium">Credit/Debit Card</span>
+
+               
+                  <div v-if="priceBreakdown.taxes > 0" class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500 font-medium">Taxes & Fees</span>
+                    <span class="text-gray-900 font-bold">₱{{ priceBreakdown.taxes.toLocaleString() }}</span>
+                  </div>
+
+              
+                  <div v-if="priceBreakdown.addons > 0" class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500 font-medium">Selected Add-ons</span>
+                    <span class="text-gray-900 font-bold">₱{{ priceBreakdown.addons.toLocaleString() }}</span>
+                  </div>
+
+                  
+                  <div v-if="priceBreakdown.insurance > 0" class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500 font-medium">Travel Insurance</span>
+                    <span class="text-gray-900 font-bold">₱{{ priceBreakdown.insurance.toLocaleString() }}</span>
+                  </div>
+
+                  <div class="border-t border-gray-200 pt-3 mt-4">
+                    <div class="flex justify-between items-center">
+                      <span class="text-gray-900 font-black text-lg">Total Amount</span>
+                      <span class="text-3xl font-black text-gray-900 flex items-center">
+                        <span class="text-pink-500 text-xl mr-1">₱</span>
+                        <AnimatedNumber :value="totalAmount" />
+                      </span>
+                    </div>
                   </div>
                 </div>
+              </div>
+
+              <!-- Promo Code -->
+              <div class="mb-8">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Promo Code</p>
+                <div class="flex gap-2">
+                  <input type="text" placeholder="Enter code" class="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-pink-500 outline-none transition-all">
+                  <button class="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-400 hover:text-pink-500 hover:border-pink-200 transition-colors uppercase">Apply</button>
+                </div>
+              </div>
+
+              <!-- Terms and Conditions -->
+              <div class="mb-8 p-4 bg-gray-50/50 rounded-lg border border-gray-100">
+                <label class="flex items-start gap-3 cursor-pointer group">
+                  <div class="flex items-center h-5 mt-0.5">
+                    <input type="checkbox" v-model="hasAgreedToTerms" class="w-4 h-4 text-[#FF579A] border-gray-300 rounded focus:ring-[#FF579A]/20 transition-all cursor-pointer">
+                  </div>
+                  <div class="text-[11px] leading-relaxed text-gray-500 group-hover:text-gray-700 transition-colors">
+                    I have read and agree to the <a href="#" class="text-[#FF579A] font-bold hover:underline">Fare Rules</a>, 
+                    <a href="#" class="text-[#FF579A] font-bold hover:underline">Privacy Policy</a>, and 
+                    <a href="#" class="text-[#FF579A] font-bold hover:underline">Terms of Transport</a>.
+                  </div>
+                </label>
               </div>
 
               <!-- Main Action -->
               <div class="mt-8 pt-8 border-t border-gray-50">
                 <button @click="handlePayMongoCheckout" 
-                        :disabled="loading || !bookingId"
-                        class="w-full py-4 bg-[#FF579A] hover:bg-[#FF4081] text-white rounded-[5px] font-bold shadow-lg shadow-pink-200 transition-all active:scale-[0.98] disabled:opacity-50 disabled:translate-y-0">
+                        :disabled="loading || !bookingId || !hasAgreedToTerms"
+                        class="w-full py-4 bg-[#FF579A] hover:bg-[#FF4081] text-white rounded-lg font-bold shadow-lg shadow-pink-200 transition-all active:scale-[0.98] disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none">
                   {{ loading ? 'Processing...' : 'Proceed to Payment' }}
                 </button>
                 
@@ -218,16 +280,16 @@
           </div>
 
           <!-- Help Section -->
-          <div class="bg-gradient-to-br from-gray-900 to-black rounded-[5px] p-8 text-white relative overflow-hidden group border border-white/5">
-            <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-white/5 rounded-[2px] blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+          <div class="bg-gradient-to-br from-gray-900 to-black rounded-lg p-8 text-white relative overflow-hidden group border border-white/5">
+            <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-white/5 rounded-md blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
             <h4 class="font-bold text-lg mb-4 flex items-center text-white">
-              <span class="w-8 h-8 bg-white/10 rounded-[5px] flex items-center justify-center mr-3 text-sm">?</span>
+              <span class="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center mr-3 text-sm">?</span>
               Need Help?
             </h4>
             <div class="space-y-4">
               <a href="tel:+63288558888" 
                  class="flex items-center space-x-4 text-gray-400 hover:text-white transition-all group/link">
-                <div class="w-10 h-10 rounded-[5px] bg-white/5 flex items-center justify-center group-hover/link:bg-white/10 transition-colors">
+                <div class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center group-hover/link:bg-white/10 transition-colors">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
@@ -239,7 +301,7 @@
               </a>
               <a href="mailto:support@philippineairlines.com" 
                  class="flex items-center space-x-4 text-gray-400 hover:text-white transition-all group/link">
-                <div class="w-10 h-10 rounded-[5px] bg-white/5 flex items-center justify-center group-hover/link:bg-white/10 transition-colors">
+                <div class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center group-hover/link:bg-white/10 transition-colors">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
@@ -264,7 +326,7 @@
     >
       <div v-if="showToast" 
            class="fixed bottom-6 right-6 bg-gradient-to-r from-[#FF579A] to-pink-500 text-white px-6 py-4 rounded-[5px] shadow-2xl flex items-center space-x-3 max-w-sm z-50">
-        <div class="w-6 h-6 bg-white/20 rounded-[2px] flex items-center justify-center">
+        <div class="w-6 h-6 bg-white/20 rounded-md flex items-center justify-center">
           <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
@@ -278,16 +340,21 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useBookingStore } from '@/stores/booking';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import api from '@/services/booking/api';
+import BookingStatusHeader from '@/components/booking/BookingStatusHeader.vue';
+import LoadingOverlay from '@/components/common/LoadingOverlay.vue';
 
 const bookingStore = useBookingStore();
 const router = useRouter();
+const route = useRoute();
 
 const loading = ref(false);
 const loadingMessage = ref("");
 const showToast = ref(false);
 const toastMessage = ref("");
+const hasAgreedToTerms = ref(false);
+const isRetrying = ref(false);
 
 // Computed properties
 const bookingId = computed(() => bookingStore.booking_id);
@@ -300,12 +367,30 @@ const contactName = computed(() => {
   return `${info.title || ''} ${info.firstName || ''} ${info.lastName || ''}`.trim() || 'Not specified';
 });
 
+const priceBreakdown = computed(() => bookingStore.backendBreakdown?.breakdown);
+
 const totalAmount = computed(() => {
+  // Priority 1: Backend breakdown from Store (Authoritative - synced in Review page)
+  if (bookingStore.backendBreakdown?.total_amount) {
+    console.log('💰 PaymentView: Using Store backendBreakdown total:', bookingStore.backendBreakdown.total_amount);
+    return bookingStore.backendBreakdown.total_amount;
+  }
+  
+  // Priority 2: Amount passed as query param from Review (booking creation response.total_amount)
+  const queryAmount = parseFloat(route.query.amount);
+  if (Number.isFinite(queryAmount) && queryAmount > 0) {
+    console.log('💰 PaymentView: Using query amount:', queryAmount);
+    return queryAmount;
+  }
+
+  // Priority 3: Store's booking_total (legacy sync)
   if (bookingStore.booking_total > 0) {
-    console.log('💰 PaymentView: Using Store booking_total (from backend sync):', bookingStore.booking_total);
+    console.log('💰 PaymentView: Using Store booking_total:', bookingStore.booking_total);
     return bookingStore.booking_total;
   }
-  console.log('⚠️ PaymentView: No backend synced total, using Store grandTotal:', bookingStore.grandTotal);
+  
+  // Priority 4: Client-computed grand total (fallback)
+  console.log('⚠️ PaymentView: Falling back to Store grandTotal:', bookingStore.grandTotal);
   return bookingStore.grandTotal || 0;
 });
 
@@ -470,8 +555,14 @@ const checkPaymentCallback = () => {
   const success = urlParams.get('success');
   const error = urlParams.get('error');
   const bookingId = urlParams.get('booking_id');
+  const isRetry = route.query.retry === 'true' || route.query.retry === true || urlParams.get('retry');
   
-  if (success === 'true' && bookingId) {
+  if (isRetry) {
+    isRetrying.value = true;
+    showToastMessage('Payment was not completed. Your booking is safely held, please retry payment.', 5000);
+    // Clean up query but keep state
+    router.replace({ ...route, query: { ...route.query, retry: undefined } });
+  } else if (success === 'true' && bookingId) {
     showToastMessage('Payment successful! Your booking has been confirmed.');
     window.history.replaceState({}, document.title, window.location.pathname);
   } else if (error) {

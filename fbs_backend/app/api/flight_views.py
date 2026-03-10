@@ -110,6 +110,44 @@ class SeatViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['schedule', 'seat_class']
 
+    @action(detail=True, methods=['post'], url_path='lock')
+    def lock_seat(self, request, pk=None):
+        """Temporarily lock a seat for a session to prevent double booking"""
+        seat = self.get_object()
+        session_id = request.data.get('session_id')
+        duration_minutes = int(request.data.get('duration', 10))
+
+        if not session_id:
+            return Response({'error': 'session_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            # Refresh and lock the row for update
+            seat = Seat.objects.select_for_update().get(id=seat.id)
+            
+            # 1. Check if permanently booked
+            is_permanently_booked = BookingDetail.objects.filter(
+                seat=seat,
+                status__in=['pending', 'confirmed', 'checkin', 'boarding', 'completed']
+            ).exists()
+            
+            if is_permanently_booked:
+                return Response({'error': 'Seat is already booked'}, status=status.HTTP_409_CONFLICT)
+            
+            # 2. Check if locked by SOMEONE ELSE
+            if seat.is_locked and seat.locked_by_session != session_id:
+                return Response({'error': 'Seat is currently locked by another user'}, status=status.HTTP_423_LOCKED)
+            
+            # 3. Apply/Extend the lock
+            seat.locked_until = timezone.now() + timezone.timedelta(minutes=duration_minutes)
+            seat.locked_by_session = session_id
+            seat.save()
+            
+            return Response({
+                'success': True, 
+                'seat_number': seat.seat_number,
+                'locked_until': seat.locked_until
+            })
+
     @action(detail=False, methods=['post'], url_path='bulk-reset')
     def bulk_reset(self, request):
         schedule_id = request.data.get('schedule_id')

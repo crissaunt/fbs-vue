@@ -34,6 +34,14 @@ export const studentDashboardService = {
     },
 
     /**
+     * Get check-in history for the student
+     * URL: GET /api/student/checkin-history/
+     */
+    getCheckinHistory() {
+        return api.get('api/student/checkin-history/');
+    },
+
+    /**
      * Submit activity work
      * URL: POST /api/student/activity/{id}/submit/
      */

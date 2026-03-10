@@ -3,15 +3,61 @@ import api from './api';
 
 export const seatService = {
   /**
+   * Temporarily lock a seat for a user session
+   * @param {Number|String} seatId 
+   * @param {String} sessionId 
+   * @param {Number} duration - Duration in minutes
+   */
+  async lockSeat(seatId, sessionId, duration = 10) {
+    try {
+      const response = await api.post(`flightapp/api/seats/${seatId}/lock/`, {
+        session_id: sessionId,
+        duration: duration
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`❌ Failed to lock seat ${seatId}:`, error.response?.data || error.message);
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Could not lock seat',
+        status: error.response?.status
+      };
+    }
+  },
+
+  /**
+   * Unlock a seat manually
+   * @param {Number|String} seatId 
+   * @param {String} sessionId 
+   */
+  async unlockSeat(seatId, sessionId) {
+    try {
+      const response = await api.post(`flightapp/api/seats/${seatId}/unlock/`, {
+        session_id: sessionId
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`❌ Failed to unlock seat ${seatId}:`, error.response?.data || error.message);
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Could not unlock seat'
+      };
+    }
+  },
+
+  /**
    * Fetches all seats for a specific flight schedule with schedule info
    * @param {Number|String} scheduleId 
+   * @param {String} sessionId
    */
-  async getSeatsBySchedule(scheduleId) {
+  async getSeatsBySchedule(scheduleId, sessionId = null) {
     try {
       console.log(`🔍 Fetching seats for schedule ${scheduleId}...`);
 
       // Try the new endpoint first (recommended)
-      const response = await api.get(`flightapp/api/schedules/${scheduleId}/seats-with-info/`);
+      const response = await api.get(`flightapp/api/schedules/${scheduleId}/seats-with-info/`, {
+        params: { session_id: sessionId }
+      });
 
       if (response.data.success) {
         console.log('✅ Seat data loaded with new endpoint:', {
@@ -46,7 +92,10 @@ export const seatService = {
     try {
       console.log(`🔄 Trying old endpoint for schedule ${scheduleId}...`);
       const response = await api.get('flightapp/api/seats/', {
-        params: { schedule: scheduleId }
+        params: {
+          schedule: scheduleId,
+          session_id: sessionId
+        }
       });
 
       console.log('Old endpoint response:', response.data);

@@ -190,7 +190,7 @@
                   :key="col" 
                   @click="toggleSeat(row, col, 'business')"
                   :class="getSeatClass(row, col, 'business')"
-                  class="h-12 w-12 rounded-sm border-2 flex items-center justify-center font-bold transition-all group relative"
+                  class="h-12 w-12 rounded border-2 flex items-center justify-center font-bold transition-all group relative"
                   :disabled="isSeatOccupied(row, col)"
                 >
                   {{ col }}
@@ -208,7 +208,7 @@
                   :key="col" 
                   @click="toggleSeat(row, col, 'business')"
                   :class="getSeatClass(row, col, 'business')"
-                  class="h-12 w-12 rounded-sm border-2 flex items-center justify-center font-bold transition-all group relative"
+                  class="h-12 w-12 rounded border-2 flex items-center justify-center font-bold transition-all group relative"
                   :disabled="isSeatOccupied(row, col)"
                 >
                   {{ col }}
@@ -239,7 +239,7 @@
                   :key="col" 
                   @click="toggleSeat(row + 4, col, 'comfort')"
                   :class="getSeatClass(row + 4, col, 'comfort')"
-                  class="h-10 w-10 rounded-sm border flex items-center justify-center text-sm transition-all group relative"
+                  class="h-10 w-10 rounded border flex items-center justify-center text-sm transition-all group relative"
                   :disabled="isSeatOccupied(row + 4, col)"
                 >
                   {{ col }}
@@ -257,7 +257,7 @@
                   :key="col" 
                   @click="toggleSeat(row + 4, col, 'comfort')"
                   :class="getSeatClass(row + 4, col, 'comfort')"
-                  class="h-10 w-10 rounded-sm border flex items-center justify-center text-sm transition-all group relative"
+                  class="h-10 w-10 rounded border flex items-center justify-center text-sm transition-all group relative"
                   :disabled="isSeatOccupied(row + 4, col)"
                 >
                   {{ col }}
@@ -288,7 +288,7 @@
                   :key="col" 
                   @click="toggleSeat(row + 9, col, 'economy')"
                   :class="getSeatClass(row + 9, col, 'economy')"
-                  class="h-9 w-9 rounded-sm border flex items-center justify-center text-xs transition-all group relative"
+                  class="h-9 w-9 rounded border flex items-center justify-center text-xs transition-all group relative"
                   :disabled="isSeatOccupied(row + 9, col)"
                 >
                   {{ col }}
@@ -306,7 +306,7 @@
                   :key="col" 
                   @click="toggleSeat(row + 9, col, 'economy')"
                   :class="getSeatClass(row + 9, col, 'economy')"
-                  class="h-9 w-9 rounded-sm border flex items-center justify-center text-xs transition-all group relative"
+                  class="h-9 w-9 rounded border flex items-center justify-center text-xs transition-all group relative"
                   :disabled="isSeatOccupied(row + 9, col)"
                 >
                   {{ col }}

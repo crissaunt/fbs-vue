@@ -1,15 +1,13 @@
 BOOKING CONFIRMATION - {{ booking_reference }}
 ================================================
 
-✈️ YOUR TICKETS ARE ATTACHED!
+⚠️ THIS IS YOUR E-TICKET — NOT A BOARDING PASS
 
-Please find your PDF tickets attached to this email:
-- itinerary_{{ booking_reference }}.pdf
-{% for detail in outbound_details %}- boarding_pass_{{ detail.passenger.last_name }}_{{ detail.schedule.flight.flight_number }}.pdf
-{% endfor %}{% for detail in return_details %}- boarding_pass_{{ detail.passenger.last_name }}_{{ detail.schedule.flight.flight_number }}.pdf
-{% endfor %}
+Attached: itinerary_{{ booking_reference }}.pdf (E-Ticket / Itinerary)
 
-Download and print these PDFs or show them on your mobile device at the airport.
+This confirms your booking, but you CANNOT use it to board your flight.
+You must complete CHECK-IN at the airport counter (24-48 hrs before 
+departure) to receive your actual Boarding Pass.
 
 
 BOOKING DETAILS
@@ -68,14 +66,12 @@ Transaction ID: {{ transaction_id }}
 Payment Date: {{ payment_date|date:"F d, Y H:i" }}
 
 
-IMPORTANT REMINDERS
--------------------
-✓ Download your PDF tickets from the email attachments
-✓ Print your boarding pass or save it to your phone
-✓ Check-in opens 24 hours before departure
-✓ Arrive at the airport 2-3 hours before domestic flights, 3-4 hours for international
-✓ Bring a valid ID/passport and your boarding pass
-✓ Keep this booking reference: {{ booking_reference }}
+WHAT YOU NEED TO DO BEFORE YOUR FLIGHT
+--------------------------------------
+✅ Done: Booking confirmed. Save your PNR: {{ booking_reference }}
+✈️ Next: Check in at the airport counter 24-48 hours before departure. Bring your PNR and a valid ID.
+🖨️ Then: After check-in, you will receive your BOARDING PASS with seat, gate, and QR code.
+⏰ Arrive at the airport at least 2 hours before departure. Counter closes 45 min before.
 
 
 Need Help?

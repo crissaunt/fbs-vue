@@ -88,7 +88,7 @@ onUnmounted(() => {
 
 <style scoped>
 .timer-banner {
-  background: #003870; 
+  background: #FF579A; 
   color: white;
   padding: 10px;
   text-align: center;
@@ -115,7 +115,7 @@ onUnmounted(() => {
 }
 
 .timer-warn.timer-banner {
-  background: #d11241;
+  background: #D4AC0D;
 }
 
 .timer-warn.timer-sidebar {

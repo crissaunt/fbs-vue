@@ -83,7 +83,7 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
+          <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-10">
             <!-- Loading State (Skeleton UI) -->
             <div v-if="loading" class="animate-pulse">
               <div class="flex justify-between items-start mb-10">
@@ -101,7 +101,7 @@
               <div class="space-y-6">
                 <!-- Activity Stats Skeleton -->
                 <div class="grid grid-cols-3 gap-6 mb-10">
-                  <div v-for="i in 3" :key="i" class="h-24 bg-gray-50 rounded-xl border border-gray-100"></div>
+                  <div v-for="i in 3" :key="i" class="h-24 bg-gray-50 rounded-lg border border-gray-100"></div>
                 </div>
                 
                 <!-- Content Placeholder -->
@@ -151,7 +151,7 @@
                 <!-- Instructions -->
                 <div class="mb-10">
                   <h3 class="text-xs font-black uppercase text-gray-800 mb-4 tracking-widest">Instructions</h3>
-                  <div class="border border-gray-100 bg-gray-50/50 p-6 rounded-xl italic text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
+                  <div class="border border-gray-100 bg-gray-50/50 p-6 rounded-lg italic text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
                     {{ activity.instructions || 'No instructions provided.' }}
                   </div>
                 </div>
@@ -241,7 +241,7 @@
                 </div>
 
                 <!-- Passenger Information -->
-                <div class="border border-gray-200 rounded-xl p-8 bg-white">
+                <div class="border border-gray-200 rounded-lg p-8 bg-white">
                   <h3 class="text-lg font-bold mb-8 text-gray-800">Passenger Information</h3>
                   <div v-if="activity.passengers && activity.passengers.length > 0">
                     <div v-for="(p, index) in activity.passengers" :key="index" class="mb-10 last:mb-0 border-b border-gray-50 pb-8 last:border-0">
@@ -460,7 +460,7 @@
                   <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Loading student work...</p>
                 </div>
 
-                <div v-else-if="submissions.length === 0" class="text-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                <div v-else-if="submissions.length === 0" class="text-center py-20 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
                   <p class="text-gray-400 text-sm italic">No students are currently enrolled in this section.</p>
                 </div>
 
