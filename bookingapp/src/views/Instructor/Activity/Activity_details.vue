@@ -1,15 +1,17 @@
 <template>
-  <div class="flex flex-col h-screen bg-gray-50 font-sans">
-    <!-- Header -->
-    <div class="bg-gradient-to-r from-pink-500 to-pink-400 text-white px-6 py-2.5 flex items-center justify-between shadow-sm z-20 border-b border-pink-400">
-      <div class="flex items-center gap-4">
-        <button @click="toggleSidebar" class="p-1.5 hover:bg-pink-600 rounded-md transition-colors focus:outline-none">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
-          </svg>
-        </button>
-        <div class="flex items-center gap-3">
-          <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-xl shadow-inner">🎓</div>
+  <div class="p-0 m-0">
+    <!-- Main Application UI (Hidden during print) -->
+    <div v-if="!isPrinting" class="flex flex-col h-screen bg-gray-50 font-sans">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-pink-500 to-pink-400 text-white px-6 py-2.5 flex items-center justify-between shadow-sm z-20 border-b border-pink-400">
+        <div class="flex items-center gap-4">
+          <button @click="toggleSidebar" class="p-1.5 hover:bg-pink-600 rounded-md transition-colors focus:outline-none">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-xl shadow-inner">🎓</div>
           <div>
             <h1 class="text-[10px] font-bold uppercase tracking-widest text-white/90">Cabagan State University</h1>
             <p class="text-[9px] uppercase tracking-tighter opacity-60">Faculty Portal</p>
@@ -166,7 +168,8 @@
                     </span>
                   </div>
 
-                  <div class="border border-yellow-200 rounded-3xl py-6 px-10 flex items-center justify-between bg-white relative overflow-hidden">
+                  <!-- Dynamic Flight Requirements based on trip type -->
+                  <div v-if="(activity.required_trip_type || '').toLowerCase().replace(/\s+/g, '_') === 'one_way' || ((!activity.segments || activity.segments.length <= 1) && (activity.required_trip_type || '').toLowerCase().replace(/\s+/g, '_') !== 'round_trip')" class="border border-yellow-200 rounded-3xl py-6 px-10 flex items-center justify-between bg-white relative overflow-hidden">
                     <div class="text-center">
                       <p class="text-xs text-gray-400 uppercase font-bold tracking-widest">From</p>
                       <p class="text-xl font-bold text-gray-900">{{ activity.required_origin || '-' }}</p>
@@ -192,6 +195,47 @@
                         child: <b>{{ activity.required_children || 0 }}</b> 
                         infant: <b>{{ activity.required_infants || 0 }}</b>
                       </p>
+                    </div>
+                  </div>
+
+                  <!-- Multi-City / Round Trip Segments -->
+                  <div v-else class="space-y-3">
+                    <div v-for="(segment, idx) in activity.segments" :key="idx" class="border border-yellow-200 rounded-2xl py-4 px-8 flex items-center justify-between bg-white relative overflow-hidden">
+                      <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-yellow-400"></div>
+                      <div class="flex items-center gap-6">
+                        <div class="w-8 h-8 rounded-full bg-yellow-50 flex items-center justify-center font-bold text-yellow-600 text-xs shadow-sm">
+                          {{ idx + 1 }}
+                        </div>
+                        <div class="flex items-center gap-10">
+                          <div class="text-center">
+                            <p class="text-[9px] text-gray-400 uppercase font-black tracking-widest">From</p>
+                            <p class="text-lg font-bold text-gray-900 uppercase">{{ segment.origin }}</p>
+                          </div>
+                          <div class="flex flex-col items-center">
+                            <div class="w-12 h-[1px] bg-gray-200 relative mb-1">
+                              <div class="absolute -top-1 -right-0.5 text-[8px] text-gray-300">▶</div>
+                            </div>
+                          </div>
+                          <div class="text-center">
+                            <p class="text-[9px] text-gray-400 uppercase font-black tracking-widest">To</p>
+                            <p class="text-lg font-bold text-gray-900 uppercase">{{ segment.destination }}</p>
+                          </div>
+                          <div class="ml-4">
+                            <p class="text-[9px] text-gray-400 uppercase font-black tracking-widest">Departure Date</p>
+                            <p class="text-xs font-bold text-gray-700">{{ segment.departure_date || 'N/A' }}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div v-if="idx === 0" class="text-right border-l border-gray-100 pl-8">
+                        <p class="text-[9px] text-gray-400 uppercase font-black tracking-widest mb-1">Passengers</p>
+                        <p class="text-[10px] text-gray-700 font-medium">
+                          Adult: <b>{{ activity.required_passengers || 0 }}</b><br>
+                          Child: <b>{{ activity.required_children || 0 }}</b><br>
+                          Infant: <b>{{ activity.required_infants || 0 }}</b>
+                        </p>
+                      </div>
+                      <div v-else class="w-24"></div> <!-- Spacer for other rows -->
                     </div>
                   </div>
                 </div>
@@ -259,6 +303,14 @@
                             {{ p.nationality }}
                           </div>
                         </div>
+
+                        <!-- Passenger Category -->
+                        <div>
+                          <label class="text-[9px] font-black text-red-500 uppercase">Category*</label>
+                          <div class="mt-1 p-3 border border-gray-200 rounded-lg text-xs bg-gray-50/50 uppercase text-gray-700">
+                            {{ p.passenger_category === 'senior' ? 'Senior Citizen' : (p.passenger_category === 'pwd' ? 'PWD' : 'Regular') }}
+                          </div>
+                        </div>
                         
                         <!-- Passport Number -->
                         <div v-if="hasValue(p.passport_number)">
@@ -291,6 +343,16 @@
                             {{ p.special_requirements }}
                           </div>
                         </div>
+                        
+                        <!-- Passenger Add-ons -->
+                        <div v-if="getPassengerAddons(p).length > 0" class="md:col-span-4 mt-2">
+                          <label class="text-[9px] font-black text-pink-500 uppercase tracking-wide">Assigned Add-ons</label>
+                          <div class="mt-1 flex flex-wrap gap-2">
+                            <span v-for="addon in getPassengerAddons(p)" :key="addon.id" class="px-3 py-1.5 bg-pink-50 border border-pink-200 text-pink-700 rounded-md text-xs font-bold shadow-sm">
+                              {{ addon.addon_name }}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -298,16 +360,54 @@
                     No passenger information available.
                   </div>
                 </div>
+                
+                <!-- Add-on & Insurance Requirements -->
+                <div v-if="activity.activity_addons && activity.activity_addons.length > 0" class="mt-10 mb-10">
+                  <h3 class="text-xs font-black uppercase text-gray-800 mb-4 tracking-widest">Add-ons & Insurance Requirements</h3>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div v-for="aa in activity.activity_addons" :key="aa.id" class="border border-pink-100 rounded-xl p-4 bg-pink-50/30 flex items-center justify-between">
+                      <div>
+                        <p class="text-xs font-bold text-gray-900 leading-tight">{{ aa.addon_name }}</p>
+                        <p class="text-[10px] text-gray-400 mt-1 uppercase font-bold tracking-tight">
+                          Assign to: {{ aa.passenger?.first_name }} {{ aa.passenger?.last_name || 'Passenger' }}
+                        </p>
+                      </div>
+                      <div class="bg-white text-pink-500 h-8 w-8 rounded-full flex items-center justify-center shadow-sm border border-pink-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
                 <!-- Activate Button -->
-                <div class="mt-12 flex justify-center">
+                <div class="mt-12 flex flex-col items-center">
+                  <div v-if="activity.is_code_active && eligibleStudents.length > 0" class="mb-4 text-center">
+                    <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mb-2">
+                       {{ eligibleStudents.length }} student(s) haven't received this activity yet
+                    </p>
+                    <button 
+                      @click="openActivationModal"
+                      :disabled="activating"
+                      class="px-8 py-3 bg-pink-500 hover:bg-pink-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md active:scale-95 disabled:opacity-50"
+                    >
+                      Release to more students
+                    </button>
+                  </div>
+
                   <button 
-                    @click="handleActivation"
-                    :disabled="activity.is_code_active || activating"
+                    v-if="!activity.is_code_active"
+                    @click="openActivationModal"
+                    :disabled="activating"
                     class="w-full max-w-lg bg-[#FFC145] hover:bg-yellow-500 disabled:bg-gray-200 disabled:text-gray-400 py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-all shadow-md active:scale-95 disabled:cursor-not-allowed"
                   >
-                    {{ activating ? 'Activating...' : (activity.is_code_active ? 'Already Activated' : 'Activate') }}
+                    {{ activating ? 'Processing...' : 'Activate' }}
                   </button>
+                  
+                  <div v-else-if="eligibleStudents.length === 0" class="text-center py-4 px-8 bg-green-50 rounded-xl border border-green-100">
+                     <p class="text-xs font-bold text-green-700 uppercase tracking-widest">Released to all students</p>
+                  </div>
                 </div>
               </div>
 
@@ -317,7 +417,7 @@
                   <h2 class="text-2xl font-black text-gray-900 uppercase tracking-tight">Student Submissions</h2>
                   <div class="flex items-center gap-4">
                     <button 
-                      v-if="activity && !activity.grades_released"
+                      v-if="activity && (!activity.grades_released || hasUnreleasedGradedSubmissions)"
                       @click="handleReleaseGrades" 
                       :disabled="releasingGrades"
                       class="text-xs font-bold bg-pink-500 text-white px-4 py-2 hover:bg-pink-600 uppercase tracking-widest flex items-center gap-2 rounded transition-all shadow-sm disabled:opacity-50"
@@ -326,10 +426,10 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      <span v-else>Release All Scores</span>
+                      <span v-else>{{ activity.grades_released ? 'Release Pending Scores' : 'Release All Scores' }}</span>
                     </button>
                     <div v-else-if="activity?.grades_released" class="flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded border border-green-100">
-                       <span class="text-[9px] font-black uppercase tracking-widest">Scores Released</span>
+                       <span class="text-[9px] font-black uppercase tracking-widest">All Scores Released</span>
                        <span class="text-green-500 text-xs">✓</span>
                     </div>
 
@@ -364,16 +464,18 @@
                   <p class="text-gray-400 text-sm italic">No students are currently enrolled in this section.</p>
                 </div>
 
-                <div v-else class="overflow-hidden border border-gray-100 rounded-xl bg-white shadow-sm">
+                <div v-else id="printable-submission-table" class="overflow-hidden border border-gray-100 rounded-xl bg-white shadow-sm">
                   <table class="w-full text-left border-collapse">
                     <thead class="bg-gray-50 border-b border-gray-100">
                       <tr>
                         <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Student</th>
-                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Compliance</th>
-                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Passengers</th>
-                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Completion</th>
-                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Add-ons</th>
-                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Score</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Accuracy</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Tech Skill</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Organization</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Completeness</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Professionalism</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Grade</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Released</th>
                         <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest print:hidden">Action</th>
                       </tr>
                     </thead>
@@ -389,34 +491,51 @@
                           </div>
                         </td>
                         <td class="px-4 py-5 text-center">
-                          <span v-if="sub.analysis" class="text-xs font-bold" :class="sub.analysis.compliance > 0 ? 'text-green-600' : 'text-gray-400'">
-                            {{ Math.round((sub.analysis.compliance / ((activity?.total_points || 100) * 0.4)) * 100) }}%
+                          <span v-if="sub.booking" class="text-xs font-bold" :class="getRubricStats(sub).accuracy.ratio > 0 ? 'text-green-600' : 'text-gray-400'">
+                            {{ getRubricStats(sub).accuracy.level }}
                           </span>
                           <span v-else class="text-gray-300">-</span>
                         </td>
                         <td class="px-4 py-5 text-center">
-                          <span v-if="sub.analysis" class="text-xs font-bold" :class="sub.analysis.passengers > 0 ? 'text-blue-600' : 'text-gray-400'">
-                            {{ Math.round((sub.analysis.passengers / ((activity?.total_points || 100) * 0.25)) * 100) }}%
+                          <span v-if="sub.booking" class="text-xs font-bold" :class="getRubricStats(sub).tech.ratio > 0 ? 'text-blue-600' : 'text-gray-400'">
+                            {{ getRubricStats(sub).tech.level }}
                           </span>
                           <span v-else class="text-gray-300">-</span>
                         </td>
                         <td class="px-4 py-5 text-center">
-                          <span v-if="sub.analysis" class="text-xs font-bold" :class="sub.analysis.completion > 0 ? 'text-amber-600' : 'text-gray-400'">
-                            {{ Math.round((sub.analysis.completion / ((activity?.total_points || 100) * 0.25)) * 100) }}%
+                          <span v-if="sub.booking" class="text-xs font-bold" :class="getRubricStats(sub).org.ratio > 0 ? 'text-amber-600' : 'text-gray-400'">
+                            {{ getRubricStats(sub).org.level }}
                           </span>
                           <span v-else class="text-gray-300">-</span>
                         </td>
                         <td class="px-4 py-5 text-center">
-                          <span v-if="sub.analysis" class="text-xs font-bold" :class="sub.analysis.addons > 0 ? 'text-pink-600' : 'text-gray-400'">
-                            {{ Math.round(((sub.analysis.addons || 0) / ((activity?.total_points || 100) * 0.1)) * 100) }}%
+                          <span v-if="sub.booking" class="text-xs font-bold" :class="getRubricStats(sub).comp.ratio > 0 ? 'text-pink-600' : 'text-gray-400'">
+                            {{ getRubricStats(sub).comp.level }}
+                          </span>
+                          <span v-else class="text-gray-300">-</span>
+                        </td>
+                        <td class="px-4 py-5 text-center">
+                          <span v-if="sub.booking" class="text-xs font-bold" :class="getRubricStats(sub).prof.ratio > 0 ? 'text-purple-600' : 'text-gray-400'">
+                            {{ getRubricStats(sub).prof.level }}
                           </span>
                           <span v-else class="text-gray-300">-</span>
                         </td>
                         <td class="px-4 py-5 text-sm font-bold text-gray-700">
-                          <span v-if="sub.grade !== null" class="text-pink-500 font-black">
-                            {{ ((sub.grade / (activity?.total_points || 100)) * 100).toFixed(0) }}%
+                          <span v-if="sub.booking" class="text-pink-500 font-black">
+                            {{ Math.round((getRubricStats(sub).total / (activity?.total_points || 100)) * 100) }}%
                           </span>
                           <span v-else class="text-gray-300">-</span>
+                        </td>
+                        <td class="px-4 py-5 text-center">
+                          <div v-if="sub.is_released" class="flex flex-col items-center">
+                            <span class="text-[9px] font-black text-green-600 uppercase tracking-widest">Yes</span>
+                            <span class="text-green-500 text-[10px]">✓</span>
+                          </div>
+                          <div v-else-if="sub.grade !== null" class="flex flex-col items-center">
+                            <span class="text-[9px] font-black text-amber-500 uppercase tracking-widest">Pending</span>
+                            <span class="text-amber-500 text-[10px]">○</span>
+                          </div>
+                          <span v-else class="text-gray-300 text-[10px]">-</span>
                         </td>
                         <td class="px-4 py-5 print:hidden">
                           <button 
@@ -453,31 +572,372 @@
 
     <!-- Success Modal -->
     <div v-if="showSuccessModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div class="bg-white p-10 rounded-2xl text-center shadow-2xl max-w-sm w-full">
-        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">✅</div>
-        <h2 class="text-xl font-black mb-2 uppercase text-gray-900">Activity Activated</h2>
-        <p class="text-gray-500 text-xs mb-6 leading-relaxed">Share this code with your students to begin the activity:</p>
-        <div class="bg-gray-100 text-4xl font-mono font-black py-4 rounded-xl tracking-widest text-pink-600 border-2 border-dashed border-gray-200 mb-8 uppercase">
+      <div class="bg-white p-10 rounded-2xl text-center shadow-2xl max-w-sm w-full border border-gray-100">
+        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl shadow-inner">✅</div>
+        <h2 class="text-2xl font-black mb-2 uppercase text-gray-900 tracking-tight">Activated</h2>
+        <p class="text-gray-500 text-[11px] mb-8 leading-relaxed font-medium">Activity has been assigned to the selected students. Share this code with them:</p>
+        <div class="bg-gray-50 text-4xl font-mono font-black py-5 rounded-2xl tracking-widest text-pink-600 border-2 border-dashed border-pink-200 mb-8 uppercase shadow-sm">
           {{ activity?.activity_code }}
         </div>
-        <button @click="showSuccessModal = false" class="w-full bg-black text-white py-3 rounded-lg font-bold uppercase text-xs tracking-widest">Close</button>
+        <button @click="showSuccessModal = false" class="w-full bg-slate-900 text-white py-4 rounded-xl font-bold uppercase text-xs tracking-widest hover:bg-black transition-all shadow-lg active:scale-95">Complete</button>
+      </div>
+    </div>
+
+    <!-- Activation Student Selection Modal -->
+    <div v-if="showActivationModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+      <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
+        <!-- Modal Header -->
+        <div class="p-8 border-b border-gray-50 bg-gray-50/30">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <h2 class="text-2xl font-black uppercase text-gray-900 tracking-tight">Select Students</h2>
+              <p class="text-[10px] font-bold text-pink-500 uppercase tracking-widest mt-1">
+                {{ activity?.is_code_active ? 'Re-releasing to remaining students' : 'Assigning students to activity' }}
+              </p>
+            </div>
+            <button @click="showActivationModal = false" class="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-all">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Selection Controls -->
+        <div class="px-8 py-4 bg-white border-b border-gray-50 flex items-center justify-between">
+          <label class="flex items-center gap-3 cursor-pointer group">
+            <div class="relative flex items-center justify-center w-5 h-5 border-2 border-gray-200 rounded-md group-hover:border-pink-300 transition-colors" :class="isAllSelected ? 'bg-pink-500 border-pink-500' : 'bg-white'">
+              <input type="checkbox" class="absolute inset-0 opacity-0 cursor-pointer" :checked="isAllSelected" @change="toggleSelectAll">
+              <svg v-if="isAllSelected" class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4">
+                <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <span class="text-[11px] font-black uppercase tracking-widest text-gray-500 group-hover:text-pink-600 transition-colors">Select All ({{ eligibleStudents.length }})</span>
+          </label>
+          <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ selectedStudentIds.length }} Selected</span>
+        </div>
+
+        <!-- Student List -->
+        <div class="overflow-y-auto max-h-[400px] p-4 bg-gray-50/20">
+          <div v-if="eligibleStudents.length === 0" class="text-center py-10 italic text-gray-400 text-sm">
+            All enrolled students have already received this activity.
+          </div>
+          <div v-else class="space-y-2">
+            <div 
+              v-for="student in eligibleStudents" 
+              :key="student.id"
+              @click="toggleStudentSelection(student.id)"
+              class="flex items-center justify-between p-4 bg-white rounded-2xl border transition-all cursor-pointer hover:shadow-md active:scale-[0.98]"
+              :class="selectedStudentIds.includes(student.id) ? 'border-pink-500 shadow-sm ring-1 ring-pink-500/10' : 'border-gray-100 hover:border-pink-200'"
+            >
+              <div class="flex items-center gap-4">
+                <div class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center font-bold text-slate-500 uppercase text-xs">
+                  {{ student.first_name[0] }}{{ student.last_name[0] }}
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold text-gray-900 leading-tight">{{ student.first_name }} {{ student.last_name }}</h3>
+                  <p class="text-[10px] text-gray-400 font-bold tracking-widest mt-0.5">{{ student.student_number }}</p>
+                </div>
+              </div>
+              <div class="w-6 h-6 border-2 rounded-lg flex items-center justify-center transition-colors" :class="selectedStudentIds.includes(student.id) ? 'bg-pink-500 border-pink-500' : 'bg-gray-100 border-gray-200'">
+                <svg v-if="selectedStudentIds.includes(student.id)" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                  <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="p-8 border-t border-gray-50 bg-white">
+          <button 
+            @click="confirmActivation"
+            :disabled="selectedStudentIds.length === 0 || activating"
+            class="w-full bg-slate-900 hover:bg-black disabled:bg-gray-200 disabled:text-gray-400 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3"
+          >
+            <span v-if="activating" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+             {{ activating ? 'Processing Activation...' : (activity?.is_code_active ? 'Release to Students' : 'Activate Activity') }}
+          </button>
+          <p v-if="selectedStudentIds.length === 0" class="text-center mt-4 text-[9px] font-bold text-red-400 uppercase tracking-widest italic animate-pulse">
+            Select at least one student to continue
+          </p>
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- Strictly Table-Only Print Layout (Shown only during print) -->
+  <div v-else class="bg-white" style="padding: 0; margin: 0;">
+    <div style="border: 1px solid #e5e7eb; border-radius: 8px; margin: 12px; overflow: hidden;">
+      <table style="width: 100%; border-collapse: collapse; text-align: left; line-height: 1.2; font-family: Arial, sans-serif; table-layout: fixed;">
+        <colgroup>
+          <col style="width: 22%;">
+          <col style="width: 11%;">
+          <col style="width: 11%;">
+          <col style="width: 12%;">
+          <col style="width: 12%;">
+          <col style="width: 14%;">
+          <col style="width: 11%;">
+        </colgroup>
+        <thead style="background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+          <tr>
+            <th style="padding: 6px 12px; font-size: 9px; font-weight: 900; color: #6b7280; letter-spacing: 0.08em; text-transform: uppercase;">STUDENT</th>
+            <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Accuracy</th>
+            <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Tech Skill</th>
+            <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Organization</th>
+            <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Completeness</th>
+            <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Professionalism</th>
+            <th style="padding: 6px 8px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Total Grade</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="sub in submissions" :key="sub.student_id" style="border-bottom: 1px solid #f3f4f6;">
+            <td style="padding: 3px 12px;">
+              <div style="font-weight: 700; font-size: 10px; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ sub.first_name }} {{ sub.last_name }}</div>
+              <div style="font-size: 8px; color: #9ca3af; white-space: nowrap;">{{ sub.student_number }}</div>
+            </td>
+            <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).accuracy.level + '' : '-' }}</td>
+            <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).tech.level + '' : '-' }}</td>
+            <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).org.level + '' : '-' }}</td>
+            <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).comp.level + '' : '-' }}</td>
+            <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).prof.level + '' : '-' }}</td>
+            <td style="padding: 3px 12px; text-align: center; font-size: 11px; font-weight: 900; color: #ec4899;">
+              <span v-if="sub.booking">
+                {{ Math.round((getRubricStats(sub).total / (activity?.total_points || 100)) * 100) }}%
+              </span>
+              <span v-else>-</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { instructorDashboardService } from '@/services/instructor/instructorDashboardService'
 import { activityDetailsService } from '@/services/instructor/activityDetailsService'
 import { useNotificationStore } from '@/stores/notification'
+import { useUserStore } from '@/stores/user'
 
+const userStore = useUserStore()
 const notificationStore = useNotificationStore()
 const router = useRouter()
 const route = useRoute()
 
 // --- Helper Functions ---
+// --- Granular Scoring Helpers ---
+const getRubricStats = (sub) => {
+    // If the backend has provided the exact rubric breakdown from the detailed calculation, use it!
+    if (sub.rubric_breakdown && Array.isArray(sub.rubric_breakdown) && sub.rubric_breakdown.length === 5) {
+        const rb = sub.rubric_breakdown;
+        return {
+            accuracy: { level: rb[0]?.level || 1, ratio: rb[0]?.ratio || 0, status: rb[0]?.status },
+            tech: { level: rb[1]?.level || 1, ratio: rb[1]?.ratio || 0, status: rb[1]?.status },
+            org: { level: rb[2]?.level || 1, ratio: rb[2]?.ratio || 0, status: rb[2]?.status },
+            comp: { level: rb[3]?.level || 1, ratio: rb[3]?.ratio || 0, status: rb[3]?.status },
+            prof: { level: rb[4]?.level || 1, ratio: rb[4]?.ratio || 0, status: rb[4]?.status },
+            total: sub.grade || 0
+        };
+    }
+
+    if (!sub.booking || !activity.value) return {
+        accuracy: { level: 1, ratio: 0 }, tech: { level: 1, ratio: 0 },
+        org: { level: 1, ratio: 0 }, comp: { level: 1, ratio: 0 },
+        prof: { level: 1, ratio: 0 }, total: 0
+    };
+
+    const b = sub.booking;
+    const a = activity.value;
+    const details = b.details || [];
+    
+    // Normalize data structure for matching
+    const actualOrigin = details[0]?.schedule?.origin || details[0]?.origin || '-';
+    // Handle multi-city destination properly by taking the last leg
+    const actualDestination = details.length > 0 ? (details[details.length - 1]?.schedule?.destination || details[details.length - 1]?.destination || actualOrigin) : '-';
+    const actualDepartureDate = details[0]?.schedule?.departure_time ? new Date(details[0].schedule.departure_time).toISOString().split('T')[0] : (details[0]?.departure_date || '-');
+    const actualClass = details[0]?.travel_class || details[0]?.schedule?.travel_class || '-';
+    const reqTripType = (a.required_trip_type || '').toLowerCase().replace(/\s+/g, '_');
+    const actTripType = (b.trip_type || '').toLowerCase().replace(/\s+/g, '_');
+    const isPassport = a.title?.toLowerCase().includes('passport');
+
+    // Robust comparators from detailed logic
+    const normalizeDate = (d) => {
+        if (!d) return null;
+        let ds = d instanceof Date ? d.toISOString() : String(d);
+        const match = ds.match(/(\d{4}-\d{2}-\d{2})/);
+        return match ? match[1] : ds.split('T')[0].trim();
+    };
+
+    const compareStrings = (str1, str2) => {
+        const s1 = (str1 || '').toString().trim().toLowerCase();
+        const s2 = (str2 || '').toString().trim().toLowerCase();
+        if (s1 === s2) return true;
+        if (s1 && s2 && s1.length >= 2 && s2.length >= 2 && (s1.includes(s2) || s2.includes(s1))) return true;
+        return false;
+    };
+
+    // 1. Accuracy
+    const accCrit = [];
+    accCrit.push({ label: 'Trip Type', isMet: actTripType === reqTripType });
+    
+    if (reqTripType === 'one_way') {
+        accCrit.push({ isMet: compareStrings(actualOrigin, a.required_origin) });
+        accCrit.push({ isMet: compareStrings(actualDestination, a.required_destination) });
+        accCrit.push({ isMet: !a.required_departure_date || a.required_departure_date === actualDepartureDate });
+    } else if (reqTripType === 'round_trip') {
+        const actualReturnDate = details.length > 1 && details[1].schedule?.departure_time ? new Date(details[1].schedule.departure_time).toISOString().split('T')[0] : '-';
+        accCrit.push({ isMet: compareStrings(actualOrigin, a.required_origin) });
+        accCrit.push({ isMet: compareStrings(actualDestination, a.required_destination) }); // actually first leg dest
+        accCrit.push({ isMet: !a.required_departure_date || a.required_departure_date === actualDepartureDate });
+        accCrit.push({ isMet: !a.required_return_date || a.required_return_date === actualReturnDate });
+    } else if (reqTripType === 'multi_city') {
+        if (a.segments?.length) {
+            a.segments.forEach((expectedSeg, idx) => {
+                const actualSeg = details[idx]; // Simplified segment matching
+                accCrit.push({ isMet: actualSeg && compareStrings(actualSeg.schedule?.origin || actualSeg.origin, expectedSeg.origin) });
+                accCrit.push({ isMet: actualSeg && compareStrings(actualSeg.schedule?.destination || actualSeg.destination, expectedSeg.destination) });
+                accCrit.push({ isMet: actualSeg && (!expectedSeg.departure_date || normalizeDate(expectedSeg.departure_date) === normalizeDate(actualSeg.schedule?.departure_time || actualSeg.departure_date)) });
+            });
+        }
+    } else {
+        accCrit.push({ isMet: compareStrings(actualOrigin, a.required_origin) });
+        accCrit.push({ isMet: compareStrings(actualDestination, a.required_destination) });
+        accCrit.push({ isMet: !a.required_departure_date || a.required_departure_date === actualDepartureDate });
+    }
+
+    const accRatio = accCrit.filter(c => c.isMet).length / accCrit.length;
+    let accLevel = 1;
+    if (accRatio === 1) accLevel = 5;
+    else if (accRatio >= 0.8) accLevel = 4;
+    else if (accRatio >= 0.5) accLevel = 3;
+    else if (accRatio >= 0.2) accLevel = 2;
+
+    // 2. Tech Skill
+    const techCrit = [
+        { isMet: (() => {
+            const norm = (s) => (s || '').toLowerCase().replace(/[\s_]/g, '').replace('class', '').trim();
+            const rClass = norm(a.required_travel_class);
+            const aClass = norm(actualClass);
+            if (!rClass) return true;
+            return rClass === aClass || aClass.includes(rClass) || rClass.includes(aClass);
+        })() },
+        { isMet: details.length > 0 }
+    ];
+    const techRatio = techCrit.filter(c => c.isMet).length / techCrit.length;
+    let techLevel = 1;
+    if (techRatio === 1) techLevel = 5;
+    else if (techRatio >= 0.7) techLevel = 4;
+    else if (techRatio >= 0.4) techLevel = 3;
+    else if (techRatio >= 0.1) techLevel = 2;
+
+    // 3. Organization (Passenger Details)
+    const orgFields = [];
+    const bookedPax = Array.from(new Set(details.map(d => d.passenger?.id || `${d.passenger?.first_name}_${d.passenger?.last_name}`)))
+        .map(id => details.find(d => (d.passenger?.id || `${d.passenger?.first_name}_${d.passenger?.last_name}`) === id)?.passenger);
+    
+    (a.passengers || []).forEach((expected) => {
+        let actualIdx = bookedPax.findIndex(p => 
+            p && p.first_name?.toLowerCase() === expected.first_name?.toLowerCase() && 
+            p.last_name?.toLowerCase() === expected.last_name?.toLowerCase()
+        );
+        const actual = actualIdx !== -1 ? bookedPax[actualIdx] : null;
+
+        orgFields.push({ label: 'Name', isMet: !!actual });
+        
+        if (actual) {
+            const actualGen = (actual.title || actual.gender || '').toLowerCase().replace('.', '').trim();
+            const expectedGen = (expected.gender || '').toLowerCase().replace('.', '').trim();
+            orgFields.push({ label: 'Gender', isMet: actualGen === expectedGen });
+            orgFields.push({ label: 'DOB', isMet: actual.date_of_birth === expected.date_of_birth });
+            orgFields.push({ label: 'Nationality', isMet: actual.nationality?.toLowerCase() === expected.nationality?.toLowerCase() });
+        } else {
+            orgFields.push({ label: 'Gender', isMet: false });
+            orgFields.push({ label: 'DOB', isMet: false });
+            orgFields.push({ label: 'Nationality', isMet: false });
+        }
+    });
+
+    const orgRatio = orgFields.length > 0 ? orgFields.filter(f => f.isMet).length / orgFields.length : 1;
+    let orgLevel = 1;
+    if (orgRatio === 1) orgLevel = 5;
+    else if (orgRatio >= 0.8) orgLevel = 4;
+    else if (orgRatio >= 0.5) orgLevel = 3;
+    else if (orgRatio >= 0.2) orgLevel = 2;
+
+    // 4. Completeness
+    const reqAdults = a.required_passengers || 0;
+    const reqChild = a.required_children || 0;
+    const reqInfant = a.required_infants || 0;
+    
+    let actAdult = 0, actChild = 0, actInfant = 0;
+    const seenPassengers = new Set();
+    details.forEach(d => {
+        const pId = d.passenger?.id || `${d.passenger?.first_name}_${d.passenger?.last_name}`;
+        if (!seenPassengers.has(pId)) {
+            seenPassengers.add(pId);
+            const type = (d.passenger_type || d.passenger?.type || 'adult').toLowerCase();
+            if (type === 'adult') actAdult++;
+            else if (type === 'child') actChild++;
+            else if (type === 'infant') actInfant++;
+        }
+    });
+    const paxTypesMatch = actAdult === reqAdults && actChild === reqChild && actInfant === reqInfant;
+    
+    // Quick Addon Compliance check
+    let addonsMatched = true;
+    if (a.activity_addons?.length) {
+        a.activity_addons.forEach(req => {
+            const detailWithAddon = details.find(d => 
+                d.passenger?.first_name?.toLowerCase() === req.passenger?.first_name?.toLowerCase() &&
+                d.passenger?.last_name?.toLowerCase() === req.passenger?.last_name?.toLowerCase()
+            );
+            if (!detailWithAddon?.addons?.some(adn => adn.id === req.addon_id)) {
+                addonsMatched = false;
+            }
+        });
+    }
+
+    const compCrit = [
+        { isMet: paxTypesMatch },
+        { isMet: addonsMatched }
+    ];
+    const compRatio = compCrit.filter(c => c.isMet).length / compCrit.length;
+    let compLevel = 1;
+    if (compRatio === 1) compLevel = 5;
+    else if (compRatio >= 0.5) compLevel = 3;
+    else if (compRatio > 0) compLevel = 2;
+
+    // 5. Professionalism
+    const profCrit = [
+        { isMet: accRatio >= 0.8 },
+        { isMet: techRatio >= 0.5 },
+        { isMet: orgRatio >= 0.5 }
+    ];
+    const profRatio = profCrit.filter(c => c.isMet).length / profCrit.length;
+    let profLevel = 1;
+    if (profRatio === 1) profLevel = 5;
+    else if (profRatio >= 0.6) profLevel = 4;
+    else if (profRatio >= 0.3) profLevel = 3;
+    else if (profRatio >= 0.1) profLevel = 2;
+
+    const totalPoints = parseFloat(a.total_points || 100);
+    const sumOfRatios = accRatio + techRatio + orgRatio + compRatio + profRatio;
+    const total = sumOfRatios * (totalPoints / 5);
+
+    return {
+        accuracy: { level: accLevel, ratio: accRatio },
+        tech: { level: techLevel, ratio: techRatio },
+        org: { level: orgLevel, ratio: orgRatio },
+        comp: { level: compLevel, ratio: compRatio },
+        prof: { level: profLevel, ratio: profRatio },
+        total: total
+    };
+}
+
 const getStatusLabel = (status) => {
   const labels = {
     'assigned': 'Assigned',
@@ -504,12 +964,21 @@ const getStatusClass = (status) => {
 const sidebarOpen = ref(false) 
 const dropdownOpen = ref(false)
 const showSuccessModal = ref(false)
+const showActivationModal = ref(false)
+const isPrinting = ref(false)
 const loading = ref(true)
 const activating = ref(false)
 const errorMessage = ref('')
 const activeTab = ref('instructions') // 'instructions' or 'submissions'
 const submissionsLoading = ref(false)
 const releasingGrades = ref(false)
+
+// Selective Activation State
+const eligibleStudents = ref([])
+const selectedStudentIds = ref([])
+const isAllSelected = computed(() => {
+  return eligibleStudents.value.length > 0 && selectedStudentIds.value.length === eligibleStudents.value.length
+})
 
 // --- Data State ---
 const sections = ref([])
@@ -528,6 +997,10 @@ const initials = computed(() => {
   return u[0]?.toUpperCase() || 'I'
 })
 
+const hasUnreleasedGradedSubmissions = computed(() => {
+  return submissions.value.some(sub => sub.grade !== null && !sub.is_released)
+})
+
 // --- Helper Functions ---
 const hasValue = (value) => {
   return value !== null && value !== undefined && value !== '' && value !== '-'
@@ -543,6 +1016,14 @@ const formatDate = (dateString) => {
   }
 }
 
+const getPassengerAddons = (passenger) => {
+  if (!activity.value?.activity_addons) return [];
+  return activity.value.activity_addons.filter(aa => 
+    aa.passenger?.first_name === passenger.first_name &&
+    aa.passenger?.last_name === passenger.last_name
+  );
+}
+
 // --- Actions ---
 const toggleSidebar = () => { sidebarOpen.value = !sidebarOpen.value }
 const toggleDropdown = () => { dropdownOpen.value = !dropdownOpen.value }
@@ -552,7 +1033,7 @@ const goToSection = (id) => {
 }
 
 const handleLogout = () => {
-  localStorage.clear()
+  userStore.logout()
   router.push('/login')
 }
 
@@ -581,7 +1062,10 @@ const fetchData = async () => {
     console.log('Activity data received:', data)
     activity.value = data
     
-    // 3. Fetch submissions if we're on that tab
+    // 3. Fetch eligible students for activation
+    await fetchEligibleStudents()
+    
+    // 4. Fetch submissions if we're on that tab
     if (activeTab.value === 'submissions') {
       await fetchSubmissions()
     }
@@ -628,22 +1112,67 @@ const getBookingRoute = (booking) => {
   return cities.join(' → ');
 };
 
-const handleActivation = async () => {
-  if (!activity.value || activating.value) return
+const fetchEligibleStudents = async () => {
+  const activityId = route.params.activityId
+  if (!activityId) return
+
+  try {
+    const res = await activityDetailsService.getEligibleStudents(activityId)
+    eligibleStudents.value = res.eligible_students || []
+    console.log('Eligible students:', eligibleStudents.value)
+  } catch (error) {
+    console.error("Error fetching eligible students:", error)
+  }
+}
+
+const toggleStudentSelection = (id) => {
+  const index = selectedStudentIds.value.indexOf(id)
+  if (index === -1) {
+    selectedStudentIds.value.push(id)
+  } else {
+    selectedStudentIds.value.splice(index, 1)
+  }
+}
+
+const toggleSelectAll = () => {
+  if (isAllSelected.value) {
+    selectedStudentIds.value = []
+  } else {
+    selectedStudentIds.value = eligibleStudents.value.map(s => s.id)
+  }
+}
+
+const openActivationModal = async () => {
+  await fetchEligibleStudents()
+  selectedStudentIds.value = eligibleStudents.value.map(s => s.id) // Default checked all
+  showActivationModal.value = true
+}
+
+const confirmActivation = async () => {
+  if (!activity.value || activating.value || selectedStudentIds.value.length === 0) return
   
   activating.value = true
   
   try {
-    console.log('Activating activity:', activity.value.id)
-    const res = await activityDetailsService.activateActivity(activity.value.id)
+    console.log('Confirming activation for students:', selectedStudentIds.value)
+    const res = await activityDetailsService.activateActivity(activity.value.id, selectedStudentIds.value)
     
     console.log('Activation response:', res)
     
-    // Update activity data with the response
+    // Update activity data
     activity.value.activity_code = res.activity_code
     activity.value.is_code_active = true
     
+    showActivationModal.value = false
     showSuccessModal.value = true
+    
+    // Refresh eligible students and submissions
+    await fetchEligibleStudents()
+    if (activeTab.value === 'submissions') {
+      await fetchSubmissions()
+    }
+    
+    notificationStore.success(res.message)
   } catch (error) {
     console.error("Activation error:", error)
     const errorMsg = error.response?.data?.error || error.response?.data?.detail || 'Failed to activate activity.'
@@ -653,13 +1182,42 @@ const handleActivation = async () => {
   }
 }
 
+const handleActivation = () => {
+  openActivationModal()
+}
+
 const goToAnalysis = (sub) => {
   if (!sub.booking) return
   router.push(`/instructor/activity/${activity.value.id}/student/${sub.student_id}/score`)
 }
 
-const handlePrint = () => {
-  window.print();
+const handlePrint = async () => {
+  if (!submissions.value || submissions.value.length === 0) {
+    notificationStore.error('No submissions to print.');
+    return;
+  }
+
+  // Check if any student hasn't taken/completed the activity
+  const incompleteStudents = submissions.value.filter(sub => 
+    sub.status === 'assigned' || sub.status === 'not_assigned' || sub.status === 'in_progress'
+  );
+
+  if (incompleteStudents.length > 0) {
+    const confirmMessage = `There are still ${incompleteStudents.length} student/s who haven't taken or finished their activities yet. \n\nDo you want to print the grade report anyway?`;
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+  }
+
+  // Switch to print-only view
+  isPrinting.value = true
+  
+  // Wait for Vue to fully re-render the print table before calling print
+  await nextTick()
+  await nextTick() // double nextTick for extra certainty
+  
+  window.print()
+  isPrinting.value = false
 }
 
 const handleReleaseGrades = async () => {
@@ -697,98 +1255,51 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
+<style>
 @media print {
-  /* Hide UI elements that shouldn't be printed */
-  nav, 
-  aside,
-  header,
-  .print\:hidden,
-  button,
-  .inline-flex,
-  .flex.items-center.gap-4 {
-    display: none !important;
-  }
-
-  /* Reset layout for print */
-  .fixed, .absolute {
-    position: relative !important;
-  }
-  
-  .h-screen {
-    height: auto !important;
-    overflow: visible !important;
-  }
-  
-  .flex-1 {
-    flex: none !important;
-  }
-
-  main, .flex-1.overflow-auto {
+  /* HIDE THE ENTIRE PAGE CONTENT BY DEFAULT IF IT LEAKS */
+  body {
+    background: white !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow: visible !important;
   }
 
-  .p-8 {
-    padding: 0 !important;
+  /* ENSURE THE TABLE WRAPPER LOOKS PREMIUM */
+  .bg-white.p-0.m-0 {
+    display: block !important;
+    width: 100% !important;
   }
 
-  /* Table styles for print */
   table {
     width: 100% !important;
     border-collapse: collapse !important;
-    font-size: 10pt !important;
     margin-top: 20px !important;
-  }
-
-  th, td {
-    border: 1px solid #e5e7eb !important;
-    padding: 10px !important;
-    text-align: left !important;
   }
 
   th {
     background-color: #f9fafb !important;
+    color: #6b7280 !important;
+    font-size: 10px !important;
+    font-weight: 900 !important;
+    padding: 16px !important;
+    border-bottom: 1px solid #f3f4f6 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  td {
+    padding: 20px 24px !important;
+    border-bottom: 1px solid #f9fafb !important;
     color: #111827 !important;
-    font-weight: bold !important;
-    text-transform: uppercase !important;
-    font-size: 8pt !important;
   }
 
-  .text-center {
-    text-align: center !important;
-  }
+  .font-bold { font-weight: 700 !important; }
+  .text-pink-500 { color: #ec4899 !important; }
+  .text-gray-400 { color: #9ca3af !important; }
 
-  /* Remove colors/shadows for better printing */
-  .bg-white {
-    background-color: white !important;
-  }
-  
-  .shadow-sm, .shadow-md {
-    shadow: none !important;
-    box-shadow: none !important;
-  }
-
-  /* Header Branding */
-  .p-8::before {
-    content: "CABAGAN STATE UNIVERSITY - FACULTY PORTAL";
-    display: block;
-    text-align: center;
-    font-size: 10pt;
-    font-weight: bold;
-    margin-bottom: 5px;
-    border-bottom: 2px solid black;
-    padding-bottom: 5px;
-  }
-
-  .p-8::after {
-    content: "Assessment Report generated on " attr(data-date);
-    display: block;
-    text-align: right;
-    font-size: 8pt;
-    margin-top: 20px;
-    font-style: italic;
+  @page {
+    margin: 1cm !important;
+    size: auto !important;
   }
 }
 </style>
