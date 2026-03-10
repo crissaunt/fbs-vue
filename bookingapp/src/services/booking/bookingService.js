@@ -202,6 +202,7 @@ export const bookingService = {
         infant: parseInt(bookingStore.passengerCount?.infants) || 0
       },
       insurance_plan_id: bookingStore.addons?.insurance?.selectedPlanId || null,
+      activity_id: bookingStore.activityId || null,
       activity_code: bookingStore.activityCode || null,
       is_practice: bookingStore.isPractice || false,
       booking_session_id: bookingStore.bookingSessionId || null,

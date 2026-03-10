@@ -1423,19 +1423,23 @@ def create_booking(request):
         
         # Handle Activity Code Validation and Practice Mode
         activity_code = data.get('activity_code')
+        activity_id = data.get('activity_id')
         is_practice = data.get('is_practice', False)
         activity_to_link = None
         
-        if activity_code and not is_practice:
-            # Validate activity code
+        if (activity_code or activity_id) and not is_practice:
+            # Validate activity code or ID
             from fbs_instructor.models import Activity, SectionEnrollment
             from app.models import Students
             
             try:
-                activity_to_link = Activity.objects.get(
-                    activity_code=activity_code.strip().upper(),
-                    is_code_active=True
-                )
+                if activity_id:
+                    activity_to_link = Activity.objects.get(id=activity_id, is_active=True)
+                else:
+                    activity_to_link = Activity.objects.get(
+                        activity_code=activity_code.strip().upper(),
+                        is_code_active=True
+                    )
                 
                 # Check if user is a student and enrolled in the section
                 try:
