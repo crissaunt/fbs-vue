@@ -46,7 +46,7 @@
             v-if="activity.grade !== null"
             class="px-2.5 py-0.5 bg-pink-50 text-pink-700 text-[10px] font-black rounded-full uppercase border border-pink-100"
           >
-            Score: {{ activity.grade }} / {{ activity.total_points }} pts
+            Score: {{ Math.round((activity.grade / activity.total_points) * 100) }}%
           </span>
         </div>
       </div>
@@ -58,7 +58,7 @@
 
     <div class="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100">
       <div class="flex flex-col gap-1">
-        <span class="text-[11px] text-gray-600"><strong>Points:</strong> {{ activity.total_points }}</span>
+        <span class="text-[11px] text-gray-600"><strong>Weight:</strong> 100%</span>
         <span class="text-[11px] text-gray-600"><strong>Trip:</strong> {{ activity.required_trip_type }}</span>
         <span class="text-[11px] text-gray-600"><strong>Class:</strong> {{ activity.required_travel_class }}</span>
       </div>
@@ -76,9 +76,14 @@
     </div>
 
     <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-      <span class="text-[11px] text-gray-500">
-        Assigned: {{ formatDate(activity.assigned_at) }}
-      </span>
+      <div class="flex flex-col">
+        <span class="text-[11px] text-gray-500">
+          Assigned: {{ formatDate(activity.assigned_at) }}
+        </span>
+        <span v-if="activity.submitted_at" class="text-[11px] text-emerald-600 font-bold">
+          Submitted: {{ formatDateTime(activity.submitted_at) }}
+        </span>
+      </div>
       <div class="flex gap-2">
         <button 
           v-if="activity.completed"
@@ -131,6 +136,21 @@ export default {
           month: 'short', 
           day: 'numeric', 
           year: 'numeric' 
+        });
+      } catch (e) {
+        return 'Invalid date';
+      }
+    },
+    formatDateTime(dateString) {
+      if (!dateString) return 'N/A';
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
         });
       } catch (e) {
         return 'Invalid date';

@@ -18,6 +18,8 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.decorators import parser_classes
+from rest_framework.parsers import MultiPartParser
 
 # ============================================================================
 # PYTHON STANDARD LIBRARY
@@ -26,12 +28,15 @@ import random
 import string
 import threading
 import traceback
+import csv
+import io
 from decimal import Decimal
 
 # ============================================================================
 # CROSS-APP IMPORTS (from app.models)
 # ============================================================================
 from app.models import AddOn, Airline, Airport, Students, UserProfile, Booking
+from django.db.models import Count
 
 # ============================================================================
 # LOCAL APP IMPORTS (from fbs_instructor)
@@ -288,8 +293,11 @@ def instructor_dashboard(request):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
     # 3. Handling the GET (Fetching data)
-    sections = Section.objects.filter(instructor=user).values(
-        'id', 'section_name', 'section_code', 'semester', 'academic_year', 'schedule', 'description', 'is_active'
+    sections = Section.objects.filter(instructor=user).annotate(
+        student_count=Count('enrollments', distinct=True),
+        activity_count=Count('activities', distinct=True)
+    ).values(
+        'id', 'section_name', 'section_code', 'semester', 'academic_year', 'schedule', 'description', 'is_active', 'student_count', 'activity_count'
     ).order_by('-id') 
     
     print(f"? Found {sections.count()} sections for instructor")
@@ -485,8 +493,113 @@ class UnenrollStudentView(APIView):
             
         # 3. Delete the enrollment
         enrollment.delete()
+        return Response({"message": "Student successfully unenrolled."}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated, IsInstructor])
+@parser_classes([MultiPartParser])
+def bulk_enroll_students(request, section_id):
+    section = get_object_or_404(Section, id=section_id, instructor=request.user)
+    
+    if section.is_locked:
+        return Response({"error": "This section is currently locked. New enrollments are not allowed."}, status=status.HTTP_403_FORBIDDEN)
         
-        return Response({"message": f"Successfully unenrolled {student.first_name}."}, status=status.HTTP_200_OK)
+    file = request.FILES.get('file')
+    if not file:
+        return Response({"error": "No file uploaded."}, status=status.HTTP_400_BAD_REQUEST)
+        
+    try:
+        # Read CSV
+        decoded_file = file.read().decode('utf-8')
+        io_string = io.StringIO(decoded_file)
+        # Use DictReader to handle headers automatically if possible
+        # We search for student number in any column that looks like it
+        reader = csv.reader(io_string)
+        
+        headers = next(reader, None)
+        if not headers:
+            return Response({"error": "The uploaded file is empty."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        id_index = 0
+        possible_headers = ['id', 'student_number', 'student id', 'id number', 'student_id']
+        found_header = False
+        for i, h in enumerate(headers):
+            if h.lower().strip() in possible_headers:
+                id_index = i
+                found_header = True
+                break
+        
+        # If no clear header found, we'll try to process the header row too as data
+        # but usually CSVs have headers. I'll stick to the found index.
+        
+        enrolled_count = 0
+        not_found_list = []
+        already_enrolled_elsewhere = []
+        already_in_this_section = []
+        
+        # Process the rest of the rows
+        rows = list(reader)
+        # If we didn't find a header, maybe the 'headers' was actually data
+        if not found_header:
+            rows.insert(0, headers)
+            id_index = 0 # Assume first column
+            
+        for row in rows:
+            if not row or len(row) <= id_index:
+                continue
+                
+            student_num = row[id_index].strip()
+            if not student_num:
+                continue
+                
+            try:
+                student = Students.objects.get(student_number=student_num)
+                
+                # Check if enrolled anywhere
+                existing_enrollment = SectionEnrollment.objects.filter(student=student).first()
+                if existing_enrollment:
+                    if existing_enrollment.section == section:
+                        already_in_this_section.append(student_num)
+                    else:
+                        already_enrolled_elsewhere.append({
+                            "id": student_num,
+                            "section": existing_enrollment.section.section_name
+                        })
+                    continue
+                    
+                # Enroll
+                SectionEnrollment.objects.create(section=section, student=student)
+                enrolled_count += 1
+                
+            except Students.DoesNotExist:
+                not_found_list.append(student_num)
+                
+        return Response({
+            "message": f"Successfully enrolled {enrolled_count} students.",
+            "enrolled_count": enrolled_count,
+            "not_found": not_found_list,
+            "already_enrolled": already_enrolled_elsewhere,
+            "already_in_this": already_in_this_section
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": f"Error processing file: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated, IsInstructor])
+def clear_section_enrollments(request, section_id):
+    section = get_object_or_404(Section, id=section_id, instructor=request.user)
+    
+    enrollments = SectionEnrollment.objects.filter(section=section)
+    count = enrollments.count()
+    enrollments.delete()
+    
+    return Response({
+        "message": f"Successfully cleared {count} students from this section."
+    }, status=status.HTTP_200_OK)
     
 
 @api_view(['GET'])
@@ -521,8 +634,9 @@ def create_activity(request, section_id):
         addons = AddOn.objects.select_related('type', 'airline').all()
         
         # ? NEW: Fetch all students for randomization
-        from app.models import Students  # Import your Students model
+        from app.models import Students, SeatClass  # Import models
         students = Students.objects.all()
+        seat_classes = SeatClass.objects.filter(is_active=True).values('name').distinct()
         
         return Response({
             'airports': [
@@ -540,6 +654,7 @@ def create_activity(request, section_id):
                 } 
                 for ad in addons
             ],
+            'available_travel_classes': [sc['name'] for sc in seat_classes],
             # ? NEW: Send students data
             'students': [
                 {
@@ -716,6 +831,19 @@ def activity_details(request, activity_id):
                     "order": s.order
                 }
                 for s in activity.segments.all()
+            ],
+            "activity_addons": [
+                {
+                    "id": aa.id,
+                    "addon_id": aa.addon.id,
+                    "addon_name": aa.addon.name,
+                    "passenger": {
+                        "id": aa.passenger.id,
+                        "first_name": aa.passenger.first_name,
+                        "last_name": aa.passenger.last_name
+                    }
+                }
+                for aa in activity.activity_addons.select_related('addon', 'passenger').all()
             ]
         }
         
@@ -840,8 +968,9 @@ def calculate_submission_score(activity, booking):
     Advanced Deductive Scoring System (Aviation Professional Mode)
     Matches the frontend calculation: 
      - Compliance: 40% (Origin, Destination, Class, Trip Type)
-     - Passengers: 30% (Counts, Passenger Details)
-     - Completion: 30% (Departure Date, Return Date)
+     - Passengers: 25% (Counts, Passenger Details)
+     - Completion: 25% (Departure Date, Return Date)
+     - Add-ons: 10% (Services, Baggage, etc.)
     """
     if not booking:
         return 0.0
@@ -874,11 +1003,11 @@ def calculate_submission_score(activity, booking):
     if req_class and req_class != actual_class:
         comp_penalty += 10
         
-    comp_score = max(0, (total_points * 0.4) - (comp_penalty / 100.0 * total_points))
+    comp_score = max(0, (total_points * 0.4) * (1 - comp_penalty / 100.0))
 
-    # --- 2. Passengers (30% base) ---
+    # --- 2. Passengers (25% base) ---
     pax_penalty = 0
-    unique_passengers = {d.passenger_id: d.passenger for d in booking.details.all() if d.passenger}.values()
+    unique_passengers = list({d.passenger_id: d.passenger for d in booking.details.all() if d.passenger}.values())
     
     pax_counts = {'adult': 0, 'child': 0, 'infant': 0}
     for p in unique_passengers:
@@ -886,26 +1015,38 @@ def calculate_submission_score(activity, booking):
         if t in pax_counts: pax_counts[t] += 1
     
     if pax_counts['adult'] != activity.required_passengers: pax_penalty += 10
-    if pax_counts['child'] != activity.required_children: pax_penalty += 5
-    if pax_counts['infant'] != activity.required_infants: pax_penalty += 5
+    if pax_counts['child'] != (activity.required_children or 0): pax_penalty += 10
+    if pax_counts['infant'] != (activity.required_infants or 0): pax_penalty += 10
 
+    # Stateful matching to prevent duplication
+    used_booked_pax_ids = set()
     expected_passengers = activity.passengers.all()
+    
     for exp in expected_passengers:
-        actual = next((p for p in unique_passengers if p.first_name.lower() == exp.first_name.lower() and p.last_name.lower() == exp.last_name.lower()), None)
+        # Find best available match from student work
+        actual = next((p for p in unique_passengers if p.id not in used_booked_pax_ids and 
+                       p.first_name.lower() == exp.first_name.lower() and 
+                       p.last_name.lower() == exp.last_name.lower()), None)
+        
         if not actual:
-            pax_penalty += 25
+            pax_penalty += 25  # Significant penalty for missing passenger identity
         else:
+            used_booked_pax_ids.add(actual.id)
             actual_gen = (getattr(actual, 'title', '') or getattr(actual, 'gender', '') or '').lower().replace('.', '').strip()
             exp_gen = (exp.gender or '').lower().replace('.', '').strip()
             if actual_gen != exp_gen: pax_penalty += 2
             
             if actual.date_of_birth != exp.date_of_birth: pax_penalty += 5
             if (actual.nationality or '').lower() != (exp.nationality or '').lower(): pax_penalty += 3
-            if (actual.passport_number or '').strip() != (exp.passport_number or '').strip(): pax_penalty += 10
+            
+            # Passport check - only if the activity requires it
+            if getattr(activity, 'require_passport', False):
+                if (actual.passport_number or '').strip() != (exp.passport_number or '').strip(): 
+                    pax_penalty += 10
 
-    pax_score = max(0, (total_points * 0.3) - (pax_penalty / 100.0 * total_points))
+    pax_score = max(0, (total_points * 0.25) * (1 - pax_penalty / 100.0))
 
-    # --- 3. Completion (30% base) ---
+    # --- 3. Completion (25% base) ---
     date_penalty = 0
     actual_departure_date = None
     actual_return_date = None
@@ -924,11 +1065,48 @@ def calculate_submission_score(activity, booking):
     if activity.required_trip_type == 'round_trip' and activity.required_return_date and activity.required_return_date != actual_return_date:
         date_penalty += 15
 
-    completion_score = max(0, (total_points * 0.3) - (date_penalty / 100.0 * total_points))
+    completion_score = max(0, (total_points * 0.25) * (1 - date_penalty / 100.0))
 
-    # --- 4. Final Calculation ---
-    final_grade = comp_score + pax_score + completion_score
-    return round(float(final_grade), 1)
+    # --- 4. Add-ons (10% base) ---
+    required_addons = activity.activity_addons.all() if hasattr(activity, 'activity_addons') else []
+    
+    if required_addons.exists():
+        correct_addons = 0
+        total_req = required_addons.count()
+        for req in required_addons:
+            # Find the booking detail for this passenger
+            detail = booking.details.filter(
+                passenger__first_name__iexact=req.passenger.first_name,
+                passenger__last_name__iexact=req.passenger.last_name
+            ).first()
+            
+            if detail and detail.addons.filter(id=req.addon_id).exists():
+                correct_addons += 1
+        
+        addon_score = (total_points * 0.1) * (correct_addons / total_req)
+    else:
+        # If no add-ons are required, they get the full 10% (100% of the category)
+        addon_score = (total_points * 0.1)
+
+    # --- 5. Final Calculation ---
+    # Round breakdown components first for display consistency
+    r_compliance = round(float(comp_score))
+    r_passengers = round(float(pax_score))
+    r_completion = round(float(completion_score))
+    r_addons = round(float(addon_score))
+    
+    # Total is the sum of rounded parts to ensure 100% accuracy in UI display
+    final_grade = r_compliance + r_passengers + r_completion + r_addons
+    
+    return {
+        "total": float(final_grade),
+        "breakdown": {
+            "compliance": float(r_compliance),
+            "passengers": float(r_passengers),
+            "completion": float(r_completion),
+            "addons": float(r_addons)
+        }
+    }
 
 
 def get_flight_notification_html(student, activity, section):
@@ -1229,14 +1407,17 @@ def get_activity_submissions(request, activity_id):
                     submission["status"] = "submitted"
 
                 # Automatic Grading
-                score = calculate_submission_score(activity, booking)
-                submission["grade"] = score
+                score_data = calculate_submission_score(activity, booking)
+                submission["grade"] = score_data["total"]
+                submission["analysis"] = score_data["breakdown"]
                 
                 # Update binding with the score if it matches confirmed criteria
                 if binding and booking.status == "Confirmed":
-                    if binding.grade != Decimal(str(score)):
-                        binding.grade = score
+                    if binding.grade != Decimal(str(score_data["total"])):
+                        binding.grade = score_data["total"]
                         binding.status = 'graded'
+                        if booking.submitted_at:
+                            binding.submitted_at = booking.submitted_at
                         binding.save()
                         submission["status"] = "graded"
             
@@ -1545,11 +1726,13 @@ def student_dashboard(request):
         ).first()
 
         if booking_obj and (binding.grade is None or binding.status in ['assigned', 'in_progress', 'submitted']):
-            score = calculate_submission_score(activity, booking_obj)
-            binding.grade = score
+            score_data = calculate_submission_score(activity, booking_obj)
+            binding.grade = score_data['total']
             binding.status = 'graded'
+            if booking_obj.submitted_at:
+                binding.submitted_at = booking_obj.submitted_at
             binding.save()
-            print(f"  ? Auto-graded dashboard activity {activity.id}: {score}")
+            print(f"  ? Auto-graded dashboard activity {activity.id}: {score_data['total']}")
 
         # ? Manual Grade Release Check
         effective_grade = float(binding.grade) if (binding.grade is not None and activity.grades_released) else None
@@ -1768,11 +1951,13 @@ def student_activity_details(request, activity_id):
         ).first()
 
         if booking_obj and (binding.grade is None or binding.status in ['assigned', 'in_progress', 'submitted']):
-            score = calculate_submission_score(activity, booking_obj)
-            binding.grade = score
+            score_data = calculate_submission_score(activity, booking_obj)
+            binding.grade = score_data['total']
             binding.status = 'graded'
+            if booking_obj.submitted_at:
+                binding.submitted_at = booking_obj.submitted_at
             binding.save()
-            print(f"? Auto-graded student {user.username}: {score}")
+            print(f"? Auto-graded student {user.username}: {score_data['total']}")
             
     except Exception as e:
         print(f"? Error with ActivityStudentBinding: {str(e)}")
@@ -1889,9 +2074,25 @@ def student_activity_details(request, activity_id):
             'required_children': activity.required_children or 0,
             'required_infants': activity.required_infants or 0,
             
-            # Dates
+            # Dates - provide BOTH naming conventions so frontend always has them
             'departure_date': safe_iso_format(getattr(activity, 'required_departure_date', None)),
             'arrival_date': safe_iso_format(getattr(activity, 'required_return_date', None)),
+            'required_departure_date': activity.required_departure_date.strftime("%Y-%m-%d") if getattr(activity, 'required_departure_date', None) else None,
+            'required_return_date': activity.required_return_date.strftime("%Y-%m-%d") if getattr(activity, 'required_return_date', None) else None,
+            
+            # Passengers embedded inside activity (same format as instructor API)
+            'passengers': [
+                {
+                    'first_name': p.first_name,
+                    'last_name': p.last_name,
+                    'gender': (p.gender or 'mr').lower().replace('.', '').strip(),
+                    'passenger_type': (p.passenger_type or 'adult').lower(),
+                    'date_of_birth': p.date_of_birth.strftime("%Y-%m-%d") if p.date_of_birth else None,
+                    'nationality': p.nationality or '',
+                    'passport_number': p.passport_number or '',
+                }
+                for p in activity.passengers.all()
+            ],
             
             # Section info
             'section_id': activity.section.id,
@@ -1904,6 +2105,7 @@ def student_activity_details(request, activity_id):
             'submitted_at': safe_iso_format(binding.submitted_at) if binding.submitted_at else None,
             'grade': float(binding.grade) if (binding.grade is not None and activity.grades_released) else None,
             'feedback': binding.feedback or '',
+            'analysis': calculate_submission_score(activity, booking_obj) if (booking_obj and activity.grades_released) else None,
             
             # Activity status
             'is_active': activity.is_code_active,
@@ -1919,6 +2121,19 @@ def student_activity_details(request, activity_id):
                     'order': s.order
                 }
                 for s in activity.segments.all().order_by('order')
+            ],
+            "activity_addons": [
+                {
+                    "id": aa.id,
+                    "addon_id": aa.addon.id,
+                    "addon_name": aa.addon.name,
+                    "passenger": {
+                        "id": aa.passenger.id,
+                        "first_name": aa.passenger.first_name,
+                        "last_name": aa.passenger.last_name
+                    }
+                }
+                for aa in activity.activity_addons.select_related('addon', 'passenger').all()
             ],
             
             # Booking link

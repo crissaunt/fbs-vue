@@ -18,14 +18,37 @@
 
       <!-- RIGHT CONTENT AREA -->
       <main class="flex-1 flex flex-col bg-gray-50 overflow-y-auto">
-        <!-- PINK BANNER -->
-        <div class="bg-pink-500 mx-6 mt-5 px-8 py-12 rounded-lg shadow-lg">
-          <h1 class="text-white text-2xl font-light tracking-wide">
-            {{ sectionDisplayName }}
-          </h1>
-          <p class="text-white/80 text-sm mt-2">
-            {{ filteredActivities.length }} {{ filteredActivities.length === 1 ? 'activity' : 'activities' }}
-          </p>
+        <div class="bg-pink-500 mx-6 mt-5 px-8 py-12 rounded-lg shadow-lg relative overflow-hidden">
+          <!-- Background decoration -->
+          <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+          <div class="absolute -left-10 -bottom-10 w-32 h-32 bg-pink-400/20 rounded-full blur-xl"></div>
+          
+          <div class="relative z-10">
+            <h1 class="text-white text-3xl font-light tracking-wide drop-shadow-sm">
+              {{ sectionDisplayName }}
+            </h1>
+            <div class="flex flex-wrap items-center gap-4 mt-3">
+              <p class="text-white/90 text-sm font-medium flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-full border border-white/10 backdrop-blur-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                {{ filteredActivities.length }} {{ filteredActivities.length === 1 ? 'activity' : 'activities' }}
+              </p>
+              
+              <!-- New Schedule Display -->
+              <div v-if="section" class="flex flex-wrap gap-2">
+                <template v-if="parsedSchedules.length > 0">
+                  <div v-for="(s, i) in parsedSchedules" :key="i" class="text-white/90 text-[11px] font-bold flex items-center gap-1.5 bg-pink-600/30 px-3 py-1 rounded-full border border-white/10 backdrop-blur-sm">
+                    <span class="opacity-70 uppercase">{{ s.day.substring(0, 3) }}</span>
+                    <span>{{ formatTimeOnly(s.start_time) }} - {{ formatTimeOnly(s.end_time) }}</span>
+                  </div>
+                </template>
+                <div v-else-if="section.schedule" class="text-white/80 text-[11px] font-medium bg-white/10 px-3 py-1 rounded-full border border-white/10 backdrop-blur-sm">
+                  {{ section.schedule }}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- TABS - Only show if section exists -->
@@ -526,9 +549,17 @@ export default {
     },
     upcomingDeadlines() {
       return this.activities
-        .filter(a => a.due_date && a.is_active)
-        .slice(0, 5)
-        .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+        .filter(a => a.due_date && a.is_active && !a.completed && !['submitted', 'graded'].includes(a.status))
+        .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
+        .slice(0, 5);
+    },
+    parsedSchedules() {
+      if (!this.section?.schedule) return []
+      try {
+        const schedules = typeof this.section.schedule === 'string' ? JSON.parse(this.section.schedule) : this.section.schedule
+        if (Array.isArray(schedules)) return schedules
+      } catch (e) {}
+      return []
     }
   },
   async created() {
@@ -793,6 +824,14 @@ export default {
       } catch (e) {
         return 'Invalid date';
       }
+    },
+    formatTimeOnly(t) {
+      if (!t) return ''
+      const [h, m] = t.split(':')
+      const hour = parseInt(h)
+      const ampm = hour >= 12 ? 'PM' : 'AM'
+      const h12 = hour % 12 || 12
+      return `${h12}:${m} ${ampm}`
     }
   },
   mounted() {

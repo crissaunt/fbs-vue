@@ -234,6 +234,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useBookingStore } from '@/stores/booking';
+import { studentActivityDetailsService } from '@/services/Student/studentActivityDetailsService.js';
+
 
 const route = useRoute();
 const router = useRouter();
@@ -276,7 +278,22 @@ onMounted(() => {
   if (!bookingReference.value) {
     bookingReference.value = localStorage.getItem('last_booking_ref') || 'N/A';
   }
+
+  // Handle activity submission if this was an activity booking
+  handleActivitySubmission();
 });
+
+const handleActivitySubmission = async () => {
+  if (isActivity.value && bookingStore.activityId) {
+    console.log('📝 Submitting activity completion:', bookingStore.activityId);
+    try {
+      await studentActivityDetailsService.submitActivity(bookingStore.activityId, {});
+      console.log('✅ Activity submission successful');
+    } catch (error) {
+      console.error('❌ Failed to submit activity:', error);
+    }
+  }
+};
 
 const downloadItinerary = async () => {
   if (!bookingId.value) {

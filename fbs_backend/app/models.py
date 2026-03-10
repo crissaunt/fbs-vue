@@ -1529,6 +1529,11 @@ class Booking(models.Model):
         blank=True,
         help_text="The activity code that was used for this booking"
     )
+    submitted_at = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="When the booking (activity) was submitted/confirmed"
+    )
     
     # Session tracking for seat locks
     booking_session_id = models.CharField(

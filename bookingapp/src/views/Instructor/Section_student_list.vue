@@ -69,7 +69,23 @@
             <button class="pb-3 text-sm font-bold uppercase border-b-4 border-[#0E8028] text-gray-800 tracking-wider">Student</button>
             <button class="pb-3 text-sm font-bold uppercase text-gray-400 hover:text-gray-600 tracking-wider">Section Settings</button>
             
-            <div class="ml-auto flex gap-3 mb-2">
+            <div class="ml-auto flex items-center gap-3 mb-2">
+              <input type="file" ref="fileInput" @change="handleCSVUpload" accept=".csv" class="hidden">
+              
+              <button @click="triggerFileUpload" class="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-bold text-xs uppercase tracking-widest shadow-md hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Import CSV
+              </button>
+
+              <button @click="handleClearAll" class="bg-red-500 text-white px-5 py-2.5 rounded-lg font-bold text-xs uppercase tracking-widest shadow-md hover:bg-red-600 active:scale-95 transition-all flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Clear All
+              </button>
+
               <button @click="openEnrollModal" class="bg-[#F4D03F] text-[#0A3D16] px-6 py-2.5 rounded-lg font-bold text-xs uppercase tracking-widest shadow-md hover:translate-y-[-1px] active:scale-95 transition-all">Enroll Student</button>
             </div>
           </div>
@@ -167,6 +183,52 @@
         </div>
       </div>
     </div>
+
+    <!-- Result Summary Modal -->
+    <div v-if="showResultModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div class="bg-blue-600 p-4 text-white flex justify-between items-center">
+          <h3 class="text-xs font-bold tracking-widest uppercase">Import Results</h3>
+          <button @click="showResultModal = false" class="hover:text-blue-100 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div v-if="importResults.enrolled_count > 0" class="flex items-center gap-3 p-3 bg-green-50 text-green-700 rounded-lg border border-green-100">
+            <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center font-bold text-sm">✓</div>
+            <p class="text-sm font-semibold">Successfully enrolled {{ importResults.enrolled_count }} students.</p>
+          </div>
+
+          <div v-if="importResults.not_found?.length > 0" class="space-y-2">
+            <p class="text-xs font-bold text-red-600 uppercase tracking-widest flex items-center gap-2">
+               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+               Not in Student Master List
+            </p>
+            <div class="bg-red-50/50 border border-red-100 rounded-lg p-3 max-h-40 overflow-y-auto">
+              <ul class="grid grid-cols-2 gap-2">
+                <li v-for="id in importResults.not_found" :key="id" class="text-xs font-mono text-red-700 bg-white p-1.5 rounded border border-red-100 shadow-sm">{{ id }}</li>
+              </ul>
+            </div>
+            <p class="text-[10px] text-gray-400 italic">These IDs do not exist in the system's student model. Only registered students can be enrolled.</p>
+          </div>
+
+          <div v-if="importResults.already_enrolled?.length > 0" class="space-y-2">
+            <p class="text-xs font-bold text-orange-600 uppercase tracking-widest">Already Enrolled Elsewhere</p>
+            <div class="bg-orange-50/50 border border-orange-100 rounded-lg p-3 max-h-32 overflow-y-auto">
+              <ul class="space-y-1">
+                <li v-for="item in importResults.already_enrolled" :key="item.id" class="text-xs text-orange-800">
+                  <span class="font-bold">{{ item.id }}</span> is in section <span class="italic font-semibold">'{{ item.section }}'</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <button @click="showResultModal = false" class="w-full py-3 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200 transition-colors uppercase text-xs tracking-widest">Close Results</button>
+        </div>
+      </div>
+    </div>
 </template>
 
 <script setup>
@@ -178,11 +240,13 @@ import { instructorDashboardService } from '@/services/instructor/instructorDash
 import { sectionPeopleListService } from '@/services/instructor/sectionPeopleListService'
 import { useUserStore } from '@/stores/user'
 import { useNotificationStore } from '@/stores/notification'
+import { useModalStore } from '@/stores/modal'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const notificationStore = useNotificationStore()
+const modalStore = useModalStore()
 
 // Data State
 const section = ref(null)
@@ -195,6 +259,9 @@ const dropdownOpen = ref(false)
 const isModalOpen = ref(false)
 const studentNumberInput = ref('')
 const loading = ref(false)
+const fileInput = ref(null)
+const showResultModal = ref(false)
+const importResults = ref({ enrolled_count: 0, not_found: [], already_enrolled: [] })
 
 // Logic: Modals
 const openEnrollModal = () => {
@@ -228,19 +295,84 @@ const submitEnrollment = async () => {
 }
 
 const removeStudent = async (student) => {
-  if (!confirm(`Are you sure you want to unenroll ${student.first_name} ${student.last_name}?`)) return
+  const confirmed = await modalStore.confirm({
+    title: 'Unenroll Student',
+    message: `Are you sure you want to unenroll ${student.first_name} ${student.last_name}?`,
+    confirmText: 'Unenroll',
+    cancelText: 'Cancel'
+  })
+  if (!confirmed) return
   
   loading.value = true
   try {
     const sectionId = route.params.id
     const response = await sectionPeopleListService.unenrollStudent(sectionId, student.id)
-    alert(response.message || "Student successfully unenrolled.")
+    notificationStore.success(response.message || "Student successfully unenrolled.")
     await fetchAllData() // Refresh student list
   } catch (error) {
-    alert(error.response?.data?.error || "Failed to unenroll student")
+    notificationStore.error(error.response?.data?.error || "Failed to unenroll student")
   } finally {
     loading.value = false
   }
+}
+
+// Logic: Bulk Actions
+const triggerFileUpload = () => {
+    fileInput.value.click()
+}
+
+const handleCSVUpload = async (event) => {
+    const file = event.target.files[0]
+    if (!file) return
+    
+    // Check if it's a CSV
+    if (!file.name.endsWith('.csv')) {
+        notificationStore.error("Please upload a .csv file")
+        return
+    }
+
+    loading.value = true
+    try {
+        const sectionId = route.params.id
+        const response = await sectionPeopleListService.bulkEnrollStudents(sectionId, file)
+        importResults.value = response
+        showResultModal.value = true
+        await fetchAllData()
+    } catch (error) {
+        notificationStore.error(error.response?.data?.error || "Failed to process bulk enrollment")
+    } finally {
+        loading.value = false
+        event.target.value = '' // Reset input
+    }
+}
+
+const handleClearAll = async () => {
+    if (enrolledStudents.value.length === 0) {
+        notificationStore.warn("There are no students to clear.")
+        return
+    }
+
+    const confirmed = await modalStore.confirm({
+        title: 'Clear All Students',
+        message: 'Are you sure you want to unenroll ALL students from this section? This action cannot be undone.',
+        confirmText: 'Clear Everything',
+        cancelText: 'Cancel',
+        danger: true
+    })
+
+    if (!confirmed) return
+
+    loading.value = true
+    try {
+        const sectionId = route.params.id
+        const response = await sectionPeopleListService.clearEnrolledStudents(sectionId)
+        notificationStore.success(response.message)
+        await fetchAllData()
+    } catch (error) {
+        notificationStore.error(error.response?.data?.error || "Failed to clear section")
+    } finally {
+        loading.value = false
+    }
 }
 
 // Logic: UI Toggles

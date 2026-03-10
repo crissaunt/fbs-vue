@@ -1100,6 +1100,8 @@ def process_payment_from_paymongo(payment_id, payment_attrs, booking):
             
             # Update booking status
             booking.status = 'Confirmed'
+
+            booking.submitted_at = timezone.now()
             booking.save()
             print(f"[OK] Booking status updated to: {booking.status}")
             
@@ -2604,6 +2606,8 @@ def process_payment(request):
                 
                 # Update booking status
                 booking.status = 'Confirmed'
+
+                booking.submitted_at = timezone.now()
                 booking.save()
                 
                 # Update all booking details status
@@ -2723,7 +2727,26 @@ def verify_session_payment(request):
                 'success': False,
                 'error': 'Session ID and Booking ID are required'
             }, status=400)
-        
+
+        from app.models import Booking
+        try:
+            booking = Booking.objects.get(id=booking_id)
+        except Booking.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Booking not found'
+            }, status=404)
+
+        # Handle Mock Session Fallback
+        if str(session_id).startswith('mock_session_'):
+            print(f"[FALLBACK] Verifying mock session for booking {booking_id}")
+            # Manually trigger processing for mock session
+            mock_attrs = {
+                'amount': int(float(booking.total_amount) * 100),
+                'source': {'type': 'mock_fallback'}
+            }
+            return process_payment_from_paymongo(f"mock_tr_{booking_id}", mock_attrs, booking)
+
         # Retrieve checkout session from PayMongo
         from .services.paymongo_service import paymongo_service
         
@@ -2999,6 +3022,8 @@ def process_payment_webhook(payment_id, payment_attrs, booking_id):
             
             # Update booking status
             booking.status = 'Confirmed'
+
+            booking.submitted_at = timezone.now()
             booking.save()
             print(f"[OK] Booking status updated to: {booking.status}")
             
@@ -3105,6 +3130,8 @@ def process_payment_with_id(payment_id, booking_id):
                     
                     # Update booking status
                     booking.status = 'Confirmed'
+
+                    booking.submitted_at = timezone.now()
                     booking.save()
                     
                     # Update booking details
@@ -3409,6 +3436,8 @@ def process_payment_immediately(payment_id, payment_attrs, booking):
             
             # Update booking status
             booking.status = 'Confirmed'
+
+            booking.submitted_at = timezone.now()
             booking.save()
             
             # Update booking details
@@ -4003,6 +4032,8 @@ def process_payment_webhook(payment_id, payment_attrs, booking_id):
             
             # Update booking status
             booking.status = 'Confirmed'
+
+            booking.submitted_at = timezone.now()
             booking.save()
             print(f"[OK] Booking status updated to: {booking.status}")
             

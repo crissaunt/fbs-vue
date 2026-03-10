@@ -46,7 +46,7 @@
     </div>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
       <!-- Passengers Card -->
       <div class="group bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
         <div class="absolute top-0 right-0 w-24 h-24 bg-blue-50/50 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
@@ -122,6 +122,25 @@
         <div class="mt-6 flex items-center text-xs poppins font-bold">
           <span class="text-purple-600 bg-purple-50 px-2 py-1 rounded-full border border-purple-100">{{ stats.scheduledFlights }}</span>
           <span class="text-gray-400 ml-2 font-medium uppercase tracking-wider text-[9px]">Schedules Today</span>
+        </div>
+      </div>
+
+      <!-- Check-ins Card -->
+      <div class="group bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-24 h-24 bg-pink-50/50 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
+        <div class="relative flex items-center justify-between text-[#002D1E]">
+          <div>
+            <p class="text-[10px] uppercase font-bold text-gray-500 tracking-[0.2em] poppins">Check-ins</p>
+            <p class="text-4xl font-black poppins mt-2 tracking-tighter">{{ stats.checkins }}</p>
+          </div>
+          <div class="w-14 h-14 rounded-[1px] bg-pink-50 flex items-center justify-center border border-pink-100 shadow-inner">
+            <i class="ph ph-user-check text-[#fe3787] text-3xl transition-transform group-hover:rotate-12"></i>
+          </div>
+        </div>
+        <div class="mt-6 flex items-center text-xs poppins font-bold">
+          <router-link to="/admin/passenger/check-ins" class="text-[#fe3787] hover:underline flex items-center gap-1">
+            View Registry <i class="ph ph-arrow-right text-[10px]"></i>
+          </router-link>
         </div>
       </div>
     </div>
@@ -309,7 +328,8 @@ const stats = ref({
   totalBookings: 0,
   pendingBookings: 0,
   activeFlights: 0,
-  scheduledFlights: 0
+  scheduledFlights: 0,
+  checkins: 0
 })
 const recentBookings = ref([])
 const revenueByRouteData = ref({ labels: [], data: [] })
@@ -371,7 +391,8 @@ const fetchDashboardData = async () => {
         totalBookings: d.totalBookings || 0,
         pendingBookings: d.pendingBookings || 0,
         activeFlights: d.activeFlights || 0,
-        scheduledFlights: d.scheduledFlights || 0
+        scheduledFlights: d.scheduledFlights || 0,
+        checkins: d.totalCheckins || 0
       }
     }
     
@@ -555,8 +576,8 @@ const initSeatClassChart = () => {
 
 const quickActions = [
   { label: 'Add Flight', description: 'Schedule new departure', icon: 'ph ph-calendar-plus', link: '/admin/manage-flight/schedules', colorClass: 'bg-blue-50 text-blue-600' },
-  { label: 'LMS Performance', description: 'Student success & activities', icon: 'ph ph-student', link: '/admin/student-info/lms-overview', colorClass: 'bg-emerald-50 text-emerald-600' },
-  { label: 'System Logs', description: 'Audit trails & track logs', icon: 'ph ph-fingerprint', link: '/admin/student-info/track-log', colorClass: 'bg-pink-50 text-[#fe3787]' }
+  { label: 'Check-in Registry', description: 'Manage trainee check-ins', icon: 'ph ph-user-check', link: '/admin/passenger/check-ins', colorClass: 'bg-pink-50 text-[#fe3787]' },
+  { label: 'LMS Performance', description: 'Student success & activities', icon: 'ph ph-student', link: '/admin/student-info/lms-overview', colorClass: 'bg-emerald-50 text-emerald-600' }
 ]
 
 const formatNumber = (num) => {

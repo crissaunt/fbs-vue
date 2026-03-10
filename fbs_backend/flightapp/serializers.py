@@ -818,26 +818,7 @@ class BookingTaxSerializer(serializers.ModelSerializer):
 # MISCELLANEOUS SERIALIZERS
 # ============================================================
 
-class CheckInDetailSerializer(serializers.ModelSerializer):
-    """Serializer for check-in details"""
-    booking_detail_info = serializers.CharField(
-        source='booking_detail.id', read_only=True
-    )
-    
-    class Meta:
-        model = CheckInDetail
-        fields = [
-            'id', 'booking_detail', 'booking_detail_info',
-            'check_in_time', 'boarding_pass', 'baggage_count', 'baggage_weight'
-        ]
-
-class TrackLogSerializer(serializers.ModelSerializer):
-    """Serializer for tracking logs"""
-    username = serializers.CharField(source='user.username', read_only=True)
-    
-    class Meta:
-        model = TrackLog
-        fields = ['id', 'user', 'username', 'action', 'timestamp']
+# Duplicate serializers removed - use app.serializers instead
 
 # ============================================================
 # SIMPLE SERIALIZERS FOR DROPDOWNS/LISTS

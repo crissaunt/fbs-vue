@@ -109,6 +109,12 @@ const routes = [
     props: true
   },
   {
+    path: '/student/activity/:activityId/analysis',
+    name: 'StudentAssessmentAnalysis',
+    component: () => import('@/views/Student/Activities/Student_assessment_analysis.vue'),
+    meta: { requiresAuth: true, role: 'student' }
+  },
+  {
     path: '/airbus-321',
     name: 'Airbus321',
     component: AirbusA321Layout

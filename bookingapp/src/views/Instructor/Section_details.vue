@@ -106,12 +106,12 @@
           <!-- Description Section -->
           <div class="grid grid-cols-1 gap-6 mb-6">
             <div class="bg-white rounded-lg border border-gray-200 p-8 shadow-sm">
-              <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Description</h3>
-              <p class="text-gray-600 leading-relaxed italic">
-                {{ section?.description || 'No description provided for this class.' }}
-              </p>
+                <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Description</h3>
+                <p class="text-gray-600 leading-relaxed italic">
+                  {{ section?.description || 'No description provided for this class.' }}
+                </p>
+              </div>
             </div>
-          </div>
 
           <!-- Activities List Section -->
           <div class="space-y-4 px-35">
@@ -361,10 +361,13 @@
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Travel Class *</label>
                     <select v-model="activityForm.required_travel_class" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#093704]">
-                      <option value="economy">Economy</option>
-                      <option value="premium_economy">Premium Economy</option>
-                      <option value="business">Business</option>
-                      <option value="first">First Class</option>
+                      <option v-if="travel_classes.length === 0" value="economy">Economy</option>
+                      <option v-if="travel_classes.length === 0" value="premium_economy">Premium Economy</option>
+                      <option v-if="travel_classes.length === 0" value="business">Business</option>
+                      <option v-if="travel_classes.length === 0" value="first">First Class</option>
+                      <option v-for="tClass in travel_classes" :key="tClass" :value="tClass">
+                        {{ tClass }}
+                      </option>
                     </select>
                   </div>
                   <!-- Origin Airport Dropdown -->
@@ -838,6 +841,7 @@ const activityToDelete = ref(null)
 const airports = ref([])
 const addons = ref([])
 const students = ref([]) // ✅ NEW: Students data
+const travel_classes = ref([]) // ✅ NEW: Travel classes from backend
 const isLoadingData = ref(false)
 
 const activityForm = reactive({
@@ -1039,6 +1043,7 @@ const fetchAirportsAndAddons = async () => {
     airports.value = response.data.airports || []
     addons.value = response.data.available_addons || []
     students.value = response.data.students || [] // ✅ NEW: Store students data
+    travel_classes.value = response.data.available_travel_classes || [] // ✅ NEW: Store travel classes
     
   } catch (error) {
     console.error('Failed to fetch airports and addons:', error)
@@ -1186,7 +1191,7 @@ const generateDetailedInstructions = () => {
   detailedInstructions += `TRIP DETAILS:\n`;
   const typeMap = { 'one_way': 'ONE-WAY', 'round_trip': 'ROUND-TRIP', 'multi_city': 'MULTI-CITY' };
   detailedInstructions += `You are required to book a ${typeMap[activityForm.required_trip_type] || 'FLIGHT'} trip `;
-  detailedInstructions += `in ${activityForm.required_travel_class.toUpperCase().replace('_', ' ')} class.\n\n`;
+  detailedInstructions += `in ${activityForm.required_travel_class.toUpperCase().replace(/_/g, ' ')} class.\n\n`;
   
   const originAirport = airports.value.find(a => a.code === activityForm.required_origin);
   const destinationAirport = airports.value.find(a => a.code === activityForm.required_destination);
@@ -1392,8 +1397,12 @@ const randomizeData = async () => {
     activityForm.segments = [];
   }
   
-  const classes = ['economy', 'premium_economy', 'business', 'first'];
-  activityForm.required_travel_class = classes[Math.floor(Math.random() * classes.length)];
+  if (travel_classes.value.length > 0) {
+    activityForm.required_travel_class = travel_classes.value[Math.floor(Math.random() * travel_classes.value.length)];
+  } else {
+    const classes = ['economy', 'premium_economy', 'business', 'first'];
+    activityForm.required_travel_class = classes[Math.floor(Math.random() * classes.length)];
+  }
   
   if (airports.value.length >= 2) {
     const shuffled = [...airports.value].sort(() => 0.5 - Math.random());
@@ -1438,15 +1447,40 @@ const randomizeData = async () => {
       p.passportNumber = 'P' + Math.floor(10000000 + Math.random() * 90000000);
     }
 
+    // Generate accurate DOB based on passenger type
     const birthDate = new Date();
-    if (p.type === 'Adult') {
-      birthDate.setFullYear(birthDate.getFullYear() - (Math.floor(Math.random() * 50) + 18));
-    } else if (p.type === 'Child') {
-      birthDate.setFullYear(birthDate.getFullYear() - (Math.floor(Math.random() * 9) + 2));
-    } else {
-      birthDate.setFullYear(birthDate.getFullYear() - Math.floor(Math.random() * 2));
+    const pType = (p.type || '').toLowerCase();
+    
+    if (pType === 'adult') {
+      // Adult: 18 to 67 years old
+      const age = Math.floor(Math.random() * 50) + 18;
+      birthDate.setFullYear(birthDate.getFullYear() - age);
+      // Randomize month and day for variety
       birthDate.setMonth(Math.floor(Math.random() * 12));
+      birthDate.setDate(Math.floor(Math.random() * 28) + 1);
+    } else if (pType === 'child') {
+      // Child: 2 to 11 years old
+      const age = Math.floor(Math.random() * 10) + 2;
+      birthDate.setFullYear(birthDate.getFullYear() - age);
+      birthDate.setMonth(Math.floor(Math.random() * 12));
+      birthDate.setDate(Math.floor(Math.random() * 28) + 1);
+    } else if (pType === 'infant') {
+      // Infant: Under 2 years old (0 or 1 year old)
+      const age = Math.floor(Math.random() * 2);
+      birthDate.setFullYear(birthDate.getFullYear() - age);
+      birthDate.setMonth(Math.floor(Math.random() * 12));
+      birthDate.setDate(Math.floor(Math.random() * 28) + 1);
+      
+      // Ensure it's not in the future if age is 0
+      if (age === 0 && birthDate > new Date()) {
+        birthDate.setMonth(new Date().getMonth() - 1);
+      }
+    } else {
+      // Default to Adult if type is unknown
+      const age = Math.floor(Math.random() * 50) + 18;
+      birthDate.setFullYear(birthDate.getFullYear() - age);
     }
+    
     p.dob = birthDate.toISOString().split('T')[0];
   });
 

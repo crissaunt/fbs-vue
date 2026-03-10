@@ -107,7 +107,13 @@
                       </div>
                       <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Academic Year</label>
-                        <input v-model="form.academic_year" type="text" class="w-full border-2 border-gray-50 rounded-lg px-4 py-3 focus:border-pink-400 outline-none transition-all font-medium text-gray-700 bg-gray-50/50" required>
+                        <select v-model="form.academic_year" class="w-full border-2 border-gray-50 rounded-xl px-4 py-3 focus:border-pink-400 outline-none transition-all font-medium text-gray-700 bg-gray-50/50" required>
+                          <option value="2024-2025">2024-2025</option>
+                          <option value="2025-2026">2025-2026</option>
+                          <option value="2026-2027">2026-2027</option>
+                          <option value="2027-2028">2027-2028</option>
+                          <option value="2029-2030">2029-2030</option>
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -117,8 +123,39 @@
                     <h3 class="text-xs font-black text-pink-500 uppercase tracking-widest mb-6 border-b border-pink-100 pb-2">Schedule & Description</h3>
                     <div class="space-y-6">
                       <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Class Schedule</label>
-                        <input v-model="form.schedule" type="text" placeholder="e.g. M-W-F 8:00 AM - 10:00 AM" class="w-full border-2 border-gray-50 rounded-lg px-4 py-3 focus:border-pink-400 outline-none transition-all font-medium text-gray-700 bg-gray-50/50">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-4">Class Schedule(s)</label>
+                        <div v-for="(sched, index) in form.schedules" :key="index" class="flex gap-4 mb-4 items-center">
+                          <div class="flex-1">
+                            <select v-model="sched.day" class="w-full border-2 border-gray-50 rounded-xl px-4 py-3 focus:border-pink-400 outline-none transition-all font-medium text-gray-700 bg-gray-50/50" required>
+                              <option value="" disabled>Select Day</option>
+                              <option value="Monday">Monday</option>
+                              <option value="Tuesday">Tuesday</option>
+                              <option value="Wednesday">Wednesday</option>
+                              <option value="Thursday">Thursday</option>
+                              <option value="Friday">Friday</option>
+                              <option value="Saturday">Saturday</option>
+                              <option value="Sunday">Sunday</option>
+                            </select>
+                          </div>
+                          <div class="flex-1">
+                            <input v-model="sched.start_time" type="time" class="w-full border-2 border-gray-50 rounded-xl px-4 py-3 focus:border-pink-400 outline-none transition-all font-medium text-gray-700 bg-gray-50/50" required>
+                          </div>
+                          <span class="text-gray-300 font-bold">to</span>
+                          <div class="flex-1">
+                            <input v-model="sched.end_time" type="time" class="w-full border-2 border-gray-50 rounded-xl px-4 py-3 focus:border-pink-400 outline-none transition-all font-medium text-gray-700 bg-gray-50/50" required>
+                          </div>
+                          <button v-if="form.schedules.length > 1" type="button" @click="removeSchedule(index)" class="p-2 text-red-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                          </button>
+                        </div>
+                        <button type="button" @click="addSchedule" class="px-4 py-2 border-2 border-pink-100 text-pink-500 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-pink-50 transition-all flex items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" />
+                          </svg>
+                          Add Another Schedule
+                        </button>
                       </div>
                       <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Course Description</label>
@@ -232,7 +269,7 @@ const form = ref({
   section_code: '',
   semester: '',
   academic_year: '',
-  schedule: '',
+  schedules: [{ day: '', start_time: '', end_time: '' }],
   description: '',
   is_locked: false,
   is_active: true
@@ -243,6 +280,30 @@ const initials = computed(() => {
   const u = userStore.user?.username || 'I'
   return u[0].toUpperCase()
 })
+
+const addSchedule = () => {
+  form.value.schedules.push({ day: '', start_time: '', end_time: '' })
+}
+
+const removeSchedule = (index) => {
+  form.value.schedules.splice(index, 1)
+}
+
+const parseSchedule = (scheduleData) => {
+  if (!scheduleData) return [{ day: '', start_time: '', end_time: '' }]
+  
+  try {
+    const schedules = typeof scheduleData === 'string' ? JSON.parse(scheduleData) : scheduleData
+    if (Array.isArray(schedules) && schedules.length > 0) {
+      return schedules
+    }
+  } catch (e) {
+    // If it's not JSON, it might be the old string format like "M-W-F 8:00 AM - 10:00 AM"
+    // We'll leave it as is or return a default empty schedule for editing
+  }
+  
+  return [{ day: '', start_time: '', end_time: '' }]
+}
 
 const toggleSidebar = () => { sidebarOpen.value = !sidebarOpen.value }
 const toggleDropdown = () => { dropdownOpen.value = !dropdownOpen.value }
@@ -269,7 +330,7 @@ const fetchData = async () => {
       section_code: data.section_code || '',
       semester: data.semester || '',
       academic_year: data.academic_year || '',
-      schedule: data.schedule || '',
+      schedules: parseSchedule(data.schedule),
       description: data.description || '',
       is_locked: data.is_locked || false,
       is_active: data.is_active !== false // Default to true if not present
@@ -287,7 +348,11 @@ const fetchData = async () => {
 const saveSettings = async () => {
   loading.value = true
   try {
-    await sectionSettingsService.updateSectionSettings(route.params.id, form.value)
+    const payload = {
+      ...form.value,
+      schedule: JSON.stringify(form.value.schedules)
+    }
+    await sectionSettingsService.updateSectionSettings(route.params.id, payload)
     notificationStore.success("Settings updated successfully!")
     router.push(`/instructor/section/${route.params.id}`)
   } catch (error) {
