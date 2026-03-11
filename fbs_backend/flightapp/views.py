@@ -62,14 +62,26 @@ def get_shared_seat_class_multiplier(airline, seat_class_name):
     name = seat_class_name.strip()
     if "class" in name.lower():
         name = name.lower().replace("class", "").strip().capitalize()
-    
+
+    # Map dynamic frontend bundle names (e.g. "Economy Saver", "Business Flex") to core class names
+    name_lower = name.lower()
+    base_name = name
+    if "premium economy" in name_lower:
+        base_name = "Premium Economy"
+    elif "economy" in name_lower:
+        base_name = "Economy"
+    elif "business" in name_lower:
+        base_name = "Business"
+    elif "first" in name_lower:
+        base_name = "First Class"
+
     try:
         from app.models import SeatClass
         from django.core.cache import cache
         
         # Cache key includes airline if provided
         airline_id = airline.id if hasattr(airline, 'id') else airline if isinstance(airline, (int, str)) else 'gen'
-        cache_key = f"sc_mult_{airline_id}_{name}"
+        cache_key = f"sc_mult_{airline_id}_{base_name.replace(' ', '_')}"
         multiplier = cache.get(cache_key)
         
         if multiplier is None:
@@ -77,12 +89,12 @@ def get_shared_seat_class_multiplier(airline, seat_class_name):
             sc = None
             if airline:
                 if hasattr(airline, 'id'):
-                    sc = SeatClass.objects.filter(airline=airline, name__iexact=name).first()
+                    sc = SeatClass.objects.filter(airline=airline, name__iexact=base_name).first()
                 else:
-                    sc = SeatClass.objects.filter(airline_id=airline, name__iexact=name).first()
+                    sc = SeatClass.objects.filter(airline_id=airline, name__iexact=base_name).first()
             
             if not sc:
-                sc = SeatClass.objects.filter(name__iexact=name).first()
+                sc = SeatClass.objects.filter(name__iexact=base_name).first()
                 
             multiplier = float(sc.price_multiplier) if sc else 1.0
             cache.set(cache_key, multiplier, 3600)
@@ -1682,22 +1694,31 @@ def update_booking(request, booking_id):
                 new_passengers = _create_passengers(passengers_data)
                 print(f"DEBUG: Created {len(new_passengers)} new passengers")
                 
-                # Create new booking details
                 # Normalize segments
                 segments = []
+                fare_families = data.get('fare_families', {})
                 if booking.trip_type in ['multi_city', 'multi-city']:
                     segments = data.get('segments', [])
                 else:
+                    outbound_ff = fare_families.get('depart') or request.data.get('fare_families', {}).get('depart')
                     outbound = {
                         'selectedFlight': data.get('selectedOutbound'),
-                        'addons': data.get('addons', {})
+                        'addons': data.get('addons', {}),
+                        'fare_family': outbound_ff
                     }
+                    if outbound['selectedFlight'] and outbound_ff:
+                        outbound['selectedFlight']['fare_family'] = outbound_ff
                     segments.append(outbound)
+                    
                     if booking.trip_type == 'round_trip' and data.get('selectedReturn'):
+                        return_ff = fare_families.get('return') or request.data.get('fare_families', {}).get('return')
                         returning = {
                             'selectedFlight': data.get('selectedReturn'),
-                            'addons': data.get('return_addons', {})
+                            'addons': data.get('return_addons', {}),
+                            'fare_family': return_ff
                         }
+                        if returning['selectedFlight'] and return_ff:
+                            returning['selectedFlight']['fare_family'] = return_ff
                         segments.append(returning)
 
                 booking_details = []
@@ -2073,22 +2094,35 @@ def _create_booking_detail(booking, passenger, segment, passenger_data=None, seg
             'is_domestic': schedule.flight.route.is_domestic,
         }
         
-        # Recalculate dynamic price
-        price_data = dynamic_pricing.get_price_for_user(
-            flight_pricing_data, 
-            user=user,
-            session_id=session_id
-        )
+        # Use frontend-selected price as the authoritative quote to match search results exactly
+        frontend_price = selected_flight.get('price', 0)
+        fare_family = selected_flight.get('fare_family', 'basic')
+        
+        if frontend_price and float(frontend_price) > 0:
+            base_price = Decimal(str(float(frontend_price)))
+            print(f"    [CREATE DETAIL] Using frontend quoted base price: PHP {base_price}")
+        else:
+            # ONLY fallback if missing
+            fare_type = selected_flight.get('seat_class') or selected_flight.get('class_type', 'Economy')
+            multiplier = get_shared_seat_class_multiplier(schedule.flight.airline, fare_type)
 
-        fare_type = selected_flight.get('seat_class') or selected_flight.get('class_type', 'Economy')
+            price_data = dynamic_pricing.get_price_for_user(
+                flight_pricing_data, 
+                user=user,
+                session_id=session_id
+            )
+            ml_base = float(price_data.get('final_price', schedule.ml_base_price or schedule.price))
+            raw_seat_price = Decimal(str(ml_base)) * Decimal(str(multiplier))
+            base_price = Decimal(str(dynamic_pricing.round_seat_class_price(raw_seat_price)))
+                
+            markup = Decimal('0.00')
+            if fare_family == 'standard':
+                markup = Decimal('1200.00')
+            elif fare_family in ['premium', 'flex']:
+                markup = Decimal('2500.00')
+                
+            base_price += markup
 
-        multiplier = get_shared_seat_class_multiplier(schedule.flight.airline, fare_type)
-
-        # SECURITY: Always calculate price on backend, do not trust frontend 'price'
-        ml_base = float(price_data.get('final_price', schedule.ml_base_price or schedule.price))
-        raw_seat_price = Decimal(str(ml_base)) * Decimal(str(multiplier))
-        base_price = Decimal(str(dynamic_pricing.round_seat_class_price(raw_seat_price)))
-            
         # Apply discounts
         if passenger.passenger_type and passenger.passenger_type.lower() == 'infant':
             # 50% discount for Infants
@@ -2100,12 +2134,15 @@ def _create_booking_detail(booking, passenger, segment, passenger_data=None, seg
             base_price = base_price * Decimal('0.8')
             
         # Add seat adjustment if any
-        if seat and hasattr(seat, 'price_adjustment') and seat.price_adjustment:
-            fare_family = selected_flight.get('fare_family', 'basic')
-            if fare_family != 'premium':
-                base_price += seat.price_adjustment
-            else:
-                print(f"    Skipping seat adjustment for Premium fare")
+        if seat:
+            # Check for the correct property name from models.py
+            adjustment = seat.total_price_adjustment if hasattr(seat, 'total_price_adjustment') else Decimal('0.00')
+            if adjustment > 0:
+                fare_family = selected_flight.get('fare_family', 'basic')
+                if fare_family != 'premium':
+                    base_price += adjustment
+                else:
+                    print(f"    Skipping seat adjustment for Premium fare")
         
         # Create booking detail
         booking_detail = BookingDetail.objects.create(
@@ -2224,24 +2261,31 @@ def _add_addons_to_booking_detail(booking_detail, segment_addons, passenger_data
                     print(f"DEBUG: Meal option with ID {meal_id} not found")
     
     # Assistance service
-    service_id = segment_addons.get('wheelchair', {}).get(passenger_key)
-    if service_id:
-        try:
-            assistance_service = AssistanceService.objects.get(id=service_id)
-            # COLLISION FIX: Include price and included in lookup
-            addon, created = AddOn.objects.get_or_create(
-                assistance_service=assistance_service,
-                price=assistance_service.price,
-                included=assistance_service.is_included,
-                defaults={
-                    'name': f"Assistance: {assistance_service.name}",
-                    'airline': airline,
-                }
-            )
-            addons_to_link.append(addon)
-            print(f"DEBUG: Added assistance addon: {assistance_service.name}")
-        except AssistanceService.DoesNotExist:
-            print(f"DEBUG: Assistance service with ID {service_id} not found")
+    assistance_data = segment_addons.get('wheelchair', {}).get(passenger_key)
+    if assistance_data:
+        service_id = None
+        if isinstance(assistance_data, dict) and assistance_data.get('id'):
+            service_id = assistance_data['id']
+        elif isinstance(assistance_data, (int, str)):
+            service_id = assistance_data
+            
+        if service_id:
+            try:
+                assistance_service = AssistanceService.objects.get(id=service_id)
+                # COLLISION FIX: Include price and included in lookup
+                addon, created = AddOn.objects.get_or_create(
+                    assistance_service=assistance_service,
+                    price=assistance_service.price,
+                    included=assistance_service.is_included,
+                    defaults={
+                        'name': f"Assistance: {assistance_service.name}",
+                        'airline': airline,
+                    }
+                )
+                addons_to_link.append(addon)
+                print(f"DEBUG: Added assistance addon: {assistance_service.name}")
+            except AssistanceService.DoesNotExist:
+                print(f"DEBUG: Assistance service with ID {service_id} not found")
     
     # Link addons to booking detail
     if addons_to_link:
@@ -2307,86 +2351,33 @@ def _apply_taxes(booking, booking_details):
                 continue
 
 
-        # Ensure VAT is applied fallback-style even if DPSC/Others exist
-        if not has_vat_applied:
-            try:
-                vat_tax, _ = TaxType.objects.get_or_create(code='VAT', defaults={'name': 'Value Added Tax', 'per_passenger': True, 'applies_domestic': True})
-                if detail.passenger.ph_discount_type not in ['senior', 'pwd']:
-                    fallback_vat = Decimal(str(detail.price)) * Decimal('0.12')
-                    if fallback_vat > 0:
-                        BookingTax.objects.create(booking=booking, tax_type=vat_tax, amount=fallback_vat, passenger_type=passenger_type)
-                        current_tax = Decimal(str(detail.tax_amount or 0.0))
-                        detail.tax_amount = current_tax + fallback_vat
-                        detail.save()
-                        applied_any_tax = True
-                        print(f"DEBUG: Applied fallback VAT for detail {detail.id}")
-            except Exception as e:
-                print(f"ERR Fallback VAT: {e}")
-
-        # FALLBACK: If no explicit taxes found in DB, apply 12% VAT estimation + Terminal Fee
-        if not applied_any_tax:
-            try:
-                print(f"DEBUG: No explicit taxes found in DB for detail {detail.id}. Applying fallbacks.")
-                
-                # Try to find or create default tax types
-                vat_tax, _ = TaxType.objects.get_or_create(
-                    code='VAT',
-                    defaults={
-                        'name': 'Value Added Tax',
-                        'base_amount': Decimal('0.00'),
-                        'is_active': True,
-                        'per_passenger': True,
-                        'applies_domestic': True,
-                        'applies_international': True
-                    }
-                )
-                
-                dpsc_tax, _ = TaxType.objects.get_or_create(
-                    code='DPSC',
-                    defaults={
-                        'name': 'Domestic Passenger Service Charge',
-                        'base_amount': Decimal('200.00'),
-                        'is_active': True,
-                        'per_passenger': True,
-                        'applies_domestic': True,
-                        'applies_international': False
-                    }
-                )
-                
-                # 1. VAT estimation
-                fallback_vat = Decimal('0.00')
-                # Philippine Rule: Senior Citizens and PWDs are VAT EXEMPT on base fare
-                if detail.passenger.ph_discount_type in ['senior', 'pwd']:
-                    print(f"DEBUG: Passenger {detail.passenger.get_full_name()} is VAT EXEMPT. Skipping 12% VAT.")
-                else:
-                    # Calculate 12% of detail price
-                    fallback_vat = Decimal(str(detail.price)) * Decimal('0.12')
-                
+        # Fallbacks for missing VAT and DPSC independently
+        try:
+            has_dpsc_applied = any(tax.code == 'DPSC' for tax in applicable_taxes)
+            
+            # VAT
+            if not has_vat_applied and detail.passenger.ph_discount_type not in ['senior', 'pwd']:
+                vat_tax, _ = TaxType.objects.get_or_create(code='VAT', defaults={'name': 'Value Added Tax', 'base_amount': Decimal('0.00'), 'is_active': True, 'per_passenger': True, 'applies_domestic': True, 'applies_international': True})
+                fallback_vat = Decimal(str(detail.price)) * Decimal('0.12')
                 if fallback_vat > 0:
-                    BookingTax.objects.create(
-                        booking=booking,
-                        tax_type=vat_tax,
-                        amount=fallback_vat,
-                        passenger_type=passenger_type
-                    )
-                
-                # 2. Terminal Fee (DPSC) - ₱200 for Adult/Child
-                terminal_fee = Decimal('0.00')
-                if passenger_type != 'infant':
-                    terminal_fee = Decimal('200.00')
-                    BookingTax.objects.create(
-                        booking=booking,
-                        tax_type=dpsc_tax,
-                        amount=terminal_fee,
-                        passenger_type=passenger_type
-                    )
+                    BookingTax.objects.create(booking=booking, tax_type=vat_tax, amount=fallback_vat, passenger_type=passenger_type)
+                    current_tax = Decimal(str(detail.tax_amount or 0.0))
+                    detail.tax_amount = current_tax + fallback_vat
+                    detail.save()
+                    print(f"DEBUG: Applied fallback VAT for detail {detail.id}")
 
-                # Ensure detail.tax_amount is treated as Decimal
-                current_tax = Decimal(str(detail.tax_amount)) if detail.tax_amount else Decimal('0.00')
-                detail.tax_amount = current_tax + fallback_vat + terminal_fee
+            # Terminal Fee
+            if not has_dpsc_applied and passenger_type != 'infant':
+                dpsc_tax, _ = TaxType.objects.get_or_create(code='DPSC', defaults={'name': 'Domestic Passenger Service Charge', 'base_amount': Decimal('200.00'), 'is_active': True, 'per_passenger': True, 'applies_domestic': True, 'applies_international': False})
+                terminal_fee = Decimal('200.00')
+                BookingTax.objects.create(booking=booking, tax_type=dpsc_tax, amount=terminal_fee, passenger_type=passenger_type)
+                current_tax = Decimal(str(detail.tax_amount or 0.0))
+                detail.tax_amount = current_tax + terminal_fee
                 detail.save()
-            except Exception as e:
-                print(f"ERROR in tax fallback: {e}")
+                print(f"DEBUG: Applied fallback Terminal Fee for detail {detail.id}")
+                
+        except Exception as e:
+            print(f"ERR Fallback Taxes: {e}")
 
         # ADDON VAT: Always apply 12% VAT to paid addons
         try:
@@ -4371,6 +4362,7 @@ def calculate_booking_price(request):
                 ph_discount = pax.get('ph_discount_type', 'none')
 
                 has_vat_applied = False
+                has_dpsc_applied = False
                 for tax in applicable_taxes:
                     try:
                         if tax.adult_only and pax_type != 'adult':
@@ -4392,6 +4384,8 @@ def calculate_booking_price(request):
                         applied_any_tax = True
                         if tax.code == 'VAT':
                             has_vat_applied = True
+                        if tax.code == 'DPSC':
+                            has_dpsc_applied = True
                         
                         # Granular breakdown
                         label = tax.name or tax.code
@@ -4412,30 +4406,15 @@ def calculate_booking_price(request):
                     label = "Value Added Tax (VAT)"
                     tax_breakdown[label] = tax_breakdown.get(label, Decimal('0.00')) + fallback_vat
                     print(f"DEBUG: Applied fallback 12% VAT ({fallback_vat}) for {pax_type} on segment {schedule_id}")
-
-            # FALLBACK: If no explicit taxes found in DB, use 12% VAT estimation + Terminal Fee
-            if not applied_any_tax:
-                print(f"DEBUG: No explicit taxes found in DB for segment {schedule_id}. Applying defaults.")
-                for pax in passengers:
-                    pax_type = pax.get('type', 'adult').lower()
-                    ph_discount = pax.get('ph_discount_type', 'none')
-                    
-                    # 1. Base VAT (12%) - Senior/PWD are exempt
-                    if ph_discount not in ['senior', 'pwd']:
-                        pax_base = segment_price
-                        if pax_type == 'infant':
-                            pax_base = segment_price * Decimal('0.5')
-                        vat_amt = (pax_base * Decimal('0.12')).quantize(Decimal('0.01'))
-                        total_taxes += vat_amt
-                        label = "Value Added Tax (VAT)"
-                        tax_breakdown[label] = tax_breakdown.get(label, Decimal('0.00')) + vat_amt
-                    
-                    # 2. Terminal Fee (DPSC) - ₱200 for Adult/Child
-                    if pax_type != 'infant':
-                        fee = Decimal('200.00')
-                        total_taxes += fee
-                        label = "Domestic Passenger Service Charge"
-                        tax_breakdown[label] = tax_breakdown.get(label, Decimal('200.00')) + fee
+                
+                # Add Fallback Terminal Fee
+                if not has_dpsc_applied and pax_type != 'infant':
+                    fee = Decimal('200.00')
+                    total_taxes += fee
+                    applied_any_tax = True
+                    label = "Domestic Passenger Service Charge"
+                    tax_breakdown[label] = tax_breakdown.get(label, Decimal('0.00')) + fee
+                    print(f"DEBUG: Applied fallback Terminal Fee ({fee}) for {pax_type} on segment {schedule_id}")
             
             # ADDON VAT: Always apply 12% VAT to paid addons (matches frontend totalTaxes)
             if segment_addons_data:
@@ -4452,7 +4431,7 @@ def calculate_booking_price(request):
                         elif item['type'] == 'seats':
                             if isinstance(item['id'], (int, str)) and str(item['id']).isdigit():
                                 obj = Seat.objects.get(id=item['id'])
-                                price = obj.price_adjustment or Decimal('0.00')
+                                price = obj.total_price_adjustment or Decimal('0.00')
                             else:
                                 price = Decimal(str(item.get('price', 0)))
                         
@@ -4491,41 +4470,55 @@ def calculate_booking_price(request):
                 else: segment_key = str(idx)
 
             # Base Fare calculation per passenger
-            fare_type = selected_flight.get('seat_class') or selected_flight.get('class_type', 'Economy')
+            # IMPORTANT: Use the frontend-provided price (which was calculated by the same ML engine
+            # during search). Re-running dynamic_pricing introduces new randomization factors and
+            # produces a different result. The frontend price is the "locked-in" quoted price.
+            frontend_price = selected_flight.get('price', 0)
+            fare_family = selected_flight.get('fare_family', 'basic')
             schedule_id = selected_flight.get('schedule_id') or selected_flight.get('id')
             
             try:
                 schedule_obj = Schedule.objects.get(id=schedule_id)
-                multiplier = get_shared_seat_class_multiplier(schedule_obj.flight.airline, fare_type)
                 
-                # Fetch dynamically calculated price to perfectly match _create_booking_detail
-                flight_pricing_data = {
-                    'schedule_id': schedule_obj.id,
-                    'flight_number': schedule_obj.flight.flight_number,
-                    'airline_code': schedule_obj.flight.airline.code,
-                    'airline_name': schedule_obj.flight.airline.name,
-                    'origin': schedule_obj.flight.route.origin_airport.code,
-                    'destination': schedule_obj.flight.route.destination_airport.code,
-                    'departure_time': schedule_obj.departure_time.isoformat(),
-                    'arrival_time': schedule_obj.arrival_time.isoformat(),
-                    'total_stops': schedule_obj.flight.total_stops,
-                    'is_domestic': schedule_obj.flight.route.is_domestic,
-                }
-                
-                session_id = data.get('booking_session_id', "booking_creation")
-                user = request.user if request.user.is_authenticated else None
-                
-                price_data = dynamic_pricing.get_price_for_user(
-                    flight_pricing_data, 
-                    user=user,
-                    session_id=session_id
-                )
-                
-                ml_base = float(price_data.get('final_price', schedule_obj.ml_base_price or schedule_obj.price))
-                raw_seat_price = Decimal(str(ml_base)) * Decimal(str(multiplier))
-                outbound_price = Decimal(str(dynamic_pricing.round_seat_class_price(raw_seat_price)))
+                if frontend_price and float(frontend_price) > 0:
+                    # Use the price the user saw (ML-predicted + seat class + bundle already applied)
+                    outbound_price = Decimal(str(float(frontend_price)))
+                    print(f"  [CALC-PRICE] Using frontend-provided price: {outbound_price} (fare_family={fare_family})")
+                else:
+                    # Fallback: recalculate if no frontend price
+                    fare_type = selected_flight.get('seat_class') or selected_flight.get('class_type', 'Economy')
+                    multiplier = get_shared_seat_class_multiplier(schedule_obj.flight.airline, fare_type)
+                    
+                    flight_pricing_data = {
+                        'schedule_id': schedule_obj.id,
+                        'flight_number': schedule_obj.flight.flight_number,
+                        'airline_code': schedule_obj.flight.airline.code,
+                        'airline_name': schedule_obj.flight.airline.name,
+                        'origin': schedule_obj.flight.route.origin_airport.code,
+                        'destination': schedule_obj.flight.route.destination_airport.code,
+                        'departure_time': schedule_obj.departure_time.isoformat(),
+                        'arrival_time': schedule_obj.arrival_time.isoformat(),
+                        'total_stops': schedule_obj.flight.total_stops,
+                        'is_domestic': schedule_obj.flight.route.is_domestic,
+                    }
+                    session_id = data.get('booking_session_id', "booking_creation")
+                    user = request.user if request.user.is_authenticated else None
+                    price_data = dynamic_pricing.get_price_for_user(flight_pricing_data, user=user, session_id=session_id)
+                    ml_base = float(price_data.get('final_price', schedule_obj.ml_base_price or schedule_obj.price))
+                    raw_seat_price = Decimal(str(ml_base)) * Decimal(str(multiplier))
+                    outbound_price = Decimal(str(dynamic_pricing.round_seat_class_price(raw_seat_price)))
+                    
+                    # Apply Fare Family markup
+                    markup = Decimal('0.00')
+                    if fare_family == 'standard':
+                        markup = Decimal('1200.00')
+                    elif fare_family in ['premium', 'flex']:
+                        markup = Decimal('2500.00')
+                    outbound_price += markup
+                    
             except Schedule.DoesNotExist:
-                outbound_price = Decimal(str(selected_flight.get('price', 0)))
+                outbound_price = Decimal(str(frontend_price or 0))
+
 
             segment_base_fare = Decimal('0.00')
             
@@ -4577,7 +4570,7 @@ def calculate_booking_price(request):
                         try:
                             if isinstance(item['id'], (int, str)) and str(item['id']).isdigit():
                                 obj = Seat.objects.get(id=item['id'])
-                                price = obj.price_adjustment or Decimal('0.00')
+                                price = obj.total_price_adjustment if hasattr(obj, 'total_price_adjustment') else Decimal('0.00')
                             else:
                                 price = Decimal(str(item.get('price', 0)))
                         except Seat.DoesNotExist:

@@ -321,9 +321,6 @@
       </aside>
     </div>
 
-      @next="handleConfirmBooking" 
-    />
-
     <LoadingOverlay 
       :show="isProcessing" 
       title="Finalizing Your Booking"
@@ -664,7 +661,7 @@ const grandTotal = computed(() => {
     return backendTotal.value;
   }
   // Fallback: frontend estimate (may be incomplete for round-trip/multi-city)
-  return bookingStore.grandTotal;
+  return bookingStore.grandTotal + bookingStore.totalTaxes;
 });
 
 const isUsingFrontendEstimate = computed(() => !isBackendTotalLoaded.value);

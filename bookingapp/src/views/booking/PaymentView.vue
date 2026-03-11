@@ -254,9 +254,9 @@
               <!-- Main Action -->
               <div class="mt-8 pt-8 border-t border-gray-50">
                 <button @click="handlePayMongoCheckout" 
-                        :disabled="loading || !bookingId || !hasAgreedToTerms"
+                        :disabled="loading || isRedirecting || !bookingId || !hasAgreedToTerms"
                         class="w-full py-4 bg-[#FF579A] hover:bg-[#FF4081] text-white rounded-lg font-bold shadow-lg shadow-pink-200 transition-all active:scale-[0.98] disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none">
-                  {{ loading ? 'Processing...' : 'Proceed to Payment' }}
+                  {{ isRedirecting ? (loadingMessage || 'Redirecting...') : (loading ? 'Processing...' : 'Proceed to Payment') }}
                 </button>
                 
                 <button @click="goBack" 
@@ -481,7 +481,12 @@ const restartBooking = () => {
 /**
  * Handle PayMongo Checkout
  */
+const isRedirecting = ref(false); // Guard against multi-press
+
 const handlePayMongoCheckout = async () => {
+  // Prevent multiple simultaneous calls
+  if (isRedirecting.value || loading.value) return;
+
   if (!isSessionValid.value) {
     showToastMessage("Booking session expired. Please restart your booking.");
     restartBooking();
@@ -495,6 +500,7 @@ const handlePayMongoCheckout = async () => {
   }
 
   loading.value = true;
+  isRedirecting.value = true;
   loadingMessage.value = "Creating secure payment session...";
 
   try {
@@ -517,12 +523,10 @@ const handlePayMongoCheckout = async () => {
         timestamp: Date.now()
       }));
 
-      loading.value = false;
-      loadingMessage.value = "";
+      loadingMessage.value = "Redirecting to PayMongo...";
       
-      setTimeout(() => {
-        window.location.href = response.data.checkout_url;
-      }, 500);
+      // Redirect immediately — keep loading=true so user can't click again
+      window.location.href = response.data.checkout_url;
       
     } else {
       let errorMsg = 'Failed to create checkout session';
@@ -531,13 +535,16 @@ const handlePayMongoCheckout = async () => {
       }
       showToastMessage(`Payment setup failed: ${errorMsg}`);
       loading.value = false;
+      isRedirecting.value = false;
     }
   } catch (error) {
     console.error("PayMongo Checkout Error:", error);
     showToastMessage("Payment Error: Failed to initialize payment gateway.");
     loading.value = false;
+    isRedirecting.value = false;
   }
 };
+
 
 
 // Lifecycle hooks

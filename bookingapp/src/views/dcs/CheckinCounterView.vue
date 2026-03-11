@@ -548,7 +548,7 @@ const steps = [
 ]
 
 const currentStep = ref(0)
-const actualWeight = ref('')
+const actualWeight = ref(0)
 const excessFeePaid = ref(false)
 
 const checks = ref({
@@ -649,8 +649,8 @@ const canProceed = computed(() => {
   if (selectedIds.value.size === 0) return false
   if (currentStep.value === 1) return checks.value.pnrVerified && checks.value.passportsInspected && checks.value.visaSyncOk
   if (currentStep.value === 2) return Object.values(securityClearance.value).every(v => v)
-  if (currentStep.value === 3) return actualWeight.value !== '' && (isOverWeight.value ? excessFeePaid.value : true)
-  if (currentStep.value === 4) return selectedPassengers.value.every(p => p.seat && p.seat !== 'TBA')
+  if (currentStep.value === 3) return (actualWeight.value !== '' && actualWeight.value !== null) && (isOverWeight.value ? excessFeePaid.value : true)
+  if (currentStep.value === 4) return selectedPassengers.value.every(p => p.seat && p.seat !== 'TBA' && p.seat !== 'Unassigned')
   return true
 })
 

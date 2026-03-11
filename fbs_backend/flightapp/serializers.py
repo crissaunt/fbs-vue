@@ -638,6 +638,7 @@ class SelectedFlightSerializer(serializers.Serializer):
     departure_time = serializers.CharField(required=False, allow_blank=True)  # Changed from DateTimeField
     airline = serializers.CharField(max_length=100, required=False, allow_blank=True)
     airline_code = serializers.CharField(max_length=10, required=False, allow_blank=True)
+    fare_family = serializers.CharField(max_length=50, required=False, allow_blank=True)
 
 class ReturnAddonDataSerializer(serializers.Serializer):
     """Serializer for return flight add-on data"""

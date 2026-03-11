@@ -1763,9 +1763,10 @@ class BookingDetail(models.Model):
         if not self.passenger_type and self.passenger:
             self.passenger_type = self.passenger.passenger_type
         
-        # Only calculate price on creation
+        # Only auto-calculate price if no price has been explicitly set.
+        # If a price is already provided (from frontend quote), do NOT override it.
         is_new = self._state.adding
-        if is_new and self.seat:
+        if is_new and self.seat and (self.price is None or self.price == 0):
             self.price = self._calculate_price()
         super().save(*args, **kwargs)
     

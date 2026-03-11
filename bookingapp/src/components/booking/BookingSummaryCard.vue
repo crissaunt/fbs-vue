@@ -84,7 +84,7 @@
         <span class="text-base font-bold text-slate-900">Total Amount</span>
         <span class="text-xl font-bold text-rose-500">₱{{ (totalAmount || 0).toLocaleString() }}</span>
       </div>
-      <div class="text-[10px] text-slate-400">Inclusive of all taxes and fees</div>
+      <div class="text-[10px] text-slate-400">Taxes & fees calculated at review</div>
     </div>
   </div>
 </template>

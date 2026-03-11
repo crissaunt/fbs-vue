@@ -278,22 +278,24 @@ export const useBookingStore = defineStore('booking', {
       const base = parseFloat(this.combinedBasePrice) || 0;
       let taxableBaseTotal = 0;
 
-      // Adults testing for VAT exemption
-      const adults = Array.isArray(state.passengers) ? state.passengers.filter(p => p.type === 'Adult') : [];
-      if (adults.length === 0) {
-        // Fallback: all adults are taxable
-        taxableBaseTotal += base * (parseInt(state.passengerCount?.adults) || 0);
-      } else {
-        adults.forEach(adult => {
-          if (adult.phDiscountType !== 'senior' && adult.phDiscountType !== 'pwd') {
-            taxableBaseTotal += base; // Regular adult is taxable
+      // Calculate taxable base fare (Seniors and PWDs are VAT-exempt in the Philippines)
+      if (state.passengers && state.passengers.length > 0) {
+        state.passengers.forEach(p => {
+          if (p.type === 'Infant') {
+            if (p.phDiscountType !== 'senior' && p.phDiscountType !== 'pwd') {
+              taxableBaseTotal += (base * 0.5);
+            }
+          } else {
+            if (p.phDiscountType !== 'senior' && p.phDiscountType !== 'pwd') {
+              taxableBaseTotal += base;
+            }
           }
         });
+      } else {
+        // Fallback: Use counts if passenger objects are not yet created
+        const { adults = 0, children = 0, infants = 0 } = state.passengerCount || {};
+        taxableBaseTotal = (base * adults) + (base * children) + ((base * 0.5) * infants);
       }
-
-      // Children and infants are generally taxable
-      taxableBaseTotal += base * (parseInt(state.passengerCount?.children) || 0);
-      taxableBaseTotal += (base * 0.5) * (parseInt(state.passengerCount?.infants) || 0);
 
       const baseVat = taxableBaseTotal * 0.12;
 
@@ -323,27 +325,26 @@ export const useBookingStore = defineStore('booking', {
     // Assistance price (active segments only)
     totalAssistancePrice(state) {
       let total = 0;
-      const activeSegments = this.allSegments;
-      activeSegments.forEach((seg, index) => {
-        const segKey = this.isMultiCity ? index.toString() : seg.type;
-        const assistance = state.addons.wheelchair?.[segKey];
-        // If assistance is an object with a price
-        if (assistance && typeof assistance === 'object' && assistance.price) {
-          total += parseFloat(assistance.price) || 0;
-        }
+      const wheelchairData = state.addons.wheelchair || {};
+
+      Object.keys(wheelchairData).forEach(segKey => {
+        const segmentAssistance = wheelchairData[segKey] || {};
+        Object.values(segmentAssistance).forEach(assistance => {
+          if (assistance && typeof assistance === 'object' && assistance.price) {
+            total += parseFloat(assistance.price) || 0;
+          }
+        });
       });
       return total;
     },
 
     // Final aggregated amount (Rounded UP)
-    // Final aggregated amount (Rounded UP)
     grandTotal(state) {
       const bPrice = parseFloat(this.combinedBasePriceTotal) || 0;
-      const tPrice = parseFloat(this.totalTaxes) || 0;
       const aPrice = parseFloat(this.totalAddonsPrice) || 0;
       const iPrice = parseFloat(this.insurancePrice) || 0;
 
-      const rawTotal = bPrice + tPrice + aPrice + iPrice;
+      const rawTotal = bPrice + aPrice + iPrice;
       return Math.ceil(rawTotal);
     },
 
@@ -914,11 +915,11 @@ export const useBookingStore = defineStore('booking', {
     },
 
     // Assistance methods
-    updateAssistanceAddon(passengerKey, serviceId, segment = 'depart') {
+    updateAssistanceAddon(passengerKey, assistanceObj, segment = 'depart') {
       if (!this.addons.wheelchair[segment]) {
         this.addons.wheelchair[segment] = {};
       }
-      this.addons.wheelchair[segment][passengerKey] = serviceId;
+      this.addons.wheelchair[segment][passengerKey] = assistanceObj;
     },
 
     removeAssistanceAddon(passengerKey, segment = 'depart') {

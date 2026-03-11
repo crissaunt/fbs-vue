@@ -298,8 +298,8 @@
                         </div>
                         <div v-for="service in assistanceOptions" :key="service.id"
                           @click="selectAssistanceDirect(p, service, segment.key, $event)"
-                          :class="['relative cursor-pointer rounded-sm border-2 p-3 flex items-start gap-3 transition-all hover:-translate-y-0.5', getAssistanceSelection(p.key, segment.key) === service.id ? 'border-pink-500 bg-pink-50' : service.price === 0 ? 'border-emerald-200 bg-emerald-50/40 hover:border-emerald-400' : 'border-gray-200 bg-white hover:border-pink-300']">
-                          <div v-if="getAssistanceSelection(p.key, segment.key) === service.id" class="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center">
+                          :class="['relative cursor-pointer rounded-sm border-2 p-3 flex items-start gap-3 transition-all hover:-translate-y-0.5', getAssistanceSelection(p.key, segment.key)?.id === service.id ? 'border-pink-500 bg-pink-50' : service.price === 0 ? 'border-emerald-200 bg-emerald-50/40 hover:border-emerald-400' : 'border-gray-200 bg-white hover:border-pink-300']">
+                          <div v-if="getAssistanceSelection(p.key, segment.key)?.id === service.id" class="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center">
                             <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
                           </div>
                           <div class="text-2xl flex-shrink-0">
@@ -393,11 +393,7 @@
                   </div>
                 </div>
 
-                <!-- Taxes Estimate -->
-                <div class="flex justify-between items-center border-t border-dashed border-gray-100 pt-2.5 mt-2">
-                  <span class="text-xs text-gray-400 italic">Taxes &amp; Fees (est.)</span>
-                  <AnimatedNumber :value="taxesPrice" prefix="&#8369;" class="text-xs font-semibold text-gray-500" />
-                </div>
+
 
                 <!-- Grand Total -->
                 <div class="border-t border-gray-200 pt-3 mt-4">
@@ -685,12 +681,19 @@ const selectAssistanceDirect = (passenger, option, segment, event) => {
   if (!option) {
     selectedAddons.wheelchair[segment][passengerKey] = null;
     bookingStore.removeAssistanceAddon(passengerKey, segment);
-  } else if (getAssistanceSelection(passengerKey, segment) === option.id) {
+  } else if (getAssistanceSelection(passengerKey, segment)?.id === option.id) {
     selectedAddons.wheelchair[segment][passengerKey] = null;
     bookingStore.removeAssistanceAddon(passengerKey, segment);
   } else {
-    selectedAddons.wheelchair[segment][passengerKey] = option.id;
-    bookingStore.updateAssistanceAddon(passengerKey, option.id, segment);
+    const obj = { 
+      id: option.id, 
+      price: parseFloat(option.price) || 0, 
+      name: option.name, 
+      service_type: option.service_type, 
+      description: option.description 
+    };
+    selectedAddons.wheelchair[segment][passengerKey] = obj;
+    bookingStore.updateAssistanceAddon(passengerKey, obj, segment);
     if (event && flyingIconRef.value && option) flyingIconRef.value.fly(event.currentTarget, '#sidebar-assistance', 'assist');
   }
   bookingStore.snapshotToServer();
@@ -712,8 +715,20 @@ const confirmSelection = () => {
     if (!option) { selectedAddons.meals[segment][passengerKey] = null; bookingStore.removeMealAddon(passengerKey, segment); }
     else { const obj = { id: option.id, price: parseFloat(option.price) || 0, name: option.name, meal_type: option.meal_type, description: option.description }; selectedAddons.meals[segment][passengerKey] = obj; bookingStore.updateMealAddon(passengerKey, obj, segment); }
   } else if (modalType.value === 'assistance') {
-    if (!option) { selectedAddons.wheelchair[segment][passengerKey] = null; bookingStore.removeAssistanceAddon(passengerKey, segment); }
-    else { selectedAddons.wheelchair[segment][passengerKey] = option.id; bookingStore.updateAssistanceAddon(passengerKey, option.id, segment); }
+    if (!option) { 
+      selectedAddons.wheelchair[segment][passengerKey] = null; 
+      bookingStore.removeAssistanceAddon(passengerKey, segment); 
+    } else { 
+      const obj = { 
+        id: option.id, 
+        price: parseFloat(option.price) || 0, 
+        name: option.name, 
+        service_type: option.service_type, 
+        description: option.description 
+      };
+      selectedAddons.wheelchair[segment][passengerKey] = obj; 
+      bookingStore.updateAssistanceAddon(passengerKey, obj, segment); 
+    }
   }
   bookingStore.snapshotToServer();
   closeConfirmationModal();
@@ -733,7 +748,7 @@ const totalSeats = computed(() => bookingStore.totalSeatsPrice);
 const isAnySegmentPremium = computed(() => {
   return Object.values(bookingStore.fareFamilies).some(f => f === 'premium');
 });
-const taxesPrice = computed(() => bookingStore.totalTaxes);
+
 const addonsSubtotal = computed(() => {
   return (totalBaggage.value || 0) + (totalMeals.value || 0) + (totalSeats.value || 0) + 
          (totalAssistance.value || 0) + (bookingStore.insurancePrice || 0);
