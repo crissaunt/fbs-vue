@@ -76,6 +76,18 @@
             </button>
           </div>
 
+          <!-- DCS Check-in Button -->
+          <div class="bg-gradient-to-br from-[#fe3787] to-[#e6327a] rounded-lg p-5 text-white shadow-lg hover:shadow-xl transition-all">
+            <h3 class="text-sm font-bold mb-1 poppins uppercase">DCS Control Panel</h3>
+            <p class="text-[10px] opacity-80 mb-3 poppins">Access the Passenger Registry and Departure Control System.</p>
+            <button 
+              @click="$router.push('/student/dcs-checkin')"
+              class="w-full bg-white text-[#fe3787] px-4 py-2 rounded-lg text-xs font-bold hover:bg-pink-50 transition-colors poppins"
+            >
+              Management Console
+            </button>
+          </div>
+
           <StudentSectionInfo 
             :section="section" 
             :total-activities="activities.length" 

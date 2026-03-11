@@ -2187,6 +2187,11 @@ class CheckInDetail(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     has_declared_safety = models.BooleanField(default=False)
     special_instructions = models.TextField(blank=True, null=True)
+
+    # Philippine-specific data added in check-in
+    pwd_id_number = models.CharField(max_length=50, blank=True, null=True)
+    senior_id_number = models.CharField(max_length=50, blank=True, null=True)
+    passport_expiry = models.DateField(blank=True, null=True)
     
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)

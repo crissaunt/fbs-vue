@@ -131,6 +131,11 @@ const routes = [
         path: 'activity/:activityId/analysis',
         name: 'StudentAssessmentAnalysis',
         component: () => import('@/views/Student/Activities/Student_assessment_analysis.vue')
+      },
+      {
+        path: 'dcs-checkin',
+        name: 'StudentDcsCheckin',
+        component: () => import('@/views/Student/StudentDcsCheckin.vue')
       }
     ]
   },

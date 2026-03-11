@@ -8,7 +8,7 @@
     <div v-show="sidebarOpen" class="flex flex-col h-full overflow-y-auto">
       <!-- Home Button -->
       <router-link 
-        to="/student/home"
+        to="/student/dashboard"
         class="flex items-center px-5 py-4 hover:bg-white/10 transition-all border-b border-white/5 group"
         active-class="bg-white/20 font-bold"
       >

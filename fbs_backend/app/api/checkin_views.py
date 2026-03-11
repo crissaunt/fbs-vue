@@ -169,11 +169,14 @@ class CheckInDetailViewSet(viewsets.ModelViewSet):
             
             # Use serializer for validation and creation
             serializer = self.get_serializer(data={
-                'booking_detail_id': booking_detail_id,
+                'booking_detail': booking_detail_id,
                 'has_declared_safety': True,
                 'status': 'checked-in',
                 'student': request.user.id if request.user.is_authenticated else None,
-                'gate_number': booking_detail.schedule.gate or 'Gate 7'
+                'gate_number': booking_detail.schedule.gate or 'Gate 7',
+                'pwd_id_number': request.data.get('pwd_id_number'),
+                'senior_id_number': request.data.get('senior_id_number'),
+                'passport_expiry': request.data.get('passport_expiry'),
             })
             
             if serializer.is_valid():
