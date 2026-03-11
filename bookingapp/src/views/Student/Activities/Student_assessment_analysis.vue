@@ -578,7 +578,7 @@ const rubricBreakdown = computed(() => {
         accuracyCriteria.push({ label: 'Dates', isMet: m.departure_date && m.return_date });
     }
     const accuracyMetCount = accuracyCriteria.filter(c => c.isMet).length;
-    const accuracyRatio = accuracyMetCount / accuracyCriteria.length;
+    let accuracyRatio = accuracyMetCount / accuracyCriteria.length;
     let accuracyLevel = 1;
     if (accuracyRatio === 1) accuracyLevel = 5;
     else if (accuracyRatio >= 0.8) accuracyLevel = 4;
@@ -599,7 +599,7 @@ const rubricBreakdown = computed(() => {
         { label: 'Category', isMet: m.passenger_details.every(p => p.category.isMet) },
         { label: 'Passport Info', isMet: m.passenger_details.every(p => p.passport.isMet) }
     ];
-    const techRatio = techCriteria.filter(c => c.isMet).length / techCriteria.length;
+    let techRatio = techCriteria.filter(c => c.isMet).length / techCriteria.length;
     let techLevel = 1;
     if (techRatio === 1) techLevel = 5;
     else if (techRatio >= 0.7) techLevel = 4;
@@ -628,7 +628,7 @@ const rubricBreakdown = computed(() => {
         orgFields.push({ label: 'DOB', isMet: p.dob.isMet });
         orgFields.push({ label: 'Nationality', isMet: p.nationality.isMet });
     });
-    const orgRatio = orgFields.length > 0 ? orgFields.filter(f => f.isMet).length / orgFields.length : 1;
+    let orgRatio = orgFields.length > 0 ? orgFields.filter(f => f.isMet).length / orgFields.length : 1;
 
     let orgLevel = 1;
     if (orgRatio === 1) orgLevel = 5;
@@ -649,7 +649,7 @@ const rubricBreakdown = computed(() => {
         { label: 'Passenger Counts', isMet: m.pax_types },
         { label: 'Add-ons Compliance', isMet: m.addons.length === 0 || m.addons.every(a => a.isMet) }
     ];
-    const compRatio = compCriteria.filter(c => c.isMet).length / compCriteria.length;
+    let compRatio = compCriteria.filter(c => c.isMet).length / compCriteria.length;
     let compLevel = 1;
     if (compRatio === 1) compLevel = 5;
     else if (compRatio >= 0.5) compLevel = 3;
@@ -674,7 +674,7 @@ const rubricBreakdown = computed(() => {
         { label: 'Budget Compliance', isMet: m.travel_class },
         { label: 'Data Integrity', isMet: (m.passenger_details || []).length > 0 && isPassengerPerfect(m.passenger_details[0]) }
     ];
-    const profRatio = profCriteria.filter(c => c.isMet).length / profCriteria.length;
+    let profRatio = profCriteria.filter(c => c.isMet).length / profCriteria.length;
     let profLevel = 1;
     if (profRatio === 1) profLevel = 5;
     else if (profRatio >= 0.7) profLevel = 4;

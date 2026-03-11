@@ -81,11 +81,27 @@
             <h3 class="text-sm font-bold mb-1 poppins uppercase">DCS Control Panel</h3>
             <p class="text-[10px] opacity-80 mb-3 poppins">Access the Passenger Registry and Departure Control System.</p>
             <button 
-              @click="$router.push('/student/dcs-checkin')"
+              @click="$router.push('/dcs/dashboard')"
               class="w-full bg-white text-[#fe3787] px-4 py-2 rounded-lg text-xs font-bold hover:bg-pink-50 transition-colors poppins"
             >
               Management Console
             </button>
+          </div>
+
+          <!-- Simulation Registries -->
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-white border-2 border-slate-100 rounded-lg p-4 hover:border-pink-200 transition-all cursor-pointer shadow-sm active:scale-95 group" @click="$router.push('/student/booking-registry')">
+              <div class="w-10 h-10 rounded-[5px] bg-blue-50 flex items-center justify-center text-blue-600 mb-2 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                <i class="ph ph-notebook text-xl"></i>
+              </div>
+              <h4 class="text-[10px] font-black uppercase text-slate-800 tracking-wider">Booking Log</h4>
+            </div>
+            <div class="bg-white border-2 border-slate-100 rounded-lg p-4 hover:border-pink-200 transition-all cursor-pointer shadow-sm active:scale-95 group" @click="$router.push('/student/checkin-registry')">
+              <div class="w-10 h-10 rounded-[5px] bg-emerald-50 flex items-center justify-center text-emerald-600 mb-2 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                <i class="ph ph-user-check text-xl"></i>
+              </div>
+              <h4 class="text-[10px] font-black uppercase text-slate-800 tracking-wider">Check-in Log</h4>
+            </div>
           </div>
 
           <StudentSectionInfo 

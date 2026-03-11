@@ -107,9 +107,6 @@ def get_dcs_manifest(request, schedule_id):
             'allowed_baggage_weight': allowed_weight,
             'baggage_allowance_name': baggage_name,
             'ssrs': ssrs,
-            'passport_number': d.passenger.passport_number if d.passenger else None,
-            'passport_expiry': d.passenger.passport_expiry if d.passenger else None,
-            'ph_discount_type': d.passenger.ph_discount_type if d.passenger else None,
         })
         
     return Response({
@@ -239,9 +236,6 @@ def get_dcs_pnr_details(request, pnr, schedule_id):
             'allowed_baggage_weight': allowed_weight,
             'baggage_allowance_name': baggage_name,
             'ssrs': ssrs,
-            'passport_number': d.passenger.passport_number if d.passenger else None,
-            'passport_expiry': d.passenger.passport_expiry if d.passenger else None,
-            'ph_discount_type': d.passenger.ph_discount_type if d.passenger else None,
         })
 
     # Get schedule info from the first record
@@ -283,9 +277,6 @@ def get_dcs_passenger_details(request, booking_detail_id):
             'allowed_baggage_weight': allowed_weight,
             'baggage_allowance_name': baggage_name,
             'ssrs': _get_passenger_ssrs(d),
-            'passport_number': d.passenger.passport_number if d.passenger else None,
-            'passport_expiry': d.passenger.passport_expiry if d.passenger else None,
-            'ph_discount_type': d.passenger.ph_discount_type if d.passenger else None,
             'schedule': {
                 'id': d.schedule.id,
                 'flight_number': d.schedule.flight.flight_number if d.schedule.flight else 'N/A',

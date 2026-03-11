@@ -401,7 +401,7 @@ const steps = [
 
 const currentStep = ref(0)
 const isProcessing = ref(false)
-const actualWeight = ref(0)
+const actualWeight = ref('')
 const excessFeePaid = ref(false)
 
 const checks = ref({
@@ -437,7 +437,7 @@ const canProceed = computed(() => {
   }
   if (currentStep.value === 3) {
     const baggageOk = excessWeight.value > 0 ? excessFeePaid.value : true
-    return checks.value.baggageTagPrinted && baggageOk && (actualWeight.value !== '' && actualWeight.value !== null)
+    return checks.value.baggageTagPrinted && baggageOk && actualWeight.value !== ''
   }
   return true
 })

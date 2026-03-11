@@ -133,10 +133,17 @@ const routes = [
         component: () => import('@/views/Student/Activities/Student_assessment_analysis.vue')
       },
       {
-        path: 'dcs-checkin',
-        name: 'StudentDcsCheckin',
-        component: () => import('@/views/Student/StudentDcsCheckin.vue')
-      }
+        path: 'booking-registry',
+        name: 'StudentBookingRegistry',
+        component: () => import('@/views/Student/Operations/BookingRegistry.vue'),
+        meta: { title: 'DCS | Booking Registry' }
+      },
+      {
+        path: 'checkin-registry',
+        name: 'StudentCheckinRegistry',
+        component: () => import('@/views/Student/Operations/CheckinRegistry.vue'),
+        meta: { title: 'DCS | Check-in Registry' }
+      },
     ]
   },
   {

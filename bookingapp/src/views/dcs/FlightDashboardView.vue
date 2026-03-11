@@ -63,6 +63,13 @@
         </button>
 
         <button 
+          @click="$router.push('/student/checkin-registry')"
+          class="px-6 py-3.5 rounded-[2px] text-[10px] font-black uppercase tracking-widest transition-all border-2 bg-white border-slate-100 text-slate-500 hover:border-pink-200 hover:text-pink-600 shrink-0"
+        >
+          Global Registry
+        </button>
+
+        <button 
           v-if="hasFilters"
           @click="resetFilters"
           class="bg-slate-50 text-slate-400 hover:text-red-500 p-3 rounded-[2px] transition-all hover:bg-red-50"

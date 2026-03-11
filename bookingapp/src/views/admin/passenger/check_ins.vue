@@ -385,11 +385,11 @@ const fetchCheckIns = async () => {
     const response = await api.get('/check-ins/')
     checkIns.value = (response.data.results || response.data).map(c => ({
       ...c,
-      passenger_name: c.passenger_name || `${c.passenger?.first_name || ''} ${c.passenger?.last_name || ''}`.trim(),
-      flight_number: c.flight_number || c.booking_detail?.schedule?.flight?.flight_number || '',
-      route: c.route || c.booking_detail?.schedule?.flight?.route || '',
-      departure_time: c.departure_time || c.booking_detail?.schedule?.departure_time || '',
-      seat_number: c.seat_number || c.booking_detail?.seat?.seat_number || '',
+      passenger_name: `${c.passenger?.first_name || ''} ${c.passenger?.last_name || ''}`.trim(),
+      flight_number: c.booking_detail?.schedule?.flight?.flight_number || '',
+      route: c.booking_detail?.schedule?.flight?.route || '',
+      departure_time: c.booking_detail?.schedule?.departure_time || '',
+      seat_number: c.booking_detail?.seat?.seat_number || '',
       status: c.status || 'pending'
     }))
 

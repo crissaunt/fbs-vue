@@ -1763,11 +1763,17 @@ class BookingDetail(models.Model):
         if not self.passenger_type and self.passenger:
             self.passenger_type = self.passenger.passenger_type
         
-        # Only auto-calculate price if no price has been explicitly set.
-        # If a price is already provided (from frontend quote), do NOT override it.
+        # Only calculate price automatically if NOT already set by calling logic
+        # (e.g. create_booking or update_booking which provide locked_price)
         is_new = self._state.adding
-        if is_new and self.seat and (self.price is None or self.price == 0):
+        has_no_price = not self.price or self.price == Decimal('0.00')
+        
+        if is_new and self.seat and has_no_price:
             self.price = self._calculate_price()
+            print(f"DEBUG: BookingDetail auto-calculated price: {self.price}")
+        elif is_new and not has_no_price:
+            print(f"DEBUG: BookingDetail using pre-set price: {self.price}")
+            
         super().save(*args, **kwargs)
     
     def _calculate_price(self):
@@ -2188,11 +2194,6 @@ class CheckInDetail(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     has_declared_safety = models.BooleanField(default=False)
     special_instructions = models.TextField(blank=True, null=True)
-
-    # Philippine-specific data added in check-in
-    pwd_id_number = models.CharField(max_length=50, blank=True, null=True)
-    senior_id_number = models.CharField(max_length=50, blank=True, null=True)
-    passport_expiry = models.DateField(blank=True, null=True)
     
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)

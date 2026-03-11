@@ -78,6 +78,12 @@ export default {
         activities.value = response.data.activities || []
       } catch (error) {
         console.error("Error loading layout data:", error)
+        if (error.response?.data?.not_enrolled) {
+          userStore.setEnrolled(false)
+          if (error.response.data.user) {
+            userStore.setStudentProfile(error.response.data.user)
+          }
+        }
       } finally {
         loading.value = false
       }

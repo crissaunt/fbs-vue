@@ -24,8 +24,8 @@ class CheckInDetailViewSet(viewsets.ModelViewSet):
     
     serializer_class = CheckInDetailSerializer
     pagination_class = None
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    # filterset_fields = ['status', 'check_in_counter']
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['status', 'flight_number', 'check_in_counter']
     search_fields = [
         'booking_detail__passenger__first_name',
         'booking_detail__passenger__last_name',
@@ -34,8 +34,6 @@ class CheckInDetailViewSet(viewsets.ModelViewSet):
     ]
     permission_classes = [AllowAny]
     
-
-
     def get_serializer_class(self):
         if self.action == 'list':
             return CheckInListSerializer
@@ -169,14 +167,11 @@ class CheckInDetailViewSet(viewsets.ModelViewSet):
             
             # Use serializer for validation and creation
             serializer = self.get_serializer(data={
-                'booking_detail': booking_detail_id,
+                'booking_detail_id': booking_detail_id,
                 'has_declared_safety': True,
                 'status': 'checked-in',
                 'student': request.user.id if request.user.is_authenticated else None,
-                'gate_number': booking_detail.schedule.gate or 'Gate 7',
-                'pwd_id_number': request.data.get('pwd_id_number'),
-                'senior_id_number': request.data.get('senior_id_number'),
-                'passport_expiry': request.data.get('passport_expiry'),
+                'gate_number': booking_detail.schedule.gate or 'Gate 7'
             })
             
             if serializer.is_valid():
