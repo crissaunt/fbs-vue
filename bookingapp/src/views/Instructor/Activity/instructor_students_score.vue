@@ -112,7 +112,7 @@
                   class="transition-colors"
                   :class="comparisonRows.find(r => r.label === 'Trip Type').isMet ? 'bg-emerald-50/10' : 'bg-red-50/10'"
                 >
-                  <td class="px-8 py-3 text-gray-400">Trip Type Check</td>
+                   <td class="px-8 py-3 text-gray-400">{{ comparisonRows.find(r => r.label === 'Trip Type').label }}</td>
                   <td class="px-8 py-3 text-gray-800">{{ comparisonRows.find(r => r.label === 'Trip Type').requirement }}</td>
                   <td class="px-8 py-3" :class="comparisonRows.find(r => r.label === 'Trip Type').isMet ? 'text-emerald-700' : 'text-red-700'">
                     {{ comparisonRows.find(r => r.label === 'Trip Type').work }}
@@ -408,19 +408,19 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 font-bold">
-                   <tr :class="((activity.required_trip_type || '').toLowerCase().includes('multi') ? (matches.segments?.every(s => s.origin && s.destination)) : (matches.origin && matches.destination)) ? 'bg-emerald-50/10' : 'bg-red-50/10'">
+                   <tr :class="(normalizedTripType === 'multi_city' ? (matches.segments?.every(s => s.origin && s.destination)) : (matches.origin && matches.destination)) ? 'bg-emerald-50/10' : 'bg-red-50/10'">
                       <td class="px-8 py-3 text-gray-400">Flight Route Integrity</td>
                       <td class="px-8 py-3 text-gray-800 text-[10px]">{{ requiredRoute }}</td>
-                      <td class="px-8 py-3" :class="((activity.required_trip_type || '').toLowerCase().includes('multi') ? (matches.segments?.every(s => s.origin && s.destination)) : (matches.origin && matches.destination)) ? 'text-emerald-700' : 'text-red-700'">{{ actualRoute || (actualOrigin + ' to ' + actualDestination) }}</td>
+                      <td class="px-8 py-3" :class="(normalizedTripType === 'multi_city' ? (matches.segments?.every(s => s.origin && s.destination)) : (matches.origin && matches.destination)) ? 'text-emerald-700' : 'text-red-700'">{{ actualRoute || (actualOrigin + ' to ' + actualDestination) }}</td>
                       <td class="px-8 py-3 pr-10 text-right">
-                         <span :class="((activity.required_trip_type || '').toLowerCase().includes('multi') ? (matches.segments?.every(s => s.origin && s.destination)) : (matches.origin && matches.destination)) ? 'text-emerald-600' : 'text-red-600'">
-                           {{ ((activity.required_trip_type || '').toLowerCase().includes('multi') ? (matches.segments?.every(s => s.origin && s.destination)) : (matches.origin && matches.destination)) ? 'PROFESSIONAL' : 'LOGIC ERROR' }}
+                         <span :class="(normalizedTripType === 'multi_city' ? (matches.segments?.every(s => s.origin && s.destination)) : (matches.origin && matches.destination)) ? 'text-emerald-600' : 'text-red-600'">
+                           {{ (normalizedTripType === 'multi_city' ? (matches.segments?.every(s => s.origin && s.destination)) : (matches.origin && matches.destination)) ? 'PROFESSIONAL' : 'LOGIC ERROR' }}
                          </span>
                       </td>
                    </tr>
-                   <tr :class="matches.travel_class ? 'bg-emerald-50/10' : 'bg-red-50/10'">
-                      <td class="px-8 py-3 text-gray-400">Budget Compliance</td>
-                      <td class="px-8 py-3 text-gray-800 text-[10px]">{{ activity.required_travel_class }} Policy</td>
+                    <tr :class="matches.travel_class ? 'bg-emerald-50/10' : 'bg-red-50/10'">
+                      <td class="px-8 py-3 text-gray-400">Budget Compliance (Class)</td>
+                      <td class="px-8 py-3 text-gray-800 text-[10px]">{{ activity.required_travel_class && activity.required_travel_class.toLowerCase() !== 'na' ? activity.required_travel_class : 'Standard' }} Policy</td>
                       <td class="px-8 py-3" :class="matches.travel_class ? 'text-emerald-700' : 'text-red-700'">{{ actualClass }}</td>
                       <td class="px-8 py-3 pr-10 text-right">
                          <span :class="matches.travel_class ? 'text-emerald-600' : 'text-red-600'">{{ matches.travel_class ? 'COMPLIANT' : 'VIOLATION' }}</span>
@@ -465,8 +465,13 @@ import { useNotificationStore } from '@/stores/notification';
 const route = useRoute();
 const router = useRouter();
 
+// Normalize a trip type string to a canonical raw code form (e.g. "One Way" -> "one_way", "Round Trip" -> "round_trip")
+const normalizeTripTypeToCode = (str) => {
+    return (str || '').toLowerCase().trim().replace(/[\s-]+/g, '_');
+};
+
 const normalizedTripType = computed(() => {
-    return (activity.value?.required_trip_type || '').toLowerCase().replace(/\s+/g, '_');
+    return normalizeTripTypeToCode(activity.value?.required_trip_type || '');
 });
 const notificationStore = useNotificationStore();
 
@@ -695,7 +700,7 @@ const rubricBreakdown = computed(() => {
     const profCriteria = [
         { 
             label: 'Flight Route Integrity', 
-            isMet: (activity.value.required_trip_type || '').includes('multi')
+            isMet: normalizedTripType.value === 'multi_city'
                 ? (m.segments?.length > 0 && m.segments.every(s => s.origin && s.destination))
                 : !!(m.origin && m.destination)
         },
@@ -775,27 +780,32 @@ const getBarColor = (score, max) => {
 };
 
 const formatTripType = (type) => {
-    const map = { 'one_way': 'One_Way Trip', 'round_trip': 'Round_Trip', 'multi_city': 'Multi_City' };
-    return map[type] || type || '-';
+    if (!type) return '-';
+    // Remove hardcoded map, just clean up the raw string (e.g. "one_way" -> "One Way")
+    return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
 
 const formatClass = (cls) => {
     if (!cls) return '-';
-    const map = { 
-        'economy': 'Economy Class', 
-        'premium_economy': 'Premium Economy', 
-        'business': 'Business Class', 
-        'first': 'First Class',
-        'first_class': 'First Class',
-        'business_class': 'Business Class'
-    };
-    return map[cls.toLowerCase().replace(/[\s_]/g, '')] || cls;
+    // Remove hardcoded map, just return the raw string from backend
+    return typeof cls === 'string' ? cls.trim() : String(cls);
 };
 
 const actualClass = computed(() => {
     if (!booking.value?.details || booking.value.details.length === 0) return 'N/A';
-    const firstDetail = booking.value.details[0];
-    return formatClass(firstDetail.travel_class || firstDetail.cabin_class || booking.value.travel_class || booking.value.class || 'Economy');
+    
+    // Dynamically collect unique seat classes from ALL segments
+    const uniqueClasses = new Set();
+    booking.value.details.forEach(d => {
+        const raw = d.seat_class_name || d.seat?.seat_class_name || null;
+        if (raw && typeof raw === 'string') {
+            uniqueClasses.add(raw.trim());
+        }
+    });
+
+    if (uniqueClasses.size === 0) return 'NOT SPECIFIED';
+    const list = Array.from(uniqueClasses);
+    return list.length === 1 ? list[0] : `Mixed (${list.join(', ')})`;
 });
 
 const actualOrigin = computed(() => {
@@ -805,9 +815,9 @@ const actualOrigin = computed(() => {
 
 const actualDestination = computed(() => {
     if (!actualSegments.value || actualSegments.value.length === 0) return 'NOT BOOKED';
-    const reqTripType = (activity.value?.required_trip_type || '').toLowerCase().replace('_', ' ');
-    if (reqTripType === 'round trip' && actualSegments.value.length > 1) {
-        // Destination is the end of the first leg
+    // For one-way: last segment destination. For round-trip: first leg's destination (outbound end).
+    const normType = normalizedTripType.value;
+    if (normType === 'round_trip' && actualSegments.value.length > 1) {
         return actualSegments.value[0].destination || 'NOT BOOKED';
     }
     return actualSegments.value[actualSegments.value.length - 1].destination || 'NOT BOOKED';
@@ -852,22 +862,19 @@ const requiredRoute = computed(() => {
 });
 
 const actualReturnDate = computed(() => {
-    const reqTripType = (activity.value?.required_trip_type || '').toLowerCase().replace('_', ' ');
-    if (reqTripType !== 'round trip') return null;
+    if (normalizedTripType.value !== 'round_trip') return null;
     if (!actualSegments.value || actualSegments.value.length < 2) return 'NOT BOOKED';
     return actualSegments.value[1].departure_date || 'NOT BOOKED';
 });
 
 const actualReturnOrigin = computed(() => {
-    const reqTripType = (activity.value?.required_trip_type || '').toLowerCase().replace('_', ' ');
-    if (reqTripType !== 'round trip') return null;
+    if (normalizedTripType.value !== 'round_trip') return null;
     if (!actualSegments.value || actualSegments.value.length < 2) return 'NOT BOOKED';
     return actualSegments.value[1].origin || 'NOT BOOKED';
 });
 
 const actualReturnDestination = computed(() => {
-    const reqTripType = (activity.value?.required_trip_type || '').toLowerCase().replace('_', ' ');
-    if (reqTripType !== 'round trip') return null;
+    if (normalizedTripType.value !== 'round_trip') return null;
     if (!actualSegments.value || actualSegments.value.length < 2) return 'NOT BOOKED';
     return actualSegments.value[1].destination || 'NOT BOOKED';
 });
@@ -911,25 +918,37 @@ const actualPaxTypes = computed(() => {
     return types;
 });
 
-// Build actual booking segments (one entry per unique flight leg)
+// Build actual booking segments (one unique entry per flight leg, sorted by departure_time)
 const actualSegments = computed(() => {
     if (!booking.value?.details) return [];
     // Deduplicate by schedule id to avoid passenger-per-row inflation
     const seen = new Set();
-    return booking.value.details.reduce((acc, d) => {
-        const uniqueKey = d.schedule?.id || `${d.schedule?.origin}_${d.schedule?.destination}_${d.schedule?.departure_time}`;
-        if (uniqueKey && !seen.has(uniqueKey) && d.schedule?.origin) {
+    const segs = [];
+    // Sort all details by departure_time so outbound always comes before return
+    const sortedDetails = [...booking.value.details].sort((a, b) => {
+        const tA = a.schedule?.departure_time || '';
+        const tB = b.schedule?.departure_time || '';
+        return tA < tB ? -1 : tA > tB ? 1 : 0;
+    });
+    for (const d of sortedDetails) {
+        if (!d.schedule?.origin) continue;
+        const uniqueKey = d.schedule.id
+            ? String(d.schedule.id)
+            : `${d.schedule.origin}_${d.schedule.destination}_${d.schedule.departure_time}`;
+        if (!seen.has(uniqueKey)) {
             seen.add(uniqueKey);
-            acc.push({
-                origin: d.schedule?.origin || '-',
-                destination: d.schedule?.destination || '-',
-                departure_date: d.schedule?.departure_time
+            segs.push({
+                origin: d.schedule.origin || '-',
+                destination: d.schedule.destination || '-',
+                departure_date: d.schedule.departure_time
                     ? String(d.schedule.departure_time).split('T')[0].split(' ')[0]
-                    : '-'
+                    : '-',
+                // Track the seat class name from this specific detail (for travel class check)
+                seat_class_name: d.seat_class_name || (d.seat?.seat_class_name) || null
             });
         }
-        return acc;
-    }, []);
+    }
+    return segs;
 });
 
 const matches = computed(() => {
@@ -939,26 +958,35 @@ const matches = computed(() => {
         segments: []
     };
     
-    // Normalize properties
-    const reqTripType = (activity.value.required_trip_type || '').toLowerCase().replace('_', ' ');
-    const actTripType = (booking.value.trip_type || '').toLowerCase().replace('_', ' ');
+    // Normalize BOTH trip types to raw code form for comparison
+    // activity.required_trip_type may be a display value like "One Way" from Django's get_display()
+    // booking.trip_type is always the raw code like "one_way"
+    const reqTripTypeNorm = normalizeTripTypeToCode(activity.value.required_trip_type || '');
+    const actTripTypeNorm = normalizeTripTypeToCode(booking.value.trip_type || '');
+    const isRoundTrip = reqTripTypeNorm === 'round_trip';
 
     const m = {
-        trip_type: reqTripType === actTripType,
+        trip_type: reqTripTypeNorm === actTripTypeNorm,
         origin: compareStrings(activity.value.required_origin, actualOrigin.value),
         destination: compareStrings(activity.value.required_destination, actualDestination.value),
-        return_origin: reqTripType !== 'round trip' || compareStrings(activity.value.required_destination, actualReturnOrigin.value),
-        return_destination: reqTripType !== 'round trip' || compareStrings(activity.value.required_origin, actualReturnDestination.value),
+        return_origin: !isRoundTrip || compareStrings(activity.value.required_destination, actualReturnOrigin.value),
+        return_destination: !isRoundTrip || compareStrings(activity.value.required_origin, actualReturnDestination.value),
         travel_class: (() => {
-            // Normalize both sides: remove spaces, underscores, and the word 'class'
-            const norm = (s) => (s || '').toLowerCase().replace(/[\s_]/g, '').replace('class', '').trim();
-            const reqClass = norm(activity.value.required_travel_class);
-            const actClass = norm(actualClass.value);
-            if (!reqClass) return true; // No requirement = always met
-            return reqClass === actClass || actClass.includes(reqClass) || reqClass.includes(actClass);
+            // Canonical normalization: remove spaces, underscores, dots, hyphens, and the word 'class' for comparison
+            const norm = (s) => (s || '').toLowerCase().replace(/[\s_\-\.]/g, '').replace('class', '').trim();
+            const reqClass = norm(activity.value.required_travel_class || 'economy');
+            if (!reqClass || reqClass === 'na' || reqClass === 'n/a') return true;
+
+            // DYNAMIC CHECK: Every single segment must match the requirement
+            if (!booking.value?.details?.length) return false;
+            
+            return booking.value.details.every(d => {
+                const raw = d.seat_class_name || d.seat?.seat_class_name || 'economy';
+                return norm(raw) === reqClass;
+            });
         })(),
-        departure_date: !activity.value.required_departure_date || activity.value.required_departure_date === actualDepartureDate.value,
-        return_date: reqTripType !== 'round trip' || !activity.value.required_return_date || activity.value.required_return_date === actualReturnDate.value,
+        departure_date: !activity.value.required_departure_date || normalizeDate(activity.value.required_departure_date) === normalizeDate(actualDepartureDate.value),
+        return_date: !isRoundTrip || !activity.value.required_return_date || normalizeDate(activity.value.required_return_date) === normalizeDate(actualReturnDate.value),
         pax_types: (actualPaxTypes.value.adult || 0) === (activity.value.required_passengers || 0) && 
                    (actualPaxTypes.value.child || 0) === (activity.value.required_children || 0) && 
                    (actualPaxTypes.value.infant || 0) === (activity.value.required_infants || 0),
@@ -968,7 +996,7 @@ const matches = computed(() => {
     };
 
     // Multi-city segment matching
-    if ((activity.value.required_trip_type || '').toLowerCase().includes('multi') && activity.value.segments?.length) {
+    if (reqTripTypeNorm === 'multi_city' && activity.value.segments?.length) {
         activity.value.segments.forEach((expected, idx) => {
             // Positional matching: Leg N required vs Leg N booked
             const actualMatched = actualSegments.value[idx] || null;
@@ -1093,12 +1121,16 @@ const matches = computed(() => {
             }
 
             if (actual) {
-                const actualGen = (actual.title || actual.gender || '').toLowerCase().replace('.', '').trim();
-                const expectedGen = (expected.gender || '').toLowerCase().replace('.', '').trim();
+                // Normalize gender: strip periods, spaces, lowercase for comparison
+                // Activity stores 'Mr.'/'Mrs.'/'Ms.' — booking stores title like 'MR'/'MRS'/'MS'
+                const normGen = (s) => (s || '').toLowerCase().replace(/[.\s]/g, '').trim();
+                const actualGen = normGen(actual.title || actual.gender || '');
+                const expectedGen = normGen(expected.gender || '');
+                // Mr == mr, Mrs/Ms are treated distinctly. Compare normalized forms.
                 detailMatch.gender.isMet = actualGen === expectedGen;
-                detailMatch.dob.isMet = actual.date_of_birth === expected.date_of_birth;
-                detailMatch.nationality.isMet = actual.nationality?.toLowerCase() === expected.nationality?.toLowerCase();
-                detailMatch.category.isMet = (actual.ph_discount_type || 'none') === (expected.passenger_category || 'none');
+                detailMatch.dob.isMet = normalizeDate(actual.date_of_birth) === normalizeDate(expected.date_of_birth);
+                detailMatch.nationality.isMet = (actual.nationality || '').toLowerCase().trim() === (expected.nationality || '').toLowerCase().trim();
+                detailMatch.category.isMet = (actual.ph_discount_type || 'none').toLowerCase() === (expected.passenger_category || 'none').toLowerCase();
                 
                 if (activity.value.require_passport) {
                     detailMatch.passport.isMet = (actual.passport_number || '').trim() === (expected.passport_number || '').trim();
@@ -1117,17 +1149,20 @@ const matches = computed(() => {
     // 2. Add-ons Verification
     if (activity.value.activity_addons?.length) {
         activity.value.activity_addons.forEach(req => {
-            const actualPassenger = findMatchingPassenger(req.passenger);
             const detail = booking.value.details?.find(d => 
                 d.passenger?.first_name?.toLowerCase() === req.passenger.first_name?.toLowerCase() &&
                 d.passenger?.last_name?.toLowerCase() === req.passenger.last_name?.toLowerCase()
             );
 
-            const isMet = detail?.addons?.some(a => a.id === req.addon_id) || false;
+            const isMet = detail?.addons?.some(a => 
+                a.id === req.addon_id || 
+                (a.name && req.addon_name && a.name.toLowerCase().trim() === req.addon_name.toLowerCase().trim())
+            ) || false;
+
             m.addons.push({
                 passengerName: `${req.passenger.first_name} ${req.passenger.last_name}`,
                 requirement: req.addon_name || req.addon?.name || 'Required Add-on',
-                actual: detail?.addons?.map(a => a.name).join(', ') || 'N/A',
+                actual: detail?.addons?.map(a => a.name).join(', ') || 'NONE',
                 isMet: isMet
             });
         });

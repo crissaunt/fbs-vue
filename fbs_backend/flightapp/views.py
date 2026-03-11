@@ -1425,7 +1425,8 @@ def create_booking(request):
         # Validate request data using serializer
         serializer = CreateBookingSerializer(data=request.data)
         if not serializer.is_valid():
-            print(f"DEBUG: Serializer errors: {serializer.errors}")
+            print(f"DEBUG: [Create Booking] Serializer errors: {serializer.errors}")
+            logger.error(f"Booking Creation Error: {serializer.errors}. Payload: {request.data}")
             return Response({
                 'success': False,
                 'error': serializer.errors
@@ -1435,19 +1436,23 @@ def create_booking(request):
         
         # Handle Activity Code Validation and Practice Mode
         activity_code = data.get('activity_code')
+        activity_id = data.get('activity_id')
         is_practice = data.get('is_practice', False)
         activity_to_link = None
         
-        if activity_code and not is_practice:
-            # Validate activity code
+        if (activity_code or activity_id) and not is_practice:
+            # Validate activity code or ID
             from fbs_instructor.models import Activity, SectionEnrollment
             from app.models import Students
             
             try:
-                activity_to_link = Activity.objects.get(
-                    activity_code=activity_code.strip().upper(),
-                    is_code_active=True
-                )
+                if activity_id:
+                    activity_to_link = Activity.objects.get(id=activity_id, status='published')
+                else:
+                    activity_to_link = Activity.objects.get(
+                        activity_code=activity_code.strip().upper(),
+                        is_code_active=True
+                    )
                 
                 # Check if user is a student and enrolled in the section
                 try:
@@ -1566,9 +1571,34 @@ def create_booking(request):
             print(f"DEBUG: Updating booking totals")
             _update_booking_totals(booking)
             
-            # NOTE: Auto-grading happens in process_payment_webhook and process_payment_with_id
-            # AFTER the payment is confirmed (status = 'Confirmed'). DO NOT grade here.
-            
+            # NEW: Auto-grading trigger for direct instructor display
+            if booking.activity:
+                print(f"DEBUG: Triggering early auto-grading for activity-linked booking {booking.id}")
+                try:
+                    from fbs_instructor.views import calculate_submission_score
+                    from fbs_instructor.models import ActivityStudentBinding
+                    
+                    # Force calculation using the professional rubric logic
+                    score_data = calculate_submission_score(booking.activity, booking)
+                    
+                    # Update or create binding with the score
+                    binding, created = ActivityStudentBinding.objects.get_or_create(
+                        activity=booking.activity,
+                        student__user=booking.user
+                    )
+                    
+                    binding.grade = score_data['total']
+                    binding.rubric_breakdown = score_data['rubric_breakdown']
+                    binding.status = 'submitted'
+                    binding.submitted_at = timezone.now()
+                    binding.save()
+                    
+                    print(f"DEBUG: Early grading SUCCESS for booking {booking.id}. [Score: {score_data['total']}]")
+                except Exception as e:
+                    print(f"DEBUG: Early grading FAILED: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
+
             print(f"DEBUG: Booking creation successful!")
 
             

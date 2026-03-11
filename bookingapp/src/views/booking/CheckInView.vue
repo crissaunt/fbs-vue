@@ -166,6 +166,29 @@
                     I acknowledge that I have read and understood the restricted items policy and confirm that my baggage does not contain any prohibited items.
                   </span>
                 </label>
+
+                <!-- Documents Section -->
+                <div class="pt-6 border-t border-slate-800 space-y-6">
+                   <div class="text-left">
+                      <h3 class="text-sm font-black uppercase tracking-widest text-blue-400">Travel Documents</h3>
+                      <p class="text-xs text-slate-500 mt-1">Required for security and verification.</p>
+                   </div>
+                   
+                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div class="space-y-2">
+                         <label class="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Passport Expiry</label>
+                         <input v-model="form.passport_expiry" type="date" class="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-medium text-sm">
+                      </div>
+                      <div v-if="selectedBooking?.ph_discount_type === 'pwd'" class="space-y-2">
+                         <label class="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">PWD ID Number</label>
+                         <input v-model="form.pwd_id_number" type="text" placeholder="Enter ID Number" class="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-medium text-sm">
+                      </div>
+                      <div v-if="selectedBooking?.ph_discount_type === 'senior'" class="space-y-2">
+                         <label class="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Senior ID Number</label>
+                         <input v-model="form.senior_id_number" type="text" placeholder="Enter ID Number" class="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-medium text-sm">
+                      </div>
+                   </div>
+                </div>
               </div>
 
               <div class="flex gap-4">
@@ -292,7 +315,10 @@ const error = ref(null)
 const form = reactive({
   pnr: '',
   lastName: '',
-  hasDeclaredSafety: false
+  hasDeclaredSafety: false,
+  passport_expiry: '',
+  pwd_id_number: '',
+  senior_id_number: ''
 })
 
 const foundBookings = ref([])
@@ -327,7 +353,10 @@ const processCheckin = async () => {
   try {
     const response = await axios.post('http://localhost:8000/api/checkin/self_checkin/', {
       booking_detail_id: selectedBooking.value.id,
-      has_declared_safety: form.hasDeclaredSafety
+      has_declared_safety: form.hasDeclaredSafety,
+      passport_expiry: form.passport_expiry,
+      pwd_id_number: form.pwd_id_number,
+      senior_id_number: form.senior_id_number
     })
     checkinResult.value = response.data
     currentStep.value = 3

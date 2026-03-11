@@ -222,12 +222,26 @@
                            <span>Encrypted Sector</span>
                            <span>Verified</span>
                         </div>
-                        <div class="mt-4 flex flex-wrap gap-2">
-                           <span v-for="p in selectedPassengers" :key="p.id" class="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase text-pink-100">
-                              {{ p.passenger_name.split(' ')[0] }}
-                           </span>
-                        </div>
-                     </div>
+                         <div class="mt-4 flex flex-wrap gap-2">
+                            <span v-for="p in selectedPassengers" :key="p.booking_detail_id" class="px-6 py-4 bg-white/5 border border-white/10 rounded-[10px] text-[10px] font-black uppercase text-pink-100 flex flex-col gap-1 w-full text-left">
+                               <span class="text-sm border-b border-white/10 pb-2 mb-2">{{ p.passenger_name }}</span>
+                               <div class="grid grid-cols-2 gap-4 opacity-80">
+                                  <div>
+                                     <div class="text-[8px] text-pink-400">PASSPORT NO.</div>
+                                     <div>{{ p.passport_number || 'N/A' }}</div>
+                                  </div>
+                                  <div>
+                                     <div class="text-[8px] text-pink-400">EXPIRY</div>
+                                     <div>{{ p.passport_expiry || 'N/A' }}</div>
+                                  </div>
+                               </div>
+                               <div v-if="p.ph_discount_type && p.ph_discount_type !== 'none'" class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between">
+                                  <span class="text-[8px] text-pink-400">CATEGORY</span>
+                                  <span class="bg-pink-600/30 px-2 py-0.5 rounded text-[8px]">{{ p.ph_discount_type.toUpperCase() }}</span>
+                               </div>
+                            </span>
+                         </div>
+                      </div>
                   </div>
                </div>
              </div>

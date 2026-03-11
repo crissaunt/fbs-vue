@@ -19,8 +19,8 @@ export const activityDetailsService = {
      * Activate an activity and generate/reuse activity code, 
      * optionally assigning it to specific students.
      * @param {number} activityId - Activity ID to activate
-     * @param {Array} studentIds - Optional list of student IDs to assign
-     * @returns {Promise} Activation response
+     * @param {Array<number>} studentIds - Array of student IDs to assign the activity to
+     * @returns {Promise} Activation response with activity code
      */
     async activateActivity(activityId, studentIds = []) {
         try {
@@ -34,13 +34,13 @@ export const activityDetailsService = {
     },
 
     /**
-     * Get students eligible for activity assignment (enrolled but not yet assigned)
-     * @param {number} activityId 
-     * @returns {Promise}
+     * Get students who are eligible to receive this activity (enrolled but not yet assigned)
+     * @param {number} activityId - Activity ID
+     * @returns {Promise} List of eligible students
      */
     async getEligibleStudents(activityId) {
         try {
-            const response = await api.get(`api/instructor/activities/${activityId}/eligible-students/`);
+            const response = await api.get(`api/instructor/activity/${activityId}/eligible-students/`);
             return response.data;
         } catch (error) {
             throw error;

@@ -86,13 +86,6 @@
       </div>
       <div class="flex gap-2">
         <button 
-          v-if="activity.completed"
-          @click.stop="$emit('compare', activity)"
-          class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors"
-        >
-          View Work
-        </button>
-        <button 
           @click.stop="$emit('view', activity.id)"
           :disabled="activity.completed"
           :class="[

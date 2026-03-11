@@ -89,6 +89,9 @@ export const authService = {
         } catch (e) {
             // Ignore errors - proceed with local logout
         }
-        localStorage.clear();
+
+        // Targeted removal for session preservation
+        const authKeys = ['token', 'auth_token', 'user', 'role', 'session_id', 'user-store'];
+        authKeys.forEach(key => localStorage.removeItem(key));
     }
 };

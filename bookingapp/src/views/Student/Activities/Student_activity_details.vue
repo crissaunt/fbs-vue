@@ -150,7 +150,7 @@
         <div class="px-8 py-6 border-b border-gray-200">
           <h2 class="text-base font-bold text-gray-900 mb-3">Instructions</h2>
           <div class="text-sm text-gray-700 leading-relaxed space-y-3">
-            <p class="whitespace-pre-wrap">{{ activity.description || 'No instructions provided.' }}</p>
+            <p class="whitespace-pre-wrap">{{ dynamicInstructions }}</p>
           </div>
         </div>
 
@@ -182,8 +182,8 @@
             </div>
           </div>
 
-          <!-- Standard Flight Details Box (Pill Shape) -->
-          <div v-if="normalizedTripType !== 'multi_city'" class="border-2 border-[#f5c842] rounded-full py-6 px-8 bg-white">
+          <!-- Standard Flight Details Box (Pill Shape) - Only for One Way -->
+          <div v-if="normalizedTripType === 'one way' || ((!activity.segments || activity.segments.length <= 1) && normalizedTripType !== 'round trip')" class="border-2 border-[#f5c842] rounded-full py-6 px-8 bg-white">
             <div class="grid grid-cols-5 gap-6 items-center">
               <div class="text-center">
                 <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">From</p>
@@ -225,12 +225,12 @@
             </div>
           </div>
 
-          <!-- Multi-City Segments Display -->
+          <!-- Multi-City / Round Trip Segments Display -->
           <div v-else class="space-y-4">
             <div 
               v-for="(segment, idx) in activity.segments" 
               :key="idx"
-              class="border-2 border-[#f5c842] rounded-xl py-4 px-8 bg-white flex items-center justify-between shadow-sm relative overflow-hidden"
+              class="border-2 border-[#f5c842] rounded-2xl py-4 px-8 bg-white flex items-center justify-between shadow-sm relative overflow-hidden"
             >
               <div class="absolute left-0 top-0 bottom-0 w-2 bg-[#f5c842]"></div>
               <div class="flex items-center gap-8 flex-1">
@@ -270,6 +270,26 @@
           </div>
         </div>
 
+        <!-- Add-on & Insurance Requirements -->
+        <div v-if="activity.activity_addons && activity.activity_addons.length > 0" class="px-8 py-6 border-b border-gray-200">
+          <h2 class="text-base font-bold text-gray-900 mb-4">Add-ons & Insurance Requirements</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div v-for="aa in activity.activity_addons" :key="aa.id" class="border border-pink-100 rounded-xl p-4 bg-pink-50/30 flex items-center justify-between">
+              <div>
+                <p class="text-xs font-bold text-gray-900 leading-tight">{{ aa.addon_name }}</p>
+                <p class="text-[10px] text-gray-400 mt-1 uppercase font-bold tracking-tight">
+                  For: {{ aa.passenger?.first_name }} {{ aa.passenger?.last_name || 'Passenger' }}
+                </p>
+              </div>
+              <div class="bg-white text-pink-500 h-8 w-8 rounded-full flex items-center justify-center shadow-sm border border-pink-100">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Passenger Information Section -->
         <div class="px-8 py-6">
           <h2 class="text-base font-bold text-gray-900 mb-4">Passenger Information</h2>
@@ -285,11 +305,19 @@
               <!-- Passenger Header -->
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide">
-                  Passenger {{ index + 1 }} ({{ passenger.type }})
+                  Passenger {{ index + 1 }} ({{ passenger.passenger_type || 'Adult' }})
                 </h3>
-                <span class="text-xs text-gray-600 uppercase tracking-wide">
-                  seat preference: <strong>{{ passenger.seat_preference || 'Window' }}</strong>
-                </span>
+                <div class="flex items-center gap-4">
+                  <span class="text-xs text-gray-600 uppercase tracking-wide">
+                    seat preference: <strong>{{ passenger.seat_preference || 'Window' }}</strong>
+                  </span>
+                  <span v-if="getAssignedSeat(index)" class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-black uppercase tracking-wider border border-blue-200 shadow-sm flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    Required Seat: {{ getAssignedSeat(index) }}
+                  </span>
+                </div>
               </div>
 
               <!-- Form Fields -->
@@ -317,7 +345,7 @@
                   <div class="col-span-1">
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1.5 tracking-wide">MI</label>
                     <div class="px-3 py-2.5 border border-gray-300 rounded text-sm bg-white text-gray-700 text-center">
-                      {{ passenger.middle_initial || '-' }}
+                      {{ passenger.middle_initial || passenger.middle_name || '-' }}
                     </div>
                   </div>
                 </div>
@@ -358,8 +386,40 @@
                   <div>
                     <label class="block text-[10px] font-bold text-red-600 uppercase mb-1.5 tracking-wide">Passport*</label>
                     <div class="px-3 py-2.5 border border-gray-300 rounded text-sm bg-white text-gray-700">
-                      {{ passenger.passport || 'N/A' }}
+                      {{ passenger.passport_number || passenger.passport || 'N/A' }}
                     </div>
+                  </div>
+                </div>
+
+                <!-- Row 4: Passenger Category -->
+                <div class="mt-4">
+                  <label class="block text-[10px] font-bold text-red-600 uppercase mb-1.5 tracking-wide">Required Category*</label>
+                  <div class="px-3 py-2.5 border border-gray-300 rounded text-sm bg-white text-gray-700">
+                    {{ passenger.passenger_category === 'senior' ? 'Senior Citizen' : (passenger.passenger_category === 'pwd' ? 'PWD' : 'Regular') }}
+                  </div>
+                </div>
+
+                <!-- Row 5: PWD ID Number (shown only for PWD passengers) -->
+                <div v-if="passenger.passenger_category === 'pwd' && passenger.pwd_id_number" class="mt-3">
+                  <label class="block text-[10px] font-bold text-blue-600 uppercase mb-1.5 tracking-wide">PWD ID Number*</label>
+                  <div class="px-3 py-2.5 border border-blue-300 rounded text-sm bg-blue-50 text-blue-800 font-mono">
+                    {{ passenger.pwd_id_number }}
+                  </div>
+                </div>
+
+                <!-- Row 6: Senior Citizen ID (shown only for Senior passengers) -->
+                <div v-if="passenger.passenger_category === 'senior' && passenger.senior_id_number" class="mt-3">
+                  <label class="block text-[10px] font-bold text-amber-600 uppercase mb-1.5 tracking-wide">Senior Citizen ID*</label>
+                  <div class="px-3 py-2.5 border border-amber-300 rounded text-sm bg-amber-50 text-amber-800 font-mono">
+                    {{ passenger.senior_id_number }}
+                  </div>
+                </div>
+
+                <!-- Row 7: Passport Expiry Date (shown only for non-Philippines nationality) -->
+                <div v-if="passenger.nationality && passenger.nationality.toLowerCase() !== 'philippines' && passenger.passport_expiry_date" class="mt-3">
+                  <label class="block text-[10px] font-bold text-red-600 uppercase mb-1.5 tracking-wide">Passport Expiry Date*</label>
+                  <div class="px-3 py-2.5 border border-red-300 rounded text-sm bg-red-50 text-red-800">
+                    {{ passenger.passport_expiry_date }}
                   </div>
                 </div>
 
@@ -388,12 +448,23 @@
                     <span>I am a Person with Disability</span>
                   </label>
                 </div>
+
+                <!-- Passenger Add-ons -->
+                <div v-if="getPassengerAddons(passenger).length > 0" class="mt-4 border-t border-gray-100 pt-3">
+                  <label class="block text-[10px] font-bold text-pink-500 uppercase tracking-wide mb-2">Assigned Add-ons</label>
+                  <div class="flex flex-wrap gap-2">
+                    <span v-for="addon in getPassengerAddons(passenger)" :key="addon.id" class="px-3 py-1.5 bg-pink-50 border border-pink-200 text-pink-700 rounded-md text-xs font-bold shadow-sm">
+                      {{ addon.addon_name }}
+                    </span>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
 
           <!-- Submission & Grading Section (Always visible for clarity) -->
-          <div class="mb-8 border-2 border-dashed border-gray-200 rounded-lg p-6 bg-gray-50/50">
+          <div class="mb-8 border-2 border-dashed border-gray-200 rounded-xl p-6 bg-gray-50/50">
             <div class="flex items-center justify-between mb-4">
               <h2 class="text-base font-bold text-gray-900 uppercase tracking-tight">Submission & Grading</h2>
               <span :class="['px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider', getStatusClass(activity.status)]">
@@ -404,7 +475,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <!-- Grade Card -->
               <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm flex items-center gap-4 relative overflow-hidden">
-                <div v-if="activity.status === 'graded' && activity.grade === null" class="absolute top-0 right-0">
+                <div v-if="activity.status === 'graded' && !activity.grades_released" class="absolute top-0 right-0">
                   <div class="bg-yellow-400 text-[8px] font-black px-2 py-0.5 uppercase tracking-tighter transform rotate-45 translate-x-4 translate-y-2 w-24 text-center">Pending Release</div>
                 </div>
                 <div class="w-12 h-12 bg-pink-50 rounded-full flex items-center justify-center text-pink-500">
@@ -414,7 +485,7 @@
                 </div>
                 <div>
                   <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Performance Score</p>
-                  <div v-if="activity.status === 'graded' && activity.grade === null" class="flex flex-col">
+                  <div v-if="!activity.grades_released" class="flex flex-col">
                     <span class="text-sm font-bold text-yellow-600">Pending Release</span>
                     <span class="text-[9px] text-gray-400 italic">Scores aren't published yet</span>
                   </div>
@@ -456,27 +527,28 @@
               <p class="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap italic">{{ activity.feedback }}</p>
             </div>
             
-            <!-- View Work Button -->
-            <div v-if="activity.completed" class="mt-6 flex flex-col items-center gap-2">
-              <template v-if="activity.grade !== null">
-                <button 
-                  @click="openComparisonModal"
-                  class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg transition-all shadow-md flex items-center gap-2"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-                  </svg>
-                  View Performance Analysis
-                </button>
-              </template>
-              <template v-else-if="activity.status === 'graded' || activity.status === 'submitted'">
-                <div class="px-6 py-3 bg-amber-50 border border-amber-200 text-amber-700 text-sm font-bold rounded-lg flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <!-- View Analysis Button -->
+            <div v-if="activity.status === 'graded' || activity.status === 'submitted'" class="mt-6 flex flex-col items-center gap-2">
+              <template v-if="!activity.grades_released">
+                <div class="px-6 py-3 bg-amber-50 border border-amber-200 text-amber-700 text-sm font-bold rounded-lg flex items-center gap-2 shadow-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   Results not released yet
                 </div>
                 <p class="text-[10px] text-gray-400 italic">Analysis will be available once the instructor releases the grades.</p>
+              </template>
+              
+              <template v-else>
+                <button 
+                  @click="openComparisonModal"
+                  class="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg flex items-center gap-2 shadow-md transition-all transform hover:scale-105"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  VIEW DETAILED ANALYSIS
+                </button>
               </template>
             </div>
           </div>
@@ -631,7 +703,9 @@ export default {
         is_active: false,
         activity_code: '', // Store the activity code
         segments: [],
-        analysis: null
+        analysis: null,
+        grades_released: false,
+        activity_addons: [] // ✅ ADDED
       },
       instructor: null,
       passengers: [],
@@ -678,6 +752,33 @@ export default {
       
       console.log('ℹ️ No passenger data from backend');
       return [];
+    },
+    dynamicInstructions() {
+      if (!this.activity.instructions && !this.activity.description) return 'No instructions provided.';
+      let text = this.activity.instructions || this.activity.description || '';
+      
+      // If we have assigned seats, try to inject them into the passenger list instructions
+      if (this.activity.assigned_seats && this.activity.assigned_seats.length > 0) {
+        const lines = text.split('\n');
+        const newLines = [];
+        let passengerCount = 0;
+        
+        for (let i = 0; i < lines.length; i++) {
+          newLines.push(lines[i]);
+          
+          // Look for "Passenger X (Type):" pattern
+          if (lines[i].trim().match(/^Passenger\s+\d+\s+\(.*\):$/i)) {
+            const seat = this.getAssignedSeat(passengerCount);
+            if (seat) {
+              newLines.push(`  • Assigned Seat: ${seat}`);
+            }
+            passengerCount++;
+          }
+        }
+        text = newLines.join('\n');
+      }
+      
+      return text;
     }
   },
   async created() {
@@ -739,6 +840,7 @@ export default {
           title: activityData.title || 'Untitled Activity',
           description: activityData.description || '',
           activity_type: activityData.activity_type || 'Flight Booking',
+          instructions: activityData.instructions || '',
           due_date: activityData.due_date,
           total_points: activityData.total_points || 0,
           section_code: activityData.section_code || '',
@@ -753,6 +855,7 @@ export default {
           required_passengers: activityData.required_passengers || 0,
           required_children: activityData.required_children || 0,
           required_infants: activityData.required_infants || 0,
+          activity_addons: activityData.activity_addons || [], // ✅ ADDED
           
           // Dates
           departure_date: activityData.departure_date,
@@ -773,7 +876,9 @@ export default {
           completed: activityData.completed || false,
           created_at: activityData.created_at,
           segments: activityData.segments || [],
-          analysis: activityData.analysis || null
+          analysis: activityData.analysis || null,
+          grades_released: activityData.grades_released || false,
+          assigned_seats: activityData.assigned_seats || []
         };
         
         console.log('✅ Activity populated with code:', this.activity.activity_code);
@@ -986,6 +1091,28 @@ export default {
       }
       if (!this.activity.is_active) return 'Activity Not Active';
       return 'Start';
+    },
+
+    getAssignedSeat(index) {
+      if (!this.activity?.assigned_seats || !this.displayPassengers[index]) return null;
+      if (this.displayPassengers[index].passenger_type === 'infant') return null;
+      
+      // Count how many non-infants are before this passenger
+      let seatIdx = 0;
+      for (let i = 0; i < index; i++) {
+        if (this.displayPassengers[i].passenger_type !== 'infant') {
+          seatIdx++;
+        }
+      }
+      return this.activity.assigned_seats[seatIdx] || null;
+    },
+
+    getPassengerAddons(passenger) {
+      if (!this.activity?.activity_addons || !this.activity.activity_addons.length) return [];
+      return this.activity.activity_addons.filter(aa => 
+        aa.passenger?.first_name === passenger.first_name &&
+        aa.passenger?.last_name === passenger.last_name
+      );
     }
   }
 }

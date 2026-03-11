@@ -63,28 +63,34 @@
               
               <div 
                 v-for="s in allNotifications" 
-                :key="s.scheduleId"
-                class="px-4 py-4 hover:bg-slate-50 transition-all border-b border-gray-50 last:border-0 group"
+                :key="s.id"
+                class="px-4 py-4 hover:bg-slate-50 transition-all border-b border-gray-50 last:border-0 group relative"
+                :class="{ 'opacity-85 bg-slate-50/40': s.read }"
               >
                 <div class="flex items-start gap-4">
                   <div :class="[
                     'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-xs shadow-sm transition-transform group-hover:scale-110',
-                    s.type === 'missed' ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                    s.type === 'missed' ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100',
+                    { 'grayscale opacity-70': s.read }
                   ]">
                     {{ s.sectionName.charAt(0) }}
                   </div>
-                  <div class="flex-1">
+                  <div class="flex-1 text-left">
                     <div class="flex justify-between items-start mb-0.5">
-                      <p class="text-[11px] font-black text-slate-800 uppercase tracking-tight">{{ s.sectionName }}</p>
-                      <span :class="[
-                        'text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded',
-                        s.type === 'missed' ? 'text-red-400' : 'text-emerald-400'
-                      ]">
-                        {{ s.type }}
-                      </span>
+                      <p class="text-[11px] font-black text-slate-800 uppercase tracking-tight" :class="{ 'text-slate-500': s.read }">{{ s.sectionName }}</p>
+                      <div class="flex flex-col items-end gap-1">
+                        <span :class="[
+                          'text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded',
+                          s.type === 'missed' ? 'text-red-400' : 'text-emerald-400',
+                          { 'text-slate-400 bg-slate-100': s.read }
+                        ]">
+                          {{ s.type }}
+                        </span>
+                        <span v-if="s.read" class="text-[7px] font-bold text-slate-500 uppercase tracking-tighter bg-slate-200/50 px-1 rounded-sm border border-slate-200">Checked</span>
+                      </div>
                     </div>
-                    <p class="text-[10px] text-slate-500 font-medium leading-normal italic">
-                      {{ s.type === 'missed' ? 'You have a missed schedule today.' : 'Schedule session acknowledged.' }}
+                    <p class="text-[10px] text-slate-500 font-medium leading-normal italic" :class="{ 'text-slate-400': s.read }">
+                      {{ s.displayMessage }}
                     </p>
                     <div class="flex items-center gap-2 mt-2">
                        <span class="text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{{ formatTimeOnly(s.start_time) }}</span>
@@ -485,13 +491,7 @@
                @click="acknowledgeSchedule" 
                class="w-full py-4 bg-pink-500 hover:bg-pink-600 text-white rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-pink-200 transition-all active:scale-[0.98]"
              >
-               Understood, I'm Ready
-             </button>
-             <button 
-               @click="showScheduleAlert = false" 
-               class="w-full py-3 text-slate-400 hover:text-slate-600 font-bold uppercase text-[10px] tracking-widest transition-colors"
-             >
-               Dismiss Alert
+               Dismiss
              </button>
           </div>
         </div>
@@ -501,7 +501,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 // Import the new API service
 import { instructorDashboardService } from '@/services/instructor/instructorDashboardService'
@@ -523,16 +523,55 @@ const sections = ref([])
 const searchQuery = ref('')
 const lastSyncTime = ref(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
 
-// Notification & Alert State
+// Notification & Alert State - Persisted via localStorage (User-Specific)
 const dismissedSchedules = ref(new Set())
 const shownAlerts = ref(new Set())
-const acknowledgedSchedules = ref([]) // For alerts that were clicked "I Understood"
 const readNotificationIds = ref(new Set())
 const showScheduleAlert = ref(false)
 const notificationDropdownOpen = ref(false)
 const currentAlertSchedule = ref(null)
 const currentTimeDisplay = ref(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
 let scheduleInterval = null
+
+// Helper to get user-specific storage keys
+const getStorageKey = (base) => {
+  const userId = userStore.user?.id || 'anon'
+  return `${base}_${userId}`
+}
+
+// Function to load user-specific state
+const loadUserState = () => {
+  const userId = userStore.user?.id
+  if (!userId) return
+
+  dismissedSchedules.value = new Set(JSON.parse(localStorage.getItem(getStorageKey('dismissedSchedules')) || '[]'))
+  shownAlerts.value = new Set(JSON.parse(localStorage.getItem(getStorageKey('shownAlerts')) || '[]'))
+  readNotificationIds.value = new Set(JSON.parse(localStorage.getItem(getStorageKey('readNotificationIds')) || '[]'))
+}
+
+// Watchers for persistence - including user-specific tagging
+watch(dismissedSchedules, (newVal) => {
+  if (userStore.user?.id) {
+    localStorage.setItem(getStorageKey('dismissedSchedules'), JSON.stringify([...newVal]))
+  }
+}, { deep: true })
+
+watch(shownAlerts, (newVal) => {
+  if (userStore.user?.id) {
+    localStorage.setItem(getStorageKey('shownAlerts'), JSON.stringify([...newVal]))
+  }
+}, { deep: true })
+
+watch(readNotificationIds, (newVal) => {
+  if (userStore.user?.id) {
+    localStorage.setItem(getStorageKey('readNotificationIds'), JSON.stringify([...newVal]))
+  }
+}, { deep: true })
+
+// Watch for user changes (login/logout/switch) to reload state
+watch(() => userStore.user?.id, (newUserId) => {
+  if (newUserId) loadUserState()
+})
 
 // Form state for creating a new section
 const form = ref({
@@ -619,52 +658,86 @@ const totalActivities = computed(() => {
   return sections.value.reduce((acc, s) => acc + (s.activity_count || 0), 0)
 })
 
-const allNotifications = computed(() => {
-  const now = new Date()
-  const dateStr = now.toDateString()
-  const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+const currentFullTime = ref(new Date())
+
+// Helper to find the most recent occurrence of a Weekly slot (e.g., "Monday 10:00")
+const getMostRecentOccurrence = (dayName, timeStr, now = new Date()) => {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-  const today = days[now.getDay()]
+  const shortDays = ['su', 'mo', 'tu', 'we', 'th', 'fr', 'sa']
   
+  let targetDayIndex = days.findIndex(d => d.toLowerCase() === dayName.toLowerCase())
+  if (targetDayIndex === -1) {
+    targetDayIndex = shortDays.findIndex(d => d === dayName.toLowerCase().substring(0, 2))
+  }
+  
+  if (targetDayIndex === -1) return null
+  
+  const [hours, minutes] = timeStr.split(':').map(Number)
+  const occurrence = new Date(now)
+  
+  // Set time
+  occurrence.setHours(hours, minutes, 0, 0)
+  
+  // Adjust day to match the provided dayName
+  const currentDayIndex = now.getDay()
+  const daysDiff = (currentDayIndex - targetDayIndex + 7) % 7
+  occurrence.setDate(now.getDate() - daysDiff)
+  
+  // If the occurrence calculated is in the future compared to 'now', it must be the previous week's occurrence
+  if (occurrence > now) {
+    occurrence.setDate(occurrence.getDate() - 7)
+  }
+  
+  return occurrence
+}
+
+const allNotifications = computed(() => {
+  const now = currentFullTime.value
   const notifications = []
   
-  // 1. Add Acknowledged Alerts
-  acknowledgedSchedules.value.forEach(s => {
-    notifications.push({ 
-      ...s, 
-      type: 'acknowledged',
-      id: `${s.scheduleId}-${dateStr}-ack` 
-    })
-  })
-  
-  // 2. Detect and Add Missed Schedules (those not acknowledged yet)
+  // Detect and Add Missed Schedules using precise occurrence timestamps
   sections.value.forEach(section => {
     const schedules = parsedSectionSchedule(section.schedule)
     if (schedules) {
       schedules.forEach(s => {
-        const scheduleId = `${section.id}-${s.day}-${s.start_time}`
-        const isMissed = s.day === today && currentTime > s.start_time
-        const alreadyInAcknowledged = acknowledgedSchedules.value.some(as => as.scheduleId === scheduleId)
+        const occurrence = getMostRecentOccurrence(s.day, s.start_time, now)
+        if (!occurrence) return
         
-        if (isMissed && !alreadyInAcknowledged && !dismissedSchedules.value.has(scheduleId)) {
-          notifications.push({
-            ...s,
-            type: 'missed',
-            sectionId: section.id,
-            sectionName: section.section_name,
-            scheduleId,
-            id: `${scheduleId}-${dateStr}-missed`
-          })
+        // Window check: We show missed schedules from the last 48 hours
+        const diffMs = now - occurrence
+        const isPast = occurrence < now
+        const isWithinWindow = diffMs < 48 * 60 * 60 * 1000 // 48-hour history window
+        
+        if (isPast && isWithinWindow) {
+          const scheduleId = `${section.id}-${s.day}-${s.start_time}`
+          // Stable ID based on the date this specific occurrence happened
+          const dateStr = occurrence.toDateString().replace(/\s+/g, '_')
+          const notificationId = `${scheduleId}_${dateStr}_missed`
+          
+          if (!dismissedSchedules.value.has(scheduleId)) {
+            notifications.push({
+              ...s,
+              type: 'missed',
+              sectionId: section.id,
+              sectionName: section.section_name,
+              scheduleId,
+              id: notificationId,
+              read: readNotificationIds.value.has(notificationId),
+              occurrenceTime: occurrence,
+              displayMessage: `You missed your ${formatTimeOnly(s.start_time)} session.`
+            })
+          }
         }
       })
     }
   })
   
-  return notifications.sort((a, b) => b.start_time.localeCompare(a.start_time))
+  // Show most recent first
+  return notifications.sort((a, b) => b.occurrenceTime - a.occurrenceTime)
 })
 
 const unseenCount = computed(() => {
-  return allNotifications.value.filter(n => !readNotificationIds.value.has(n.id)).length
+  return allNotifications.value.filter(n => !n.read).length
 })
 
 // Computed: User initials for the avatar
@@ -685,6 +758,7 @@ const toggleNotificationDropdown = () => {
     dropdownOpen.value = false
     // Mark all current as read
     allNotifications.value.forEach(n => readNotificationIds.value.add(n.id))
+    readNotificationIds.value = new Set(readNotificationIds.value)
   }
 }
 
@@ -700,7 +774,7 @@ const editSection = (section) => {
 
 // Logout logic
 const handleLogout = () => {
-  localStorage.clear()
+  userStore.logout()
   router.push('/login')
 }
 
@@ -711,20 +785,16 @@ const dismissSchedule = (id) => {
 const acknowledgeSchedule = () => {
   if (currentAlertSchedule.value) {
     const scheduleId = `${currentAlertSchedule.value.sectionId}-${currentAlertSchedule.value.day}-${currentAlertSchedule.value.start_time}`
-    
-    // Add to acknowledged list if not already there
-    if (!acknowledgedSchedules.value.find(s => s.scheduleId === scheduleId)) {
-      acknowledgedSchedules.value.push({
-        ...currentAlertSchedule.value,
-        scheduleId
-      })
-    }
+    dismissedSchedules.value.add(scheduleId)
+    // Force a re-render/save
+    dismissedSchedules.value = new Set(dismissedSchedules.value)
   }
   showScheduleAlert.value = false
 }
 
 const checkScheduleAlerts = () => {
   const now = new Date()
+  currentFullTime.value = now // Update reactive time for notifications
   currentTimeDisplay.value = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   
   const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
@@ -746,6 +816,7 @@ const checkScheduleAlerts = () => {
             }
             showScheduleAlert.value = true
             shownAlerts.value.add(alertId)
+            shownAlerts.value = new Set(shownAlerts.value)
             // Increment unseenCount for the alert itself? 
             // The user said "if missed ... OR click i understand ... then show the alert the new alert like ther is a number"
             // Wait, if it alerts, does it count as unseen yet? 
@@ -815,6 +886,7 @@ const submitSection = async () => {
 // Lifecycle: Initialize data
 onMounted(async () => {
   await userStore.ensureUserLoaded();
+  loadUserState(); // Ensure state is loaded for the current user
   await fetchInstructorData();
   
   // Start schedule alert checker (High Precision - 1s)

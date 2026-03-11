@@ -83,7 +83,7 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-10">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
             <!-- Loading State (Skeleton UI) -->
             <div v-if="loading" class="animate-pulse">
               <div class="flex justify-between items-start mb-10">
@@ -101,7 +101,7 @@
               <div class="space-y-6">
                 <!-- Activity Stats Skeleton -->
                 <div class="grid grid-cols-3 gap-6 mb-10">
-                  <div v-for="i in 3" :key="i" class="h-24 bg-gray-50 rounded-lg border border-gray-100"></div>
+                  <div v-for="i in 3" :key="i" class="h-24 bg-gray-50 rounded-xl border border-gray-100"></div>
                 </div>
                 
                 <!-- Content Placeholder -->
@@ -151,7 +151,7 @@
                 <!-- Instructions -->
                 <div class="mb-10">
                   <h3 class="text-xs font-black uppercase text-gray-800 mb-4 tracking-widest">Instructions</h3>
-                  <div class="border border-gray-100 bg-gray-50/50 p-6 rounded-lg italic text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
+                  <div class="border border-gray-100 bg-gray-50/50 p-6 rounded-xl italic text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
                     {{ activity.instructions || 'No instructions provided.' }}
                   </div>
                 </div>
@@ -241,7 +241,7 @@
                 </div>
 
                 <!-- Passenger Information -->
-                <div class="border border-gray-200 rounded-lg p-8 bg-white">
+                <div class="border border-gray-200 rounded-xl p-8 bg-white">
                   <h3 class="text-lg font-bold mb-8 text-gray-800">Passenger Information</h3>
                   <div v-if="activity.passengers && activity.passengers.length > 0">
                     <div v-for="(p, index) in activity.passengers" :key="index" class="mb-10 last:mb-0 border-b border-gray-50 pb-8 last:border-0">
@@ -309,6 +309,30 @@
                           <label class="text-[9px] font-black text-red-500 uppercase">Category*</label>
                           <div class="mt-1 p-3 border border-gray-200 rounded-lg text-xs bg-gray-50/50 uppercase text-gray-700">
                             {{ p.passenger_category === 'senior' ? 'Senior Citizen' : (p.passenger_category === 'pwd' ? 'PWD' : 'Regular') }}
+                          </div>
+                        </div>
+
+                        <!-- PWD ID Number (shown only for PWD passengers) -->
+                        <div v-if="p.passenger_category === 'pwd' && hasValue(p.pwd_id_number)">
+                          <label class="text-[9px] font-black text-blue-600 uppercase">PWD ID Number*</label>
+                          <div class="mt-1 p-3 border border-blue-200 rounded-lg text-xs bg-blue-50/50 uppercase text-blue-800 font-mono">
+                            {{ p.pwd_id_number }}
+                          </div>
+                        </div>
+
+                        <!-- Senior Citizen ID (shown only for Senior passengers) -->
+                        <div v-if="p.passenger_category === 'senior' && hasValue(p.senior_id_number)">
+                          <label class="text-[9px] font-black text-amber-600 uppercase">Senior Citizen ID*</label>
+                          <div class="mt-1 p-3 border border-amber-200 rounded-lg text-xs bg-amber-50/50 uppercase text-amber-800 font-mono">
+                            {{ p.senior_id_number }}
+                          </div>
+                        </div>
+
+                        <!-- Passport Expiry Date (shown only for non-Philippines nationality) -->
+                        <div v-if="p.nationality && p.nationality.toLowerCase() !== 'philippines' && hasValue(p.passport_expiry_date)">
+                          <label class="text-[9px] font-black text-red-500 uppercase">Passport Expiry*</label>
+                          <div class="mt-1 p-3 border border-red-200 rounded-lg text-xs bg-red-50/50 uppercase text-red-800">
+                            {{ p.passport_expiry_date }}
                           </div>
                         </div>
                         
@@ -460,7 +484,7 @@
                   <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Loading student work...</p>
                 </div>
 
-                <div v-else-if="submissions.length === 0" class="text-center py-20 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                <div v-else-if="submissions.length === 0" class="text-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
                   <p class="text-gray-400 text-sm italic">No students are currently enrolled in this section.</p>
                 </div>
 

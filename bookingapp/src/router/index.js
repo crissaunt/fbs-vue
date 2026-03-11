@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHistory, RouterView } from 'vue-router';
 import { useBookingStore } from '@/stores/booking';
 import { useNotificationStore } from '@/stores/notification';
 import { useUserStore } from '@/stores/user';
@@ -28,6 +28,7 @@ import Activity_details from '@/views/Instructor/Activity/Activity_details.vue';
 import InstructorStudentScore from '@/views/Instructor/Activity/instructor_students_score.vue';
 
 // Student Views
+import StudentLayout from '@/views/Student/StudentLayout.vue';
 import StudentDashboard from '@/views/Student/Student_dashboard.vue';
 import StudentActivityDetails from '@/views/Student/Activities/Student_activity_details.vue'
 
@@ -96,23 +97,47 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    path: '/student/dashboard',
-    name: 'StudentDashboard',
-    component: StudentDashboard,
-    meta: { requiresAuth: true, role: 'student' }
-  },
-  {
-    path: '/student/activity/:id',
-    name: 'StudentActivityDetails',
-    component: StudentActivityDetails,
-    meta: { requiresAuth: true, role: 'student' },
-    props: true
-  },
-  {
-    path: '/student/activity/:activityId/analysis',
-    name: 'StudentAssessmentAnalysis',
-    component: () => import('@/views/Student/Activities/Student_assessment_analysis.vue'),
-    meta: { requiresAuth: true, role: 'student' }
+    path: '/student',
+    component: RouterView,
+    meta: { requiresAuth: true, role: 'student', layout: 'StudentLayout' },
+    children: [
+      {
+        path: 'dashboard',
+        name: 'StudentDashboard',
+        component: StudentDashboard
+      },
+      {
+        path: 'home',
+        name: 'StudentHome',
+        component: () => import('@/views/Student/Home.vue')
+      },
+      {
+        path: 'calendar',
+        name: 'StudentCalendar',
+        component: () => import('@/views/Student/Calendar.vue')
+      },
+      {
+        path: 'tasks',
+        name: 'StudentTasks',
+        component: () => import('@/views/Student/Tasks.vue')
+      },
+      {
+        path: 'activity/:id',
+        name: 'StudentActivityDetails',
+        component: StudentActivityDetails,
+        props: true
+      },
+      {
+        path: 'activity/:activityId/analysis',
+        name: 'StudentAssessmentAnalysis',
+        component: () => import('@/views/Student/Activities/Student_assessment_analysis.vue')
+      },
+      {
+        path: 'dcs-checkin',
+        name: 'StudentDcsCheckin',
+        component: () => import('@/views/Student/StudentDcsCheckin.vue')
+      }
+    ]
   },
   {
     path: '/airbus-321',

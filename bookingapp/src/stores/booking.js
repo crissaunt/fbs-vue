@@ -679,7 +679,8 @@ export const useBookingStore = defineStore('booking', {
 
         this.multiCitySegments[index].selectedFlight = {
           ...flight,
-          ...seatClassInfo
+          ...seatClassInfo,
+          class_type: flight.class_type || flight.selected_seat_class || flight.seat_class || 'Economy'
         };
 
         // Store fare family for this segment
@@ -748,7 +749,8 @@ export const useBookingStore = defineStore('booking', {
       const flightWithSeatClass = {
         ...flight,
         ...seatClassInfo,
-        price: flight.price
+        price: flight.price,
+        class_type: flight.class_type || flight.selected_seat_class || flight.seat_class || 'Economy'
       };
 
       const segKey = type === 'outbound' ? 'depart' : 'return';

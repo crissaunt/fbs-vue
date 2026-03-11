@@ -161,7 +161,7 @@
                     <!-- Dropdown Menu -->
                     <div 
                       v-if="activityDropdowns[activity.id]"
-                      class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50 border border-gray-200"
+                      class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200"
                     >
                       <button 
                         @click="openDeleteModal(activity)"
@@ -203,7 +203,7 @@
     <!-- Delete Confirmation Modal -->
     <Transition name="modal-fade">
       <div v-if="showDeleteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md mx-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4">
           <!-- Warning Icon -->
           <div class="flex justify-center mb-6">
             <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
@@ -247,8 +247,8 @@
 
     <!-- Success Modal -->
     <Transition name="success-fade">
-      <div v-if="showSuccessModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md mx-4 transform transition-all">
+      <div v-if="showSuccessModal" class="fixed inset-0 flex items-center justify-center z-[100] bg-black/60 backdrop-blur-[2px]">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 transform transition-all border border-green-100">
           <div class="flex justify-center mb-6">
             <div class="success-checkmark">
               <div class="check-icon">
@@ -277,7 +277,7 @@
 
     <!-- Enroll Student Modal -->
     <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/50">
-      <div class="bg-white rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
         <div class="bg-white p-6 text-black flex justify-between items-center">
           <h3 class="text-xl font-bold">Enroll Student</h3>
           <button @click="isModalOpen = false" class="hover:rotate-90 transition-transform">
@@ -293,12 +293,12 @@
               v-model="studentNumberInput"
               type="text" 
               placeholder="e.g. 21-0001"
-              class="w-full p-4 border-2 border-gray-100 rounded-lg focus:border-[#FF579A] outline-none transition-all text-lg font-medium"
+              class="w-full p-4 border-2 border-gray-100 rounded-xl focus:border-[#FF579A] outline-none transition-all text-lg font-medium"
             />
           </div>
           <div class="flex gap-4">
-            <button @click="isModalOpen = false" class="flex-1 py-3 text-gray-400 font-bold hover:bg-gray-200 rounded-lg transition-colors uppercase text-xs">Cancel</button>
-            <button @click="submitEnrollment" :disabled="loading" class="flex-1 py-3 bg-[#FF579A] text-white font-bold rounded-lg shadow-lg hover:bg-green-700 transition-colors uppercase text-xs">
+            <button @click="isModalOpen = false" class="flex-1 py-3 text-gray-400 font-bold hover:bg-gray-200 rounded-xl transition-colors uppercase text-xs">Cancel</button>
+            <button @click="submitEnrollment" :disabled="loading" class="flex-1 py-3 bg-[#FF579A] text-white font-bold rounded-xl shadow-lg hover:bg-green-700 transition-colors uppercase text-xs">
               {{ loading ? 'Enrolling...' : 'Enroll Student' }}
             </button>
           </div>
@@ -359,26 +359,45 @@
                     </select>
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Travel Class *</label>
-                    <select v-model="activityForm.required_travel_class" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#093704]">
-                      <option v-if="travel_classes.length === 0" value="economy">Economy</option>
-                      <option v-if="travel_classes.length === 0" value="premium_economy">Premium Economy</option>
-                      <option v-if="travel_classes.length === 0" value="business">Business</option>
-                      <option v-if="travel_classes.length === 0" value="first">First Class</option>
-                      <option v-for="tClass in travel_classes" :key="tClass" :value="tClass">
-                        {{ tClass }}
-                      </option>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Travel Class *
+                      <span v-if="isFetchingTravelClasses" class="ml-2 text-xs text-blue-400 font-normal italic">Loading...</span>
+                      <span v-else-if="(activityForm.required_origin && activityForm.required_destination && activityForm.required_departure_date || (activityForm.required_trip_type === 'multi_city' && activityForm.segments.length > 0)) && filteredTravelClasses.length === 0"
+                        class="ml-2 text-xs text-orange-500 font-normal italic">
+                        No available travel classes for this selection
+                      </span>
+                    </label>
+                    <select v-model="activityForm.required_travel_class" required
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#093704]"
+                      :disabled="isFetchingTravelClasses">
+                      <!-- Filtered by route+date (preferred) -->
+                      <template v-if="filteredTravelClasses.length > 0">
+                        <option v-for="tClass in filteredTravelClasses" :key="tClass" :value="tClass">{{ tClass }}</option>
+                      </template>
+                      <!-- Fallback: all travel classes when no route/date is selected yet -->
+                      <template v-else-if="travel_classes.length > 0">
+                        <option v-for="tClass in travel_classes" :key="tClass" :value="tClass">{{ tClass }}</option>
+                      </template>
+                      <!-- Hard fallback -->
+                      <template v-else>
+                        <option value="economy">Economy</option>
+                        <option value="premium_economy">Premium Economy</option>
+                        <option value="business">Business</option>
+                        <option value="first">First Class</option>
+                      </template>
                     </select>
                   </div>
+
                   <!-- Origin Airport Dropdown -->
                   <div v-if="activityForm.required_trip_type !== 'multi_city'">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Origin Airport *</label>
                     <select v-model="activityForm.required_origin" :required="activityForm.required_trip_type !== 'multi_city'" 
                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#093704]"
-                      :disabled="airports.length === 0">
+                      :disabled="airports.length === 0"
+                      @change="fetchFilteredTravelClasses()">
                       <option value="">{{ airports.length === 0 ? 'Loading airports...' : 'Select Origin Airport' }}</option>
                       <option v-for="airport in airports" :key="airport.code" :value="airport.code">
-                        {{ airport.code }} - {{ airport.name }} ({{ airport.location }})
+                        {{ airport.code }} - {{ airport.name }}<template v-if="airport.location"> ({{ airport.location }})</template>
                       </option>
                     </select>
                     <p v-if="airports.length === 0" class="text-xs text-blue-500 mt-1">Loading airports...</p>
@@ -389,17 +408,20 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Destination Airport *</label>
                     <select v-model="activityForm.required_destination" :required="activityForm.required_trip_type !== 'multi_city'" 
                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#093704]"
-                      :disabled="airports.length === 0">
+                      :disabled="airports.length === 0"
+                      @change="fetchFilteredTravelClasses()">
                       <option value="">{{ airports.length === 0 ? 'Loading airports...' : 'Select Destination Airport' }}</option>
                       <option v-for="airport in airports" :key="airport.code" :value="airport.code">
-                        {{ airport.code }} - {{ airport.name }} ({{ airport.location }})
+                        {{ airport.code }} - {{ airport.name }}<template v-if="airport.location"> ({{ airport.location }})</template>
                       </option>
                     </select>
                     <p v-if="airports.length === 0" class="text-xs text-blue-500 mt-1">Loading airports...</p>
                   </div>
                   <div v-if="activityForm.required_trip_type !== 'multi_city'">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Departure Date</label>
-                    <input type="date" v-model="activityForm.required_departure_date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#093704]">
+                    <input type="date" v-model="activityForm.required_departure_date"
+                      @change="fetchFilteredTravelClasses()"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#093704]">
                   </div>
                   <div v-show="showReturnDate && activityForm.required_trip_type !== 'multi_city'">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Return Date</label>
@@ -426,21 +448,27 @@
                       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <label class="block text-xs font-medium text-gray-600 mb-1">Origin *</label>
-                          <select v-model="segment.origin" required class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-pink-500">
+                          <select v-model="segment.origin" required
+                            class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-pink-500"
+                            @change="fetchFilteredTravelClasses()">
                             <option value="">Select Origin</option>
                             <option v-for="airport in airports" :key="airport.code" :value="airport.code">{{ airport.code }} - {{ airport.name }}</option>
                           </select>
                         </div>
                         <div>
                           <label class="block text-xs font-medium text-gray-600 mb-1">Destination *</label>
-                          <select v-model="segment.destination" required class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-pink-500">
+                          <select v-model="segment.destination" required
+                            class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-pink-500"
+                            @change="fetchFilteredTravelClasses()">
                             <option value="">Select Destination</option>
                             <option v-for="airport in airports" :key="airport.code" :value="airport.code">{{ airport.code }} - {{ airport.name }}</option>
                           </select>
                         </div>
                         <div>
                           <label class="block text-xs font-medium text-gray-600 mb-1">Date *</label>
-                          <input type="date" v-model="segment.departure_date" required class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-pink-500">
+                          <input type="date" v-model="segment.departure_date" required
+                            class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-pink-500"
+                            @change="fetchFilteredTravelClasses()">
                         </div>
                       </div>
                     </div>
@@ -476,6 +504,62 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Infants (Under 2 years)</label>
                     <input type="number" v-model.number="activityForm.required_infants" @change="updatePassengerForms" min="0" max="4" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#093704]">
                     <p class="text-xs text-gray-500 mt-1">Note: Infants must be accompanied by adults</p>
+                  </div>
+                </div>
+
+                <!-- Add-on & Insurance Requirements -->
+                <div class="mb-6 p-4 bg-pink-50 rounded-lg border border-pink-100">
+                  <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                      <input type="checkbox" v-model="activityForm.require_addons" @change="toggleAddons"
+                            class="mr-2 h-5 w-5 rounded border-gray-300 text-pink-600 focus:ring-pink-500">
+                      <label class="text-md font-bold text-gray-800">Require Add-ons & Insurance</label>
+                    </div>
+                    <span v-if="activityForm.require_addons" class="text-xs font-bold text-pink-600 bg-white px-2 py-1 rounded-full border border-pink-200">
+                      {{ activityForm.selected_addons.length }} Selected
+                    </span>
+                  </div>
+                  
+                  <div v-if="activityForm.require_addons" class="space-y-4">
+                    <p class="text-sm text-gray-600">Select which add-ons or insurance plans should be available for this activity:</p>
+                    
+                    <div v-if="addons.length === 0" class="text-sm text-gray-500 italic py-2">
+                       No add-ons available for this route/date yet.
+                    </div>
+                    
+                    <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto p-1">
+                      <div v-for="addon in addons" :key="addon.id" 
+                           class="flex items-start p-3 rounded-md border transition-all"
+                           :class="activityForm.selected_addons.includes(addon.id) ? 'bg-white border-pink-400 shadow-sm' : 'bg-gray-50 border-gray-200 hover:border-pink-200'">
+                        <div class="flex items-center h-5 mt-0.5">
+                          <input type="checkbox" 
+                                 :value="addon.id" 
+                                 v-model="activityForm.selected_addons"
+                                 @change="syncPassengerAddons"
+                                 class="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500">
+                        </div>
+                        <div class="ml-3 text-sm flex-1">
+                          <div class="flex items-center justify-between">
+                            <label class="font-bold text-gray-700">{{ addon.name }}</label>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 font-bold uppercase">
+                              {{ addon.type?.name || 'Add-on' }}
+                            </span>
+                          </div>
+                          <div class="flex items-center justify-between mt-1">
+                            <span class="text-xs text-pink-600 font-bold">₱{{ addon.price }}</span>
+                            <div class="flex items-center gap-2">
+                              <label class="text-[10px] text-gray-500 flex items-center cursor-pointer">
+                                <input type="checkbox" 
+                                       v-model="addonRequirements[addon.id]" 
+                                       @change="syncPassengerAddons"
+                                       class="mr-1 h-3 w-3 rounded text-pink-500">
+                                Required?
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -547,6 +631,45 @@
                             <label class="block text-xs font-medium text-gray-600 mb-1">Passport Number</label>
                             <input type="text" v-model="passenger.passportNumber" placeholder="Enter passport number" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm">
                           </div>
+                          <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Passenger Category *</label>
+                            <select v-model="passenger.passenger_category" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm">
+                              <option value="none">Regular</option>
+                              <option value="senior">Senior Citizen</option>
+                              <option value="pwd">PWD</option>
+                            </select>
+                          </div>
+                          <!-- PWD ID Number - shown only when PWD -->
+                          <div v-if="passenger.passenger_category === 'pwd'">
+                            <label class="block text-xs font-medium text-blue-600 mb-1">PWD ID Number *</label>
+                            <input type="text" v-model="passenger.pwd_id_number" placeholder="e.g. PWD-1234567" class="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm">
+                          </div>
+                          <!-- Senior Citizen ID - shown only when Senior -->
+                          <div v-if="passenger.passenger_category === 'senior'">
+                            <label class="block text-xs font-medium text-amber-600 mb-1">Senior Citizen ID *</label>
+                            <input type="text" v-model="passenger.senior_id_number" placeholder="e.g. SC-1234567" class="w-full px-3 py-2 border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm">
+                          </div>
+                          <!-- Passport Expiry - shown only for non-Philippines nationality -->
+                          <div v-if="passenger.nationality && passenger.nationality !== 'Philippines'">
+                            <label class="block text-xs font-medium text-red-600 mb-1">Passport Expiry Date *</label>
+                            <input type="date" v-model="passenger.passport_expiry_date" class="w-full px-3 py-2 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400 text-sm">
+                          </div>
+                        </div>
+
+                        <!-- Per-Passenger Add-ons Selection -->
+                        <div v-if="activityForm.require_addons && activityForm.selected_addons.length > 0" class="md:col-span-2 mt-4">
+                          <label class="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-tight">Passenger Specific Add-ons</label>
+                          <div class="flex flex-wrap gap-2">
+                            <div v-for="addonId in activityForm.selected_addons" :key="addonId" 
+                                 class="flex items-center px-3 py-1.5 rounded-lg border transition-all cursor-pointer"
+                                 :class="passenger.selected_addons.includes(addonId) ? 'bg-pink-50 border-pink-400 text-pink-700' : 'bg-white border-gray-200 text-gray-500 hover:border-pink-200'"
+                                 @click="togglePassengerAddon(passenger, addonId)">
+                              <span class="text-[10px] font-bold">{{ addons.find(a => a.id === addonId)?.name }}</span>
+                              <svg v-if="passenger.selected_addons.includes(addonId)" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                              </svg>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -596,6 +719,45 @@
                           <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Passport Number</label>
                             <input type="text" v-model="passenger.passportNumber" placeholder="Enter passport number" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400 text-sm">
+                          </div>
+                          <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Passenger Category *</label>
+                            <select v-model="passenger.passenger_category" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400 text-sm">
+                              <option value="none">Regular</option>
+                              <option value="senior">Senior Citizen</option>
+                              <option value="pwd">PWD</option>
+                            </select>
+                          </div>
+                          <!-- PWD ID Number - shown only when PWD -->
+                          <div v-if="passenger.passenger_category === 'pwd'">
+                            <label class="block text-xs font-medium text-blue-600 mb-1">PWD ID Number *</label>
+                            <input type="text" v-model="passenger.pwd_id_number" placeholder="e.g. PWD-1234567" class="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm">
+                          </div>
+                          <!-- Senior Citizen ID - shown only when Senior -->
+                          <div v-if="passenger.passenger_category === 'senior'">
+                            <label class="block text-xs font-medium text-amber-600 mb-1">Senior Citizen ID *</label>
+                            <input type="text" v-model="passenger.senior_id_number" placeholder="e.g. SC-1234567" class="w-full px-3 py-2 border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm">
+                          </div>
+                          <!-- Passport Expiry - shown only for non-Philippines nationality -->
+                          <div v-if="passenger.nationality && passenger.nationality !== 'Philippines'">
+                            <label class="block text-xs font-medium text-red-600 mb-1">Passport Expiry Date *</label>
+                            <input type="date" v-model="passenger.passport_expiry_date" class="w-full px-3 py-2 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400 text-sm">
+                          </div>
+                        </div>
+
+                        <!-- Per-Passenger Add-ons Selection -->
+                        <div v-if="activityForm.require_addons && activityForm.selected_addons.length > 0" class="md:col-span-2 mt-4">
+                          <label class="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-tight">Passenger Specific Add-ons</label>
+                          <div class="flex flex-wrap gap-2">
+                            <div v-for="addonId in activityForm.selected_addons" :key="addonId" 
+                                 class="flex items-center px-3 py-1.5 rounded-lg border transition-all cursor-pointer"
+                                 :class="passenger.selected_addons.includes(addonId) ? 'bg-pink-50 border-pink-400 text-pink-700' : 'bg-white border-gray-200 text-gray-500 hover:border-pink-200'"
+                                 @click="togglePassengerAddon(passenger, addonId)">
+                              <span class="text-[10px] font-bold">{{ addons.find(a => a.id === addonId)?.name }}</span>
+                              <svg v-if="passenger.selected_addons.includes(addonId)" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                              </svg>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -647,107 +809,31 @@
                             <label class="block text-xs font-medium text-gray-600 mb-1">Passport Number</label>
                             <input type="text" v-model="passenger.passportNumber" placeholder="Enter passport number" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm">
                           </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Add-ons Section -->
-              <div class="border-t border-gray-200 pt-4">
-                <div class="mb-6">
-                  <div class="flex items-center mb-4">
-                    <input 
-                      type="checkbox" 
-                      v-model="activityForm.require_addons" 
-                      @change="toggleAddons" 
-                      class="h-4 w-4 text-[#093704] focus:ring-[#093704] border-gray-300 rounded"
-                    >
-                    <label class="ml-2 block text-sm font-medium text-gray-700">
-                      Enable Add-ons for Passengers
-                    </label>
-                  </div>
-
-                  <!-- Add-ons Selection -->
-                  <div v-if="activityForm.require_addons" class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <h4 class="text-sm font-medium text-gray-900 mb-3">Available Add-ons</h4>
-                    
-                    <!-- Loading state -->
-                    <div v-if="isLoadingData" class="text-center py-4">
-                      <p class="text-sm text-gray-500">Loading add-ons...</p>
-                    </div>
-                    
-                    <!-- No addons available -->
-                    <div v-else-if="addons.length === 0" class="text-center py-4">
-                      <p class="text-sm text-gray-500">No add-ons available</p>
-                    </div>
-                    
-                    <!-- Add-ons list -->
-                    <div v-else class="space-y-3">
-                      <div 
-                        v-for="addon in addons" 
-                        :key="addon.id" 
-                        class="flex items-start p-3 bg-white rounded border border-gray-200 hover:border-[#FF579A] transition-colors"
-                      >
-                        <input 
-                          type="checkbox" 
-                          v-model="activityForm.selected_addons" 
-                          :value="addon.id" 
-                          @change="toggleAddonRequirements(addon.id)"
-                          class="h-4 w-4 text-[#093704] focus:ring-[#093704] border-gray-300 rounded mt-1"
-                        >
-                        
-                        <div class="ml-3 flex-1">
-                          <div class="flex justify-between items-start">
-                            <div>
-                              <label class="text-sm font-medium text-gray-700">
-                                {{ addon.name }}
-                                <span v-if="addon.airline" class="text-xs text-gray-500">({{ addon.airline.code }})</span>
-                              </label>
-                              <p v-if="addon.type" class="text-xs text-gray-500">{{ addon.type.name }}</p>
-                              <p class="text-xs text-gray-600">{{ addon.description || '' }}</p>
-                            </div>
-                            <span class="text-sm font-semibold text-[#FF579A]">₱{{ addon.price }}</span>
+                          <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Sitting on (Adult) *</label>
+                            <select v-model="passenger.associatedAdultIndex" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm">
+                              <option :value="null">Select Adult</option>
+                              <option v-for="adult in getPassengersByType('Adult')" :key="'adult-for-infant-' + adult.globalIndex" :value="adult.globalIndex">
+                                Passenger {{ adult.globalIndex }} ({{ adult.firstName }} {{ adult.lastName }})
+                              </option>
+                            </select>
                           </div>
-                          
-                          <!-- Add-on requirements (shown when selected) -->
-                          <div v-if="activityForm.selected_addons.includes(addon.id)" class="mt-3 p-3 bg-gray-50 rounded border border-gray-200">
-                            <div class="flex items-center space-x-4 mb-2">
-                              <div class="flex items-center">
-                                <input 
-                                  type="checkbox" 
-                                  v-model="addonRequirements[addon.id].required" 
-                                  class="h-3 w-3 text-[#093704] focus:ring-[#093704] border-gray-300 rounded"
-                                >
-                                <label class="ml-1 text-xs text-gray-600">
-                                  Required for passengers
-                                </label>
-                              </div>
-                              
-                              <div class="flex items-center">
-                                <label class="text-xs text-gray-600 mr-2">Quantity per passenger:</label>
-                                <input 
-                                  type="number" 
-                                  v-model.number="addonRequirements[addon.id].quantity" 
-                                  min="1" 
-                                  max="10"
-                                  class="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#093704]"
-                                >
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <label class="text-xs text-gray-600 block mb-1">Notes (optional):</label>
-                              <textarea 
-                                v-model="addonRequirements[addon.id].notes" 
-                                rows="2"
-                                class="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#093704]"
-                                placeholder="Special instructions for this add-on..."
-                              ></textarea>
-                            </div>
+                          <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Passenger Category *</label>
+                            <select v-model="passenger.passenger_category" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm">
+                              <option value="none">Regular</option>
+                              <option value="senior">Senior Citizen</option>
+                              <option value="pwd">PWD</option>
+                            </select>
+                          </div>
+                          <!-- Passport Expiry - shown only for non-Philippines nationality (infants can be foreign too) -->
+                          <div v-if="passenger.nationality && passenger.nationality !== 'Philippines'">
+                            <label class="block text-xs font-medium text-red-600 mb-1">Passport Expiry Date *</label>
+                            <input type="date" v-model="passenger.passport_expiry_date" class="w-full px-3 py-2 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400 text-sm">
                           </div>
                         </div>
+
+                        <!-- Infants never have add-ons -->
                       </div>
                     </div>
                   </div>
@@ -793,12 +879,13 @@
 
 
 <script setup>
-import { ref, computed, onMounted, watch, reactive } from 'vue'
+import { ref, computed, onMounted, watch, reactive, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/services/api/axios'
 import { sectionDetailsService } from '@/services/instructor/sectionDetailsService'
 import { instructorDashboardService } from '@/services/instructor/instructorDashboardService'
 import { activityService } from '@/services/instructor/activityService'
+import flightService from '@/services/booking/flightService'
 import LoadingOverlay from '@/components/instructor/LoadingOverlay.vue'
 import { useUserStore } from '@/stores/user'
 import { useNotificationStore } from '@/stores/notification'
@@ -828,6 +915,9 @@ const loading = ref(false)
 const activityModalOpen = ref(false)
 const showReturnDate = ref(false)
 const passengerForms = ref([])
+// ✅ Passenger pool: stores ALL passenger data ever created/randomized
+// so that reducing count and then increasing it again restores previously entered data.
+const passengerPool = ref({})
 
 // Success Modal
 const showSuccessModal = ref(false)
@@ -841,8 +931,13 @@ const activityToDelete = ref(null)
 const airports = ref([])
 const addons = ref([])
 const students = ref([]) // ✅ NEW: Students data
-const travel_classes = ref([]) // ✅ NEW: Travel classes from backend
+const travel_classes = ref([]) // ✅ All travel classes from backend (fallback)
+const filteredTravelClasses = ref([]) // ✅ Classes filtered by route+date
+const isFetchingTravelClasses = ref(false)
+const filteredAddons = ref([]) // ✅ Add-ons filtered by route+date
+const isFetchingAddons = ref(false)
 const isLoadingData = ref(false)
+const validRoutes = ref([]) // ✅ NEW: Store valid routes for randomization
 
 const activityForm = reactive({
   title: '',
@@ -878,13 +973,28 @@ const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', '
 const middleNames = ['Lee', 'Garcia', 'Quinto', 'Santos', 'Reyes', 'Cruz', 'Bautista', 'Ocampo', 'Mae', 'Ann', 'Marie', 'Louise' , 'James', 'John', 'Ray', 'Lynn', 'Grace', 'Rose', 'Mae', 'Jean', 'Paul', 'Mark', 'Jane', 'Louise', 'Michael', 'Elizabeth', 'Ann', 'Lee', 'Marie', 'Ray', 'Lynn', 'Grace', 'Rose', 'Jean', 'Paul', 'Mark', 'Jane', 'Louise'];
 const nationalities = ['Philippines', 'United States', 'Canada', 'Japan', 'South Korea', 'Singapore', 'Australia', 'United Kingdom'];
 
+let successTimeout = null;
 const showSuccess = (message) => {
-  successMessage.value = message
-  showSuccessModal.value = true
+  if (successTimeout) clearTimeout(successTimeout);
   
-  setTimeout(() => {
-    showSuccessModal.value = false
-  }, 3000)
+  // Force a re-trigger of the animation if already shown
+  if (showSuccessModal.value) {
+    showSuccessModal.value = false;
+    nextTick(() => {
+      successMessage.value = message;
+      showSuccessModal.value = true;
+      successTimeout = setTimeout(() => {
+        showSuccessModal.value = false;
+      }, 3000);
+    });
+    return;
+  }
+
+  successMessage.value = message;
+  showSuccessModal.value = true;
+  successTimeout = setTimeout(() => {
+    showSuccessModal.value = false;
+  }, 3000);
 }
 
 const openEnrollModal = () => {
@@ -1042,86 +1152,212 @@ const fetchAirportsAndAddons = async () => {
     
     airports.value = response.data.airports || []
     addons.value = response.data.available_addons || []
-    students.value = response.data.students || [] // ✅ NEW: Store students data
-    travel_classes.value = response.data.available_travel_classes || [] // ✅ NEW: Store travel classes
+    students.value = response.data.students || [] // ✅ Store students data
+    travel_classes.value = response.data.available_travel_classes || [] // ✅ Store all travel classes (fallback)
+    validRoutes.value = response.data.valid_routes || [] // ✅ NEW: Store valid routes
+    // Initialize filteredTravelClasses with all classes until route+date is chosen
+    filteredTravelClasses.value = travel_classes.value
     
   } catch (error) {
     console.error('Failed to fetch airports and addons:', error)
     airports.value = []
     addons.value = []
-    students.value = [] // ✅ NEW
+    students.value = []
   }
 }
 
-// ✅ UPDATED: Preserve existing passenger data when adding/removing passengers
+// ✅ Fetch available travel classes for a given route+date from the backend.
+// Supports one-way, round-trip (single leg), and multi-city (segment intersection).
+const fetchFilteredTravelClasses = async (opts = {}) => {
+  const tripType = opts.tripType ?? activityForm.required_trip_type
+  const origin = opts.origin ?? activityForm.required_origin
+  const destination = opts.destination ?? activityForm.required_destination
+  const date = opts.date ?? activityForm.required_departure_date
+  const returnDate = opts.returnDate ?? activityForm.required_return_date
+  const segments = opts.segments ?? activityForm.segments
+
+  // Don't fetch if we don't have at least a route or segments
+  const hasRoute = origin && destination && date
+  const hasSegments = tripType === 'multi_city' && segments && segments.length > 0
+  if (!hasRoute && !hasSegments) {
+    // Fall back to full list only if NO route is selected at all
+    filteredTravelClasses.value = travel_classes.value.length > 0 ? travel_classes.value : []
+    return filteredTravelClasses.value
+  }
+
+  isFetchingTravelClasses.value = true
+  try {
+    let params = {}
+    if (hasSegments) {
+      params.segments = JSON.stringify(segments)
+    } else {
+      params.origin = origin
+      params.destination = destination
+      params.date = date
+      if (tripType === 'round_trip' && returnDate) {
+        params.return_date = returnDate
+      }
+    }
+
+    const response = await api.get('api/instructor/available-travel-classes/', { params })
+    const classes = response.data?.available_travel_classes || []
+    filteredTravelClasses.value = classes
+
+    // If currently selected travel class isn't available, reset to first option
+    if (classes.length > 0 && !classes.includes(activityForm.required_travel_class)) {
+      activityForm.required_travel_class = classes[0]
+    }
+
+    return classes
+  } catch (err) {
+    console.warn('⚠️ Could not fetch filtered travel classes, using fallback:', err)
+    filteredTravelClasses.value = travel_classes.value
+    return travel_classes.value
+  } finally {
+    isFetchingTravelClasses.value = false
+  }
+}
+
+const fetchFilteredAddons = async (opts = {}) => {
+  const tripType = opts.tripType ?? activityForm.required_trip_type
+  const origin = opts.origin ?? activityForm.required_origin
+  const destination = opts.destination ?? activityForm.required_destination
+  const date = opts.date ?? activityForm.required_departure_date
+  const segments = opts.segments ?? activityForm.segments
+
+  const hasRoute = origin && destination && date
+  const hasSegments = tripType === 'multi_city' && segments && segments.length > 0
+  
+  if (!hasRoute && !hasSegments) {
+    filteredAddons.value = addons.value
+    return addons.value
+  }
+
+  isFetchingAddons.value = true
+  try {
+    let params = {}
+    if (hasSegments) {
+      params.segments = JSON.stringify(segments)
+    } else {
+      params.origin = origin
+      params.destination = destination
+      params.date = date
+    }
+
+    const response = await api.get('api/instructor/available-addons/', { params })
+    const available = response.data?.available_addons || []
+    filteredAddons.value = available
+    return available
+  } catch (err) {
+    console.warn('⚠️ Could not fetch filtered addons, using fallback:', err)
+    filteredAddons.value = addons.value
+    return addons.value
+  } finally {
+    isFetchingAddons.value = false
+  }
+}
+
+
+// ✅ Pool-based passenger management: data is NEVER lost when counts change
 const updatePassengerForms = () => {
   if (!activityForm.require_passenger_details) {
+    // Move all current forms into pool before clearing
+    passengerForms.value.forEach(p => {
+      const poolKey = `${p.type}-${p.poolIndex ?? p.globalIndex}`;
+      passengerPool.value[poolKey] = { ...p };
+    });
     passengerForms.value = []
     return
   }
+
+  // Move current forms into pool first (sync pool with latest data)
+  passengerForms.value.forEach(p => {
+    const poolKey = `${p.type}-${p.poolIndex ?? p.globalIndex}`;
+    passengerPool.value[poolKey] = { ...p };
+  });
   
-  // ✅ Store existing passenger data temporarily
-  const existingPassengers = [...passengerForms.value]
-  
-  // Calculate new total
   const newAdultCount = activityForm.required_passengers
   const newChildCount = activityForm.required_children
   const newInfantCount = activityForm.required_infants
   
-  // Clear and rebuild
-  passengerForms.value = []
+  const newForms = []
   let globalIndex = 1
-  
-  // ✅ Helper function to find existing passenger or create new one
-  const getOrCreatePassenger = (type, indexInType) => {
-    // Try to find existing passenger of this type at this index
-    const existing = existingPassengers.find(p => 
-      p.type === type && 
-      existingPassengers.filter(ep => ep.type === type).indexOf(p) === indexInType
-    )
-    
-    if (existing) {
-      // Return existing passenger with updated globalIndex
-      return {
-        ...existing,
-        globalIndex: globalIndex
-      }
-    } else {
-      // Create new empty passenger
-      return {
-        type: type,
-        globalIndex: globalIndex,
-        firstName: '',
-        middleName: '',
-        lastName: '',
-        gender: '',
-        dob: '',
-        nationality: '',
-        passportNumber: ''
-      }
+
+  const getOrRestorePassenger = (type, indexInType) => {
+    const poolKey = `${type}-${indexInType}`;
+    if (passengerPool.value[poolKey]) {
+      // ✅ Restore from pool — preserves all randomized/entered data
+      return { ...passengerPool.value[poolKey], globalIndex, poolIndex: indexInType };
+    }
+    // 🆕 Create a new blank passenger
+    return {
+      type,
+      globalIndex,
+      poolIndex: indexInType,
+      firstName: '',
+      middleName: '',
+      lastName: '',
+      gender: '',
+      dob: '',
+      nationality: '',
+      passportNumber: '',
+      passport_expiry_date: '',
+      passenger_category: 'none',
+      pwd_id_number: '',
+      senior_id_number: '',
+      associatedAdultIndex: null, // ✅ NEW: For infants to sit on an adult's lap
+      selected_addons: [],
+      addon_requirements: {}
     }
   }
-  
-  // Add adults (preserve existing data)
+
   for (let i = 0; i < newAdultCount; i++) {
-    passengerForms.value.push(getOrCreatePassenger('Adult', i))
+    newForms.push(getOrRestorePassenger('Adult', i))
     globalIndex++
   }
-  
-  // Add children (preserve existing data)
   for (let i = 0; i < newChildCount; i++) {
-    passengerForms.value.push(getOrCreatePassenger('Child', i))
+    newForms.push(getOrRestorePassenger('Child', i))
     globalIndex++
   }
-  
-  // Add infants (preserve existing data)
   for (let i = 0; i < newInfantCount; i++) {
-    passengerForms.value.push(getOrCreatePassenger('Infant', i))
+    newForms.push(getOrRestorePassenger('Infant', i))
     globalIndex++
   }
-  
-  // ✅ IMPORTANT: Regenerate instructions after updating passengers
+
+  passengerForms.value = newForms
   activityForm.instructions = generateDetailedInstructions()
+}
+
+const syncPassengerAddons = () => {
+  if (!activityForm.require_addons) return;
+  
+  passengerForms.value.forEach(p => {
+    // Infants never get add-ons
+    if (p.type === 'Infant') {
+      p.selected_addons = [];
+      p.addon_requirements = {};
+      return;
+    }
+    
+    // Ensure all selected global addons are present in passenger's selection or if they are required
+    activityForm.selected_addons.forEach(addonId => {
+      const isGlobalRequired = addonRequirements[addonId]?.required;
+      if (isGlobalRequired && !p.selected_addons.includes(addonId)) {
+        p.selected_addons.push(addonId);
+        p.addon_requirements[addonId] = { ...addonRequirements[addonId] };
+      }
+    });
+
+    // Remove addons from passengers that are no longer in activityForm.selected_addons
+    p.selected_addons = p.selected_addons.filter(id => activityForm.selected_addons.includes(id));
+    Object.keys(p.addon_requirements).forEach(id => {
+      if (!activityForm.selected_addons.includes(parseInt(id))) {
+        delete p.addon_requirements[id];
+      }
+    });
+  });
+  
+  activityForm.instructions = generateDetailedInstructions();
 }
 
 const getPassengersByType = (type) => {
@@ -1159,6 +1395,21 @@ const toggleAddonRequirements = (addonId) => {
   } else {
     delete addonRequirements[addonId]
   }
+  syncPassengerAddons();
+}
+
+const togglePassengerAddon = (passenger, addonId) => {
+  const index = passenger.selected_addons.indexOf(addonId);
+  if (index === -1) {
+    passenger.selected_addons.push(addonId);
+    passenger.addon_requirements[addonId] = {
+      ...(addonRequirements[addonId] || { required: false, quantity: 1, notes: '' })
+    };
+  } else {
+    passenger.selected_addons.splice(index, 1);
+    delete passenger.addon_requirements[addonId];
+  }
+  activityForm.instructions = generateDetailedInstructions();
 }
 
 const generateDetailedInstructions = () => {
@@ -1272,41 +1523,50 @@ const generateDetailedInstructions = () => {
         detailedInstructions += `  • Nationality: ${passenger.nationality}\n`;
       }
       
+      const categoryMap = { 'none': 'Regular', 'senior': 'Senior Citizen', 'pwd': 'PWD' };
+      const catLabel = categoryMap[passenger.passenger_category] || 'Regular';
+      
+      // Only show category for non-infants if it's not 'none', or if it's 'none' for clarity
+      const pType = (passenger.type || '').toLowerCase();
+      if (pType !== 'infant') {
+        detailedInstructions += `  • Passenger Category: ${catLabel}\n`;
+      } else if (passenger.associatedAdultIndex) {
+        detailedInstructions += `  • Seating: Must sit on the lap of Passenger ${passenger.associatedAdultIndex} (Adult)\n`;
+      }
+      
+      // ✅ PWD ID Number (only for PWD passengers)
+      if (pType !== 'infant' && passenger.passenger_category === 'pwd' && passenger.pwd_id_number) {
+        detailedInstructions += `  • PWD ID Number: ${passenger.pwd_id_number}\n`;
+      }
+      
+      // ✅ Senior Citizen ID Number (only for Senior passengers)
+      if (pType !== 'infant' && passenger.passenger_category === 'senior' && passenger.senior_id_number) {
+        detailedInstructions += `  • Senior Citizen ID: ${passenger.senior_id_number}\n`;
+      }
+      
+      // ✅ Passport Expiry Date (only for non-Philippines passengers)
+      if (passenger.nationality && passenger.nationality !== 'Philippines' && passenger.passport_expiry_date) {
+        detailedInstructions += `  • Passport Expiry Date: ${passenger.passport_expiry_date}\n`;
+      }
+      
       if (activityForm.require_passport && passenger.passportNumber) {
         detailedInstructions += `  • Passport Number: ${passenger.passportNumber}\n`;
+      }
+
+      // ✅ NEW: Display passenger-specific add-ons (Infants don't have them)
+      if (activityForm.require_addons && passenger.selected_addons && passenger.selected_addons.length > 0) {
+        detailedInstructions += `  • Add-ons:\n`;
+        passenger.selected_addons.forEach(addonId => {
+          const addon = addons.value.find(a => a.id === addonId);
+          if (addon) {
+            detailedInstructions += `    - ${addon.name} (Qty: ${passenger.addon_requirements[addonId]?.quantity || 1})\n`;
+          }
+        });
       }
     });
     detailedInstructions += `\n`;
   }
   
-  if (activityForm.require_addons && activityForm.selected_addons.length > 0) {
-    detailedInstructions += `ADD-ONS:\n`;
-    detailedInstructions += `The following add-ons have been configured for this booking:\n\n`;
-    
-    activityForm.selected_addons.forEach((addonId) => {
-      const addon = addons.value.find(a => a.id === addonId);
-      if (addon) {
-        const req = addonRequirements[addonId];
-        detailedInstructions += `• ${addon.name}`;
-        
-        if (addon.airline) {
-          detailedInstructions += ` (${addon.airline.code})`;
-        }
-        
-        detailedInstructions += ` - ₱${addon.price}\n`;
-        
-        if (req) {
-          detailedInstructions += `  Status: ${req.required ? 'REQUIRED' : 'Optional'}\n`;
-          detailedInstructions += `  Quantity per passenger: ${req.quantity}\n`;
-          if (req.notes) {
-            detailedInstructions += `  Notes: ${req.notes}\n`;
-          }
-        }
-        detailedInstructions += `\n`;
-      }
-    });
-    detailedInstructions += `\n`;
-  }
   
   if (activityForm.required_max_price && activityForm.required_max_price > 0) {
     detailedInstructions += `BUDGET CONSTRAINT:\n`;
@@ -1330,11 +1590,24 @@ const generateDetailedInstructions = () => {
   if (activityForm.require_addons && activityForm.selected_addons.length > 0) {
     detailedInstructions += `• Add-ons must be selected according to the requirements above.\n`;
   }
+  // ✅ PWD/Senior/Passport Expiry reminders
+  const hasPwd = passengerForms.value.some(p => p.passenger_category === 'pwd');
+  const hasSenior = passengerForms.value.some(p => p.passenger_category === 'senior');
+  const hasNonPh = passengerForms.value.some(p => p.nationality && p.nationality !== 'Philippines');
+  if (hasPwd) {
+    detailedInstructions += `• PWD passengers must select the PWD discount category and provide their PWD ID number.\n`;
+  }
+  if (hasSenior) {
+    detailedInstructions += `• Senior Citizen passengers must select the Senior Citizen discount and provide their Senior ID number.\n`;
+  }
+  if (hasNonPh) {
+    detailedInstructions += `• Non-Philippine passport holders must provide a valid Passport Expiry Date.\n`;
+  }
   
   return detailedInstructions;
 };
 
-// ✅ UPDATED: Randomize data using Students database
+// ✅ UPDATED: Randomize data using Students database and Valid Routes pool
 const randomizeData = async () => {
   if (airports.value.length === 0 || addons.value.length === 0 || students.value.length === 0) {
     isLoadingData.value = true;
@@ -1352,171 +1625,336 @@ const randomizeData = async () => {
     return;
   }
 
+  isLoadingData.value = true;
+
+  // 1. Pick Basic Info (Outside retry)
   activityForm.title = sampleTitles[Math.floor(Math.random() * sampleTitles.length)] + ' ' + Math.floor(Math.random() * 1000);
   activityForm.activity_type = 'Flight Booking';
   activityForm.total_points = Math.floor(Math.random() * 50) + 50;
+  activityForm.required_max_price = Math.floor(Math.random() * 50000) + 10000;
+  activityForm.time_limit_minutes = [30, 45, 60, 90, 120][Math.floor(Math.random() * 5)];
   
   const now = new Date();
   const dueDate = new Date(now.getTime() + (Math.floor(Math.random() * 14) + 7) * 24 * 60 * 60 * 1000);
-  const deptDate = new Date(now.getTime() + (Math.floor(Math.random() * 30) + 14) * 24 * 60 * 60 * 1000);
-  
   activityForm.due_date = dueDate.toISOString().slice(0, 16);
-  activityForm.required_departure_date = deptDate.toISOString().split('T')[0];
-  
+
   const tripTypes = ['one_way', 'round_trip', 'multi_city'];
-  activityForm.required_trip_type = tripTypes[Math.floor(Math.random() * tripTypes.length)];
-  handleTripTypeChange();
-
-  if (activityForm.required_trip_type === 'round_trip') {
-    const retDate = new Date(deptDate.getTime() + (Math.floor(Math.random() * 7) + 3) * 24 * 60 * 60 * 1000);
-    activityForm.required_return_date = retDate.toISOString().split('T')[0];
-  } else if (activityForm.required_trip_type === 'multi_city') {
-    // Generate 2-3 segments
-    const numSegments = Math.floor(Math.random() * 2) + 2; // 2 or 3
-    activityForm.segments = [];
-    let lastDate = deptDate;
-    let lastDest = '';
-
-    for (let i = 0; i < numSegments; i++) {
-        const shuffled = [...airports.value].sort(() => 0.5 - Math.random());
-        let origin = lastDest || shuffled[0].code;
-        let dest = shuffled[1].code;
-        if (dest === origin) dest = shuffled[2].code;
-
-        activityForm.segments.push({
-            origin: origin,
-            destination: dest,
-            departure_date: lastDate.toISOString().split('T')[0]
-        });
-
-        lastDest = dest;
-        lastDate = new Date(lastDate.getTime() + (Math.floor(Math.random() * 5) + 2) * 24 * 60 * 60 * 1000);
-    }
-  } else {
-    activityForm.required_return_date = '';
-    activityForm.segments = [];
-  }
   
-  if (travel_classes.value.length > 0) {
-    activityForm.required_travel_class = travel_classes.value[Math.floor(Math.random() * travel_classes.value.length)];
-  } else {
-    const classes = ['economy', 'premium_economy', 'business', 'first'];
-    activityForm.required_travel_class = classes[Math.floor(Math.random() * classes.length)];
-  }
+  // RETRY LOOP: Attempts to find a valid itinerary (max 5 tries)
+  let attempts = 0;
+  let success = false;
   
-  if (airports.value.length >= 2) {
-    const shuffled = [...airports.value].sort(() => 0.5 - Math.random());
-    activityForm.required_origin = shuffled[0].code;
-    let destIndex = 1;
-    while (destIndex < shuffled.length && shuffled[destIndex].code === activityForm.required_origin) {
-      destIndex++;
-    }
-    if (destIndex < shuffled.length) {
-      activityForm.required_destination = shuffled[destIndex].code;
+  while (attempts < 5 && !success) {
+    attempts++;
+    
+    // 2. Pick Trip Type and Reset State
+    activityForm.required_trip_type = tripTypes[Math.floor(Math.random() * tripTypes.length)];
+    handleTripTypeChange();
+
+    // 3. SMART Randomization from validRoutes
+    if (validRoutes.value.length > 0) {
+      const pool = [...validRoutes.value].sort(() => 0.5 - Math.random());
+      
+      if (activityForm.required_trip_type === 'one_way') {
+        const route = pool[0];
+        activityForm.required_origin = route.origin;
+        activityForm.required_destination = route.destination;
+        activityForm.required_departure_date = route.date;
+      } 
+      else if (activityForm.required_trip_type === 'round_trip') {
+        // Find a valid pair in the pool
+        let pair = null;
+        for (let outbound of pool) {
+          let inbound = validRoutes.value.find(r => 
+            r.origin === outbound.destination && 
+            r.destination === outbound.origin && 
+            new Date(r.date) > new Date(outbound.date)
+          );
+          if (inbound) {
+            pair = { out: outbound, in: inbound };
+            break;
+          }
+        }
+
+        if (pair) {
+          activityForm.required_origin = pair.out.origin;
+          activityForm.required_destination = pair.out.destination;
+          activityForm.required_departure_date = pair.out.date;
+          activityForm.required_return_date = pair.in.date;
+        } else {
+          // Fallback: pick any route and guess return
+          const route = pool[0];
+          activityForm.required_origin = route.origin;
+          activityForm.required_destination = route.destination;
+          activityForm.required_departure_date = route.date;
+          const retDate = new Date(new Date(route.date).getTime() + (Math.floor(Math.random() * 5) + 3) * 24 * 60 * 60 * 1000);
+          activityForm.required_return_date = retDate.toISOString().split('T')[0];
+        }
+      }
+      else if (activityForm.required_trip_type === 'multi_city') {
+        activityForm.segments = [];
+        let legs = [];
+        let start = pool[Math.floor(Math.random() * Math.min(pool.length, 5))];
+        legs.push(start);
+
+        // Attempt to chain up to 3 additional segments (total 4 legs)
+        let last = start;
+        const targetSegments = Math.floor(Math.random() * 2) + 2; // Randomly pick 2 or 3 segments
+        
+        for (let i = 0; i < targetSegments; i++) {
+          let next = validRoutes.value.find(r => 
+            r.origin === last.destination && 
+            new Date(r.date) >= new Date(last.date) &&
+            !legs.some(l => l.origin === r.origin && l.destination === r.destination) // Avoid exact duplicates
+          );
+          
+          if (!next) {
+            // Fallback 1: Any flight from the current destination regardless of date
+            next = validRoutes.value.find(r => r.origin === last.destination);
+          }
+          
+          if (!next) {
+            // Fallback 2: Any valid route that doesn't create a loop back to the start immediately
+            next = validRoutes.value.find(r => r.origin !== last.origin && r.origin !== start.origin);
+          }
+
+          if (next) {
+            legs.push(next);
+            last = next;
+          } else if (validRoutes.value.length > 0) {
+            // Hard fallback: just pick a random valid route
+            let flat = validRoutes.value[Math.floor(Math.random() * validRoutes.value.length)];
+            legs.push(flat);
+            last = flat;
+          }
+        }
+
+        // 🚨 CRITICAL: Ensure we have at least 3 legs (at least 2 segments in the list)
+        while (legs.length < 3 && validRoutes.value.length > 0) {
+          let extra = validRoutes.value[Math.floor(Math.random() * validRoutes.value.length)];
+          legs.push(extra);
+        }
+
+        activityForm.required_origin = legs[0].origin;
+        activityForm.required_departure_date = legs[0].date;
+        activityForm.required_destination = legs[0].destination;
+        
+        for (let i = 1; i < legs.length; i++) {
+          activityForm.segments.push({
+            origin: legs[i].origin,
+            destination: legs[i].destination,
+            departure_date: legs[i].date
+          });
+        }
+      }
     } else {
-      activityForm.required_destination = shuffled[1].code;
+      // Blind fallback
+      const deptDate = new Date(now.getTime() + (Math.floor(Math.random() * 14) + 7) * 24 * 60 * 60 * 1000);
+      activityForm.required_departure_date = deptDate.toISOString().split('T')[0];
+      if (airports.value.length >= 2) {
+        const shuffled = [...airports.value].sort(() => 0.5 - Math.random());
+        activityForm.required_origin = shuffled[0].code;
+        activityForm.required_destination = shuffled[1].code;
+      }
     }
+
+    // 4. VERIFY
+    try {
+      const params = {
+        tripType: activityForm.required_trip_type,
+        origin: activityForm.required_origin,
+        destination: activityForm.required_destination,
+        date: activityForm.required_departure_date,
+        returnDate: activityForm.required_return_date,
+        segments: activityForm.segments,
+      }
+      const available = await fetchFilteredTravelClasses(params)
+      if (available && available.length > 0) {
+        activityForm.required_travel_class = available[Math.floor(Math.random() * available.length)];
+        success = true;
+      }
+    } catch (e) { success = false; }
   }
 
-  // ✅ Randomize passenger counts
+  isLoadingData.value = false;
+  if (!success && travel_classes.value.length > 0) {
+    activityForm.required_travel_class = travel_classes.value[0];
+  }
+
+  // 5. Populate rest of the data (Passengers, Addons, etc.)
+  const pCategories = ['none', 'senior', 'pwd'];
   activityForm.required_passengers = Math.floor(Math.random() * 3) + 1;
   activityForm.required_children = Math.floor(Math.random() * 3);
   activityForm.required_infants = Math.min(Math.floor(Math.random() * 2), activityForm.required_passengers);
-  
   activityForm.require_passenger_details = true;
   activityForm.require_passport = Math.random() > 0.3;
   
-  // ✅ Generate passenger forms FIRST
   updatePassengerForms();
 
-  // ✅ NEW: Populate passenger data from Students database
   passengerForms.value.forEach((p) => {
-    // Get random student from database
+    if (!students.value || students.value.length === 0) return;
     const randomStudent = students.value[Math.floor(Math.random() * students.value.length)];
-    
-    // ✅ Fetch from Students database: firstName, lastName, middleName, gender
     p.firstName = randomStudent.first_name || '';
     p.middleName = randomStudent.middle_name || '';
     p.lastName = randomStudent.last_name || '';
     p.gender = randomStudent.gender || ['mr', 'mrs'][Math.floor(Math.random() * 2)];
-    
-    // ✅ HARDCODED: nationality, passport, date of birth
     p.nationality = nationalities[Math.floor(Math.random() * nationalities.length)];
+    p.passenger_category = pCategories[Math.floor(Math.random() * pCategories.length)];
     
     if (activityForm.require_passport || Math.random() > 0.5) {
       p.passportNumber = 'P' + Math.floor(10000000 + Math.random() * 90000000);
     }
 
-    // Generate accurate DOB based on passenger type
     const birthDate = new Date();
     const pType = (p.type || '').toLowerCase();
     
-    if (pType === 'adult') {
-      // Adult: 18 to 67 years old
-      const age = Math.floor(Math.random() * 50) + 18;
-      birthDate.setFullYear(birthDate.getFullYear() - age);
-      // Randomize month and day for variety
-      birthDate.setMonth(Math.floor(Math.random() * 12));
-      birthDate.setDate(Math.floor(Math.random() * 28) + 1);
-    } else if (pType === 'child') {
-      // Child: 2 to 11 years old
-      const age = Math.floor(Math.random() * 10) + 2;
-      birthDate.setFullYear(birthDate.getFullYear() - age);
-      birthDate.setMonth(Math.floor(Math.random() * 12));
-      birthDate.setDate(Math.floor(Math.random() * 28) + 1);
-    } else if (pType === 'infant') {
-      // Infant: Under 2 years old (0 or 1 year old)
+    if (pType === 'infant') {
+      p.passenger_category = 'none';
       const age = Math.floor(Math.random() * 2);
       birthDate.setFullYear(birthDate.getFullYear() - age);
-      birthDate.setMonth(Math.floor(Math.random() * 12));
-      birthDate.setDate(Math.floor(Math.random() * 28) + 1);
-      
-      // Ensure it's not in the future if age is 0
-      if (age === 0 && birthDate > new Date()) {
-        birthDate.setMonth(new Date().getMonth() - 1);
-      }
+    } else if (pType === 'child') {
+      if (p.passenger_category === 'senior') p.passenger_category = 'none';
+      const age = Math.floor(Math.random() * 10) + 2;
+      birthDate.setFullYear(birthDate.getFullYear() - age);
     } else {
-      // Default to Adult if type is unknown
-      const age = Math.floor(Math.random() * 50) + 18;
+      const age = p.passenger_category === 'senior' ? (Math.floor(Math.random() * 21) + 60) : (Math.floor(Math.random() * 42) + 18);
       birthDate.setFullYear(birthDate.getFullYear() - age);
     }
-    
     p.dob = birthDate.toISOString().split('T')[0];
+
+    // ✅ Generate PWD ID for PWD passengers (distinct format: PWD-XXXXXXX)
+    if (p.passenger_category === 'pwd') {
+      p.pwd_id_number = 'PWD-' + Math.floor(1000000 + Math.random() * 9000000);
+      p.senior_id_number = '';
+    } else if (p.passenger_category === 'senior') {
+      // ✅ Generate Senior Citizen ID for Senior passengers (distinct format: SC-XXXXXXX)
+      p.senior_id_number = 'SC-' + Math.floor(1000000 + Math.random() * 9000000);
+      p.pwd_id_number = '';
+    } else {
+      p.pwd_id_number = '';
+      p.senior_id_number = '';
+    }
+
+    // ✅ Generate Passport Expiry Date for non-Philippines passengers
+    if (p.nationality && p.nationality !== 'Philippines') {
+      const expiry = new Date();
+      expiry.setFullYear(expiry.getFullYear() + Math.floor(Math.random() * 8) + 2); // 2–10 years from now
+      expiry.setMonth(Math.floor(Math.random() * 12));
+      expiry.setDate(Math.floor(Math.random() * 28) + 1);
+      p.passport_expiry_date = expiry.toISOString().split('T')[0];
+    } else {
+      p.passport_expiry_date = '';
+    }
   });
+
+  // ✅ Assign infants
+  const adults = passengerForms.value.filter(p => (p.type || '').toLowerCase() === 'adult');
+  const infants = passengerForms.value.filter(p => (p.type || '').toLowerCase() === 'infant');
+  if (infants.length > 0 && adults.length > 0) {
+    const shuffledAdults = [...adults].sort(() => 0.5 - Math.random());
+    infants.forEach((infant, idx) => {
+      infant.associatedAdultIndex = shuffledAdults[idx % shuffledAdults.length].globalIndex;
+    });
+  }
 
   // ✅ Addons randomization
   activityForm.selected_addons = [];
   Object.keys(addonRequirements).forEach(key => delete addonRequirements[key]);
   
-  if (addons.value && addons.value.length > 0 && Math.random() > 0.3) {
+  // Fetch relevant addons for the randomized route
+  const pool = await fetchFilteredAddons();
+  
+  if (pool && pool.length > 0 && Math.random() > 0.3) {
     activityForm.require_addons = true;
-    
-    const numAddonsToSelect = Math.min(Math.floor(Math.random() * 4) + 1, addons.value.length);
-    const shuffledAddons = [...addons.value].sort(() => 0.5 - Math.random());
+    const numAddonsToSelect = Math.min(Math.floor(Math.random() * 3) + 1, pool.length);
+    const shuffledAddons = [...pool].sort(() => 0.5 - Math.random());
     const selectedAddons = shuffledAddons.slice(0, numAddonsToSelect);
     
     selectedAddons.forEach((addon) => {
       activityForm.selected_addons.push(addon.id);
       addonRequirements[addon.id] = {
         required: Math.random() > 0.5,
-        quantity: Math.floor(Math.random() * 3) + 1,
-        notes: Math.random() > 0.7 ? 'Priority service requested' : ''
+        quantity: 1, // Default to 1 for randomization simplicity
+        notes: Math.random() > 0.8 ? 'Special request for this add-on.' : ''
       };
     });
-  } else {
-    activityForm.require_addons = false;
+
+    passengerForms.value.forEach(p => {
+      p.selected_addons = [];
+      p.addon_requirements = {};
+      
+      const pType = (p.type || '').toLowerCase();
+      if (pType === 'infant') return; // Infants never have add-ons
+
+      activityForm.selected_addons.forEach(addonId => {
+        const isRequired = addonRequirements[addonId].required;
+        // If required globally, must select for passenger. Otherwise 50% chance.
+        if (isRequired || Math.random() > 0.5) {
+          p.selected_addons.push(addonId);
+          p.addon_requirements[addonId] = {
+            ...addonRequirements[addonId]
+          };
+        }
+      });
+    });
   }
 
   activityForm.required_max_price = Math.floor(Math.random() * 50000) + 10000;
   activityForm.time_limit_minutes = [30, 45, 60, 90, 120][Math.floor(Math.random() * 5)];
 
-  // ✅ Generate instructions AFTER all data is filled
+  // ✅ Sync passengers to pool
+  passengerForms.value.forEach(p => {
+    const key = `${p.type}-${p.poolIndex ?? (passengerForms.value.filter(x => x.type === p.type).indexOf(p))}`;
+    passengerPool.value[key] = { ...p };
+  });
+
   activityForm.instructions = generateDetailedInstructions();
-  
   showSuccess('Activity data randomized successfully!');
 };
 
+const validateActivityForm = () => {
+  const errors = [];
+  
+  if (!activityForm.title?.trim()) errors.push("Activity title is required.");
+  if (!activityForm.activity_type) errors.push("Activity type is required.");
+  if (!activityForm.due_date) errors.push("Due date is required.");
+  if (activityForm.total_points <= 0) errors.push("Total points must be greater than 0.");
+  
+  if (activityForm.require_passenger_details) {
+    if (passengerForms.value.length === 0) {
+      errors.push("At least one passenger is required when passenger details are enabled.");
+    }
+    
+    passengerForms.value.forEach((p, index) => {
+      const pLabel = `Passenger ${index + 1} (${p.type})`;
+      if (!p.firstName?.trim()) errors.push(`${pLabel}: First name is required.`);
+      if (!p.lastName?.trim()) errors.push(`${pLabel}: Last name is required.`);
+      if (!p.dob) errors.push(`${pLabel}: Date of birth is required.`);
+      if (!p.gender) errors.push(`${pLabel}: Gender is required.`);
+      if (!p.nationality) errors.push(`${pLabel}: Nationality is required.`);
+      
+      if (activityForm.require_passport && !p.passportNumber?.trim()) {
+        errors.push(`${pLabel}: Passport number is required.`);
+      }
+    });
+  }
+  
+  if (activityForm.require_addons && activityForm.selected_addons.length === 0) {
+     // If they enabled addons but didn't select any global ones, that might be okay depending on requirements,
+     // but usually they should select at least one if the section is enabled.
+     // However, let's keep it flexible unless there's a specific requirement.
+  }
+
+  return errors;
+};
+
 const submitActivity = async () => {
+  const validationErrors = validateActivityForm();
+  if (validationErrors.length > 0) {
+    notificationStore.error(validationErrors[0]); // Show the first error
+    return;
+  }
+
   loading.value = true
   try {
     const sectionId = route.params.id
@@ -1524,12 +1962,12 @@ const submitActivity = async () => {
     const formattedPassengers = passengerForms.value.map((p, index) => {
       let passengerAddons = [];
       
-      if (activityForm.require_addons && activityForm.selected_addons.length > 0) {
-        passengerAddons = activityForm.selected_addons.map(addonId => ({
+      if (activityForm.require_addons && p.selected_addons && p.selected_addons.length > 0) {
+        passengerAddons = p.selected_addons.map(addonId => ({
           id: addonId,
-          is_required: addonRequirements[addonId]?.required || false,
-          quantity: addonRequirements[addonId]?.quantity || 1,
-          notes: addonRequirements[addonId]?.notes || ''
+          is_required: p.addon_requirements[addonId]?.required || false,
+          quantity: p.addon_requirements[addonId]?.quantity || 1,
+          notes: p.addon_requirements[addonId]?.notes || ''
         }));
       }
 
@@ -1542,6 +1980,11 @@ const submitActivity = async () => {
         date_of_birth: p.dob,
         nationality: p.nationality,
         passport_number: p.passportNumber || "",
+        passport_expiry_date: p.passport_expiry_date || null,
+        pwd_id_number: p.pwd_id_number || "",
+        senior_id_number: p.senior_id_number || "",
+        passenger_category: p.passenger_category || "none",
+        associated_adult_index: p.associatedAdultIndex || null, // ✅ NEW
         selected_addons: passengerAddons
       }
     })
@@ -1589,6 +2032,7 @@ const submitActivity = async () => {
       
       Object.keys(addonRequirements).forEach(key => delete addonRequirements[key])
       passengerForms.value = []
+      passengerPool.value = {} // ✅ Clear pool so next activity starts fresh
 
       fetchAllData()
     }, 2000)
@@ -1658,6 +2102,22 @@ watch(() => activityForm.required_origin, () => {
 watch(() => activityForm.required_destination, () => {
   activityForm.instructions = generateDetailedInstructions();
 });
+
+watch(() => activityForm.required_passengers, () => {
+  activityForm.instructions = generateDetailedInstructions();
+});
+
+watch(() => activityForm.required_children, () => {
+  activityForm.instructions = generateDetailedInstructions();
+});
+
+watch(() => activityForm.required_infants, () => {
+  activityForm.instructions = generateDetailedInstructions();
+});
+
+watch(passengerForms, () => {
+  activityForm.instructions = generateDetailedInstructions();
+}, { deep: true });
 
 watch(() => activityForm.total_points, () => {
   activityForm.instructions = generateDetailedInstructions();

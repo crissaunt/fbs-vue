@@ -205,7 +205,8 @@ class CheckInDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'booking_detail', 'check_in_time', 'boarding_pass', 
             'status', 'passenger_name', 'flight_number', 'route', 
-            'departure_time', 'seat_number', 'baggage_count', 'baggage_weight'
+            'departure_time', 'seat_number', 'baggage_count', 'baggage_weight',
+            'pwd_id_number', 'senior_id_number', 'passport_expiry'
         ]
         read_only_fields = ['boarding_pass', 'check_in_time']
 
@@ -230,7 +231,8 @@ class CheckInListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'status', 'check_in_time', 'passenger_name', 
             'flight_number', 'route', 'departure_time', 'seat_number',
-            'boarding_pass', 'baggage_count', 'baggage_weight'
+            'boarding_pass', 'baggage_count', 'baggage_weight',
+            'pwd_id_number', 'senior_id_number', 'passport_expiry'
         ]
 
 # ==========================================

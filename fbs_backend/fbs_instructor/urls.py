@@ -12,11 +12,9 @@ from .views import (
     delete_activity,
     activity_details,
     activate_activity,
-    get_eligible_students,
     student_activity_details,
     student_dashboard,
     submit_grade,
-    submit_activity,
     release_activity_grades,
     validate_session,
     list_sessions,
@@ -27,6 +25,9 @@ from .views import (
     bulk_enroll_students,
     clear_section_enrollments,
     admin_lms_overview,
+    get_eligible_students,
+    get_available_travel_classes,
+    get_available_addons,
 )
 
 urlpatterns = [
@@ -54,11 +55,15 @@ urlpatterns = [
     path('instructor/sections/<int:section_id>/activities/create/', create_activity, name='api_create_activity'),
     path('instructor/sections/<int:section_id>/activities/<int:activity_id>/delete/', delete_activity, name='delete_activity'),
     
+    # Travel/Add-on Lookups (route+date aware)
+    path('instructor/available-travel-classes/', get_available_travel_classes, name='get_available_travel_classes'),
+    path('instructor/available-addons/', get_available_addons, name='get_available_addons'),
+    
     # Activity Details & Activation
     path('instructor/activities/<int:activity_id>/', activity_details, name='activity-details'),
     path('instructor/activities/<int:activity_id>/submissions/', get_activity_submissions, name='activity-submissions'),
-    path('instructor/activities/<int:activity_id>/eligible-students/', get_eligible_students, name='eligible-students'),
     path('instructor/activity/<int:activity_id>/activate/', activate_activity, name='activate_activity'),
+    path('instructor/activity/<int:activity_id>/eligible-students/', get_eligible_students, name='get_eligible_students'),
     path('instructor/activities/<int:activity_id>/submissions/<int:student_id>/grade/', submit_grade, name='submit-grade'),
     path('instructor/activities/<int:activity_id>/release-grades/', release_activity_grades, name='release-grades'),
 
@@ -72,15 +77,17 @@ urlpatterns = [
     # ? FIXED: Main student activity endpoint (matches frontend)
     path('student/activities/<int:activity_id>/details/', student_activity_details, name='student_activity_details'),
     
-    # Student activity submission
-    path('student/activities/<int:activity_id>/submit/', submit_activity, name='student_submit_activity'),
+    # ? REMOVED: Non-existent views (commented out - create these views later if needed)
+    # path('student/activities/<int:activity_id>/submit/', views.submit_activity, name='student_submit_activity'),
+    # path('student/activities/<int:activity_id>/status/', views.update_activity_status, name='student_update_status'),
+    # path('student/activities/<int:activity_id>/submission/', views.get_activity_submission, name='student_get_submission'),
+    # path('student/activities/<int:activity_id>/draft/', views.save_draft, name='student_save_draft'),
     
     # ? KEEP: Legacy URL for backward compatibility
     path('student/activity/<int:activity_id>/', student_activity_details, name='student_activity_details_legacy'),
 
     # ? NEW: Practice Bookings History
     path('student/practice-bookings/', views.get_student_practice_bookings, name='student_practice_bookings'),
-    path('student/checkin-history/', views.get_student_checkin_history, name='student_checkin_history'),
 
     # Admin LMS Overview
     path('admin/lms-overview/', admin_lms_overview, name='admin_lms_overview'),
