@@ -76,7 +76,7 @@
             </button>
           </div>
 
-          <!-- DCS Check-in Button -->
+          <!-- DCS Control Panel -->
           <div class="bg-gradient-to-br from-[#fe3787] to-[#e6327a] rounded-lg p-5 text-white shadow-lg hover:shadow-xl transition-all">
             <h3 class="text-sm font-bold mb-1 poppins uppercase">DCS Control Panel</h3>
             <p class="text-[10px] opacity-80 mb-3 poppins">Access the Passenger Registry and Departure Control System.</p>
@@ -102,6 +102,18 @@
               </div>
               <h4 class="text-[10px] font-black uppercase text-slate-800 tracking-wider">Check-in Log</h4>
             </div>
+          </div>
+
+          <!-- Performance Records -->
+          <div class="bg-gradient-to-br from-rose-500 to-pink-600 rounded-lg p-5 text-white shadow-lg hover:shadow-xl transition-all">
+            <h3 class="text-sm font-bold mb-1 uppercase tracking-tight">System Performance Records</h3>
+            <p class="text-[10px] opacity-80 mb-3">Review your practice simulations and operation history.</p>
+            <button 
+              @click="$router.push('/student/records')"
+              class="w-full bg-white text-pink-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-pink-50 transition-colors uppercase"
+            >
+              Review History
+            </button>
           </div>
 
           <StudentSectionInfo 

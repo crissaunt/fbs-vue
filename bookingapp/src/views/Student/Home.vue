@@ -64,7 +64,7 @@
             @view="viewActivityDetails" 
           />
 
-          <!-- Practice Booking -->
+          <!-- Practice Lab -->
           <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all border border-white/10">
             <div class="flex items-center gap-3 mb-4">
               <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-xl">🚀</div>
@@ -76,6 +76,36 @@
               class="w-full bg-white text-blue-600 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] hover:bg-blue-50 transition-colors shadow-sm"
             >
               Initialize Simulation
+            </button>
+          </div>
+
+          <!-- DCS Ground Ops -->
+          <div class="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all border border-white/10">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-xl">🛂</div>
+              <h3 class="text-sm font-black uppercase tracking-widest">Ground Ops (DCS)</h3>
+            </div>
+            <p class="text-[10px] font-medium leading-relaxed opacity-80 mb-6">Perform passenger check-ins, manage flight manifests, and handle boarding processes.</p>
+            <button 
+              @click="$router.push('/dcs/dashboard')"
+              class="w-full bg-white text-indigo-600 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] hover:bg-indigo-50 transition-colors shadow-sm"
+            >
+              Enter DCS Console
+            </button>
+          </div>
+
+          <!-- Performance Records -->
+          <div class="bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all border border-white/10">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-xl">📊</div>
+              <h3 class="text-sm font-black uppercase tracking-widest">Performance Records</h3>
+            </div>
+            <p class="text-[10px] font-medium leading-relaxed opacity-80 mb-6">Review your practice simulations, check-in history, and academic progress reports.</p>
+            <button 
+              @click="$router.push('/student/records')"
+              class="w-full bg-white text-pink-600 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] hover:bg-pink-50 transition-colors shadow-sm"
+            >
+              Review History
             </button>
           </div>
 

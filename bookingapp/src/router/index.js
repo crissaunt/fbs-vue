@@ -144,6 +144,11 @@ const routes = [
         component: () => import('@/views/Student/Operations/CheckinRegistry.vue'),
         meta: { title: 'DCS | Check-in Registry' }
       },
+      {
+        path: 'records',
+        name: 'StudentPerformanceRecords',
+        component: () => import('@/views/Student/PerformanceRecords.vue')
+      }
     ]
   },
   {

@@ -3065,6 +3065,46 @@ def get_student_practice_bookings(request):
         )
 
 
+@api_view(['GET'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_student_checkin_history(request):
+    """
+    Get all DCS and self-checkin actions performed by the student.
+    """
+    try:
+        from app.models import CheckInDetail
+        checkins = CheckInDetail.objects.filter(
+            student=request.user
+        ).select_related(
+            'booking_detail__schedule__flight__route__origin_airport',
+            'booking_detail__schedule__flight__route__destination_airport',
+            'booking_detail__passenger'
+        ).order_by('-check_in_time')
+        
+        history = []
+        for ci in checkins:
+            history.append({
+                "id": ci.id,
+                "passenger_name": ci.passenger_name,
+                "flight_number": ci.flight_number,
+                "route": ci.route,
+                "check_in_time": ci.check_in_time.isoformat(),
+                "boarding_pass": ci.boarding_pass,
+                "status": ci.status,
+                "gate": ci.gate_number,
+                "seat": ci.seat_number,
+                "counter": ci.check_in_counter or "Self Check-in"
+            })
+            
+        return Response({
+            "checkin_history": history
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 # ==========================================
 # ADMIN: LMS OVERVIEW STATS
 # ==========================================
