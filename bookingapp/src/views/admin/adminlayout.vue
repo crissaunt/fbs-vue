@@ -39,8 +39,35 @@
           <span v-if="!collapsed" class="ml-3 text-[14px] font-medium">Dashboard</span>
         </router-link>
 
-        <!-- LMS ADMIN PRIVILEGES: Users & LMS Info -->
-        <template v-if="userRole === 'superadmin' || userRole === 'lms_admin'">
+        <!-- LMS ADMIN PRIVILEGES: Users & LMS Info (Flat List) -->
+        <template v-if="userRole === 'lms_admin'">
+          <div class="px-4 py-2 mt-4" v-if="!collapsed">
+            <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">User Management</p>
+          </div>
+          
+          <router-link to="/admin/instructor-info/list" class="flex items-center px-4 py-3 text-white hover:bg-white/10 transition-colors group" active-class="bg-white/10 border-l-4 border-white">
+            <i class="ph ph-chalkboard-teacher text-xl"></i>
+            <span v-if="!collapsed" class="ml-3 text-[14px] font-medium">Instructors</span>
+          </router-link>
+
+          <router-link to="/admin/student-info/list" class="flex items-center px-4 py-3 text-white hover:bg-white/10 transition-colors group" active-class="bg-white/10 border-l-4 border-white">
+            <i class="ph ph-student text-xl"></i>
+            <span v-if="!collapsed" class="ml-3 text-[14px] font-medium">Students</span>
+          </router-link>
+
+          <router-link to="/admin/student-info/track-log" class="flex items-center px-4 py-3 text-white hover:bg-white/10 transition-colors group" active-class="bg-white/10 border-l-4 border-white">
+            <i class="ph ph-clipboard-text text-xl"></i>
+            <span v-if="!collapsed" class="ml-3 text-[14px] font-medium">Audit Logs</span>
+          </router-link>
+
+          <router-link to="/admin/student-info/lms-overview" class="flex items-center px-4 py-3 text-white hover:bg-white/10 transition-colors group" active-class="bg-white/10 border-l-4 border-white">
+            <i class="ph ph-chart-line-up text-xl"></i>
+            <span v-if="!collapsed" class="ml-3 text-[14px] font-medium">LMS Overview</span>
+          </router-link>
+        </template>
+
+        <!-- SUPERADMIN PRIVILEGES (Grouped) -->
+        <template v-if="userRole === 'superadmin'">
           <div class="px-4 py-2 mt-4" v-if="!collapsed">
             <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Users</p>
           </div>
