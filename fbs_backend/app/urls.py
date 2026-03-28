@@ -25,6 +25,7 @@ from .api.extra_services_views import (
     PlanCoverageViewSet, MealCategoryViewSet, MealOptionViewSet,
     AssistanceServiceViewSet, BaggageOptionViewSet, PricingConfigurationViewSet
 )
+from .api.tracklog_views import TrackLogViewSet
 from .api.dcs_views import get_dcs_flights, get_dcs_manifest, process_dcs_checkin, scan_qr_lookup, get_dcs_passenger_details, get_dcs_pnr_details, download_boarding_pass_view, assign_dcs_seat
 
 
@@ -79,6 +80,7 @@ router.register(r'meal-options', MealOptionViewSet, basename='mealoption')
 router.register(r'assistance-services', AssistanceServiceViewSet, basename='assistanceservice')
 router.register(r'baggage-options', BaggageOptionViewSet, basename='baggageoption')
 router.register(r'pricing-config', PricingConfigurationViewSet, basename='pricingconfig')
+router.register(r'tracklogs', TrackLogViewSet, basename='tracklog')
 
 urlpatterns = [
     # Manual path for login

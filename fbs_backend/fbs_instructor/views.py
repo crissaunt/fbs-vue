@@ -39,12 +39,9 @@ from decimal import Decimal
 # ============================================================================
 # CROSS-APP IMPORTS (from app.models)
 # ============================================================================
-from app.models import AddOn, Airline, Airport, Students, UserProfile, Booking
+from app.models import AddOn, Airline, Airport, Students, UserProfile, Booking, TrackLog
 from django.db.models import Count
 
-# ============================================================================
-# LOCAL APP IMPORTS (from fbs_instructor)
-# ============================================================================
 from .models import (
     Activity,
     ActivityPassenger,
@@ -54,7 +51,8 @@ from .models import (
     ActivityStudentBinding,
     ActivityAddOn,
     ActivitySegment,
-    UserSession  # NEW: Our custom session model
+    UserSession,
+    InstructorLog
 )
 from .serializers import LoginSerializer, UserSerializer
 from .authentication import MultiSessionTokenAuthentication  # NEW: Our custom auth
@@ -79,6 +77,66 @@ def get_client_ip(request):
     else:
         ip = request.META.get('REMOTE_ADDR')
     return ip
+
+
+# ==========================================
+# HELPER: Enhanced Logging for Instructors
+# ==========================================
+def log_instructor_event(request, action_type, instructor=None, student=None, section_name=None, activity_name=None, details=None, is_csv=False, login_time=None, logout_time=None, actor=None):
+    """
+    Utility to record logs consistently.
+    If student is provided, logs for every instructor who has this student in a section.
+    """
+    try:
+        device = request.META.get('HTTP_USER_AGENT', 'Unknown')[:255]
+        ip = get_client_ip(request)
+        
+        # Use provided actor, or request.user if authenticated, otherwise None
+        if not actor:
+            actor = request.user if request.user.is_authenticated else None
+
+        # If it's a student action (like LOGIN/LOGOUT/ACTIVITY), find all relevant instructors
+        if student and not instructor:
+            target_instructors = User.objects.filter(
+                sections__enrollments__student=student
+            ).distinct()
+            
+            for inst in target_instructors:
+                InstructorLog.objects.create(
+                    instructor=inst,
+                    actor=actor,
+                    student=student,
+                    action_type=action_type,
+                    section_name=section_name,
+                    activity_name=activity_name,
+                    details=details,
+                    device=device,
+                    ip_address=ip,
+                    is_csv=is_csv,
+                    login_time=login_time,
+                    logout_time=logout_time
+                )
+        elif instructor:
+            # Action specifically for one instructor
+            InstructorLog.objects.create(
+                instructor=instructor,
+                actor=actor,
+                student=student,
+                action_type=action_type,
+                section_name=section_name,
+                activity_name=activity_name,
+                details=details,
+                device=device,
+                ip_address=ip,
+                is_csv=is_csv,
+                login_time=login_time,
+                logout_time=logout_time
+            )
+    except Exception as e:
+        # Prevent logging errors from breaking the main application logic
+        print(f"⚠️ ERROR in log_instructor_event ({action_type}): {str(e)}")
+        import traceback
+        traceback.print_exc()
 
 
 # ==========================================
@@ -220,13 +278,43 @@ def Login_view(request):
         dashboard_route = '/instructor/dashboard'
     elif profile.role == 'student':
         dashboard_route = '/student/dashboard'
-    elif profile.role == 'admin':
-        dashboard_route = '/admin'
+    elif profile.role in ['admin', 'lms_admin', 'flight_admin', 'superadmin']:
+        dashboard_route = '/admin/dashboard'
 
     print(f"? Login successful - Redirecting to: {dashboard_route}")
     print(f"{'='*60}\n")
 
-    # 6. Return the UNIQUE session token (NOT the old DRF token)
+    # 6. Log the action
+    TrackLog.objects.create(
+        user=user,
+        action=f"User Login: {user.username} ({role}) logged in."
+    )
+
+    # NEW: Log to InstructorLog
+    if role == 'instructor':
+        log_instructor_event(
+            request, 
+            action_type='LOGIN', 
+            instructor=user, 
+            login_time=timezone.now(),
+            details=f"Instructor {user.username} logged in.",
+            actor=user
+        )
+    elif role == 'student':
+        try:
+            student_obj = user.student_profile
+            log_instructor_event(
+                request, 
+                action_type='LOGIN', 
+                student=student_obj, 
+                login_time=timezone.now(),
+                details=f"Student {student_obj.student_number} ({user.username}) logged in.",
+                actor=user
+            )
+        except Exception as e:
+            print(f"⚠️ Could not log student login: {str(e)}")
+
+    # 7. Return the UNIQUE session token (NOT the old DRF token)
     return Response({
         "message": "Login successful",
         "token": session.session_token,  # This is unique per login
@@ -301,6 +389,12 @@ def register_view(request):
                     middle_initial=data.get('mi', '')
                 )
 
+            # 4. Log the action
+            TrackLog.objects.create(
+                user=user,
+                action=f"User Registration: New {role} {username} registered."
+            )
+
             return Response({
                 "message": "Registration successful!",
                 "username": user.username,
@@ -366,10 +460,20 @@ def instructor_dashboard(request):
             )
             print(f"? Section created: {request.data.get('section_name')}")
             
-            # Send Email Notification if schedule exists
-            section = Section.objects.filter(section_code=request.data.get('section_code'), instructor=user).first()
-            if section and section.schedule:
-                threading.Thread(target=send_schedule_email_notification, args=(user, section)).start()
+            # Log the action
+            TrackLog.objects.create(
+                user=user,
+                action=f"Instructor Operation: Created new section '{request.data.get('section_name')}' ({request.data.get('section_code')})."
+            )
+
+            # NEW: Log to InstructorLog
+            log_instructor_event(
+                request,
+                action_type='SECTION_CREATED',
+                instructor=user,
+                section_name=request.data.get('section_name'),
+                details=f"Instructor created section {request.data.get('section_name')} ({request.data.get('section_code')})"
+            )
                 
             return Response({"message": "Section created successfully!"}, status=status.HTTP_201_CREATED)
         except IntegrityError:
@@ -464,6 +568,16 @@ def update_section(request, section_id):
     
     if request.method == 'DELETE':
         section_name = section.section_name
+        
+        # LOG Section Deletion
+        log_instructor_event(
+            request, 
+            action_type='SECTION_DELETED',
+            instructor=user,
+            section_name=section_name,
+            details=f"Instructor deleted section '{section_name}' and all associated data."
+        )
+        
         section.delete()
         return Response({"message": f"Section '{section_name}' deleted successfully!"}, status=status.HTTP_200_OK)
     
@@ -524,6 +638,17 @@ def delete_activity(request, section_id, activity_id):
         section = Section.objects.get(id=section_id, instructor=user)
         activity = Activity.objects.get(id=activity_id, section=section)
         activity_title = activity.title
+        
+        # LOG Activity Deletion
+        log_instructor_event(
+            request, 
+            action_type='ACTIVITY_DELETED',
+            instructor=user,
+            section_name=section.section_name,
+            activity_name=activity_title,
+            details=f"Instructor deleted activity '{activity_title}' from section '{section.section_name}'."
+        )
+        
         activity.delete()
         
         return Response({
@@ -570,6 +695,14 @@ class EnrollStudentView(APIView):
         if not created:
             return Response({"error": "Student is already enrolled in this section."}, status=status.HTTP_400_BAD_REQUEST)
             
+        log_instructor_event(
+            request,
+            action_type='STUDENT_ENROLLED',
+            instructor=request.user,
+            student=student,
+            section_name=section.section_name,
+            details=f"Instructor enrolled student {student.student_number} ({student.first_name} {student.last_name}) to section '{section.section_name}'."
+        )
         return Response({"message": f"Successfully enrolled {student.first_name}!"}, status=status.HTTP_201_CREATED)
 
 class UnenrollStudentView(APIView):
@@ -587,7 +720,17 @@ class UnenrollStudentView(APIView):
         if not enrollment:
             return Response({"error": "Student is not enrolled in this section."}, status=status.HTTP_404_NOT_FOUND)
             
-        # 3. Delete the enrollment
+        # 3. LOG Unenrollment
+        log_instructor_event(
+            request,
+            action_type='STUDENT_UNENROLLED',
+            instructor=request.user,
+            student=student,
+            section_name=section.section_name,
+            details=f"Instructor unenrolled student {student.student_number} ({student.first_name} {student.last_name}) from section '{section.section_name}'."
+        )
+        
+        # 4. Delete the enrollment
         enrollment.delete()
         return Response({"message": "Student successfully unenrolled."}, status=status.HTTP_200_OK)
 
@@ -671,6 +814,16 @@ def bulk_enroll_students(request, section_id):
             except Students.DoesNotExist:
                 not_found_list.append(student_num)
                 
+        if enrolled_count > 0:
+            log_instructor_event(
+                request,
+                action_type='STUDENT_ENROLLED',
+                instructor=request.user,
+                section_name=section.section_name,
+                is_csv=True,
+                details=f"Instructor enrolled {enrolled_count} students to section '{section.section_name}' via CSV import."
+            )
+
         return Response({
             "message": f"Successfully enrolled {enrolled_count} students.",
             "enrolled_count": enrolled_count,
@@ -1085,6 +1238,16 @@ def create_activity(request, section_id):
                             print(f"Error creating ActivityAddOn: {str(e)}")
                             continue
 
+                # NEW: Log to InstructorLog
+                log_instructor_event(
+                    request,
+                    action_type='ACTIVITY_CREATED',
+                    instructor=request.user,
+                    section_name=section.section_name,
+                    activity_name=activity.title,
+                    details=f"Instructor created activity '{activity.title}' in section '{section.section_name}'."
+                )
+
                 return Response({
                     "message": "Activity created successfully!",
                     "activity_id": activity.id
@@ -1121,7 +1284,7 @@ def activity_details(request, activity_id):
                     get_passenger_field(p, 'middle_initial')
                 ),
                 "last_name": get_passenger_field(p, 'last_name'),
-                "gender": 'Mr.' if get_passenger_field(p, 'gender', 'mr').lower() == 'mr' else ('Mrs.' if get_passenger_field(p, 'gender', 'mr').lower() == 'mrs' else 'Ms.'),
+                "gender": next((label for val, label in [('mr', 'Mr.'), ('mrs', 'Mrs.'), ('ms', 'Ms.'), ('male', 'Mr.'), ('female', 'Mrs.')] if get_passenger_field(p, 'gender', 'mr').lower().strip('.') == val or val == get_passenger_field(p, 'gender', 'mr').lower().strip('.')), 'Mr.'),
                 "type": get_passenger_field(p, 'passenger_type', 'Adult').capitalize(),
                 "nationality": get_passenger_field(p, 'nationality'),
                 "date_of_birth": get_passenger_field(p, 'date_of_birth'),
@@ -1166,7 +1329,7 @@ def activity_details(request, activity_id):
                         get_passenger_field(p, 'middle_initial')
                     ),
                     "last_name": get_passenger_field(p, 'last_name'),
-                    "gender": 'Mr.' if get_passenger_field(p, 'gender', 'mr').lower() == 'mr' else ('Mrs.' if get_passenger_field(p, 'gender', 'mr').lower() == 'mrs' else 'Ms.'),
+                    "gender": next((label for val, label in [('mr', 'Mr.'), ('mrs', 'Mrs.'), ('ms', 'Ms.'), ('male', 'Mr.'), ('female', 'Mrs.')] if get_passenger_field(p, 'gender', 'mr').lower().strip('.') == val or val == get_passenger_field(p, 'gender', 'mr').lower().strip('.')), 'Mr.'),
                     "type": get_passenger_field(p, 'passenger_type', 'Adult').capitalize(),
                     "passenger_type": get_passenger_field(p, 'passenger_type', 'adult').lower(),
                     "nationality": get_passenger_field(p, 'nationality'),
@@ -1380,6 +1543,16 @@ def release_activity_grades(request, activity_id):
             bindings_to_release.update(is_released=True)
             
             message = f"Grades released to {released_count} students"
+            
+            # LOG Grade Release
+            log_instructor_event(
+                request,
+                action_type='GRADES_RELEASED',
+                instructor=request.user,
+                section_name=activity.section.section_name,
+                activity_name=activity.title,
+                details=f"Instructor released grades for activity '{activity.title}' to {released_count} students."
+            )
         else:
             # Re-releasing: Release only those who haven't been released yet but have a grade
             bindings_to_release = ActivityStudentBinding.objects.filter(
@@ -1469,192 +1642,85 @@ def calculate_submission_score(activity, booking):
     req_class = (activity.required_travel_class or "").lower()
     req_trip_type = activity.required_trip_type
 
-    # --- 1. Compliance (40% base) ---
-    comp_penalty = 0
-    
-    # Helper for fuzzy class matching
-    def normalize_class(c):
-        return (c or "").lower().replace("class", "").replace("_", "").replace("-", "").strip()
-
-    norm_actual_class = normalize_class(actual_class)
-    norm_req_class = normalize_class(req_class)
-
-    if req_origin and req_origin != actual_origin:
-        comp_penalty += 40
-    if req_destination and req_destination != actual_destination:
-        comp_penalty += 40
-    if req_trip_type and req_trip_type != actual_trip_type:
-        comp_penalty += 20
-    if norm_req_class and norm_req_class != norm_actual_class:
-        comp_penalty += 10
-        
-    # Multi-City Segment Check
-    if req_trip_type == 'multi_city':
-        expected_segments = list(activity.segments.all())
-        
-        if expected_segments:
-            seg_penalty = 0
-            for idx, exp_seg in enumerate(expected_segments):
-                # Try to find matching actual segment by index from prefetched list
-                act_seg = details_list[idx] if idx < len(details_list) else None
-                if not act_seg or not act_seg.schedule or not act_seg.schedule.flight:
-                    seg_penalty += 20
-                    continue
-                
-                route = act_seg.schedule.flight.route
-                act_org = route.origin_airport.code.lower() if route and route.origin_airport else ""
-                act_dest = route.destination_airport.code.lower() if route and route.destination_airport else ""
-                act_date = act_seg.schedule.departure_time.date()
-                
-                if exp_seg.origin.lower() != act_org: seg_penalty += 10
-                if exp_seg.destination.lower() != act_dest: seg_penalty += 10
-                if exp_seg.departure_date != act_date: seg_penalty += 5
-            
-            # Weighted penalty for segments (capped at 40 of compliance)
-            comp_penalty += min(40, seg_penalty)
-
-    comp_score = max(0, (total_points * 0.4) * (1 - comp_penalty / 100.0))
-
-    # --- 2. Passengers (25% base) ---
-    pax_penalty = 0
+    # Data collection for scoring logic
     unique_passengers = list({d.passenger_id: d.passenger for d in details_list if d.passenger}.values())
-    
     pax_counts = {'adult': 0, 'child': 0, 'infant': 0}
     for p in unique_passengers:
         t = (p.passenger_type or 'adult').lower()
         if t in pax_counts: pax_counts[t] += 1
-    
-    if pax_counts['adult'] != activity.required_passengers: pax_penalty += 10
-    if pax_counts['child'] != (activity.required_children or 0): pax_penalty += 10
-    if pax_counts['infant'] != (activity.required_infants or 0): pax_penalty += 10
-
-    # Stateful matching to prevent duplication
-    used_booked_pax_ids = set()
-    expected_passengers = list(activity.passengers.all())
-    
-    for idx, exp in enumerate(expected_passengers):
-        # Find best available match from student work
-        actual = next((p for p in unique_passengers if p.id not in used_booked_pax_ids and 
-                       p.first_name.lower() == exp.first_name.lower() and 
-                       p.last_name.lower() == exp.last_name.lower()), None)
-        
-        if not actual:
-            pax_penalty += 25  # Significant penalty for missing passenger identity
-        else:
-            used_booked_pax_ids.add(actual.id)
-            actual_gen = (getattr(actual, 'title', '') or getattr(actual, 'gender', '') or '').lower().replace('.', '').strip()
-            exp_gen = (exp.gender or '').lower().replace('.', '').strip()
-            if actual_gen != exp_gen: pax_penalty += 2
-            
-            if actual.date_of_birth != exp.date_of_birth: pax_penalty += 5
-            if (actual.nationality or '').lower() != (exp.nationality or '').lower(): pax_penalty += 3
-            
-            # Category Check (Regular, Senior, PWD)
-            req_cat = getattr(exp, 'passenger_category', 'none')
-            actual_cat = getattr(actual, 'ph_discount_type', 'none')
-            if req_cat != actual_cat:
-                pax_penalty += 10
-            
-            # Passport check - only if the activity requires it
-            if getattr(activity, 'require_passport', False):
-                if (actual.passport_number or '').strip() != (exp.passport_number or '').strip(): 
-                    pax_penalty += 10
-                    
-            # Seat Assignment Check (New Logic) - Use in-memory filter
-            if assigned_seats and idx < len(assigned_seats):
-                expected_seat = assigned_seats[idx]
-                actual_detail = next((d for d in details_list if d.passenger_id == actual.id), None)
-                actual_seat = actual_detail.seat.seat_number if (actual_detail and actual_detail.seat) else None
-                if expected_seat != actual_seat:
-                    pax_penalty += 15  # Major penalty for booking the wrong seat
-
-    pax_score = max(0, (total_points * 0.25) * (1 - pax_penalty / 100.0))
-
-    # --- 3. Completion (25% base) ---
-    date_penalty = 0
-    actual_departure_date = None
-    actual_return_date = None
-    
-    for d in details_list:
-        o_code = d.schedule.flight.route.origin_airport.code.lower() if d.schedule.flight.route.origin_airport else ""
-        d_code = d.schedule.flight.route.destination_airport.code.lower() if d.schedule.flight.route.destination_airport else ""
-        
-        if req_origin and o_code == req_origin:
-            actual_departure_date = d.schedule.departure_time.date()
-        if req_trip_type == 'round_trip' and req_origin and d_code == req_origin:
-            actual_return_date = d.schedule.departure_time.date()
-
-    if activity.required_departure_date and activity.required_departure_date != actual_departure_date:
-        date_penalty += 15
-    if activity.required_trip_type == 'round_trip' and activity.required_return_date and activity.required_return_date != actual_return_date:
-        date_penalty += 15
-
-    completion_score = max(0, (total_points * 0.25) * (1 - date_penalty / 100.0))
-
-    # --- 4. Add-ons (10% base) ---
     required_addons = list(activity.activity_addons.all()) if hasattr(activity, 'activity_addons') else []
-    
-    if required_addons:
-        correct_addons = 0
-        total_req = len(required_addons)
-        for req in required_addons:
-            # Find the booking detail for this passenger using in-memory search
-            detail = next((d for d in details_list if 
-                         d.passenger and 
-                         d.passenger.first_name.lower() == req.passenger.first_name.lower() and 
-                         d.passenger.last_name.lower() == req.passenger.last_name.lower()), None)
-            
-            # Check addons in-memory from prefetched prefetch_related('addons')
-            if detail and any(a.id == req.addon_id for a in detail.addons.all()):
-                correct_addons += 1
-        
-        addon_score = (total_points * 0.1) * (correct_addons / total_req)
-    else:
-        # If no add-ons are required, they get the full 10% (100% of the category)
-        addon_score = (total_points * 0.1)
 
-    # --- 5. Final Calculation ---
-    # Round breakdown components first for display consistency
-    r_compliance = round(float(comp_score))
-    r_passengers = round(float(pax_score))
-    r_completion = round(float(completion_score))
-    r_addons = round(float(addon_score))
+    # Helpers for normalized matching
+    def norm_s(s): return str(s or "").strip().lower()
+    def compare(a, b):
+        na, nb = norm_s(a), norm_s(b)
+        return na == nb or (na and nb and (na in nb or nb in na))
+
+    # 1. Accuracy (20%)
+    acc_c = [norm_s(booking.trip_type) == norm_s(activity.required_trip_type)]
+    if req_trip_type == 'one_way':
+        acc_c.extend([compare(actual_origin, req_origin), compare(actual_destination, req_destination)])
+    elif req_trip_type == 'round_trip':
+        acc_c.append(compare(actual_origin, req_origin) and compare(actual_destination, req_destination))
+    else:
+        acc_c.extend([compare(actual_origin, req_origin), compare(actual_destination, req_destination)])
+    acc_ratio = sum(1 for c in acc_c if c) / len(acc_c) if acc_c else 0
+    acc_level = 5 if acc_ratio >= 1.0 else (4 if acc_ratio >= 0.8 else (3 if acc_ratio >= 0.5 else 2))
+
+    # 2. Technical Skill (20%)
+    def n_cls(s): return str(s or "").lower().replace("class", "").replace("_","").strip()
+    tech_c = [n_cls(actual_class) == n_cls(req_class)]
+    pax_cat_match = all(norm_s(next((p for p in unique_passengers if compare(p.first_name, ep.first_name)), None).ph_discount_type or "none") == norm_s(ep.passenger_category or "none")
+                        for ep in activity.passengers.all() if next((p for p in unique_passengers if compare(p.first_name, ep.first_name)), None))
+    tech_c.append(pax_cat_match)
+    tech_ratio = sum(1 for c in tech_c if c) / len(tech_c) if tech_c else 0
+    tech_level = 5 if tech_ratio >= 1.0 else (4 if tech_ratio >= 0.7 else 3)
+
+    # 3. Organization (20%)
+    org_f = []
+    for exp in activity.passengers.all():
+        act = next((p for p in unique_passengers if compare(p.first_name, exp.first_name) and compare(p.last_name, exp.last_name)), None)
+        org_f.append(act is not None)
+        if act: org_f.extend([compare(act.first_name, exp.first_name), act.date_of_birth == exp.date_of_birth])
+    org_ratio = sum(1 for f in org_f if f) / len(org_f) if org_f else 1.0
+    org_level = 5 if org_ratio >= 1.0 else (4 if org_ratio >= 0.8 else 3)
+
+    # 4. Completeness (20%)
+    req_passengers_match = (
+        pax_counts.get('adult', 0) == (activity.required_passengers or 0) and
+        pax_counts.get('child', 0) == (activity.required_children or 0) and
+        pax_counts.get('infant', 0) == (activity.required_infants or 0)
+    )
     
-    # Total is the sum of rounded parts to ensure 100% accuracy in UI display
-    final_grade = r_compliance + r_passengers + r_completion + r_addons
-    
-    # Calculate simulated 5-part rubric breakdown for the frontend list view
-    acc_ratio = comp_score / (total_points * 0.4) if total_points > 0 else 0
-    acc_level = 5 if acc_ratio >= 1.0 else (4 if acc_ratio >= 0.8 else (3 if acc_ratio >= 0.5 else (2 if acc_ratio >= 0.2 else 1)))
-    
-    tech_ratio = 1.0 if acc_ratio >= 0.5 else 0.5
-    tech_level = 5 if tech_ratio >= 1.0 else 3
-    
-    org_ratio = pax_score / (total_points * 0.25) if total_points > 0 else 0
-    org_level = 5 if org_ratio >= 1.0 else (4 if org_ratio >= 0.8 else (3 if org_ratio >= 0.5 else 2))
-    
-    comp_ratio_val = completion_score / (total_points * 0.25) if total_points > 0 else 0
-    comp_level = 5 if comp_ratio_val >= 1.0 else (4 if comp_ratio_val >= 0.6 else (3 if comp_ratio_val >= 0.3 else (2 if comp_ratio_val > 0 else 1)))
-    
+    addon_match = True
+    if required_addons:
+        for req in required_addons:
+             detail = next((d for d in details_list if 
+                            d.passenger and compare(d.passenger.first_name, req.passenger.first_name) and compare(d.passenger.last_name, req.passenger.last_name)), None)
+             if not detail or not any(a.id == req.addon_id for a in detail.addons.all()):
+                 addon_match = False
+                 break
+
+    comp_c = [req_passengers_match, addon_match]
+    comp_ratio = sum(1 for c in comp_c if c) / len(comp_c) if comp_c else 1.0
+    comp_level = 5 if comp_ratio >= 1.0 else (4 if comp_ratio >= 0.5 else 3)
+
+    # 5. Professionalism (20%)
     prof_ratio = (acc_ratio + tech_ratio + org_ratio) / 3
-    prof_level = 5 if prof_ratio >= 1.0 else (4 if prof_ratio >= 0.7 else (3 if prof_ratio >= 0.4 else (2 if prof_ratio >= 0.1 else 1)))
-    
+    prof_level = 5 if prof_ratio >= 1.0 else (4 if prof_ratio >= 0.7 else 3)
+
+    final_grade = round((acc_ratio + tech_ratio + org_ratio + comp_ratio + prof_ratio) * (total_points / 5))
     rubric_breakdown = [
-        {"level": acc_level, "ratio": acc_ratio},
-        {"level": tech_level, "ratio": tech_ratio},
-        {"level": org_level, "ratio": org_ratio},
-        {"level": comp_level, "ratio": comp_ratio_val},
-        {"level": prof_level, "ratio": prof_ratio}
+        {"label": "Accuracy", "level": acc_level, "ratio": acc_ratio, "status": "Excellent" if acc_level == 5 else "Good"},
+        {"label": "Technical Skill", "level": tech_level, "ratio": tech_ratio, "status": "Excellent" if tech_level == 5 else "Good"},
+        {"label": "Organization", "level": org_level, "ratio": org_ratio, "status": "Excellent" if org_level == 5 else "Good"},
+        {"label": "Completeness", "level": comp_level, "ratio": comp_ratio, "status": "Excellent" if comp_level == 5 else "Good"},
+        {"label": "Professionalism", "level": prof_level, "ratio": prof_ratio, "status": "Excellent" if prof_level == 5 else "Good"}
     ]
-    
+
     return {
         "total": float(final_grade),
-        "breakdown": {
-            "compliance": float(r_compliance),
-            "passengers": float(r_passengers),
-            "completion": float(r_completion),
-            "addons": float(r_addons)
-        },
+        "breakdown": {"accuracy": acc_ratio, "tech": tech_ratio, "org": org_ratio, "comp": comp_ratio, "prof": prof_ratio},
         "rubric_breakdown": rubric_breakdown
     }
 
@@ -2122,6 +2188,7 @@ def get_activity_submissions(request, activity_id):
                     binding.grade = score_data["total"]
                     binding.rubric_breakdown = score_data["rubric_breakdown"]
                     binding.status = 'graded' if booking.status == "Confirmed" else 'submitted'
+                    binding.is_released = False  # Wait for instructor to release grades
                     if booking.submitted_at:
                         binding.submitted_at = booking.submitted_at
                     elif not binding.submitted_at:
@@ -2129,6 +2196,7 @@ def get_activity_submissions(request, activity_id):
                     binding.save()
                     submission["status"] = binding.status
                     submission["grade"] = float(binding.grade)
+                    submission["is_released"] = False
             
             submissions_data.append(submission)
             
@@ -2201,6 +2269,30 @@ def logout_view(request):
         session_obj = request.session_obj
         session_obj.deactivate()
         
+        # NEW: Log to InstructorLog
+        now = timezone.now()
+        # Find the latest LOGIN record for this user that hasn't been logged out
+        latest_log = InstructorLog.objects.filter(
+            actor=request.user, 
+            action_type='LOGIN', 
+            logout_time__isnull=True
+        ).first()
+        
+        if latest_log:
+            latest_log.logout_time = now
+            latest_log.save()
+        else:
+            # If no login record (e.g. started before logging was added), create a LOGOUT record
+            # We don't have a login record to update, so just create a simple one
+            log_instructor_event(
+                request, 
+                action_type='LOGOUT', 
+                instructor=request.user if hasattr(request.user, 'instructor_profile') else None,
+                student=getattr(request.user, 'student_profile', None),
+                logout_time=now,
+                details=f"User {request.user.username} logged out."
+            )
+
         print(f"? Session {session_obj.id} deactivated for user {request.user.username}")
         
         return Response({
@@ -2435,13 +2527,14 @@ def student_dashboard(request):
             binding.grade = score_data['total']
             binding.rubric_breakdown = score_data['rubric_breakdown']
             binding.status = 'graded'
+            binding.is_released = False  # Wait for instructor to release grades
             if booking_obj.submitted_at:
                 binding.submitted_at = booking_obj.submitted_at
             binding.save()
             print(f"  ? Auto-graded dashboard activity {activity.id}: {score_data['total']}")
 
         # ? Manual Grade Release Check
-        effective_grade = float(binding.grade) if (binding.grade is not None and activity.grades_released) else None
+        effective_grade = float(binding.grade) if (binding.grade is not None and (binding.is_released or activity.grades_released)) else None
 
         activities_data.append({
             'id': activity.id,
@@ -2673,7 +2766,9 @@ def student_activity_details(request, activity_id):
             
             if (binding.grade is None or binding.status in ['assigned', 'in_progress', 'submitted']):
                 binding.grade = submission_score_data['total']
+                binding.rubric_breakdown = submission_score_data['rubric_breakdown']
                 binding.status = 'graded'
+                binding.is_released = False # Wait for instructor to release grades
                 if booking_obj.submitted_at:
                     binding.submitted_at = booking_obj.submitted_at
                 binding.save()
@@ -2773,6 +2868,18 @@ def student_activity_details(request, activity_id):
             val = getattr(passenger, field_name, default)
             return val if val is not None else default
 
+        def _normalize_gender_raw(g):
+            """Normalize gender value to 'MR', 'MRS', or 'MS' matching booking form codes."""
+            val = (g or '').upper().strip().replace('.', '')
+            if val in ('MR', 'MALE', 'M'):
+                return 'MR'
+            if val in ('MRS', 'FEMALE', 'F'):
+                return 'MRS'
+            if val in ('MS',):
+                return 'MS'
+            return val or 'MR'
+
+
         # Search for a confirmed booking for this activity
         booking_obj = Booking.objects.filter(
             user=user,
@@ -2812,7 +2919,7 @@ def student_activity_details(request, activity_id):
                     'first_name': get_p_field(p, 'first_name'),
                     'last_name': get_p_field(p, 'last_name'),
                     'middle_initial': get_p_field(p, 'middle_name') or get_p_field(p, 'middle_initial'),
-                    'gender': get_p_field(p, 'gender', 'mr').lower().replace('.', '').strip(),
+                    'gender': _normalize_gender_raw(get_p_field(p, 'gender', 'mr')),
                     'passenger_type': get_p_field(p, 'passenger_type', 'adult').lower(),
                     'type': get_p_field(p, 'passenger_type', 'Adult').capitalize(),
                     'date_of_birth': safe_date_format(p.date_of_birth, "%Y-%m-%d"),
@@ -2914,7 +3021,7 @@ def student_activity_details(request, activity_id):
         response_data['passengers'] = [
             {
                 'type': get_p_field(p, 'passenger_type', 'Adult').capitalize(),
-                'gender': get_p_field(p, 'gender', 'Mr.').capitalize(),
+                'gender': next((label for val, label in [('mr', 'Mr.'), ('mrs', 'Mrs.'), ('male', 'Mr.'), ('female', 'Mrs.')] if val in get_p_field(p, 'gender', 'mr').lower()), 'Mr.'),
                 'first_name': get_p_field(p, 'first_name'),
                 'last_name': get_p_field(p, 'last_name'),
                 'middle_initial': get_p_field(p, 'middle_name') or get_p_field(p, 'middle_initial'),
@@ -2981,6 +3088,7 @@ def submit_grade(request, activity_id, student_id):
             binding.rubric_breakdown = rubric_breakdown
             
         binding.status = 'graded'
+        binding.is_released = False  # Wait for explicit release
         binding.save()
         
         return Response({
@@ -3163,3 +3271,74 @@ def admin_lms_overview(request):
     except Exception as e:
         traceback.print_exc()
         return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated, IsInstructor])
+def get_instructor_logs(request):
+    """
+    Fetch all logs for the current instructor.
+    """
+    logs = InstructorLog.objects.filter(instructor=request.user).order_by('-timestamp')
+    
+    data = []
+    for log in logs:
+        data.append({
+            'id': log.id,
+            'actor_name': f"{log.actor.first_name} {log.actor.last_name}" if log.actor else 'System',
+            'actor_role': log.actor.userprofile.role if log.actor and hasattr(log.actor, 'userprofile') else 'N/A',
+            'student_number': log.student.student_number if log.student else None,
+            'action_type': log.action_type,
+            'section_name': log.section_name,
+            'activity_name': log.activity_name,
+            'details': log.details,
+            'device': log.device,
+            'ip_address': log.ip_address,
+            'is_csv': log.is_csv,
+            'login_time': log.login_time.isoformat() if log.login_time else None,
+            'logout_time': log.logout_time.isoformat() if log.logout_time else None,
+            'timestamp': log.timestamp.isoformat()
+        })
+        
+    return Response(data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated, IsInstructor])
+def log_report_print(request):
+    """
+    Log when an instructor prints a report for an activity or section.
+    """
+    activity_id = request.data.get('activity_id')
+    section_id = request.data.get('section_id')
+    report_type = request.data.get('report_type', 'Grade Report')
+    
+    section_name = None
+    activity_name = None
+    
+    if activity_id:
+        try:
+            activity = Activity.objects.get(id=activity_id, section__instructor=request.user)
+            activity_name = activity.title
+            section_name = activity.section.section_name
+        except Activity.DoesNotExist:
+            pass
+    elif section_id:
+        try:
+            section = Section.objects.get(id=section_id, instructor=request.user)
+            section_name = section.section_name
+        except Section.DoesNotExist:
+            pass
+            
+    log_instructor_event(
+        request,
+        action_type='REPORT_PRINTED',
+        instructor=request.user,
+        section_name=section_name,
+        activity_name=activity_name,
+        details=f"Instructor printed {report_type} for {activity_name or section_name or 'unspecified context'}."
+    )
+    
+    return Response({"message": "Print action logged successfully."}, status=status.HTTP_200_OK)

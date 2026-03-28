@@ -1,9 +1,9 @@
 <template>
-  <div class="bg-pink-500 text-white px-4 py-2.5 flex items-center justify-between shadow-md z-20">
+  <div class="bg-[#F9F9F9] text-gray-800 px-4 py-2.5 flex items-center shadow-sm justify-between ">
     <div class="flex items-center gap-3">
       <button 
         @click="$emit('toggle-sidebar')" 
-        class="p-1.5 hover:bg-pink-600/50 rounded transition-colors focus:outline-none"
+        class="p-1.5 hover:bg-gray-500/20  cursor-pointer rounded transition-colors focus:outline-none"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
@@ -11,10 +11,10 @@
       </button>
       
       <div class="flex items-center gap-2">
-        <div class="w-7 h-7 bg-white rounded-full flex items-center justify-center text-base">🎓</div>
+        <div class="w-7 h-7 bg-[#F9F9F9] rounded-full  flex items-center justify-center text-base ">🎓</div>
         <div>
-          <h1 class="text-xs font-bold leading-tight">CARAGA STATE UNIVERSITY</h1>
-          <p class="text-[9px] opacity-90 leading-tight">Cabadbaran City</p>
+          <h1 class="text-xs font-bold leading-tight text-[#FF579A]">College of Tourism and Hospitality Management</h1>
+          <p class="text-[9px] text-green-800 font-medium opacity-90 leading-tight">Caraga State University - Cabadbaran City</p>
         </div>
       </div>
     </div>
@@ -24,14 +24,14 @@
         @click="toggleDropdown" 
         class="flex items-center gap-2 hover:bg-pink-600/50 px-2 py-1 rounded transition-colors focus:outline-none"
       >
-        <div class="w-7 h-7 bg-white rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
+        <div class="w-7 h-7 bg-[#F9F9F9] rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
           <div class="w-full h-full bg-pink-200 flex items-center justify-center text-pink-700 font-bold text-xs">
             {{ initials }}
           </div>
         </div>
       </button>
 
-      <div v-if="dropdownOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-1 z-50 border border-gray-100">
+      <div v-if="dropdownOpen" class="absolute right-0 mt-2 w-48 bg-[#F9F9F9] rounded-lg shadow-xl py-1 z-50 border border-gray-100">
         <div class="px-4 py-3 border-b border-gray-100">
           <p class="text-sm font-semibold text-gray-800">{{ fullName }}</p>
           <p class="text-xs text-gray-500">{{ student?.email }}</p>

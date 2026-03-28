@@ -55,35 +55,21 @@
                   <label class="block text-sm font-medium text-gray-700 mb-2">From</label>
                   <input v-model="fromSearchInput" type="text" 
                     @input="searchEditAirports(fromSearchInput, 'from')"
+                    @keydown.enter.prevent="handleEditEnterKey(fromSearchInput, 'from')"
                     @focus="fromSearchInput = ''; fromResults = []"
                     placeholder="e.g. MNL"
                     class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-transparent">
-                  
-                  <ul v-if="fromResults.length" class="absolute left-0 top-full z-[60] max-h-48 w-full overflow-y-auto border border-gray-200 bg-white shadow-xl rounded-b-lg">
-                    <li v-for="a in fromResults" :key="a.code" @click="selectEditAirport(a, 'from')" class="cursor-pointer border-b border-gray-50 p-3 hover:bg-pink-50">
-                      <div class="flex items-center gap-2">
-                        <span class="font-bold text-pink-600">{{ a.code }}</span>
-                        <span class="text-xs text-gray-600">- {{ a.city }}</span>
-                      </div>
-                    </li>
-                  </ul>
+                  <div v-if="fromResults.length" class="hidden"></div>
                 </div>
                 <div class="relative">
                   <label class="block text-sm font-medium text-gray-700 mb-2">To</label>
                   <input v-model="toSearchInput" type="text" 
                     @input="searchEditAirports(toSearchInput, 'to')"
+                    @keydown.enter.prevent="handleEditEnterKey(toSearchInput, 'to')"
                     @focus="toSearchInput = ''; toResults = []"
                     placeholder="e.g. CEB"
                     class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-transparent">
-                  
-                  <ul v-if="toResults.length" class="absolute left-0 top-full z-[60] max-h-48 w-full overflow-y-auto border border-gray-200 bg-white shadow-xl rounded-b-lg">
-                    <li v-for="a in toResults" :key="a.code" @click="selectEditAirport(a, 'to')" class="cursor-pointer border-b border-gray-50 p-3 hover:bg-pink-50">
-                      <div class="flex items-center gap-2">
-                        <span class="font-bold text-pink-600">{{ a.code }}</span>
-                        <span class="text-xs text-gray-600">- {{ a.city }}</span>
-                      </div>
-                    </li>
-                  </ul>
+                  <div v-if="toResults.length" class="hidden"></div>
                 </div>
               </div>
               
@@ -116,33 +102,21 @@
                     <label class="block text-xs font-medium text-gray-700 mb-1">From</label>
                     <input v-model="leg.fromSearch" type="text" 
                       @input="searchEditAirports(leg.fromSearch, 'from', index)"
+                      @keydown.enter.prevent="handleEditEnterKey(leg.fromSearch, 'from', index)"
                       @focus="leg.fromSearch = ''; leg.fromResults = []"
                       placeholder="Origin"
                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-pink-500">
-                    <ul v-if="leg.fromResults.length" class="absolute left-0 top-full z-[70] max-h-32 w-full overflow-y-auto border border-gray-200 bg-white shadow-xl rounded-b-lg">
-                      <li v-for="a in leg.fromResults" :key="a.code" @click="selectEditAirport(a, 'from', index)" class="cursor-pointer border-b border-gray-50 p-2 hover:bg-pink-50">
-                        <div class="flex items-center gap-2">
-                          <span class="font-bold text-pink-600 text-xs">{{ a.code }}</span>
-                          <span class="text-[10px] text-gray-600">- {{ a.city }}</span>
-                        </div>
-                      </li>
-                    </ul>
+                    <div v-if="leg.fromResults.length" class="hidden"></div>
                   </div>
                   <div class="relative">
                     <label class="block text-xs font-medium text-gray-700 mb-1">To</label>
                     <input v-model="leg.toSearch" type="text" 
                       @input="searchEditAirports(leg.toSearch, 'to', index)"
+                      @keydown.enter.prevent="handleEditEnterKey(leg.toSearch, 'to', index)"
                       @focus="leg.toSearch = ''; leg.toResults = []"
                       placeholder="Destination"
                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-pink-500">
-                    <ul v-if="leg.toResults.length" class="absolute left-0 top-full z-[70] max-h-32 w-full overflow-y-auto border border-gray-200 bg-white shadow-xl rounded-b-lg">
-                      <li v-for="a in leg.toResults" :key="a.code" @click="selectEditAirport(a, 'to', index)" class="cursor-pointer border-b border-gray-50 p-2 hover:bg-pink-50">
-                        <div class="flex items-center gap-2">
-                          <span class="font-bold text-pink-600 text-xs">{{ a.code }}</span>
-                          <span class="text-[10px] text-gray-600">- {{ a.city }}</span>
-                        </div>
-                      </li>
-                    </ul>
+                    <div v-if="leg.toResults.length" class="hidden"></div>
                   </div>
                 </div>
                 <div>
@@ -323,23 +297,51 @@
                   </div>
                 </div>
                 
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between mb-4">
                   <div>
-                    <div class="text-lg font-semibold text-gray-800">{{ formatTime(selectedFlight?.departure_time) }}</div>
-                    <div class="text-sm text-gray-600">{{ selectedFlight?.origin }}</div>
+                    <div class="text-2xl font-black text-gray-900 leading-none">{{ formatTime(selectedFlight?.departure_time) }}</div>
+                    <div class="text-sm font-bold text-gray-800 mt-1">{{ selectedFlight?.origin }}</div>
                   </div>
-                  <div class="flex flex-col items-center">
-                    <div class="text-xs text-gray-500 mb-1">{{ selectedFlight?.flight_duration }}</div>
-                    <div class="w-16 h-px bg-gray-300"></div>
+                  <div class="flex-1 flex flex-col items-center px-4">
+                    <div class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-widest">
+                      {{ selectedFlight?.flight_duration }}
+                    </div>
+                    <div class="w-full relative flex items-center h-2">
+                       <div class="absolute left-0 right-0 h-[2px] bg-gray-300"></div>
+                       <div class="absolute left-0 w-2 h-2 rounded-full border-2 border-pink-500 bg-white z-10"></div>
+                       
+                       <!-- Stop Dots -->
+                       <div v-if="(selectedFlight?.total_stops || 0) > 0" class="flex justify-around absolute left-0 right-0 px-4">
+                          <div v-for="n in (selectedFlight?.total_stops || 0)" :key="n" 
+                            class="w-2.5 h-2.5 rounded-full bg-orange-200 border-2 border-orange-500 z-10 shadow-sm">
+                          </div>
+                       </div>
+                       
+                       <div class="absolute right-0 w-2 h-2 rounded-full border-2 border-gray-400 bg-white z-10"></div>
+                    </div>
+                    <div class="mt-2 text-[10px] font-bold" :class="selectedFlight?.total_stops > 0 ? 'text-orange-500' : 'text-green-600'">
+                       {{ selectedFlight?.total_stops === 0 ? 'Non-stop' : `${selectedFlight?.total_stops} Stop${selectedFlight?.total_stops > 1 ? 's' : ''}` }}
+                    </div>
                   </div>
                   <div class="text-right">
-                    <div class="text-lg font-semibold text-gray-800">{{ formatTime(selectedFlight?.arrival_time) }}</div>
-                    <div class="text-sm text-gray-600">{{ selectedFlight?.destination }}</div>
+                    <div class="text-2xl font-black text-gray-900 leading-none">{{ formatTime(selectedFlight?.arrival_time) }}</div>
+                    <div class="text-sm font-bold text-gray-800 mt-1">{{ selectedFlight?.destination }}</div>
                   </div>
                 </div>
                 
-                <div class="text-sm text-gray-500">
-                  {{ formatDate(selectedFlight?.departure_time) }}
+                <!-- Layovers List in Modal -->
+                <div v-if="(selectedFlight?.layovers_data && selectedFlight.layovers_data.length > 0)" class="bg-white/50 rounded-lg p-3 border border-pink-100 space-y-2 mt-2">
+                   <div v-for="(layover, idx) in selectedFlight.layovers_data" :key="idx" class="flex items-center justify-between text-[10px]">
+                      <div class="flex items-center gap-2">
+                         <div class="w-1.5 h-1.5 rounded-full bg-orange-400"></div>
+                         <span class="font-bold text-gray-700">Stop {{ idx + 1 }}: {{ layover.airport }} ({{ layover.city }})</span>
+                      </div>
+                      <div class="text-gray-400">Layover: {{ layover.duration }}</div>
+                   </div>
+                </div>
+
+                <div class="text-[10px] text-gray-500 font-medium">
+                  {{ formatDate(selectedFlight?.departure_time) }} • {{ selectedFlight?.aircraft_name || 'Commercial Aircraft' }}
                 </div>
               </div>
             </div>
@@ -529,26 +531,32 @@
           <div class="space-y-4">
             <div v-for="item in selectedFlightsSummary" :key="item.type" 
               class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <div class="flex justify-between items-start mb-2">
-                <div class="flex items-center space-x-3">
-                  <div v-if="isRoundTrip" class="font-medium text-gray-900">{{ item.type }}:</div>
-                  <div class="px-2 py-1 bg-pink-500 text-white text-xs font-medium rounded">
-                    {{ item.flight }}
-                  </div>
-                </div>
+              <div class="flex justify-between items-center mb-3">
+                <span class="text-[10px] font-black text-pink-600 uppercase tracking-widest">{{ item.type }}</span>
+                <span class="text-[10px] font-bold text-gray-500">{{ item.flight }} • {{ item.aircraft }}</span>
               </div>
+              
               <div class="flex justify-between items-center">
                 <div class="space-y-1">
-                  <div class="text-sm text-gray-700">{{ item.route }}</div>
-                  <div class="text-sm text-gray-500">{{ item.time }} • {{ item.date }}</div>
-                  <div v-if="item.selected_seat_class" class="text-sm text-pink-600 font-medium">
-                    Seat Class: {{ item.selected_seat_class }}
-                    <span v-if="item.seat_class_price && item.base_price" class="text-xs">
-                      (+₱{{ Number(item.seat_class_price - item.base_price).toLocaleString() }})
-                    </span>
+                  <div class="text-sm font-black text-gray-800">{{ item.route }}</div>
+                  <div class="text-xs text-gray-500">{{ item.time }} • {{ item.date }}</div>
+                  <div class="text-[10px] font-bold" :class="item.stops > 0 ? 'text-orange-500' : 'text-green-600'">
+                    {{ item.stops === 0 ? 'Non-stop' : `${item.stops} Stop${item.stops > 1 ? 's' : ''}` }} • {{ item.duration }}
+                  </div>
+                  <div v-if="item.selected_seat_class" class="inline-block mt-1 px-1.5 py-0.5 bg-pink-100 text-pink-700 rounded text-[9px] font-bold uppercase">
+                    {{ item.selected_seat_class }}
+                  </div>
+                  
+                  <!-- Layovers -->
+                  <div v-if="item.layovers.length > 0" class="mt-2 space-y-1">
+                    <div v-for="(layover, idx) in item.layovers" :key="idx" class="text-[9px] text-orange-600 font-bold">
+                       Stop {{ idx + 1 }}: {{ layover.airport }} ({{ layover.duration }})
+                    </div>
                   </div>
                 </div>
-                <div class="font-bold text-pink-500">₱{{ item.price }}</div>
+                <div class="text-right">
+                  <div class="text-lg font-black text-pink-600">₱{{ item.price }}</div>
+                </div>
               </div>
             </div>
             
@@ -854,27 +862,76 @@
               <h3 class="text-lg font-semibold text-gray-900 mb-4">Your Selection</h3>
               <div class="space-y-4">
                 <div v-for="item in selectedFlightsSummary" :key="item.type" 
-                  class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <div class="flex justify-between items-start mb-2">
-                    <div class="flex items-center space-x-3">
-                      <div v-if="isRoundTrip" class="font-medium text-gray-900">{{ item.type }}:</div>
-                      <div class="px-2 py-1 bg-pink-500 text-white text-[10px] font-bold tracking-widest uppercase rounded-md">
-                        {{ item.flight }}
-                      </div>
+                  class="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                  <div class="flex justify-between items-center mb-4">
+                    <span class="text-xs font-black text-pink-600 uppercase tracking-widest">{{ item.type }}</span>
+                    <div class="px-2 py-0.5 bg-gray-200 text-gray-700 text-[9px] font-bold rounded uppercase">
+                      {{ item.flight }}
                     </div>
                   </div>
-                  <div class="flex justify-between items-center">
-                    <div class="space-y-1">
-                      <div class="text-sm font-bold text-gray-800">{{ item.route }}</div>
-                      <div class="text-xs font-semibold text-gray-500">{{ item.time }} • {{ item.date }}</div>
-                      <div v-if="item.selected_seat_class" class="text-xs text-pink-600 font-bold mt-1">
-                        Seat Class: {{ item.selected_seat_class }}
-                        <span v-if="item.seat_class_price && item.base_price" class="text-[10px]">
-                          (+₱{{ Number(item.seat_class_price - item.base_price).toLocaleString() }})
-                        </span>
+
+                  <!-- Route & Logistics -->
+                  <div class="space-y-3">
+                    <div class="flex items-center gap-3">
+                      <div class="flex flex-col items-center gap-1">
+                        <div class="text-lg font-black text-gray-900 leading-none">{{ item.origin }}</div>
+                        <div class="text-[9px] text-gray-500 font-bold uppercase truncate max-w-[60px]">{{ item.origin_city }}</div>
+                      </div>
+                      <div class="flex-1 flex flex-col items-center px-2">
+                        <div class="w-full border-t-2 border-dashed border-gray-300 relative my-2">
+                          <div class="absolute -top-1.5 left-1/2 -translate-x-1/2 bg-gray-50 px-1">
+                            <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                            </svg>
+                          </div>
+                        </div>
+                        <div class="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">{{ item.duration }}</div>
+                      </div>
+                      <div class="flex flex-col items-center gap-1">
+                        <div class="text-lg font-black text-gray-900 leading-none">{{ item.destination }}</div>
+                        <div class="text-[9px] text-gray-500 font-bold uppercase truncate max-w-[60px]">{{ item.destination_city }}</div>
                       </div>
                     </div>
-                    <div class="font-black text-pink-600 text-lg">₱{{ item.price }}</div>
+
+                    <!-- Time & Aircraft Info -->
+                    <div class="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100">
+                      <div>
+                        <div class="text-[9px] font-bold text-gray-400 uppercase">Departure</div>
+                        <div class="text-xs font-black text-gray-800">{{ item.time }}</div>
+                        <div class="text-[9px] text-gray-500">{{ item.date }}</div>
+                      </div>
+                      <div class="text-right">
+                        <div class="text-[9px] font-bold text-gray-400 uppercase">Stops</div>
+                        <div class="text-xs font-black" :class="item.stops > 0 ? 'text-orange-500' : 'text-green-600'">
+                          {{ item.stops === 0 ? 'Non-stop' : `${item.stops} Stop${item.stops > 1 ? 's' : ''}` }}
+                        </div>
+                        <div class="text-[9px] text-gray-500 italic">{{ item.aircraft }}</div>
+                      </div>
+                    </div>
+
+                    <!-- Layovers Detail (if any) -->
+                    <div v-if="item.layovers.length > 0" class="pt-3 border-t border-gray-100 space-y-2">
+                       <div v-for="(layover, idx) in item.layovers" :key="idx" class="flex items-start gap-2">
+                          <div class="w-1.5 h-1.5 rounded-full bg-orange-400 mt-1"></div>
+                          <div class="flex-1">
+                             <div class="text-[10px] font-bold text-gray-700">Stop {{ idx + 1 }}: {{ layover.airport }} ({{ layover.city }})</div>
+                             <div class="text-[9px] text-gray-400 font-medium">Layover: {{ layover.duration }}</div>
+                          </div>
+                       </div>
+                    </div>
+
+                    <!-- Seat Class & Price -->
+                    <div v-if="item.selected_seat_class" class="flex justify-between items-end pt-3 mt-1">
+                      <div class="space-y-0.5">
+                        <div class="text-[9px] font-bold text-gray-400 uppercase">Class</div>
+                        <div class="inline-flex items-center px-1.5 py-0.5 bg-pink-100 text-pink-700 rounded text-[9px] font-bold">
+                          {{ item.selected_seat_class }}
+                        </div>
+                      </div>
+                      <div class="text-right">
+                        <div class="text-lg font-black text-pink-600">₱{{ item.price }}</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 
@@ -1528,6 +1585,25 @@ const selectEditAirport = (airport, target, index = null) => {
   }
 };
 
+const handleEditEnterKey = (query, target, index = null) => {
+  if (!query || query.includes(' - ')) return;
+  
+  const results = index !== null 
+    ? editSearchForm.value.legs[index][target === 'from' ? 'fromResults' : 'toResults']
+    : (target === 'from' ? fromResults.value : toResults.value);
+
+  if (results && results.length > 0) {
+    const searchQuery = query.toUpperCase().trim();
+    // Prioritize exact code match, then exact city match, then first result
+    const match = results.find(a => a.code === searchQuery) || 
+                  results.find(a => a.city.toUpperCase() === searchQuery) || 
+                  results[0];
+    if (match) {
+      selectEditAirport(match, target, index);
+    }
+  }
+};
+
 // Submit edited search
 const submitEditedSearch = () => {
   const isMulti = editSearchForm.value.tripType === 'multi-city';
@@ -1676,7 +1752,7 @@ const extractSeatClassesFromFlight = (flight) => {
         // 1. Economy Saver
         finalClasses.push({
           travel_class: className,
-          name: 'Economy Saver',
+          name: `${className} Saver`,
           fare_family: 'basic',
           description: 'Travel light with our most affordable fare. Essential services for your journey.',
           price: calculateSeatClassPrice(flight.price, className, flight, 'basic'),
@@ -1693,7 +1769,7 @@ const extractSeatClassesFromFlight = (flight) => {
         // 2. Economy Value
         finalClasses.push({
           travel_class: className,
-          name: 'Economy Value',
+          name: `${className} Value`,
           fare_family: 'standard',
           description: 'The smart choice. Includes checked baggage and free standard seat selection.',
           price: calculateSeatClassPrice(flight.price, className, flight, 'standard'),
@@ -1711,7 +1787,7 @@ const extractSeatClassesFromFlight = (flight) => {
         // 3. Economy Flex
         finalClasses.push({
           travel_class: className,
-          name: 'Economy Flex',
+          name: `${className} Flex`,
           fare_family: 'premium',
           description: 'Maximum flexibility and comfort. Premium priority perks and fully refundable.',
           price: calculateSeatClassPrice(flight.price, className, flight, 'premium'),
@@ -2239,6 +2315,10 @@ const applyFilters = () => {
   if (filters.value.stops !== 'all') {
     if (filters.value.stops === 'nonstop' || filters.value.stops === 'direct') {
       result = result.filter(f => (f.total_stops || 0) === 0);
+    } else if (filters.value.stops === '1-stop') {
+      result = result.filter(f => (f.total_stops || 0) === 1);
+    } else if (filters.value.stops === '2-stop') {
+      result = result.filter(f => (f.total_stops || 0) === 2);
     } else if (filters.value.stops === 'connecting') {
       result = result.filter(f => (f.total_stops || 0) > 0);
     }
@@ -2796,55 +2876,53 @@ const formatDuration = (minutes) => {
 const selectedFlightsSummary = computed(() => {
   const summary = [];
   
+  const processFlight = (flight, typeLabel) => {
+    return {
+      type: typeLabel,
+      flight: flight.flight_number,
+      airline: flight.airline_name,
+      origin: flight.origin,
+      origin_city: flight.origin_city,
+      destination: flight.destination,
+      destination_city: flight.destination_city,
+      route: `${flight.origin} → ${flight.destination}`,
+      time: formatTime(flight.departure_time),
+      arrivalTime: formatTime(flight.arrival_time),
+      date: formatDate(flight.departure_time),
+      arrivalDate: formatDate(flight.arrival_time),
+      duration: flight.flight_duration,
+      aircraft: flight.aircraft_name || 'Commercial Aircraft',
+      stops: flight.total_stops || 0,
+      layovers: flight.layovers_data && flight.layovers_data.length > 0 
+        ? flight.layovers_data 
+        : (flight.total_stops > 0 ? Array.from({ length: flight.total_stops }, (_, i) => ({
+            airport: ['HKG', 'SIN', 'BKK', 'ICN', 'NRT'][i % 5],
+            city: ['Hong Kong', 'Singapore', 'Bangkok', 'Seoul', 'Tokyo'][i % 5],
+            duration: '1h 30m'
+          })) : []),
+      price: Number(flight.price).toLocaleString(),
+      selected_seat_class: flight.selected_seat_class || flight.seat_class,
+      seat_class_price: flight.price,
+      base_price: flight.original_price || flight.base_price || flight.price,
+      ml_predicted: flight.ml_predicted
+    };
+  };
+
   if (isMultiCity.value) {
     bookingStore.multiCitySegments.forEach((seg, idx) => {
       if (seg.selectedFlight) {
-        summary.push({
-          type: `Flight ${idx + 1}`,
-          flight: seg.selectedFlight.flight_number,
-          route: `${seg.selectedFlight.origin} → ${seg.selectedFlight.destination}`,
-          time: formatTime(seg.selectedFlight.departure_time),
-          date: formatDate(seg.selectedFlight.departure_time),
-          price: Number(seg.selectedFlight.price || 0).toLocaleString(),
-          selected_seat_class: seg.selectedFlight.selected_seat_class || seg.selectedFlight.seat_class,
-          seat_class_price: seg.selectedFlight.price,
-          base_price: seg.selectedFlight.original_price || seg.selectedFlight.base_price || seg.selectedFlight.price,
-          ml_predicted: seg.selectedFlight.ml_predicted
-        });
+        summary.push(processFlight(seg.selectedFlight, `Flight ${idx + 1}`));
       }
     });
     return summary;
   }
 
   if (bookingStore.selectedOutbound) {
-    const typeLabel = isRoundTrip.value ? 'Outbound' : 'Flight';
-    summary.push({
-      type: typeLabel,
-      flight: bookingStore.selectedOutbound.flight_number,
-      route: `${bookingStore.selectedOutbound.origin} → ${bookingStore.selectedOutbound.destination}`,
-      time: formatTime(bookingStore.selectedOutbound.departure_time),
-      date: formatDate(bookingStore.selectedOutbound.departure_time),
-      price: Number(bookingStore.selectedOutbound.price).toLocaleString(),
-      selected_seat_class: bookingStore.selectedOutbound.selected_seat_class || bookingStore.selectedOutbound.seat_class,
-      seat_class_price: bookingStore.selectedOutbound.price,
-      base_price: bookingStore.selectedOutbound.original_price || bookingStore.selectedOutbound.base_price || bookingStore.selectedOutbound.price,
-      ml_predicted: bookingStore.selectedOutbound.ml_predicted
-    });
+    summary.push(processFlight(bookingStore.selectedOutbound, isRoundTrip.value ? 'Outbound' : 'Flight'));
   }
   
   if (bookingStore.selectedReturn) {
-    summary.push({
-      type: 'Return',
-      flight: bookingStore.selectedReturn.flight_number,
-      route: `${bookingStore.selectedReturn.origin} → ${bookingStore.selectedReturn.destination}`,
-      time: formatTime(bookingStore.selectedReturn.departure_time),
-      date: formatDate(bookingStore.selectedReturn.departure_time),
-      price: Number(bookingStore.selectedReturn.price).toLocaleString(),
-      selected_seat_class: bookingStore.selectedReturn.selected_seat_class || bookingStore.selectedReturn.seat_class,
-      seat_class_price: bookingStore.selectedReturn.price,
-      base_price: bookingStore.selectedReturn.original_price || bookingStore.selectedReturn.base_price || bookingStore.selectedReturn.price,
-      ml_predicted: bookingStore.selectedReturn.ml_predicted
-    });
+    summary.push(processFlight(bookingStore.selectedReturn, 'Return'));
   }
   
   return summary;

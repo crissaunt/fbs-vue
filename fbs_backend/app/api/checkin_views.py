@@ -8,7 +8,7 @@ from django.db.models import Q, Count, Sum, Avg
 from django.utils import timezone
 from datetime import timedelta
 from django_filters.rest_framework import DjangoFilterBackend
-from ..models import CheckInDetail, BookingDetail
+from ..models import CheckInDetail, BookingDetail, TrackLog
 from ..serializers import CheckInDetailSerializer, CheckInListSerializer
 
 class CheckInDetailViewSet(viewsets.ModelViewSet):
@@ -24,8 +24,7 @@ class CheckInDetailViewSet(viewsets.ModelViewSet):
     
     serializer_class = CheckInDetailSerializer
     pagination_class = None
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'flight_number', 'check_in_counter']
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = [
         'booking_detail__passenger__first_name',
         'booking_detail__passenger__last_name',
@@ -33,6 +32,18 @@ class CheckInDetailViewSet(viewsets.ModelViewSet):
         'booking_detail__schedule__flight__flight_number',
     ]
     permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status = self.request.query_params.get('status')
+        counter = self.request.query_params.get('check_in_counter')
+        
+        if status:
+            queryset = queryset.filter(status=status)
+        if counter:
+            queryset = queryset.filter(check_in_counter=counter)
+            
+        return queryset
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -67,6 +78,12 @@ class CheckInDetailViewSet(viewsets.ModelViewSet):
             checkin.boarding_pass = f"BP-{checkin.id}-{timezone.now().strftime('%Y%m%d%H%M')}"
             checkin.save()
         
+        # Log the action
+        TrackLog.objects.create(
+            user=request.user if request.user.is_authenticated else None,
+            action=f"Printed boarding pass for {checkin.passenger_name} (Flight: {checkin.flight_number})"
+        )
+        
         return Response({
             'message': 'Boarding pass ready for printing',
             'boarding_pass': checkin.boarding_pass,
@@ -92,6 +109,12 @@ class CheckInDetailViewSet(viewsets.ModelViewSet):
             except Exception:
                 continue
                 
+        # Log the action
+        TrackLog.objects.create(
+            user=request.user if request.user.is_authenticated else None,
+            action=f"Performed bulk check-in for {len(created_checkins)} passengers."
+        )
+        
         return Response({'success': len(created_checkins), 'created_checkins': created_checkins})
     
     @action(detail=False, methods=['get'])
@@ -116,6 +139,13 @@ class CheckInDetailViewSet(viewsets.ModelViewSet):
         if new_status:
             checkin.status = new_status
             checkin.save()
+            
+            # Log the action
+            TrackLog.objects.create(
+                user=request.user if request.user.is_authenticated else None,
+                action=f"Updated check-in status for {checkin.passenger_name} to {new_status}."
+            )
+            
             return Response({'status': 'updated'})
         return Response({'error': 'status required'}, status=400)
     
@@ -179,6 +209,12 @@ class CheckInDetailViewSet(viewsets.ModelViewSet):
                 # Update booking detail status
                 booking_detail.status = 'checkin'
                 booking_detail.save(update_fields=['status'])
+                
+                # Log the action
+                TrackLog.objects.create(
+                    user=request.user if request.user.is_authenticated else None,
+                    action=f"Self-check-in completed for {booking_detail.passenger.get_full_name()}."
+                )
                 
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

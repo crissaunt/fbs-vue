@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen bg-[#f5f3ef] py-6 px-4">
-    <div class="max-w-5xl mx-auto">
+  <div class=" bg-gray-200  py-6 px-4">
+    <div class="max-w-5xl mx-auto ">
       <!-- Back Button -->
       <div class="mb-4">
         <button 
@@ -142,6 +142,9 @@
             </span>
             <span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
               Grade Weight: 100%
+            </span>
+            <span v-if="isOverdue && activity.status !== 'submitted' && activity.status !== 'graded'" class="px-3 py-1 bg-red-100 text-red-700 text-xs font-black rounded-full uppercase animate-pulse border border-red-200 shadow-sm">
+              Overdue
             </span>
           </div>
         </div>
@@ -327,7 +330,7 @@
                   <div class="col-span-2">
                     <label class="block text-[10px] font-bold text-red-600 uppercase mb-1.5 tracking-wide">Gender*</label>
                     <div class="px-3 py-2.5 border border-gray-300 rounded text-sm bg-white text-gray-700">
-                      {{ passenger.gender || 'N/A' }}
+                      {{ formatGender(passenger.gender) }}
                     </div>
                   </div>
                   <div class="col-span-4">
@@ -485,9 +488,13 @@
                 </div>
                 <div>
                   <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Performance Score</p>
-                  <div v-if="!activity.grades_released" class="flex flex-col">
+                  <div v-if="activity.status === 'assigned' && isOverdue" class="flex flex-col">
+                    <span class="text-sm font-bold text-red-600 uppercase tracking-tighter">Missed Deadline</span>
+                    <span class="text-[9px] text-gray-400 italic font-medium">Activity is no longer accessible</span>
+                  </div>
+                  <div v-else-if="!activity.grades_released" class="flex flex-col">
                     <span class="text-sm font-bold text-yellow-600">Pending Release</span>
-                    <span class="text-[9px] text-gray-400 italic">Scores aren't published yet</span>
+                    <span class="text-[9px] text-gray-400 italic border-l-2 border-yellow-200 pl-1.5">Scores aren't published yet</span>
                   </div>
                   <p v-else class="text-2xl font-black text-gray-900 flex items-center gap-2">
                     <span v-if="activity.grade !== null" class="text-2xl font-black text-emerald-600">
@@ -557,18 +564,21 @@
           <div class="flex flex-col items-center gap-3 mt-8">
             <button 
               @click="openCodeModal"
-              :disabled="!activity.is_active || activity.grade !== null || activity.status === 'submitted' || activity.status === 'graded'"
+              :disabled="!activity.is_active || activity.grade !== null || activity.status === 'submitted' || activity.status === 'graded' || isOverdue"
               :class="[
                 'w-full max-w-md py-4 rounded-lg font-bold text-sm uppercase tracking-wider transition-all shadow-md',
-                activity.is_active && activity.grade === null
+                activity.is_active && activity.grade === null && !isOverdue
                   ? 'bg-[#f5c842] hover:bg-[#e5b832] text-gray-900' 
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               ]"
             >
               {{ getButtonText() }}
             </button>
-            <p v-if="activity.grade !== null" class="text-[10px] text-gray-400 italic">
+            <p v-if="activity.grade !== null" class="text-[10px] text-gray-400 italic font-medium">
               Activity has been graded. You cannot re-submit.
+            </p>
+            <p v-else-if="isOverdue && activity.status !== 'submitted' && activity.status !== 'graded'" class="text-[10px] text-red-500 italic font-black uppercase tracking-wider">
+              The deadline for this activity has passed.
             </p>
           </div>
         </div>
@@ -779,6 +789,16 @@ export default {
       }
       
       return text;
+    },
+    isOverdue() {
+      if (!this.activity.due_date) return false;
+      const now = new Date();
+      const dueDate = new Date(this.activity.due_date);
+      // If it's just a date, set time to end of day
+      if (this.activity.due_date.length <= 10) {
+        dueDate.setHours(23, 59, 59, 999);
+      }
+      return now > dueDate;
     }
   },
   async created() {
@@ -1089,6 +1109,7 @@ export default {
       if (this.activity.completed || this.activity.grade !== null || this.activity.status === 'submitted' || this.activity.status === 'graded') {
         return 'Activity Completed';
       }
+      if (this.isOverdue) return 'Deadline Passed';
       if (!this.activity.is_active) return 'Activity Not Active';
       return 'Start';
     },
@@ -1113,6 +1134,15 @@ export default {
         aa.passenger?.first_name === passenger.first_name &&
         aa.passenger?.last_name === passenger.last_name
       );
+    },
+
+    formatGender(g) {
+      if (!g) return 'N/A';
+      const val = g.toLowerCase().trim();
+      if (val === 'mr' || val === 'male') return 'Mr.';
+      if (val === 'mrs' || val === 'female') return 'Mrs.';
+      if (val === 'ms') return 'Ms.';
+      return g.charAt(0).toUpperCase() + g.slice(1);
     }
   }
 }

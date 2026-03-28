@@ -287,10 +287,11 @@ const handleActivitySubmission = async () => {
   if (isActivity.value && bookingStore.activityId) {
     console.log('📝 Submitting activity completion:', bookingStore.activityId);
     try {
-      await studentActivityDetailsService.submitActivity(bookingStore.activityId, {});
-      console.log('✅ Activity submission successful');
+      // Backend dynamically handles the submission automatically via get_activity_submissions
+      // await studentActivityDetailsService.submitActivity(bookingStore.activityId, {});
+      console.log('✅ Activity submission successfully resolved automatically via backend scoring');
     } catch (error) {
-      console.error('❌ Failed to submit activity:', error);
+      console.error('❌ Failed to process backend constraints:', error);
     }
   }
 };

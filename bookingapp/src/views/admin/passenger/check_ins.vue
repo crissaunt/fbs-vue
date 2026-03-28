@@ -382,14 +382,14 @@ const visiblePages = computed(() => {
 const fetchCheckIns = async () => {
   loading.value = true
   try {
-    const response = await api.get('/check-ins/')
+    const response = await api.get('/checkins/')
     checkIns.value = (response.data.results || response.data).map(c => ({
       ...c,
-      passenger_name: `${c.passenger?.first_name || ''} ${c.passenger?.last_name || ''}`.trim(),
-      flight_number: c.booking_detail?.schedule?.flight?.flight_number || '',
-      route: c.booking_detail?.schedule?.flight?.route || '',
-      departure_time: c.booking_detail?.schedule?.departure_time || '',
-      seat_number: c.booking_detail?.seat?.seat_number || '',
+      passenger_name: c.passenger_name || '',
+      flight_number: c.flight_number || '',
+      route: c.route || '',
+      departure_time: c.departure_time || '',
+      seat_number: c.seat_number || '',
       status: c.status || 'pending'
     }))
 
@@ -440,7 +440,7 @@ const processCheckIn = async () => {
   try {
     const bp = `BP-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
     const data = { ...checkInForm.value, boarding_pass: bp, check_in_time: new Date().toISOString(), status: 'checked-in' }
-    await api.put(`/check-ins/${selectedCheckIn.value.id}/`, data)
+    await api.put(`/checkins/${selectedCheckIn.value.id}/`, data)
     await fetchCheckIns()
     closeModal()
     selectedCheckIn.value = checkIns.value.find(c => c.id === selectedCheckIn.value.id)
@@ -455,7 +455,7 @@ const editCheckIn = (c) => { selectedCheckIn.value = c; checkInForm.value = { ..
 
 const deleteCheckIn = async (id) => {
   if (confirm('Delete this record?')) {
-    await api.delete(`/check-ins/${id}/`)
+    await api.delete(`/checkins/${id}/`)
     checkIns.value = checkIns.value.filter(c => c.id !== id)
   }
 }

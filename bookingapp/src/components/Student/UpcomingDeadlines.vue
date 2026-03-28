@@ -5,8 +5,8 @@
       <div
           v-for="activity in deadlines"
           :key="activity.id"
-          class="flex justify-between items-center p-2.5 bg-white rounded-md 
-                border border-gray-300 border-l-4 border-l-orange-500 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
+          class="flex justify-between border-b border-gray-300 items-center p-2.5 bg-white rounded-md 
+                cursor-pointer hover:bg-gray-50 transition-colors"
           @click="$emit('view', activity.id)"
         >
         <div class="flex-1">

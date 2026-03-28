@@ -307,7 +307,7 @@ def seed_data():
             student_number=f"SN-2024-{i:04d}", 
             first_name=u.first_name, 
             last_name=u.last_name,
-            gender=random.choice(['male', 'female'])
+            gender=random.choice(['mr', 'mrs'])
         )
     print("✅ Instructors & Students: 20 each")
 

@@ -1,73 +1,77 @@
 <template>
-  <div 
-    :class="[
-      'bg-pink-500 text-white transition-all duration-300 ease-in-out flex flex-col shadow-lg overflow-hidden', 
-      sidebarOpen ? 'w-56' : 'w-0'
-    ]"
-  >
-    <div v-show="sidebarOpen" class="flex flex-col h-full overflow-y-auto">
-      <!-- Home Button -->
-      <router-link 
-        to="/student/dashboard"
-        class="flex items-center px-5 py-4 hover:bg-white/10 transition-all border-b border-white/5 group"
-        active-class="bg-white/20 font-bold"
-      >
-        <div class="w-8 h-8 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-          </svg>
-        </div>
-        <span class="text-sm tracking-wide ml-4 whitespace-nowrap">Home</span>
-      </router-link>
+  <div class="sidebar-wrapper">
+    <!-- Overlay for mobile -->
+    <div 
+      v-if="sidebarOpen" 
+      class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[90] lg:hidden"
+      @click="$emit('close-sidebar')"
+    ></div>
 
-      <!-- Calendar Button -->
-      <router-link 
-        to="/student/calendar"
-        class="flex items-center px-5 py-4 hover:bg-white/10 transition-all border-b border-white/5 group"
-        active-class="bg-white/20 font-bold"
-      >
-        <div class="w-8 h-8 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-        </div>
-        <span class="text-sm tracking-wide ml-4 whitespace-nowrap">Calendar</span>
-      </router-link>
+    <div 
+      :class="[
+        'bg-[#F9F9F9] text-gray-800 transition-all duration-300 ease-in-out flex flex-col font-normal overflow-hidden z-[100] lg:z-0',
+        'fixed inset-y-0 left-0 lg:relative lg:inset-auto lg:h-full',
+        sidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:translate-x-0 w-64 lg:w-[88px]'
+      ]"
+    >
+      <div class="flex-shrink-0 w-full flex flex-col h-full overflow-y-auto space-y-3 mt-6">
+        <!-- Home Button -->
+        <router-link 
+          to="/student/dashboard"
+          :class="['flex items-center rounded-2xl sm:rounded-full hover:bg-[#FF579A]/10 hover:text-[#FF579A] transition-all group', sidebarOpen ? 'mx-4 px-4 py-3' : 'mx-auto justify-center w-14 h-14']"
+          active-class="bg-[#FF579A] !text-white hover:bg-[#FF579A]/90 shadow-sm"
+        >
+          <div class="flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <i class="ph ph-house text-2xl"></i>
+          </div>
+          <span v-show="sidebarOpen" class="text-base font-medium tracking-wide ml-4 whitespace-nowrap">Dashboard</span>
+        </router-link>
 
-      <!-- Tasks Button -->
-      <router-link 
-        to="/student/tasks"
-        class="flex items-center px-5 py-4 hover:bg-white/10 transition-all border-b border-white/5 group"
-        active-class="bg-white/20 font-bold"
-      >
-        <div class="w-8 h-8 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-          </svg>
-        </div>
-        <span class="text-sm tracking-wide ml-4 whitespace-nowrap">Tasks</span>
-      </router-link>
+        <!-- Calendar Button -->
+        <router-link 
+          to="/student/calendar"
+          :class="['flex items-center rounded-2xl sm:rounded-full hover:bg-[#FF579A]/10 hover:text-[#FF579A] transition-all group', sidebarOpen ? 'mx-4 px-4 py-3' : 'mx-auto justify-center w-14 h-14']"
+          active-class="bg-[#FF579A] !text-white hover:bg-[#FF579A]/90 shadow-sm"
+        >
+          <div class="flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <i class="ph ph-calendar text-2xl"></i>
+          </div>
+          <span v-show="sidebarOpen" class="text-base font-medium tracking-wide ml-4 whitespace-nowrap">Calendar</span>
+        </router-link>
 
-      <!-- My Section (Only if enrolled) -->
-      <router-link 
-        v-if="section"
-        to="/student/dashboard"
-        class="flex items-center px-5 py-5 bg-black/10 border-b border-white/5 mt-auto hover:bg-black/20 transition-all group"
-        active-class="bg-pink-700 font-bold shadow-inner"
-      >
-        <div class="w-10 h-10 rounded-2xl bg-white text-pink-600 flex items-center justify-center font-bold text-lg flex-shrink-0 shadow-lg group-hover:rotate-6 transition-transform">
-          {{ section.section_code?.charAt(0).toUpperCase() || section.section_name?.charAt(0).toUpperCase() }}
-        </div>
-        <div class="ml-4 flex-1 overflow-hidden">
-          <span class="block truncate text-sm font-bold tracking-tight uppercase">
-            {{ section.section_code || section.section_name }}
-          </span>
-          <span class="text-[10px] opacity-75 font-medium flex items-center gap-1">
-            <span class="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
-            {{ section.activities_count || 0 }} activities
-          </span>
-        </div>
-      </router-link>
+        <!-- Tasks Button -->
+        <router-link 
+          to="/student/tasks"
+          :class="['flex items-center rounded-2xl sm:rounded-full hover:bg-[#FF579A]/10 hover:text-[#FF579A] transition-all group', sidebarOpen ? 'mx-4 px-4 py-3' : 'mx-auto justify-center w-14 h-14']"
+          active-class="bg-[#FF579A] !text-white hover:bg-[#FF579A]/90 shadow-sm"
+        >
+          <div class="flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <i class="ph ph-list-checks text-2xl"></i>
+          </div>
+          <span v-show="sidebarOpen" class="text-base font-medium tracking-wide ml-4 whitespace-nowrap">My Tasks</span>
+        </router-link>
+
+        <!-- My Section (Only if enrolled) -->
+        <router-link 
+          v-if="section"
+          to="/student/dashboard"
+          class="flex items-center mt-auto transition-all group justify-center no-underline border-t border-gray-200/50"
+          :class="sidebarOpen ? 'w-full px-6 py-5 hover:bg-black/5' : 'mx-auto w-[88px] py-6 hover:bg-black/5'"
+        >
+          <div :class="['rounded-2xl bg-white text-[#FF579A] flex items-center justify-center font-bold text-xl flex-shrink-0 shadow-sm transition-all border border-pink-100', sidebarOpen ? 'w-12 h-12 group-hover:rotate-6' : 'w-12 h-12']">
+            {{ section.section_code?.charAt(0).toUpperCase() || section.section_name?.charAt(0).toUpperCase() }}
+          </div>
+          <div v-show="sidebarOpen" class="ml-4 flex-1 overflow-hidden">
+            <span class="block truncate text-sm font-black tracking-tight uppercase text-gray-800">
+              {{ section.section_code || section.section_name }}
+            </span>
+            <span class="text-[10px] text-gray-500 font-bold flex items-center gap-1.5 mt-0.5">
+              <span class="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.6)]"></span>
+              {{ section.activities_count || 0 }} Activities
+            </span>
+          </div>
+        </router-link>
+      </div>
     </div>
   </div>
 </template>

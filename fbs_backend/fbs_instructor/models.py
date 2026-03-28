@@ -148,7 +148,8 @@ class ActivityPassenger(models.Model):
         choices=[('none', 'Regular'), ('senior', 'Senior Citizen'), ('pwd', 'PWD')], 
         default='none'
     )
-    gender = models.CharField(max_length=10, choices=[('mr', 'Mr.'), ('mrs', 'Mrs.')])
+    gender = models.CharField(max_length=10, choices=[('MR', 'Mr.'), ('MRS', 'Mrs.'), ('MS', 'Ms.'), ('mr', 'Mr.'), ('mrs', 'Mrs.')])
+
     date_of_birth = models.DateField()
     passport_number = models.CharField(max_length=50, blank=True, null=True)
     passport_expiry_date = models.DateField(null=True, blank=True)
@@ -276,3 +277,33 @@ class ScheduleNotificationLog(models.Model):
 
     def __str__(self):
         return f"Notif for {self.section.section_name} on {self.date_sent} at {self.schedule_id}"
+
+
+class InstructorLog(models.Model):
+    """
+    Audit log for instructor actions and student activities within their domain.
+    """
+    instructor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='instructor_logs')
+    actor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='actor_logs', null=True, blank=True)
+    student = models.ForeignKey('app.Students', on_delete=models.SET_NULL, null=True, blank=True)
+    
+    action_type = models.CharField(max_length=100) # LOGIN, LOGOUT, SECTION_CREATED, ACTIVITY_CREATED, STUDENT_ENROLLED, ACTIVITY_TAKEN
+    section_name = models.CharField(max_length=255, null=True, blank=True)
+    activity_name = models.CharField(max_length=255, null=True, blank=True)
+    
+    details = models.TextField(null=True, blank=True)
+    device = models.CharField(max_length=255, null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    
+    is_csv = models.BooleanField(default=False)
+    
+    login_time = models.DateTimeField(null=True, blank=True)
+    logout_time = models.DateTimeField(null=True, blank=True)
+    
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"{self.action_type} - {self.actor.username if self.actor else 'System'} - {self.timestamp}"

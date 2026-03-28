@@ -21,6 +21,7 @@ const pollingInterval = ref(null);
 const processingStatus = ref('');
 const showIncompleteState = ref(false);
 const hasRedirected = ref(false); // Guard against double-redirects
+const isPolling = ref(false); // Mutex lock
 
 // Get parameters from URL
 const urlParams = new URLSearchParams(window.location.search);
@@ -49,16 +50,19 @@ const getLoadingMessage = () => {
 
 // Poll payment status - REDIRECTS TO SUCCESS PAGE WHEN PAID
 const pollPaymentStatus = async (bookingId) => {
-  // Stop if we've already redirected to avoid multiple navigations
-  if (hasRedirected.value) {
-    clearInterval(pollingInterval.value);
+  // Stop if we've already redirected or if a poll is currently running
+  if (hasRedirected.value || isPolling.value) {
+    if (hasRedirected.value) clearInterval(pollingInterval.value);
     return;
   }
+  
+  isPolling.value = true;
 
   if (pollingCount.value >= maxPollingAttempts) {
     clearInterval(pollingInterval.value);
     showIncompleteState.value = true;
     loading.value = false;
+    isPolling.value = false;
     return;
   }
 
@@ -118,6 +122,8 @@ const pollPaymentStatus = async (bookingId) => {
   } catch (error) {
     console.error('Polling error:', error);
     processingStatus.value = 'Connection error, retrying...';
+  } finally {
+    isPolling.value = false;
   }
 };
 

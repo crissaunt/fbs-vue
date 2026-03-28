@@ -165,14 +165,20 @@ class DashboardViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def active_flights_map(self, request):
         now = timezone.now()
+        
+        # A flight is considered active (showing on radar) if it's currently flying (On Flight)
+        # or about to fly (Closed for boarding but hasn't departed yet)
         active_schedules = Schedule.objects.filter(
-            status__in=['On Flight', 'Closed'],
-            arrival_time__gt=now
+            Q(status__in=['On Flight', 'Closed']) | 
+            Q(
+                departure_time__lte=now + timedelta(minutes=30),
+                arrival_time__gt=now
+            )
         ).select_related(
             'flight__route__origin_airport',
             'flight__route__destination_airport',
             'flight__airline'
-        )
+        ).distinct()
         
         data = []
         for s in active_schedules:
@@ -187,7 +193,7 @@ class DashboardViewSet(viewsets.ViewSet):
                     'destination': {'lat': float(dest.latitude), 'lng': float(dest.longitude), 'city': dest.city, 'code': dest.code},
                     'departure_time': s.departure_time,
                     'arrival_time': s.arrival_time,
-                    'status': s.status
+                    'status': s.automatic_status
                 })
         return Response(data)
 

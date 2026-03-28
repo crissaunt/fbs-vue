@@ -235,7 +235,7 @@ const fetchMonthPrices = async () => {
     const startDate = new Date(currentYear.value, currentMonth.value, 1).toISOString().split('T')[0];
     const endDate = new Date(currentYear.value, currentMonth.value + 1, 0).toISOString().split('T')[0];
     
-    const response = await axios.get(`${import.meta.env.VITE_API_URL}api/schedules/price-calendar/`, {
+    const response = await axios.get(`${import.meta.env.VITE_API_URL}flightapp/api/schedules/price-calendar/`, {
       params: {
         origin: props.origin,
         destination: props.destination,

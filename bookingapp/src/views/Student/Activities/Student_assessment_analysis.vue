@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 font-sans text-gray-900 p-8">
+  <div class="min-h-screen bg-gray-200 font-sans text-gray-900 p-8">
     <!-- Navigation Back Link -->
     <div class="max-w-7xl mx-auto mb-6 flex justify-between items-center">
       <button @click="goBack" class="text-sm font-semibold text-gray-500 hover:text-black transition-all flex items-center gap-2">
@@ -113,7 +113,7 @@
             </table>
 
             <!-- One-Way Verification Table Inline -->
-            <div v-if="activity?.required_trip_type === 'one_way'" class="p-0 border-t border-gray-100">
+            <div v-if="normalizedTripType === 'one_way'" class="p-0 border-t border-gray-100">
                <table class="w-full border-collapse text-left text-xs uppercase">
                  <thead class="bg-gray-50/20 text-[9px] font-black tracking-widest text-gray-400 border-b border-gray-100">
                    <tr>
@@ -147,7 +147,7 @@
             </div>
 
             <!-- Round-Trip Verification Table Inline -->
-            <div v-if="activity?.required_trip_type === 'round_trip'" class="p-0 border-t border-gray-100">
+            <div v-if="normalizedTripType === 'round_trip'" class="p-0 border-t border-gray-100">
                <table class="w-full border-collapse text-left text-xs uppercase">
                  <thead class="bg-gray-50/20 text-[9px] font-black tracking-widest text-gray-400 border-b border-gray-100">
                    <tr>
@@ -158,6 +158,12 @@
                    </tr>
                  </thead>
                  <tbody class="divide-y divide-gray-100 font-bold">
+                    <tr :class="matches.origin && matches.destination ? 'bg-emerald-50/10' : 'bg-red-50/10'">
+                      <td class="px-8 py-3 text-gray-400">Outbound Route</td>
+                      <td class="px-8 py-3 text-gray-800">{{ activity.required_origin }} → {{ activity.required_destination }}</td>
+                      <td class="px-8 py-3" :class="matches.origin && matches.destination ? 'text-emerald-700' : 'text-red-700'">{{ actualOrigin }} → {{ actualDestination }}</td>
+                      <td class="px-8 py-3 pr-10 text-right">{{ matches.origin && matches.destination ? '✓' : '✕' }}</td>
+                    </tr>
                    <tr :class="matches.return_origin && matches.return_destination ? 'bg-emerald-50/10' : 'bg-red-50/10'">
                      <td class="px-8 py-3 text-gray-400">Return Route</td>
                      <td class="px-8 py-3 text-gray-800">{{ activity.required_destination }} → {{ activity.required_origin }}</td>
@@ -181,7 +187,7 @@
             </div>
 
             <!-- Multi-City Table Inline -->
-            <div v-if="activity?.required_trip_type === 'multi_city'" class="p-0 border-t border-gray-100">
+            <div v-if="normalizedTripType === 'multi_city'" class="p-0 border-t border-gray-100">
                <table class="w-full border-collapse text-left text-xs uppercase">
                  <thead class="bg-gray-50/20 text-[9px] font-black tracking-widest text-gray-400 border-b border-gray-100">
                    <tr>
@@ -774,19 +780,17 @@ const formatClass = (cls) => {
 };
 
 const actualOrigin = computed(() => {
-    if (!booking.value?.details?.length) return '-';
-    // Prefer the leg that starts at the required origin
-    const reqOrigin = activity.value?.required_origin?.toLowerCase();
-    const startLeg = reqOrigin ? booking.value.details.find(d => compareStrings(d.schedule?.origin, reqOrigin)) : null;
-    return (startLeg || booking.value.details[0]).schedule?.origin || '-';
+    if (!actualSegments.value || actualSegments.value.length === 0) return 'NOT BOOKED';
+    return actualSegments.value[0].origin || 'NOT BOOKED';
 });
 
 const actualDestination = computed(() => {
-    if (!booking.value?.details?.length) return '-';
-    // Prefer the leg that ends at the required destination
-    const reqDest = activity.value?.required_destination?.toLowerCase();
-    const endLeg = reqDest ? [...booking.value.details].reverse().find(d => compareStrings(d.schedule?.destination, reqDest)) : null;
-    return (endLeg || booking.value.details[booking.value.details.length - 1]).schedule?.destination || '-';
+    if (!actualSegments.value || actualSegments.value.length === 0) return 'NOT BOOKED';
+    const normType = normalizedTripType.value;
+    if (normType === 'round_trip' && actualSegments.value.length > 1) {
+        return actualSegments.value[0].destination || 'NOT BOOKED';
+    }
+    return actualSegments.value[actualSegments.value.length - 1].destination || 'NOT BOOKED';
 });
 const actualClass = computed(() => {
     if (!booking.value?.details || booking.value.details.length === 0) return 'N/A';
@@ -805,12 +809,8 @@ const actualClass = computed(() => {
     return list.length === 1 ? list[0] : `Mixed (${list.join(', ')})`;
 });
 const actualDepartureDate = computed(() => {
-    const detail = booking.value?.details?.find(d => {
-        const reqOrigin = activity.value?.required_origin?.toLowerCase();
-        return !reqOrigin || d.schedule?.origin?.toLowerCase() === reqOrigin;
-    });
-    const date = detail?.schedule?.departure_time;
-    return date ? new Date(date).toISOString().split('T')[0] : '-';
+    if (!actualSegments.value || actualSegments.value.length === 0) return 'NOT BOOKED';
+    return actualSegments.value[0].departure_date || 'NOT BOOKED';
 });
 
 const actualRoute = computed(() => {
@@ -848,30 +848,20 @@ const requiredRoute = computed(() => {
 
 const actualReturnDate = computed(() => {
     if (normalizedTripType.value !== 'round_trip') return null;
-    const detail = booking.value?.details?.find(d => {
-        const reqOrigin = activity.value?.required_origin?.toLowerCase();
-        return !reqOrigin || d.schedule?.destination?.toLowerCase() === reqOrigin;
-    });
-    const date = detail?.schedule?.departure_time;
-    return date ? new Date(date).toISOString().split('T')[0] : '-';
+    if (!actualSegments.value || actualSegments.value.length < 2) return 'NOT BOOKED';
+    return actualSegments.value[1].departure_date || 'NOT BOOKED';
 });
 
 const actualReturnOrigin = computed(() => {
     if (normalizedTripType.value !== 'round_trip') return null;
-    const detail = booking.value?.details?.find(d => {
-        const reqOrigin = activity.value?.required_origin?.toLowerCase();
-        return !reqOrigin || d.schedule?.destination?.toLowerCase() === reqOrigin;
-    });
-    return detail?.schedule?.origin || '-';
+    if (!actualSegments.value || actualSegments.value.length < 2) return 'NOT BOOKED';
+    return actualSegments.value[1].origin || 'NOT BOOKED';
 });
 
 const actualReturnDestination = computed(() => {
     if (normalizedTripType.value !== 'round_trip') return null;
-    const detail = booking.value?.details?.find(d => {
-        const reqOrigin = activity.value?.required_origin?.toLowerCase();
-        return !reqOrigin || d.schedule?.destination?.toLowerCase() === reqOrigin;
-    });
-    return detail?.schedule?.destination || '-';
+    if (!actualSegments.value || actualSegments.value.length < 2) return 'NOT BOOKED';
+    return actualSegments.value[1].destination || 'NOT BOOKED';
 });
 
 // Build actual booking segments (one unique entry per flight leg, sorted by departure_time)
@@ -984,10 +974,15 @@ const matches = computed(() => {
     if (reqTripTypeNorm === 'multi_city' && activity.value.segments?.length) {
         activity.value.segments.forEach((expected, idx) => {
             // Find the best matching actual segment regardless of index order
-            const actualMatched = actualSegments.value.find(as => 
+            let actualMatched = actualSegments.value.find(as => 
                 compareStrings(expected.origin, as.origin) && 
                 compareStrings(expected.destination, as.destination)
             );
+            
+            if (!actualMatched) {
+                // Fallback to positional matching
+                actualMatched = actualSegments.value[idx] || null;
+            }
             
             // If we found it, check the date too
             const dateMatched = actualMatched ? (!expected.departure_date || normalizeDate(expected.departure_date) === normalizeDate(actualMatched.departure_date)) : false;
@@ -1019,9 +1014,14 @@ const matches = computed(() => {
             // Find match among unused booked passengers
             let actualIdx = bookedPassengers.findIndex((p, idx) => 
                 !usedIndices.has(idx) && 
-                p.first_name?.toLowerCase() === expected.first_name?.toLowerCase() && 
-                p.last_name?.toLowerCase() === expected.last_name?.toLowerCase()
+                p.first_name?.toLowerCase().trim() === expected.first_name?.toLowerCase().trim() && 
+                p.last_name?.toLowerCase().trim() === expected.last_name?.toLowerCase().trim()
             );
+
+            // Fallback to positional to display actual student work
+            if (actualIdx === -1) {
+                actualIdx = bookedPassengers.findIndex((p, idx) => !usedIndices.has(idx));
+            }
 
             let actual = null;
             if (actualIdx !== -1) {

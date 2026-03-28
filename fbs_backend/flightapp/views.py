@@ -30,7 +30,8 @@ from app.models import (
     SeatClass, PassengerInfo, Airline, Booking, BookingDetail,
     MealOption, BaggageOption, AssistanceService, AddOn, AddOnType,
     TaxType, PassengerTypeTaxRate, BookingTax, TravelInsurancePlan, 
-    BookingInsuranceRecord, Aircraft, BookingContact, SeatClassFeature
+    BookingInsuranceRecord, Aircraft, BookingContact, SeatClassFeature,
+    TrackLog
 )
 from .serializers import *
 from .services.paymongo_service import paymongo_service
@@ -1514,7 +1515,13 @@ def create_booking(request):
                 booking_session_id=data.get('booking_session_id')
             )
             
-            print(f"DEBUG: Booking created with ID: {booking.id} (total pending backend calculation)")
+            # Log the action
+            TrackLog.objects.create(
+                user=user,
+                action=f"Student Operation: Created new booking {booking.id} (Status: {booking.status})"
+            )
+            
+            print(f"DEBUG: Booking created with ID: {booking.id}")
             
             contact_info = data.get('contact_info', {})
             booking_contact = _create_booking_contact(booking, contact_info)

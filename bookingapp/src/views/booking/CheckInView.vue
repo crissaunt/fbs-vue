@@ -160,7 +160,7 @@
                   <input 
                     v-model="form.hasDeclaredSafety"
                     type="checkbox" 
-                    class="mt-1 w-5 h-5 rounded border-slate-700 bg-slate-800 text-blue-500 focus:ring-blue-500/50"
+                    class="mt-1 w-5 h-5 rounded border-slate-700 bg-slate-800 focus:ring-blue-500/50 appearance-none transition-all duration-200 checked:bg-blue-500 checked:border-blue-500 checked:shadow-lg checked:shadow-blue-500/20 custom-checkbox"
                   >
                   <span class="text-sm font-medium text-slate-300 group-hover:text-blue-200 transition-colors">
                     I acknowledge that I have read and understood the restricted items policy and confirm that my baggage does not contain any prohibited items.
@@ -403,15 +403,13 @@ const reset = () => {
 }
 
 /* Custom Checkbox */
-input[type="checkbox"] {
-  @apply appearance-none transition-all duration-200;
+input[type="checkbox"].custom-checkbox {
   background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
 }
 
-input[type="checkbox"]:checked {
+input[type="checkbox"].custom-checkbox:checked {
   background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
-  @apply bg-blue-500 border-blue-500 shadow-lg shadow-blue-500/20;
 }
 </style>

@@ -91,6 +91,18 @@ const routes = [
     meta: { requiresAuth: true, role: 'instructor' }
   },
   {
+    path: '/instructor/activity/:activityId/toplist',
+    name: 'ActivityToplist',
+    component: () => import('@/views/Instructor/Activity/Activity_toplist.vue'),
+    meta: { requiresAuth: true, role: 'instructor' }
+  },
+  {
+    path: '/instructor/logs',
+    name: 'InstructorLogs',
+    component: () => import('@/views/Instructor/Activity/instructor_logs.vue'),
+    meta: { requiresAuth: true, role: 'instructor' }
+  },
+  {
     path: '/profile',
     name: 'Profile',
     component: ProfileView,
@@ -306,16 +318,21 @@ router.beforeEach((to, from, next) => {
     }
 
     // Role-based Route Protection
-    if (to.meta.role && userRole && userRole !== to.meta.role) {
-      console.warn(`⛔ User role '${userRole}' blocked from accessing '${to.meta.role}' route`);
-      notificationStore.error('You do not have permission to access that page.');
-      if (userRole === 'instructor') {
-        return next('/instructor/dashboard');
-      } else if (userRole === 'student') {
-        return next('/student/dashboard');
-      } else {
-        // Admin or unknown role: no dedicated route in this app
-        return next('/login');
+    if (to.meta.role && userRole) {
+      const allowedRoles = Array.isArray(to.meta.role) ? to.meta.role : [to.meta.role];
+      if (!allowedRoles.includes(userRole)) {
+        console.warn(`⛔ User role '${userRole}' blocked from accessing '${to.meta.role}' route`);
+        notificationStore.error('You do not have permission to access that page.');
+        
+        if (userRole === 'instructor') {
+          return next('/instructor/dashboard');
+        } else if (userRole === 'student') {
+          return next('/student/dashboard');
+        } else if (['lms_admin', 'flight_admin', 'superadmin'].includes(userRole)) {
+          return next('/admin/dashboard');
+        } else {
+          return next('/login');
+        }
       }
     }
 

@@ -8,7 +8,7 @@
         {{ activity.title.charAt(0).toUpperCase() }}
       </div>
       <div class="flex-1">
-        <div class="flex items-start justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
           <div>
             <h4 class="text-base font-bold text-gray-800 mb-1">{{ activity.title }}</h4>
             <p class="text-xs text-gray-500 mb-2">{{ activity.section_code || activity.section_name }}</p>
@@ -19,17 +19,19 @@
           >
             ✓ Completed
           </span>
-          <span 
-            :class="[
-              'px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase',
-              activity.is_active 
-                ? 'bg-green-50 text-green-700' 
-                : 'bg-gray-100 text-gray-600'
-            ]"
-          >
-            {{ activity.is_active ? 'Active' : 'Inactive' }}
-          </span>
-        </div>
+            <span 
+              :class="[
+                'px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase w-fit',
+                isOverdue && !activity.completed && activity.status !== 'submitted' && activity.status !== 'graded'
+                  ? 'bg-red-50 text-red-700 border border-red-100'
+                  : activity.is_active 
+                    ? 'bg-green-50 text-green-700' 
+                    : 'bg-gray-100 text-gray-600'
+              ]"
+            >
+              {{ isOverdue && !activity.completed && activity.status !== 'submitted' && activity.status !== 'graded' ? 'Overdue' : (activity.is_active ? 'Active' : 'Inactive') }}
+            </span>
+          </div>
         <div class="flex flex-wrap gap-1.5">
           <span class="px-2.5 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-full uppercase">
             {{ activity.activity_type }}
@@ -48,6 +50,12 @@
           >
             Score: {{ Math.round((activity.grade / activity.total_points) * 100) }}%
           </span>
+          <span 
+            v-else-if="activity.status === 'graded' || activity.status === 'submitted' || activity.completed"
+            class="px-2.5 py-0.5 bg-amber-50 text-amber-600 text-[10px] font-bold rounded-full uppercase border border-amber-100"
+          >
+            Pending Release
+          </span>
         </div>
       </div>
     </div>
@@ -56,7 +64,7 @@
       {{ activity.description || 'No description provided.' }}
     </p>
 
-    <div class="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-gray-100">
       <div class="flex flex-col gap-1">
         <span class="text-[11px] text-gray-600"><strong>Weight:</strong> 100%</span>
         <span class="text-[11px] text-gray-600"><strong>Trip:</strong> {{ activity.required_trip_type }}</span>
@@ -75,7 +83,7 @@
       </div>
     </div>
 
-    <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+    <div class="mt-3 pt-3 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div class="flex flex-col">
         <span class="text-[11px] text-gray-500">
           Assigned: {{ formatDate(activity.assigned_at) }}
@@ -89,10 +97,10 @@
           @click.stop="$emit('view', activity.id)"
           :disabled="activity.completed"
           :class="[
-            'px-4 py-2 text-white text-xs font-semibold rounded-lg transition-colors',
+            'w-full sm:w-auto px-4 py-2 text-white text-xs font-semibold rounded-sm transition-colors',
             activity.completed 
               ? 'bg-gray-400 cursor-not-allowed' 
-              : 'bg-pink-500 hover:bg-pink-600'
+              : 'bg-pink-500 hover:bg-pink-500/80 cursor-pointer'
           ]"
         >
           {{ activity.completed ? 'Finished' : 'View Details' }}
@@ -109,6 +117,18 @@ export default {
     activity: {
       type: Object,
       required: true
+    }
+  },
+  computed: {
+    isOverdue() {
+      if (!this.activity.due_date) return false;
+      const now = new Date();
+      const dueDate = new Date(this.activity.due_date);
+      // If it's just a date string (YYYY-MM-DD), set to end of day
+      if (typeof this.activity.due_date === 'string' && this.activity.due_date.length <= 10) {
+        dueDate.setHours(23, 59, 59, 999);
+      }
+      return now > dueDate;
     }
   },
   methods: {

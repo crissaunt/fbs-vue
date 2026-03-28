@@ -1,5 +1,5 @@
-<template>
-  <div class="p-8 max-w-7xl mx-auto">
+<template class="">
+  <div class="p-8 min-w-7xl mx-auto">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
       <div>
         <h1 class="text-4xl font-black text-gray-900 tracking-tight">Tasks & Activities</h1>
@@ -43,8 +43,11 @@
               <span class="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-tighter">
                 {{ activity.status || 'Assigned' }}
               </span>
-              <span v-if="activity.student_score" class="text-2xl font-black">
-                {{ activity.student_score }}<span class="text-xs opacity-60">/{{ activity.total_points }}</span>
+              <span v-if="activity.grade !== null" class="text-2xl font-black">
+                {{ activity.grade }}<span class="text-xs opacity-60">/{{ activity.total_points }}</span>
+              </span>
+              <span v-else-if="activity.status === 'graded' || activity.status === 'submitted'" class="px-2 py-1 bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 rounded text-[10px] font-black uppercase tracking-widest flex items-center shadow-inner">
+                Pending Release
               </span>
             </div>
             <h3 class="text-xl font-bold leading-tight line-clamp-2">{{ activity.title }}</h3>

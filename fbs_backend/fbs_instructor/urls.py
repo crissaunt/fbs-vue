@@ -28,9 +28,15 @@ from .views import (
     get_eligible_students,
     get_available_travel_classes,
     get_available_addons,
+    get_instructor_logs,
+    log_report_print,
 )
 
 urlpatterns = [
+    # Logs
+    path('instructor/logs/', get_instructor_logs, name='get_instructor_logs'),
+    path('instructor/logs/print-report/', log_report_print, name='log_report_print'),
+    
     # Authentication
     path('auth/register/', register_view, name='register'),
     path('auth/login/', Login_view, name='login'),

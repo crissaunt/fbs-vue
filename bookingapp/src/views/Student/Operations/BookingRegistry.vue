@@ -1,5 +1,5 @@
 <template>
-  <div class="p-8 bg-gray-50 min-h-screen poppins">
+  <div class="p-8 bg-gray-200 min-h-screen poppins">
     <!-- Header -->
     <div class="mb-8 flex justify-between items-center bg-white p-6 rounded-[2px] border border-gray-200 shadow-sm relative overflow-hidden group">
       <div class="absolute inset-y-0 left-0 w-1.5 bg-[#fe3787]"></div>

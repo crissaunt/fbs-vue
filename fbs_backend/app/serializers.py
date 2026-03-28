@@ -528,11 +528,11 @@ class CheckInDetailSerializer(serializers.ModelSerializer):
         source='booking_detail'
     )
     
-    passenger_name = serializers.ReadOnlyField(source='passenger_name')
-    flight_number = serializers.ReadOnlyField(source='flight_number')
+    passenger_name = serializers.ReadOnlyField()
+    flight_number = serializers.ReadOnlyField()
     route_display = serializers.ReadOnlyField(source='route')
-    departure_time = serializers.ReadOnlyField(source='departure_time')
-    seat_number = serializers.ReadOnlyField(source='seat_number')
+    departure_time = serializers.ReadOnlyField()
+    seat_number = serializers.ReadOnlyField()
     
     # For creating check-ins
     seat_assignment = serializers.CharField(required=False, allow_blank=True)
@@ -605,11 +605,11 @@ class CheckInDetailSerializer(serializers.ModelSerializer):
 
 class CheckInListSerializer(serializers.ModelSerializer):
     """Simplified serializer for check-in list view"""
-    passenger_name = serializers.ReadOnlyField(source='passenger_name')
-    flight_number = serializers.ReadOnlyField(source='flight_number')
-    route = serializers.ReadOnlyField(source='route')
-    departure_time = serializers.DateTimeField()
-    seat_number = serializers.ReadOnlyField(source='seat_number')
+    passenger_name = serializers.ReadOnlyField()
+    flight_number = serializers.ReadOnlyField()
+    route = serializers.ReadOnlyField()
+    departure_time = serializers.ReadOnlyField()
+    seat_number = serializers.ReadOnlyField()
     
     class Meta:
         model = CheckInDetail

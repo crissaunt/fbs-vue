@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col h-screen bg-gray-50">
+  <div class="flex flex-col h-screen bg-gray-200">
     <!-- TOP HEADER -->
     <DashboardHeader 
       :student="userStore.studentProfile || {}" 
@@ -8,15 +8,16 @@
     />
 
     <!-- MAIN CONTENT WITH SIDEBAR -->
-    <div class="flex flex-1 overflow-hidden">
-      <!-- LEFT SIDEBAR -->
+    <div class="flex flex-1 overflow-hidden relative">
+      <!-- LEFT SIDEBAR - Becomes a drawer on mobile -->
       <DashboardSidebar 
         :sidebar-open="sidebarOpen" 
         :section="section" 
+        @close-sidebar="sidebarOpen = false"
       />
 
       <!-- RIGHT CONTENT AREA -->
-      <main class="flex-1 flex flex-col bg-gray-50 overflow-y-auto">
+      <main class="flex-1 flex flex-col bg-gray-200 overflow-y-auto">
         <router-view v-if="!loading" :section="section" :activities="activities" />
         
         <!-- Loading State -->
@@ -45,7 +46,7 @@ export default {
   setup() {
     const userStore = useUserStore()
     const router = useRouter()
-    const sidebarOpen = ref(false)
+    const sidebarOpen = ref(window.innerWidth >= 1024)
     const section = ref(null)
     const activities = ref([])
     const loading = ref(true)

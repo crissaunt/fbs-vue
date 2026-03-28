@@ -87,26 +87,27 @@
           <div class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-widest">
             {{ flight.flight_duration || formatDuration(flight.duration_minutes) }}
           </div>
-          
-          <!-- The Line -->
-          <div class="w-full relative flex items-center justify-center h-2">
+                  <!-- The Line -->
+          <div class="w-full relative flex items-center h-2">
             <!-- connecting line -->
             <div class="absolute left-0 right-0 h-[2px] bg-gray-300"></div>
             
             <!-- Origin Dot -->
-            <div class="absolute left-0 w-2 h-2 rounded-full border-2 border-pink-500 bg-white z-10"></div>
+            <div class="absolute left-0 w-2 h-2 rounded-full border-2 border-pink-500 bg-white z-10 transition-transform hover:scale-125"></div>
             
-            <!-- Layover Dots (if any) -->
-            <div v-if="(flight.total_stops || 0) > 0" class="w-3 h-3 rounded-full bg-orange-200 border-2 border-orange-500 z-10 shadow-sm relative group cursor-help">
-               <!-- Tooltip for stop -->
-               <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-gray-800 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap z-50">
-                 {{ flight.total_stops }} Stop(s)
-               </div>
-            </div>
-            <div v-else class="text-pink-300 z-10 bg-white px-1">
-              <svg class="w-4 h-4 transform rotate-90" fill="currentColor" viewBox="0 0 20 20">
-                 <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
-              </svg>
+            <!-- Layover Dots (Dynamic for multiple stops) -->
+            <div v-if="(flight.total_stops || 0) > 0" class="flex justify-around absolute left-0 right-0 px-8">
+              <div v-for="n in (flight.total_stops || 0)" :key="n" 
+                class="w-3 h-3 rounded-full bg-orange-200 border-2 border-orange-500 z-10 shadow-sm relative group cursor-help hover:bg-orange-400 hover:border-orange-600 transition-all">
+                <div class="hidden group-hover:block absolute -top-10 left-1/2 -translate-x-1/2 bg-orange-500 text-white text-[9px] font-bold py-1.5 px-3 rounded-md shadow-xl z-20 whitespace-nowrap">
+                  <span class="flex items-center gap-1.5">
+                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Stop {{ n }} ({{ flight.aircraft || 'Commercial Jet' }})
+                  </span>
+                </div>
+              </div>
             </div>
             
             <!-- Destination Dot -->

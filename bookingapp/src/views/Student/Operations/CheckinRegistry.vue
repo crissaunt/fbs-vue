@@ -1,5 +1,5 @@
 <template>
-  <div class="p-8 bg-gray-50 min-h-screen poppins">
+  <div class="p-8 bg-gray-200 min-h-screen poppins">
     <!-- Header -->
     <div class="mb-8 flex justify-between items-center bg-white p-6 rounded-[2px] border border-gray-200 shadow-sm relative overflow-hidden group">
       <div class="absolute inset-y-0 left-0 w-1.5 bg-[#fe3787]"></div>
@@ -185,10 +185,10 @@ const fetchCheckIns = async () => {
     })
     checkIns.value = (res.data.results || res.data).map(c => ({
       ...c,
-      passenger_name: `${c.passenger?.first_name || ''} ${c.passenger?.last_name || ''}`.trim().toUpperCase(),
-      flight_number: c.booking_detail?.schedule?.flight?.flight_number || 'N/A',
-      route: c.booking_detail?.schedule?.flight?.route?.name || 'N/A',
-      seat_number: c.booking_detail?.seat?.seat_number || 'TBD',
+      passenger_name: (c.passenger_name || '').toUpperCase(),
+      flight_number: c.flight_number || 'N/A',
+      route: c.route || 'N/A',
+      seat_number: c.seat_number || 'TBD',
       status: c.status || 'pending'
     })).sort((a, b) => b.id - a.id)
   } catch (err) { console.error(err) } finally { loading.value = false }

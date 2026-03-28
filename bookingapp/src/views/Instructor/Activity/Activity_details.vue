@@ -42,6 +42,17 @@
             </svg>
             <span v-show="sidebarOpen" class="text-sm font-medium ml-3">Home</span>
           </button>
+
+          <button @click="router.push('/instructor/logs')" class="flex items-center py-3 hover:bg-pink-600 transition-colors border-b border-pink-400/20 justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            <span v-show="sidebarOpen" class="text-sm font-medium ml-3">Activity Logs</span>
+          </button>
           <div 
             v-for="section in sections" 
             :key="section.id" 
@@ -79,6 +90,12 @@
                 :class="[activeTab === 'submissions' ? 'text-green-700 border-b-2 border-green-700 pb-1' : 'text-gray-400 cursor-pointer hover:text-gray-600']"
               >
                 Student work
+              </span>
+                            <span 
+                @click="router.push(`/instructor/activity/${route.params.activityId}/toplist`)"
+                class="text-gray-400 cursor-pointer hover:text-gray-600"
+              >
+                Overview
               </span>
             </div>
           </div>
@@ -260,7 +277,7 @@
                         <div v-if="hasValue(p.gender)">
                           <label class="text-xs font-bold text-red-500 uppercase tracking-tight">Gender*</label>
                           <div class="mt-1 p-3 border border-gray-200 rounded-lg text-xs bg-gray-50/50 text-gray-700">
-                            {{ p.gender }}
+                            {{ formatGender(p.gender) }}
                           </div>
                         </div>
                         
@@ -492,84 +509,79 @@
                   <table class="w-full text-left border-collapse">
                     <thead class="bg-gray-50 border-b border-gray-100">
                       <tr>
-                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Student</th>
-                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Accuracy</th>
-                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Tech Skill</th>
-                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Organization</th>
-                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Completeness</th>
-                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Professionalism</th>
-                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Grade</th>
-                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Released</th>
-                        <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest print:hidden">Action</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest">Student</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Accuracy</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Tech</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Org</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Comp</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Prof</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest">Grade</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Sub</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Rel</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest print:hidden text-right">Action</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-50">
                       <tr v-for="sub in submissions" :key="sub.student_id" class="hover:bg-gray-50/50 transition-colors">
-                        <td class="px-4 py-5">
-                          <div class="font-bold text-sm text-gray-900">{{ sub.first_name }} {{ sub.last_name }}</div>
-                          <div class="text-[10px] text-gray-400 font-medium tracking-tight">{{ sub.student_number }}</div>
-                          <div class="mt-1 print:hidden">
-                            <span :class="['px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider', getStatusClass(sub.status)]">
-                              {{ getStatusLabel(sub.status) }}
-                            </span>
-                          </div>
+                        <td class="px-3 py-3">
+                          <div class="font-bold text-xs text-gray-900 truncate max-w-[120px]">{{ sub.first_name }} {{ sub.last_name }}</div>
+                          <div class="text-[9px] text-gray-400 font-medium tracking-tight uppercase">{{ sub.student_number }}</div>
                         </td>
-                        <td class="px-4 py-5 text-center">
-                          <span v-if="sub.booking" class="text-xs font-bold" :class="getRubricStats(sub).accuracy.ratio > 0 ? 'text-green-600' : 'text-gray-400'">
+                        <td class="px-3 py-3 text-center">
+                          <span v-if="sub.booking" class="text-[10px] font-bold" :class="getRubricStats(sub).accuracy.ratio > 0 ? 'text-green-600' : 'text-gray-400'">
                             {{ getRubricStats(sub).accuracy.level }}
                           </span>
                           <span v-else class="text-gray-300">-</span>
                         </td>
-                        <td class="px-4 py-5 text-center">
-                          <span v-if="sub.booking" class="text-xs font-bold" :class="getRubricStats(sub).tech.ratio > 0 ? 'text-blue-600' : 'text-gray-400'">
+                        <td class="px-3 py-3 text-center">
+                          <span v-if="sub.booking" class="text-[10px] font-bold" :class="getRubricStats(sub).tech.ratio > 0 ? 'text-blue-600' : 'text-gray-400'">
                             {{ getRubricStats(sub).tech.level }}
                           </span>
                           <span v-else class="text-gray-300">-</span>
                         </td>
-                        <td class="px-4 py-5 text-center">
-                          <span v-if="sub.booking" class="text-xs font-bold" :class="getRubricStats(sub).org.ratio > 0 ? 'text-amber-600' : 'text-gray-400'">
+                        <td class="px-3 py-3 text-center">
+                          <span v-if="sub.booking" class="text-[10px] font-bold" :class="getRubricStats(sub).org.ratio > 0 ? 'text-amber-600' : 'text-gray-400'">
                             {{ getRubricStats(sub).org.level }}
                           </span>
                           <span v-else class="text-gray-300">-</span>
                         </td>
-                        <td class="px-4 py-5 text-center">
-                          <span v-if="sub.booking" class="text-xs font-bold" :class="getRubricStats(sub).comp.ratio > 0 ? 'text-pink-600' : 'text-gray-400'">
+                        <td class="px-3 py-3 text-center">
+                          <span v-if="sub.booking" class="text-[10px] font-bold" :class="getRubricStats(sub).comp.ratio > 0 ? 'text-pink-600' : 'text-gray-400'">
                             {{ getRubricStats(sub).comp.level }}
                           </span>
                           <span v-else class="text-gray-300">-</span>
                         </td>
-                        <td class="px-4 py-5 text-center">
-                          <span v-if="sub.booking" class="text-xs font-bold" :class="getRubricStats(sub).prof.ratio > 0 ? 'text-purple-600' : 'text-gray-400'">
+                        <td class="px-3 py-3 text-center">
+                          <span v-if="sub.booking" class="text-[10px] font-bold" :class="getRubricStats(sub).prof.ratio > 0 ? 'text-purple-600' : 'text-gray-400'">
                             {{ getRubricStats(sub).prof.level }}
                           </span>
                           <span v-else class="text-gray-300">-</span>
                         </td>
-                        <td class="px-4 py-5 text-sm font-bold text-gray-700">
+                        <td class="px-3 py-3 text-[11px] font-bold text-gray-700">
                           <span v-if="sub.booking" class="text-pink-500 font-black">
                             {{ Math.round((getRubricStats(sub).total / (activity?.total_points || 100)) * 100) }}%
                           </span>
                           <span v-else class="text-gray-300">-</span>
                         </td>
-                        <td class="px-4 py-5 text-center">
-                          <div v-if="sub.is_released" class="flex flex-col items-center">
-                            <span class="text-[9px] font-black text-green-600 uppercase tracking-widest">Yes</span>
-                            <span class="text-green-500 text-[10px]">✓</span>
-                          </div>
-                          <div v-else-if="sub.grade !== null" class="flex flex-col items-center">
-                            <span class="text-[9px] font-black text-amber-500 uppercase tracking-widest">Pending</span>
-                            <span class="text-amber-500 text-[10px]">○</span>
-                          </div>
-                          <span v-else class="text-gray-300 text-[10px]">-</span>
+                        <td class="px-3 py-3 text-center">
+                          <span :class="['px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider', getStatusClass(sub.status)]">
+                            {{ sub.status === 'graded' ? 'DONE' : sub.status === 'submitted' ? 'SUB' : 'NOT' }}
+                          </span>
                         </td>
-                        <td class="px-4 py-5 print:hidden">
+                        <td class="px-3 py-3 text-center">
+                          <div v-if="sub.is_released" class="text-green-500 text-xs flex justify-center">✓</div>
+                          <div v-else-if="sub.grade !== null" class="text-amber-500 text-xs flex justify-center">○</div>
+                          <span v-else class="text-gray-300 text-[9px]">-</span>
+                        </td>
+                        <td class="px-3 py-3 print:hidden text-right">
                           <button 
                             v-if="sub.booking"
                             @click="goToAnalysis(sub)"
-                            class="text-[9px] font-black text-pink-500 hover:text-pink-700 uppercase tracking-widest border border-pink-100 px-3 py-1.5 rounded-lg hover:bg-pink-50 transition-all"
+                            class="text-[8px] font-black text-pink-500 hover:text-pink-700 uppercase tracking-widest border border-pink-100 px-2 py-1 rounded hover:bg-pink-50 transition-all shadow-sm"
                           >
-                            View Details
+                            Details
                           </button>
-                          <span v-else class="text-[9px] font-bold text-gray-300 uppercase tracking-widest">Pending</span>
+                          <span v-else class="text-[8px] font-bold text-gray-300 uppercase tracking-widest">Waiting</span>
                         </td>
                       </tr>
                     </tbody>
@@ -755,210 +767,39 @@ const route = useRoute()
 // --- Helper Functions ---
 // --- Granular Scoring Helpers ---
 const getRubricStats = (sub) => {
-    // If the backend has provided the exact rubric breakdown from the detailed calculation, use it!
-    if (sub.rubric_breakdown && Array.isArray(sub.rubric_breakdown) && sub.rubric_breakdown.length === 5) {
-        const rb = sub.rubric_breakdown;
-        return {
-            accuracy: { level: rb[0]?.level || 1, ratio: rb[0]?.ratio || 0, status: rb[0]?.status },
-            tech: { level: rb[1]?.level || 1, ratio: rb[1]?.ratio || 0, status: rb[1]?.status },
-            org: { level: rb[2]?.level || 1, ratio: rb[2]?.ratio || 0, status: rb[2]?.status },
-            comp: { level: rb[3]?.level || 1, ratio: rb[3]?.ratio || 0, status: rb[3]?.status },
-            prof: { level: rb[4]?.level || 1, ratio: rb[4]?.ratio || 0, status: rb[4]?.status },
-            total: sub.grade || 0
-        };
-    }
-
-    if (!sub.booking || !activity.value) return {
-        accuracy: { level: 1, ratio: 0 }, tech: { level: 1, ratio: 0 },
-        org: { level: 1, ratio: 0 }, comp: { level: 1, ratio: 0 },
-        prof: { level: 1, ratio: 0 }, total: 0
-    };
-
-    const b = sub.booking;
-    const a = activity.value;
-    const details = b.details || [];
+    // Determine the source of breakdown data
+    const rb = sub.rubric_breakdown || [];
+    const analysis = sub.analysis || {};
     
-    // Normalize data structure for matching
-    const actualOrigin = details[0]?.schedule?.origin || details[0]?.origin || '-';
-    // Handle multi-city destination properly by taking the last leg
-    const actualDestination = details.length > 0 ? (details[details.length - 1]?.schedule?.destination || details[details.length - 1]?.destination || actualOrigin) : '-';
-    const actualDepartureDate = details[0]?.schedule?.departure_time ? new Date(details[0].schedule.departure_time).toISOString().split('T')[0] : (details[0]?.departure_date || '-');
-    const actualClass = details[0]?.travel_class || details[0]?.schedule?.travel_class || '-';
-    const reqTripType = (a.required_trip_type || '').toLowerCase().replace(/\s+/g, '_');
-    const actTripType = (b.trip_type || '').toLowerCase().replace(/\s+/g, '_');
-    const isPassport = a.title?.toLowerCase().includes('passport');
-
-    // Robust comparators from detailed logic
-    const normalizeDate = (d) => {
-        if (!d) return null;
-        let ds = d instanceof Date ? d.toISOString() : String(d);
-        const match = ds.match(/(\d{4}-\d{2}-\d{2})/);
-        return match ? match[1] : ds.split('T')[0].trim();
-    };
-
-    const compareStrings = (str1, str2) => {
-        const s1 = (str1 || '').toString().trim().toLowerCase();
-        const s2 = (str2 || '').toString().trim().toLowerCase();
-        if (s1 === s2) return true;
-        if (s1 && s2 && s1.length >= 2 && s2.length >= 2 && (s1.includes(s2) || s2.includes(s1))) return true;
-        return false;
-    };
-
-    // 1. Accuracy
-    const accCrit = [];
-    accCrit.push({ label: 'Trip Type', isMet: actTripType === reqTripType });
-    
-    if (reqTripType === 'one_way') {
-        accCrit.push({ isMet: compareStrings(actualOrigin, a.required_origin) });
-        accCrit.push({ isMet: compareStrings(actualDestination, a.required_destination) });
-        accCrit.push({ isMet: !a.required_departure_date || a.required_departure_date === actualDepartureDate });
-    } else if (reqTripType === 'round_trip') {
-        const actualReturnDate = details.length > 1 && details[1].schedule?.departure_time ? new Date(details[1].schedule.departure_time).toISOString().split('T')[0] : '-';
-        accCrit.push({ isMet: compareStrings(actualOrigin, a.required_origin) });
-        accCrit.push({ isMet: compareStrings(actualDestination, a.required_destination) }); // actually first leg dest
-        accCrit.push({ isMet: !a.required_departure_date || a.required_departure_date === actualDepartureDate });
-        accCrit.push({ isMet: !a.required_return_date || a.required_return_date === actualReturnDate });
-    } else if (reqTripType === 'multi_city') {
-        if (a.segments?.length) {
-            a.segments.forEach((expectedSeg, idx) => {
-                const actualSeg = details[idx]; // Simplified segment matching
-                accCrit.push({ isMet: actualSeg && compareStrings(actualSeg.schedule?.origin || actualSeg.origin, expectedSeg.origin) });
-                accCrit.push({ isMet: actualSeg && compareStrings(actualSeg.schedule?.destination || actualSeg.destination, expectedSeg.destination) });
-                accCrit.push({ isMet: actualSeg && (!expectedSeg.departure_date || normalizeDate(expectedSeg.departure_date) === normalizeDate(actualSeg.schedule?.departure_time || actualSeg.departure_date)) });
-            });
-        }
-    } else {
-        accCrit.push({ isMet: compareStrings(actualOrigin, a.required_origin) });
-        accCrit.push({ isMet: compareStrings(actualDestination, a.required_destination) });
-        accCrit.push({ isMet: !a.required_departure_date || a.required_departure_date === actualDepartureDate });
-    }
-
-    const accRatio = accCrit.filter(c => c.isMet).length / accCrit.length;
-    let accLevel = 1;
-    if (accRatio === 1) accLevel = 5;
-    else if (accRatio >= 0.8) accLevel = 4;
-    else if (accRatio >= 0.5) accLevel = 3;
-    else if (accRatio >= 0.2) accLevel = 2;
-
-    // 2. Tech Skill
-    const techCrit = [
-        { isMet: (() => {
-            const norm = (s) => (s || '').toLowerCase().replace(/[\s_]/g, '').replace('class', '').trim();
-            const rClass = norm(a.required_travel_class);
-            const aClass = norm(actualClass);
-            if (!rClass) return true;
-            return rClass === aClass || aClass.includes(rClass) || rClass.includes(aClass);
-        })() },
-        { isMet: details.length > 0 }
-    ];
-    const techRatio = techCrit.filter(c => c.isMet).length / techCrit.length;
-    let techLevel = 1;
-    if (techRatio === 1) techLevel = 5;
-    else if (techRatio >= 0.7) techLevel = 4;
-    else if (techRatio >= 0.4) techLevel = 3;
-    else if (techRatio >= 0.1) techLevel = 2;
-
-    // 3. Organization (Passenger Details)
-    const orgFields = [];
-    const bookedPax = Array.from(new Set(details.map(d => d.passenger?.id || `${d.passenger?.first_name}_${d.passenger?.last_name}`)))
-        .map(id => details.find(d => (d.passenger?.id || `${d.passenger?.first_name}_${d.passenger?.last_name}`) === id)?.passenger);
-    
-    (a.passengers || []).forEach((expected) => {
-        let actualIdx = bookedPax.findIndex(p => 
-            p && p.first_name?.toLowerCase() === expected.first_name?.toLowerCase() && 
-            p.last_name?.toLowerCase() === expected.last_name?.toLowerCase()
-        );
-        const actual = actualIdx !== -1 ? bookedPax[actualIdx] : null;
-
-        orgFields.push({ label: 'Name', isMet: !!actual });
-        
-        if (actual) {
-            const actualGen = (actual.title || actual.gender || '').toLowerCase().replace('.', '').trim();
-            const expectedGen = (expected.gender || '').toLowerCase().replace('.', '').trim();
-            orgFields.push({ label: 'Gender', isMet: actualGen === expectedGen });
-            orgFields.push({ label: 'DOB', isMet: actual.date_of_birth === expected.date_of_birth });
-            orgFields.push({ label: 'Nationality', isMet: actual.nationality?.toLowerCase() === expected.nationality?.toLowerCase() });
-        } else {
-            orgFields.push({ label: 'Gender', isMet: false });
-            orgFields.push({ label: 'DOB', isMet: false });
-            orgFields.push({ label: 'Nationality', isMet: false });
-        }
-    });
-
-    const orgRatio = orgFields.length > 0 ? orgFields.filter(f => f.isMet).length / orgFields.length : 1;
-    let orgLevel = 1;
-    if (orgRatio === 1) orgLevel = 5;
-    else if (orgRatio >= 0.8) orgLevel = 4;
-    else if (orgRatio >= 0.5) orgLevel = 3;
-    else if (orgRatio >= 0.2) orgLevel = 2;
-
-    // 4. Completeness
-    const reqAdults = a.required_passengers || 0;
-    const reqChild = a.required_children || 0;
-    const reqInfant = a.required_infants || 0;
-    
-    let actAdult = 0, actChild = 0, actInfant = 0;
-    const seenPassengers = new Set();
-    details.forEach(d => {
-        const pId = d.passenger?.id || `${d.passenger?.first_name}_${d.passenger?.last_name}`;
-        if (!seenPassengers.has(pId)) {
-            seenPassengers.add(pId);
-            const type = (d.passenger_type || d.passenger?.type || 'adult').toLowerCase();
-            if (type === 'adult') actAdult++;
-            else if (type === 'child') actChild++;
-            else if (type === 'infant') actInfant++;
-        }
-    });
-    const paxTypesMatch = actAdult === reqAdults && actChild === reqChild && actInfant === reqInfant;
-    
-    // Quick Addon Compliance check
-    let addonsMatched = true;
-    if (a.activity_addons?.length) {
-        a.activity_addons.forEach(req => {
-            const detailWithAddon = details.find(d => 
-                d.passenger?.first_name?.toLowerCase() === req.passenger?.first_name?.toLowerCase() &&
-                d.passenger?.last_name?.toLowerCase() === req.passenger?.last_name?.toLowerCase()
-            );
-            if (!detailWithAddon?.addons?.some(adn => adn.id === req.addon_id)) {
-                addonsMatched = false;
-            }
-        });
-    }
-
-    const compCrit = [
-        { isMet: paxTypesMatch },
-        { isMet: addonsMatched }
-    ];
-    const compRatio = compCrit.filter(c => c.isMet).length / compCrit.length;
-    let compLevel = 1;
-    if (compRatio === 1) compLevel = 5;
-    else if (compRatio >= 0.5) compLevel = 3;
-    else if (compRatio > 0) compLevel = 2;
-
-    // 5. Professionalism
-    const profCrit = [
-        { isMet: accRatio >= 0.8 },
-        { isMet: techRatio >= 0.5 },
-        { isMet: orgRatio >= 0.5 }
-    ];
-    const profRatio = profCrit.filter(c => c.isMet).length / profCrit.length;
-    let profLevel = 1;
-    if (profRatio === 1) profLevel = 5;
-    else if (profRatio >= 0.6) profLevel = 4;
-    else if (profRatio >= 0.3) profLevel = 3;
-    else if (profRatio >= 0.1) profLevel = 2;
-
-    const totalPoints = parseFloat(a.total_points || 100);
-    const sumOfRatios = accRatio + techRatio + orgRatio + compRatio + profRatio;
-    const total = sumOfRatios * (totalPoints / 5);
-
+    // We strictly use the backend's provided grade and breakdown to ensure perfect matching
+    // with the Instructor Scoring area.
     return {
-        accuracy: { level: accLevel, ratio: accRatio },
-        tech: { level: techLevel, ratio: techRatio },
-        org: { level: orgLevel, ratio: orgRatio },
-        comp: { level: compLevel, ratio: compRatio },
-        prof: { level: profLevel, ratio: profRatio },
-        total: total
+        accuracy: { 
+            level: rb[0]?.level || (analysis.accuracy >= 1 ? 5 : (analysis.accuracy >= 0.8 ? 4 : (analysis.accuracy >= 0.5 ? 3 : 2))), 
+            ratio: rb[0]?.ratio ?? analysis.accuracy ?? 0, 
+            status: rb[0]?.status 
+        },
+        tech: { 
+            level: rb[1]?.level || (analysis.tech >= 1 ? 5 : (analysis.tech >= 0.7 ? 4 : (analysis.tech >= 0.4 ? 3 : 2))), 
+            ratio: rb[1]?.ratio ?? analysis.tech ?? 0, 
+            status: rb[1]?.status 
+        },
+        org: { 
+            level: rb[2]?.level || (analysis.org >= 1 ? 5 : (analysis.org >= 0.8 ? 4 : (analysis.org >= 0.5 ? 3 : 2))), 
+            ratio: rb[2]?.ratio ?? analysis.org ?? 0, 
+            status: rb[2]?.status 
+        },
+        comp: { 
+            level: rb[3]?.level || (analysis.comp >= 1 ? 5 : (analysis.comp >= 0.5 ? 3 : 2)), 
+            ratio: rb[3]?.ratio ?? analysis.comp ?? 0, 
+            status: rb[3]?.status 
+        },
+        prof: { 
+            level: rb[4]?.level || (analysis.prof >= 1 ? 5 : (analysis.prof >= 0.7 ? 4 : (analysis.prof >= 0.4 ? 3 : 2))), 
+            ratio: rb[4]?.ratio ?? analysis.prof ?? 0, 
+            status: rb[4]?.status 
+        },
+        total: sub.grade ?? 0
     };
 }
 
@@ -1239,6 +1080,13 @@ const handlePrint = async () => {
   // Wait for Vue to fully re-render the print table before calling print
   await nextTick()
   await nextTick() // double nextTick for extra certainty
+  // Log the print action to the backend
+  if (activity.value) {
+    instructorDashboardService.logPrintReport({
+      activity_id: activity.value.id,
+      report_type: 'Grade Report'
+    })
+  }
   
   window.print()
   isPrinting.value = false
@@ -1274,9 +1122,20 @@ watch(activeTab, (newTab) => {
 })
 
 onMounted(() => {
-  console.log('Component mounted, route params:', route.params)
+  if (route.query.tab) {
+    activeTab.value = route.query.tab
+  }
   fetchData()
 })
+
+const formatGender = (g) => {
+  if (!g) return '-';
+  const val = g.toLowerCase().trim();
+  if (val === 'mr' || val === 'male') return 'Mr.';
+  if (val === 'mrs' || val === 'female') return 'Mrs.';
+  if (val === 'ms') return 'Ms.';
+  return g.charAt(0).toUpperCase() + g.slice(1);
+};
 </script>
 
 <style>

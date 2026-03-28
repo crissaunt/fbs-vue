@@ -464,7 +464,13 @@ class BoardingPassPDFService:
             segment_color = BoardingPassPDFService.SECONDARY_ACCENT if is_return else accent
             
             # Flight card
+            total_stops = flight.total_stops if flight else 0
+            layovers_data = flight.layovers_data if flight else []
+            has_layovers = total_stops > 0 and layovers_data
+            
             card_h = 2.2*inch
+            if has_layovers:
+                card_h += (len(layovers_data) * 0.25 * inch)
             
             # Card shadow effect
             c.setFillColor(HexColor('#e2e8f0'))
@@ -517,7 +523,7 @@ class BoardingPassPDFService:
             c.line(3.4*inch, arrow_y - 0.1*inch, 3.6*inch, arrow_y)
             
             # Duration
-            duration = "2h 30m"  # Calculate from schedule
+            duration = schedule.duration() if schedule else "N/A"
             c.setFillColor(text_secondary)
             c.setFont("Helvetica", 8)
             c.drawCentredString(3.0*inch, route_y + 0.25*inch, duration)
@@ -577,6 +583,24 @@ class BoardingPassPDFService:
             c.setFont("Helvetica-Bold", 14)
             c.drawRightString(width - 0.9*inch, times_y - 0.38*inch, f"Seat {seat_num}")
             
+            # Layovers Section
+            if has_layovers:
+                lay_y = times_y - 0.6*inch
+                c.setStrokeColor(border)
+                c.setLineWidth(0.5)
+                c.line(0.8*inch, lay_y + 0.15*inch, width - 0.8*inch, lay_y + 0.15*inch)
+                
+                c.setFillColor(text_secondary)
+                c.setFont("Helvetica-Bold", 7)
+                c.drawString(0.9*inch, lay_y, "FLIGHT STOPS / LAYOVERS")
+                
+                for l_idx, layover in enumerate(layovers_data):
+                    lay_row_y = lay_y - 0.15*inch - (l_idx * 0.2*inch)
+                    c.setFillColor(text)
+                    c.setFont("Helvetica", 8)
+                    c.drawString(0.9*inch, lay_row_y, f"STOP {l_idx + 1}: {layover.get('airport')} ({layover.get('city')})")
+                    c.drawRightString(width - 0.9*inch, lay_row_y, f"Layover: {layover.get('duration')}")
+
             y_pos -= card_h + 0.3*inch
         
         # === PAYMENT SUMMARY ===

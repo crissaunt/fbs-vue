@@ -31,5 +31,27 @@ export const instructorDashboardService = {
         } catch (error) {
             throw error;
         }
+    },
+
+    // GET: Fetch all instructor logs
+    async getLogs() {
+        try {
+            const response = await api.get('api/instructor/logs/');
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    // POST: Log a report print action
+    async logPrintReport(payload) {
+        try {
+            const response = await api.post('api/instructor/logs/print-report/', payload);
+            return response.data;
+        } catch (error) {
+            // Silently fail logging if it fails, don't break main app
+            console.warn('Logging failed:', error);
+            return null;
+        }
     }
 };

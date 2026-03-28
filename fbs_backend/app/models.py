@@ -21,12 +21,14 @@ class UserProfile(models.Model):
     ROLE_CHOICES = [
         ('student', 'Student'),
         ('instructor', 'Instructor'),
-        ('admin', 'Admin'),
+        ('lms_admin', 'LMS Admin'),
+        ('flight_admin', 'Flight Admin'),
+        ('superadmin', 'Superadmin'),
     ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     role = models.CharField(
-        max_length=10, 
+        max_length=20, 
         choices=ROLE_CHOICES, 
         null=True, 
         blank=True
@@ -40,7 +42,14 @@ class UserProfile(models.Model):
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
     if created:
-        role = 'admin' if (instance.is_superuser or instance.is_staff) else None
+        # Map Django permission flags to our custom role-based system
+        if instance.is_superuser:
+            role = 'superadmin'
+        elif instance.is_staff:
+            role = 'lms_admin'
+        else:
+            role = None
+            
         UserProfile.objects.create(user=instance, role=role)
     else:
         if hasattr(instance, 'userprofile'):
@@ -335,6 +344,7 @@ class Flight(models.Model):
     aircraft = models.ForeignKey(Aircraft, on_delete=models.CASCADE, related_name="flights")
     route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name="flights")
     total_stops = models.PositiveIntegerField(default=0)
+    layovers_data = models.JSONField(default=list, blank=True, null=True, help_text='List of layovers: [{"airport": "HKG", "city": "Hong Kong", "duration": "1h 30m"}, ...]')
 
     def __str__(self):
         return f"{self.flight_number} ({self.airline.code})"
@@ -2236,7 +2246,7 @@ class CheckInDetail(models.Model):
 # TRACK LOGS
 # ============================================================
 class TrackLog(models.Model):
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name="tracklogs")
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name="tracklogs", null=True, blank=True)
     action = models.CharField(max_length=200)
     timestamp = models.DateTimeField(auto_now_add=True)
 

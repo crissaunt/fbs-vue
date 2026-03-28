@@ -788,8 +788,30 @@ const getSeatStatus = (seat) => {
 };
 
 const isClassDimmed = (className) => {
-  if (!currentFlight.value?.selected_seat_class) return false;
-  return className.toLowerCase() !== currentFlight.value.selected_seat_class.toLowerCase();
+  if (!currentFlight.value?.selected_seat_class || !className) return false;
+  
+  const selected = currentFlight.value.selected_seat_class.toLowerCase();
+  const seatClass = className.toLowerCase();
+  
+  // Map both the selected bundle and the physical seat to a core class bucket
+  let baseSelectedClass = '';
+  if (selected.includes('premium')) baseSelectedClass = 'premium';
+  else if (selected.includes('economy')) baseSelectedClass = 'economy';
+  else if (selected.includes('business')) baseSelectedClass = 'business';
+  else if (selected.includes('first')) baseSelectedClass = 'first';
+
+  let baseSeatClass = '';
+  if (seatClass.includes('premium')) baseSeatClass = 'premium';
+  else if (seatClass.includes('economy')) baseSeatClass = 'economy';
+  else if (seatClass.includes('business')) baseSeatClass = 'business';
+  else if (seatClass.includes('first')) baseSeatClass = 'first';
+
+  if (baseSelectedClass && baseSeatClass) {
+    return baseSelectedClass !== baseSeatClass;
+  }
+  
+  // Exact match as fallback
+  return selected !== seatClass;
 };
 
 

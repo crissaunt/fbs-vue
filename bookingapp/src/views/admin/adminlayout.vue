@@ -39,85 +39,91 @@
           <span v-if="!collapsed" class="ml-3 text-[14px] font-medium">Dashboard</span>
         </router-link>
 
-        <div class="px-4 py-2 mt-4" v-if="!collapsed">
-          <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Users</p>
-        </div>
-        <SidebarGroup title="Users" icon="ph-chalkboard-teacher">
-          <SidebarSubLink label="Instructors" to="/admin/instructor-info/list" />
-          <SidebarSubLink label="Students" to="/admin/student-info/list" />
-          <SidebarSubLink label="Audit Logs" to="/admin/student-info/track-log" />
-          <SidebarSubLink label="LMS Overview" to="/admin/student-info/lms-overview" />
-        </SidebarGroup>
+        <!-- LMS ADMIN PRIVILEGES: Users & LMS Info -->
+        <template v-if="userRole === 'superadmin' || userRole === 'lms_admin'">
+          <div class="px-4 py-2 mt-4" v-if="!collapsed">
+            <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Users</p>
+          </div>
+          <SidebarGroup title="Users" icon="ph-chalkboard-teacher">
+            <SidebarSubLink label="Instructors" to="/admin/instructor-info/list" />
+            <SidebarSubLink label="Students" to="/admin/student-info/list" />
+            <SidebarSubLink label="Audit Logs" to="/admin/student-info/track-log" />
+            <SidebarSubLink label="LMS Overview" to="/admin/student-info/lms-overview" />
+          </SidebarGroup>
+        </template>
 
-        <div class="px-4 py-2 mt-4" v-if="!collapsed">
-          <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Flights</p>
-        </div>
-        <SidebarGroup title="Manage Flight" icon="ph-airplane">
-          <SidebarSubLink label="Schedules" to="/admin/manage-flight/schedules" />
-          <SidebarSubLink label="Profiles" to="/admin/manage-flight/flights" /> 
-          <SidebarSubLink label="Routes" to="/admin/manage-flight/routes" />
-          <SidebarSubLink label="Seat Maps" to="/admin/manage-flight/seats" />
-          <SidebarSubLink label="Live Monitor" to="/admin/manage-flight/live-monitor" />
-        </SidebarGroup>
+        <!-- FLIGHT ADMIN PRIVILEGES: Operations & Booking -->
+        <template v-if="userRole === 'superadmin' || userRole === 'flight_admin'">
+          <div class="px-4 py-2 mt-4" v-if="!collapsed">
+            <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Flights</p>
+          </div>
+          <SidebarGroup title="Manage Flight" icon="ph-airplane">
+            <SidebarSubLink label="Schedules" to="/admin/manage-flight/schedules" />
+            <SidebarSubLink label="Profiles" to="/admin/manage-flight/flights" /> 
+            <SidebarSubLink label="Routes" to="/admin/manage-flight/routes" />
+            <SidebarSubLink label="Seat Maps" to="/admin/manage-flight/seats" />
+            <SidebarSubLink label="Live Monitor" to="/admin/manage-flight/live-monitor" />
+          </SidebarGroup>
 
-        <div class="px-4 py-2 mt-4" v-if="!collapsed">
-          <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Bookings</p>
-        </div>
-        <SidebarGroup title="Records" icon="ph-identification-card">
-          <SidebarSubLink label="Passengers" to="/admin/passenger/list" />
-          <SidebarSubLink label="Check-ins" to="/admin/passenger/check-ins" />
-          <SidebarSubLink label="Details" to="/admin/booking/details" />
-          <SidebarSubLink label="Bookings" to="/admin/booking/list" />
-          <SidebarSubLink label="Payments" to="/admin/booking/payments" />
-        </SidebarGroup>
+          <div class="px-4 py-2 mt-4" v-if="!collapsed">
+            <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Bookings</p>
+          </div>
+          <SidebarGroup title="Records" icon="ph-identification-card">
+            <SidebarSubLink label="Passengers" to="/admin/passenger/list" />
+            <SidebarSubLink label="Check-ins" to="/admin/passenger/check-ins" />
+            <SidebarSubLink label="Details" to="/admin/booking/details" />
+            <SidebarSubLink label="Bookings" to="/admin/booking/list" />
+            <SidebarSubLink label="Payments" to="/admin/booking/payments" />
+          </SidebarGroup>
 
-        <div class="px-4 py-2 mt-4" v-if="!collapsed">
-          <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Assets</p>
-        </div>
-        <SidebarGroup title="Resources" icon="ph-database">
-          <SidebarSubLink label="Countries" to="/admin/assets/countries" />
-          <SidebarSubLink label="Airports" to="/admin/assets/airports" />
-          <SidebarSubLink label="Aircraft" to="/admin/assets/aircraft" />
-          <SidebarSubLink label="Airlines" to="/admin/assets/airlines" />
-          <SidebarSubLink label="Seat Classes" to="/admin/assets/seat-classes" />
-          <SidebarSubLink label="Seat Requirements" to="/admin/assets/seat-requirements" />
-          <SidebarSubLink label="Add-ons" to="/admin/assets/add-ons" />
-        </SidebarGroup>
+          <div class="px-4 py-2 mt-4" v-if="!collapsed">
+            <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Assets</p>
+          </div>
+          <SidebarGroup title="Resources" icon="ph-database">
+            <SidebarSubLink label="Countries" to="/admin/assets/countries" />
+            <SidebarSubLink label="Airports" to="/admin/assets/airports" />
+            <SidebarSubLink label="Aircraft" to="/admin/assets/aircraft" />
+            <SidebarSubLink label="Airlines" to="/admin/assets/airlines" />
+            <SidebarSubLink label="Seat Classes" to="/admin/assets/seat-classes" />
+            <SidebarSubLink label="Seat Requirements" to="/admin/assets/seat-requirements" />
+            <SidebarSubLink label="Add-ons" to="/admin/assets/add-ons" />
+          </SidebarGroup>
 
-        <div class="px-4 py-2 mt-4" v-if="!collapsed">
-          <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Add-on Details</p>
-        </div>
-        <SidebarGroup title="Add-ons" icon="ph-package">
-          <SidebarSubLink label="Meal Options" to="/admin/addons/meal-options" />
-          <SidebarSubLink label="Assistance" to="/admin/addons/assistance" />
-          <SidebarSubLink label="Baggage" to="/admin/addons/baggage" />
-        </SidebarGroup>
+          <div class="px-4 py-2 mt-4" v-if="!collapsed">
+            <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Add-on Details</p>
+          </div>
+          <SidebarGroup title="Add-ons" icon="ph-package">
+            <SidebarSubLink label="Meal Options" to="/admin/addons/meal-options" />
+            <SidebarSubLink label="Assistance" to="/admin/addons/assistance" />
+            <SidebarSubLink label="Baggage" to="/admin/addons/baggage" />
+          </SidebarGroup>
 
-        <div class="px-4 py-2 mt-4" v-if="!collapsed">
-          <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Insurance</p>
-        </div>
-        <SidebarGroup title="Insurance" icon="ph-shield-check">
-          <SidebarSubLink label="Providers" to="/admin/insurance/providers" />
-          <SidebarSubLink label="Plans" to="/admin/insurance/plans" />
-        </SidebarGroup>
+          <div class="px-4 py-2 mt-4" v-if="!collapsed">
+            <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Insurance</p>
+          </div>
+          <SidebarGroup title="Insurance" icon="ph-shield-check">
+            <SidebarSubLink label="Providers" to="/admin/insurance/providers" />
+            <SidebarSubLink label="Plans" to="/admin/insurance/plans" />
+          </SidebarGroup>
 
-        <div class="px-4 py-2 mt-4" v-if="!collapsed">
-          <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Taxation</p>
-        </div>
-        <SidebarGroup title="Taxes" icon="ph-bank">
-          <SidebarSubLink label="Airport Fees" to="/admin/manage-tax/airport-fee" />
-          <SidebarSubLink label="Tax Types" to="/admin/manage-tax/tax-type" />
-          <SidebarSubLink label="Airline Taxes" to="/admin/manage-tax/airline-tax" />
-          <SidebarSubLink label="Travel Taxes" to="/admin/manage-tax/travel-tax" />
-          <SidebarSubLink label="Booking Taxes" to="/admin/manage-tax/booking-tax" />
-        </SidebarGroup>
+          <div class="px-4 py-2 mt-4" v-if="!collapsed">
+            <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Taxation</p>
+          </div>
+          <SidebarGroup title="Taxes" icon="ph-bank">
+            <SidebarSubLink label="Airport Fees" to="/admin/manage-tax/airport-fee" />
+            <SidebarSubLink label="Tax Types" to="/admin/manage-tax/tax-type" />
+            <SidebarSubLink label="Airline Taxes" to="/admin/manage-tax/airline-tax" />
+            <SidebarSubLink label="Travel Taxes" to="/admin/manage-tax/travel-tax" />
+            <SidebarSubLink label="Booking Taxes" to="/admin/manage-tax/booking-tax" />
+          </SidebarGroup>
 
-        <div class="px-4 py-2 mt-4" v-if="!collapsed">
-          <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">System</p>
-        </div>
-        <SidebarGroup title="Configuration" icon="ph-sliders">
-          <SidebarSubLink label="Pricing Config" to="/admin/pricing-config" />
-        </SidebarGroup>
+          <div class="px-4 py-2 mt-4" v-if="!collapsed">
+            <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">System</p>
+          </div>
+          <SidebarGroup title="Configuration" icon="ph-sliders">
+            <SidebarSubLink label="Pricing Config" to="/admin/pricing-config" />
+          </SidebarGroup>
+        </template>
       </div>
       </div>
     </nav>
@@ -142,6 +148,7 @@
             >
               <i class="ph ph-user-circle text-xl"></i>
               <span>{{ adminName }}</span>
+              <span class="text-[10px] px-2 py-0.5 bg-white/20 rounded uppercase font-bold">{{ userRole }}</span>
               <i :class="isProfileOpen ? 'ph-caret-up' : 'ph-caret-down'" class="ph text-xs transition-transform duration-200"></i>
             </div>
 
@@ -197,6 +204,10 @@ const route = useRoute();
 const adminName = computed(() => {
   if (userStore.user?.username) return userStore.user.username;
   return localStorage.getItem('adminUsername') || 'Admin';
+});
+
+const userRole = computed(() => {
+  return AuthStorage.getRole() || 'admin';
 });
 
 /* -------------------------

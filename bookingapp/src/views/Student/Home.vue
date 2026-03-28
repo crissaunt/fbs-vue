@@ -1,5 +1,5 @@
 <template>
-  <div class="flex-1 flex flex-col bg-gray-50 overflow-y-auto">
+  <div class="flex-1 flex flex-col overflow-y-auto bg-gray-200">
     <!-- Header Hero -->
     <div class="bg-pink-500 mx-6 mt-5 px-8 py-12 rounded-lg shadow-lg relative overflow-hidden">
       <!-- Background decoration -->

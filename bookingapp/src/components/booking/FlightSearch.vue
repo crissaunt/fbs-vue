@@ -145,6 +145,25 @@ const selectAirport = (airport, target, segmentIndex = null) => {
   }
 };
 
+const handleEnterKey = (query, target, segmentIndex = null) => {
+  if (!query || query.includes(' - ')) return;
+  
+  const results = segmentIndex !== null 
+    ? multiSegments.value[segmentIndex][target === 'from' ? 'fromResults' : 'toResults']
+    : (target === 'from' ? fromResults.value : toResults.value);
+
+  if (results.length > 0) {
+    const searchQuery = query.toUpperCase().trim();
+    // Prioritize exact code match, then exact city match, then first result
+    const match = results.find(a => a.code === searchQuery) || 
+                  results.find(a => a.city.toUpperCase() === searchQuery) || 
+                  results[0];
+    if (match) {
+      selectAirport(match, target, segmentIndex);
+    }
+  }
+};
+
 const handleClickOutside = (e) => {
   if (!e.target.closest('.field-container') && !e.target.closest('.airport-input-container')) {
     fromResults.value = [];
@@ -340,28 +359,13 @@ const handleActivityCodeContinue = () => {
           <input
             v-model="fromSearch"
             @input="searchAirports(fromSearch, 'from')"
+            @keydown.enter.prevent="handleEnterKey(fromSearch, 'from')"
             @focus="fromSearch = ''; fromResults = []"
             placeholder="e.g. MNL"
             class="w-full rounded-[2px] border border-gray-300 bg-white px-2 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF579A]"
           />
 
-          <ul
-            v-if="fromResults.length"
-            class="absolute left-0 top-full z-[60] max-h-64 w-full overflow-y-auto border border-gray-300 bg-white shadow-lg"
-          >
-            <li
-              v-for="a in fromResults"
-              :key="a.id"
-              @click="selectAirport(a, 'from')"
-              class="cursor-pointer border-b border-gray-100 p-3 hover:bg-gray-50"
-            >
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="text-lg font-extrabold text-[#FF579A]">{{ a.code }}</span>
-                <span class="font-medium text-gray-700">- {{ a.city }}</span>
-                <small class="w-full text-xs text-gray-400">{{ a.name }}</small>
-              </div>
-            </li>
-          </ul>
+          <!-- Results Dropdown Removed as requested -->
         </div>
       </div>
 
@@ -374,28 +378,13 @@ const handleActivityCodeContinue = () => {
           <input
             v-model="toSearch"
             @input="searchAirports(toSearch, 'to')"
+            @keydown.enter.prevent="handleEnterKey(toSearch, 'to')"
             @focus="toSearch = ''; toResults = []"
             placeholder="Destination City/Code"
             class="w-full rounded-[2px] border border-gray-300 bg-white px-2 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF579A]"
           />
 
-          <ul
-            v-if="toResults.length"
-            class="absolute left-0 top-full z-[60] max-h-64 w-full overflow-y-auto border border-gray-300 bg-white shadow-lg"
-          >
-            <li
-              v-for="a in toResults"
-              :key="a.id"
-              @click="selectAirport(a, 'to')"
-              class="cursor-pointer border-b border-gray-100 p-3 hover:bg-gray-50"
-            >
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="text-lg font-extrabold text-[#FF579A]">{{ a.code }}</span>
-                <span class="font-medium text-gray-700">- {{ a.city }}</span>
-                <small class="w-full text-xs text-gray-400">{{ a.name }}</small>
-              </div>
-            </li>
-          </ul>
+          <!-- Results Dropdown Removed as requested -->
         </div>
       </div>
 
@@ -518,16 +507,12 @@ const handleActivityCodeContinue = () => {
             <input
               v-model="segment.fromSearch"
               @input="searchAirports(segment.fromSearch, 'from', index)"
+              @keydown.enter.prevent="handleEnterKey(segment.fromSearch, 'from', index)"
               @focus="segment.fromSearch = ''; segment.fromResults = []"
               placeholder="Origin"
               class="w-full rounded-[2px] border border-gray-300 bg-white px-2 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF579A]"
             />
-            <ul v-if="segment.fromResults.length" class="absolute left-0 top-full z-[60] max-h-48 w-full overflow-y-auto border border-gray-300 bg-white shadow-xl">
-              <li v-for="a in segment.fromResults" :key="a.id" @click="selectAirport(a, 'from', index)" class="cursor-pointer border-b border-gray-100 p-3 hover:bg-gray-50 flex items-center gap-2">
-                <span class="font-extrabold text-[#FF579A]">{{ a.code }}</span>
-                <span class="text-sm">- {{ a.city }}</span>
-              </li>
-            </ul>
+            <!-- Results Dropdown Removed as requested -->
           </div>
         </div>
 
@@ -537,16 +522,12 @@ const handleActivityCodeContinue = () => {
             <input
               v-model="segment.toSearch"
               @input="searchAirports(segment.toSearch, 'to', index)"
+              @keydown.enter.prevent="handleEnterKey(segment.toSearch, 'to', index)"
               @focus="segment.toSearch = ''; segment.toResults = []"
               placeholder="Destination"
               class="w-full rounded-[2px] border border-gray-300 bg-white px-2 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF579A]"
             />
-            <ul v-if="segment.toResults.length" class="absolute left-0 top-full z-[60] max-h-48 w-full overflow-y-auto border border-gray-300 bg-white shadow-xl">
-              <li v-for="a in segment.toResults" :key="a.id" @click="selectAirport(a, 'to', index)" class="cursor-pointer border-b border-gray-100 p-3 hover:bg-gray-50 flex items-center gap-2">
-                <span class="font-extrabold text-[#FF579A]">{{ a.code }}</span>
-                <span class="text-sm">- {{ a.city }}</span>
-              </li>
-            </ul>
+            <!-- Results Dropdown Removed as requested -->
           </div>
         </div>
 

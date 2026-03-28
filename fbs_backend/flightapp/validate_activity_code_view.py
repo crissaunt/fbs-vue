@@ -12,6 +12,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from django.utils import timezone
 from fbs_instructor.models import Activity, SectionEnrollment
 from app.models import Students
 
@@ -48,6 +49,14 @@ def validate_activity_code(request):
             'success': False,
             'error': 'Invalid or inactive activity code'
         }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Check if activity is overdue
+    if activity.due_date and activity.due_date < timezone.now():
+        # Only block if student hasn't submitted yet
+        return Response({
+            'success': False,
+            'error': 'The deadline for this activity has passed. You can no longer participate.'
+        }, status=status.HTTP_400_BAD_REQUEST)
     
     # Get student record
     try:
@@ -71,6 +80,17 @@ def validate_activity_code(request):
             'error': 'You are not enrolled in the section for this activity'
         }, status=status.HTTP_403_FORBIDDEN)
     
+    # NEW: Log to InstructorLog that student started activity
+    from fbs_instructor.views import log_instructor_event
+    log_instructor_event(
+        request,
+        action_type='ACTIVITY_TAKEN',
+        student=student,
+        section_name=activity.section.section_name,
+        activity_name=activity.title,
+        details=f"Student {student.student_number} started activity '{activity.title}'."
+    )
+
     # Return activity details
     return Response({
         'success': True,

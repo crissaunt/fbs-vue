@@ -47,23 +47,22 @@ async function handleEndSession() {
 
 <template>
   <div>
-    <header class="bg-blue-900 shadow-md">
+    <header class="bg-white shadow-lg/20">
       <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
 
-        <router-link to="/" class="text-white font-bold text-xl tracking-wide flex items-center gap-2">
-          ✈ <span>Philippine Airlines</span>
+        <router-link to="/" class="text-[#FF579A] font-bold text-xl tracking-wide flex items-center gap-2">
+           <span>TourSim</span>
         </router-link>
 
         <nav class="hidden md:flex items-center gap-6">
-            <router-link to="/check-in"  class="text-blue-200 hover:text-white text-sm font-medium transition-colors" active-class="text-white border-b-2 border-yellow-400 pb-0.5">Check-in</router-link>
-            <router-link to="/status"    class="text-blue-200 hover:text-white text-sm font-medium transition-colors" active-class="text-white border-b-2 border-yellow-400 pb-0.5">Flight Status</router-link>
+            
    
             <div class="flex items-center gap-3">
               <!-- Reset Search Button (Only if validated) -->
               <button
                   v-if="hasValidation"
                   @click="handleReset"
-                  class="flex items-center gap-2 border border-blue-400/30 bg-blue-800/50 hover:bg-blue-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                  class="flex items-center gap-2   bg-blue-800 cursor-pointer hover:bg-blue-700/80 text-white text-xs font-semibold px-3 py-1.5 rounded-md transition-colors"
                   title="Reset search and passenger data"
                 >
                   ↺ Reset
@@ -73,7 +72,7 @@ async function handleEndSession() {
               <button
                   v-if="hasValidation"
                   @click="handleEndSession"
-                  class="flex items-center gap-2 border bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition-colors shadow-lg"
+                  class="flex items-center gap-2  bg-red-600 hover:bg-red-600/80 cursor-pointer text-white text-xs font-bold px-4 py-1.5 rounded-lg transition-colors "
                 >
                   ✕ {{ isPracticeMode ? 'End Practice' : 'End Activity' }}
               </button>

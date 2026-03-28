@@ -23,7 +23,7 @@
         <div class="flex-1 space-y-8">
           <div>
             <h1 class="text-4xl font-light mb-2 tracking-wide text-gray-900">{{ activity?.title || 'Assessment Title' }}</h1>
-            <p class="text-gray-500 font-medium text-lg">{{ activity?.course_code || 'CS-101' }} - {{ activity?.block || 'Block A' }}</p>
+            <p class="text-gray-500 font-medium text-lg">Section: {{ activity?.section?.name || activity?.section_code || 'N/A' }} | {{ activity?.course_code || 'CS-101' }} - {{ activity?.block || 'Block A' }}</p>
             <p class="text-gray-400 text-sm mt-1">Due: {{ formatDueDate(activity?.due_date) }}</p>
             
             <div class="flex flex-wrap gap-2 mt-4">
@@ -901,6 +901,31 @@ const compareStrings = (a, b) => {
     return false;
 };
 
+const formatGender = (g) => {
+    if (!g) return '-';
+    const val = g.toLowerCase().trim();
+    if (val === 'mr' || val === 'male') return 'Mr.';
+    if (val === 'mrs' || val === 'female') return 'Mrs.';
+    if (val === 'ms') return 'Ms.';
+    return g.charAt(0).toUpperCase() + g.slice(1);
+};
+
+const compareGender = (g1, g2) => {
+    if (!g1 || !g2) return false;
+    const v1 = g1.toLowerCase().trim().replace('.', '');
+    const v2 = g2.toLowerCase().trim().replace('.', '');
+    
+    const isMale1 = (v1 === 'mr' || v1 === 'male');
+    const isMale2 = (v2 === 'mr' || v2 === 'male');
+    
+    const isFemale1 = (v1 === 'mrs' || v1 === 'female' || v1 === 'ms');
+    const isFemale2 = (v2 === 'mrs' || v2 === 'female' || v2 === 'ms');
+    
+    if (isMale1 && isMale2) return true;
+    if (isFemale1 && isFemale2) return true;
+    return v1 === v2;
+};
+
 const actualPaxTypes = computed(() => {
     const types = { adult: 0, child: 0, infant: 0 };
     const seenPassengers = new Set();
@@ -998,12 +1023,21 @@ const matches = computed(() => {
     // Multi-city segment matching
     if (reqTripTypeNorm === 'multi_city' && activity.value.segments?.length) {
         activity.value.segments.forEach((expected, idx) => {
-            // Positional matching: Leg N required vs Leg N booked
-            const actualMatched = actualSegments.value[idx] || null;
+            // Find the best matching actual segment regardless of index order
+            let actualMatched = actualSegments.value.find(as => 
+                compareStrings(expected.origin, as.origin) && 
+                compareStrings(expected.destination, as.destination)
+            );
             
-            // Check origin/dest vs specific position
-            const originMatched = actualMatched ? compareStrings(expected.origin, actualMatched.origin) : false;
-            const destMatched = actualMatched ? compareStrings(expected.destination, actualMatched.destination) : false;
+            const originMatched = actualMatched ? true : (actualSegments.value[idx] ? compareStrings(expected.origin, actualSegments.value[idx].origin) : false);
+            const destMatched = actualMatched ? true : (actualSegments.value[idx] ? compareStrings(expected.destination, actualSegments.value[idx].destination) : false);
+
+            if (!actualMatched) {
+                // Fallback to positional matching
+                actualMatched = actualSegments.value[idx] || null;
+            }
+            
+            // If we found it, check the date too
             const dateMatched = actualMatched ? (!expected.departure_date || normalizeDate(expected.departure_date) === normalizeDate(actualMatched.departure_date)) : false;
 
             m.segments.push({
@@ -1033,9 +1067,14 @@ const matches = computed(() => {
             // Find match among unused booked passengers
             let actualIdx = bookedPassengers.findIndex((p, idx) => 
                 !usedIndices.has(idx) && 
-                p.first_name?.toLowerCase() === expected.first_name?.toLowerCase() && 
-                p.last_name?.toLowerCase() === expected.last_name?.toLowerCase()
+                p.first_name?.toLowerCase().trim() === expected.first_name?.toLowerCase().trim() && 
+                p.last_name?.toLowerCase().trim() === expected.last_name?.toLowerCase().trim()
             );
+
+            // Fallback to positional to display actual student work
+            if (actualIdx === -1) {
+                actualIdx = bookedPassengers.findIndex((p, idx) => !usedIndices.has(idx));
+            }
 
             let actual = null;
             if (actualIdx !== -1) {
@@ -1050,9 +1089,9 @@ const matches = computed(() => {
                     isMet: !!actual 
                 },
                 gender: { 
-                    expected: (expected.gender || '').toUpperCase(), 
-                    actual: (actual?.title || actual?.gender || '-').toUpperCase(), 
-                    isMet: false 
+                    expected: formatGender(expected.gender), 
+                    actual: formatGender(actual?.title || actual?.gender), 
+                    isMet: compareGender(expected.gender, actual?.title || actual?.gender) 
                 },
                 dob: { 
                     expected: expected.date_of_birth, 

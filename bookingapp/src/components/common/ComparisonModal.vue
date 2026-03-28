@@ -4,17 +4,17 @@
     <div class="modal-content">
       <div class="modal-content-scrollable custom-scrollbar">
         <!-- Minimalist Header -->
-        <div class="p-16 pb-12 bg-white">
-          <div class="flex justify-between items-end mb-12">
+        <div class="p-6 sm:p-16 pb-8 sm:pb-12 bg-white">
+          <div class="flex flex-col lg:flex-row lg:justify-between lg:items-end mb-8 sm:mb-12 gap-8">
             <div>
-              <p class="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.2em] mb-3">Activity Analysis</p>
-              <h2 class="text-[48px] font-bold text-[#111827] leading-tight tracking-tight">{{ activity?.title || 'Airline Activity' }}</h2>
-              <div class="flex gap-4 mt-6">
-                <span class="text-[12px] font-bold text-[#64748B] flex items-center gap-2">
+              <p class="text-[10px] sm:text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.2em] mb-2 sm:mb-3">Activity Analysis</p>
+              <h2 class="text-3xl sm:text-[48px] font-bold text-[#111827] leading-tight tracking-tight">{{ activity?.title || 'Airline Activity' }}</h2>
+              <div class="flex flex-wrap gap-4 mt-4 sm:mt-6">
+                <span class="text-[11px] sm:text-[12px] font-bold text-[#64748B] flex items-center gap-2">
                   <span class="w-2 h-2 rounded-full bg-[#E2E8F0]"></span>
                   {{ activity?.section_code }} • {{ activity?.section_name }}
                 </span>
-                <span class="text-[12px] font-bold text-[#64748B] flex items-center gap-2">
+                <span class="text-[11px] sm:text-[12px] font-bold text-[#64748B] flex items-center gap-2">
                   <span class="w-2 h-2 rounded-full bg-[#E2E8F0]"></span>
                   Due: {{ formatDate(activity?.due_date) }}
                 </span>
@@ -22,16 +22,16 @@
             </div>
             
             <!-- Unified Score & Breakdown -->
-            <div v-if="grade !== null" class="flex items-center gap-12 bg-[#F8FAFC] p-8 rounded-xl border border-[#F1F5F9]">
-              <div class="text-center border-r border-[#E2E8F0] pr-12">
-                <p class="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest mb-1">Total Score</p>
+            <div v-if="grade !== null" class="flex flex-col sm:flex-row items-center gap-6 sm:gap-12 bg-[#F8FAFC] p-6 sm:p-8 rounded-xl border border-[#F1F5F9]">
+              <div class="text-center sm:border-r border-[#E2E8F0] sm:pr-12 w-full sm:w-auto pb-4 sm:pb-0 border-b sm:border-b-0">
+                <p class="text-[9px] sm:text-[10px] font-black text-[#94A3B8] uppercase tracking-widest mb-1">Total Score</p>
                 <div class="flex items-baseline justify-center">
-                  <span class="text-[56px] font-black text-[#111827]">{{ calculatedScore.toFixed(0) }}</span>
-                  <span class="text-[20px] font-bold text-[#94A3B8]">/{{ activity?.total_points || 100 }}</span>
+                  <span class="text-4xl sm:text-[56px] font-black text-[#111827]">{{ calculatedScore.toFixed(0) }}</span>
+                  <span class="text-base sm:text-[20px] font-bold text-[#94A3B8]">/{{ activity?.total_points || 100 }}</span>
                 </div>
               </div>
-              <div class="grid grid-cols-2 gap-x-12 gap-y-4">
-                <div v-for="item in scoreBreakdown" :key="item.label" class="w-40">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 sm:gap-x-12 gap-y-4 w-full">
+                <div v-for="item in scoreBreakdown" :key="item.label" class="w-full">
                   <div class="flex justify-between text-[10px] font-black text-[#64748B] uppercase tracking-wider mb-2">
                     <span>{{ item.label }}</span>
                     <span>{{ item.score.toFixed(0) }}</span>
@@ -60,27 +60,27 @@
                 <div 
                   v-for="row in comparisonRows" 
                   :key="row.label"
-                  class="bg-white py-6 flex items-center justify-between group transition-all hover:px-4"
+                  class="bg-white py-6 flex flex-col sm:flex-row sm:items-center justify-between group transition-all sm:hover:px-4 gap-4"
                 >
-                  <div class="flex gap-8 items-center">
-                    <div class="w-32">
-                      <p class="text-[11px] font-black text-[#94A3B8] uppercase tracking-widest">{{ row.label }}</p>
+                  <div class="flex flex-col sm:flex-row gap-2 sm:gap-8 sm:items-center">
+                    <div class="w-full sm:w-32">
+                      <p class="text-[10px] sm:text-[11px] font-black text-[#94A3B8] uppercase tracking-widest">{{ row.label }}</p>
                     </div>
                     <div>
-                      <p class="text-[14px] font-bold text-[#111827] mb-1">{{ row.requirement }}</p>
-                      <p class="text-[12px] font-medium text-[#64748B]">Expected outcome</p>
+                      <p class="text-sm font-bold text-[#111827] mb-1">{{ row.requirement }}</p>
+                      <p class="text-xs font-medium text-[#64748B]">Expected outcome</p>
                     </div>
                   </div>
 
-                  <div class="flex gap-12 items-center text-right">
+                  <div class="flex items-center justify-between sm:justify-end gap-6 sm:gap-12 text-right">
                     <div>
-                      <p class="text-[14px] font-bold" :class="row.isMet ? 'text-[#111827]' : 'text-[#EF4444]'">{{ row.work }}</p>
-                      <p class="text-[12px] font-medium" :class="row.isMet ? 'text-[#10B981]' : 'text-[#EF4444]'">
+                      <p class="text-sm font-bold" :class="row.isMet ? 'text-[#111827]' : 'text-[#EF4444]'">{{ row.work }}</p>
+                      <p class="text-xs font-medium" :class="row.isMet ? 'text-[#10B981]' : 'text-[#EF4444]'">
                         {{ row.isMet ? 'Verified Match' : (row.diff || 'Mismatch detected') }}
                       </p>
                     </div>
                     <div 
-                      class="w-10 h-10 rounded-full flex items-center justify-center border-2"
+                      class="w-10 h-10 rounded-full flex items-center justify-center border-2 flex-shrink-0"
                       :class="row.isMet ? 'border-[#10B981]/10 bg-[#10B981]/5 text-[#10B981]' : 'border-[#EF4444]/10 bg-[#EF4444]/5 text-[#EF4444]'"
                     >
                       <span class="text-sm font-black">{{ row.isMet ? '✓' : '✕' }}</span>
@@ -100,32 +100,32 @@
               <!-- One-Way Blocks -->
               <div v-if="activity?.required_trip_type === 'one_way'" class="grid grid-cols-1 gap-6">
                  <!-- Outbound Card -->
-                 <div class="p-8 border rounded-[24px] bg-white transition-all hover:shadow-sm"
+                 <div class="p-6 sm:p-8 border rounded-[24px] bg-white transition-all hover:shadow-sm"
                       :class="matches.origin && matches.destination && matches.departure_date ? 'border-[#10B981]/20' : 'border-[#EF4444]/20'">
                     <div class="flex justify-between items-center mb-6 pb-4 border-b border-[#F1F5F9]">
                       <span class="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em]">One-Way Itinerary</span>
                       <span class="px-3 py-1 bg-[#F8FAFC] rounded-full text-[10px] font-black text-[#64748B] uppercase">Single Leg</span>
                     </div>
-                    <div class="grid grid-cols-2 gap-8 items-center relative">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 items-center relative">
                        <div class="space-y-4 relative z-10">
                           <p class="text-[11px] font-black text-[#94A3B8] uppercase tracking-widest">Expected Routing</p>
-                          <p class="text-[16px] font-bold text-[#111827]">{{ activity.required_origin }} → {{ activity.required_destination }}</p>
-                          <p class="text-[13px] font-medium text-[#64748B]">{{ activity.required_departure_date || 'Any Date' }}</p>
+                          <p class="text-base sm:text-[16px] font-bold text-[#111827]">{{ activity.required_origin }} → {{ activity.required_destination }}</p>
+                          <p class="text-xs sm:text-[13px] font-medium text-[#64748B]">{{ activity.required_departure_date || 'Any Date' }}</p>
                        </div>
-                       <div class="space-y-4 relative z-10 text-right border-l border-dashed border-[#E2E8F0] pl-8"
+                       <div class="space-y-4 relative z-10 text-left sm:text-right border-t sm:border-t-0 sm:border-l border-dashed border-[#E2E8F0] pt-6 sm:pt-0 sm:pl-8"
                             :class="matches.origin && matches.destination && matches.departure_date ? 'border-[#10B981]/30' : 'border-[#EF4444]/30'">
                           <p class="text-[11px] font-black text-[#94A3B8] uppercase tracking-widest">Student Trajectory</p>
-                          <p class="text-[16px] font-bold" :class="matches.origin && matches.destination ? 'text-[#111827]' : 'text-[#EF4444]'">{{ actualOrigin }} → {{ actualDestination }}</p>
-                          <p class="text-[13px] font-bold" :class="matches.departure_date ? 'text-[#10B981]' : 'text-[#EF4444]'">{{ actualDepartureDate }}</p>
+                          <p class="text-base sm:text-[16px] font-bold" :class="matches.origin && matches.destination ? 'text-[#111827]' : 'text-[#EF4444]'">{{ actualOrigin }} → {{ actualDestination }}</p>
+                          <p class="text-xs sm:text-[13px] font-bold" :class="matches.departure_date ? 'text-[#10B981]' : 'text-[#EF4444]'">{{ actualDepartureDate }}</p>
                        </div>
                     </div>
                  </div>
               </div>
 
               <!-- Round-Trip Blocks -->
-              <div v-if="activity?.required_trip_type === 'round_trip'" class="grid grid-cols-2 gap-6">
+              <div v-if="activity?.required_trip_type === 'round_trip'" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                  <!-- Outbound Leg -->
-                 <div class="p-8 border rounded-[24px] bg-white transition-all hover:shadow-sm flex flex-col justify-between"
+                 <div class="p-6 sm:p-8 border rounded-[24px] bg-white transition-all hover:shadow-sm flex flex-col justify-between"
                       :class="matches.origin && matches.destination && matches.departure_date ? 'border-[#10B981]/20' : 'border-[#EF4444]/20'">
                     <div>
                       <div class="flex justify-between items-center mb-6 pb-4 border-b border-[#F1F5F9]">
@@ -147,7 +147,7 @@
                  </div>
 
                  <!-- Return Leg -->
-                 <div class="p-8 border rounded-[24px] bg-white transition-all hover:shadow-sm flex flex-col justify-between"
+                 <div class="p-6 sm:p-8 border rounded-[24px] bg-white transition-all hover:shadow-sm flex flex-col justify-between"
                       :class="matches.return_origin && matches.return_destination && matches.return_date ? 'border-[#10B981]/20' : 'border-[#EF4444]/20'">
                     <div>
                       <div class="flex justify-between items-center mb-6 pb-4 border-b border-[#F1F5F9]">
@@ -203,9 +203,9 @@
                 <span class="h-px flex-1 bg-[#F1F5F9]"></span>
               </h3>
               
-              <div class="grid grid-cols-2 gap-8">
-                <div v-for="(p, idx) in matches.passenger_details" :key="idx" class="p-8 border border-[#F1F5F9] rounded-xl hover:border-[#111827]/10 transition-all">
-                  <div class="flex justify-between items-center mb-8 pb-4 border-b border-[#F1F5F9]">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+                <div v-for="(p, idx) in matches.passenger_details" :key="idx" class="p-6 sm:p-8 border border-[#F1F5F9] rounded-xl hover:border-[#111827]/10 transition-all">
+                  <div class="flex justify-between items-center mb-6 sm:mb-8 pb-4 border-b border-[#F1F5F9]">
                     <span class="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em]">P{{ idx + 1 }} • Verification Card</span>
                     <span class="px-3 py-1 bg-[#F8FAFC] rounded-full text-[10px] font-black text-[#64748B] uppercase">ID: 00{{ idx + 1 }}</span>
                   </div>
@@ -214,10 +214,10 @@
                     <div v-for="(field, key) in p" :key="key" class="flex justify-between items-start group">
                       <div class="space-y-0.5">
                         <p class="text-[10px] font-black text-[#94A3B8] uppercase tracking-wider capitalize">{{ key }}</p>
-                        <p class="text-[13px] font-medium text-[#64748B]">{{ field.expected }}</p>
+                        <p class="text-xs sm:text-[13px] font-medium text-[#64748B]">{{ field.expected }}</p>
                       </div>
                       <div class="text-right">
-                        <p class="text-[13px] font-bold" :class="field.isMet ? 'text-[#111827]' : 'text-[#EF4444]'">{{ field.actual }}</p>
+                        <p class="text-xs sm:text-[13px] font-bold" :class="field.isMet ? 'text-[#111827]' : 'text-[#EF4444]'">{{ field.actual }}</p>
                         <span class="text-[10px] font-black uppercase tracking-tighter" :class="field.isMet ? 'text-[#10B981]' : 'text-[#EF4444]'">
                           {{ field.isMet ? 'OK' : 'ERR' }}
                         </span>
@@ -232,9 +232,9 @@
       </div>
       
       <!-- Minimalist Footer -->
-      <div class="p-12 bg-white flex justify-end gap-6 border-t border-[#F1F5F9]">
-        <button class="text-[13px] font-bold text-[#64748B] hover:text-[#111827] transition-all px-4" @click="closeModal">Discard</button>
-        <button class="bg-[#111827] text-white px-10 py-4 rounded-lg text-[13px] font-bold hover:shadow-2xl hover:-translate-y-1 transition-all active:scale-95 shadow-xl shadow-[#111827]/10" @click="saveAndClose">Confirm Analysis</button>
+      <div class="p-6 sm:p-12 bg-white flex flex-col sm:flex-row justify-end gap-4 sm:gap-6 border-t border-[#F1F5F9]">
+        <button class="w-full sm:w-auto text-[13px] font-bold text-[#64748B] hover:text-[#111827] transition-all px-4 py-3 sm:py-0" @click="closeModal">Discard</button>
+        <button class="w-full sm:w-auto bg-[#111827] text-white px-10 py-4 rounded-lg text-[13px] font-bold hover:shadow-2xl hover:-translate-y-1 transition-all active:scale-95 shadow-xl shadow-[#111827]/10" @click="saveAndClose">Confirm Analysis</button>
       </div>
     </div>
   </div>
@@ -593,7 +593,13 @@ const calculatedScore = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px;
+  padding: 16px;
+}
+
+@media (min-width: 640px) {
+  .comparison-modal {
+    padding: 40px;
+  }
 }
 
 .modal-overlay {
@@ -602,8 +608,8 @@ const calculatedScore = computed(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
 }
 
 .modal-content {

@@ -141,10 +141,16 @@
             <span class="text-sm text-gray-700">Direct</span>
           </label>
           <label class="flex items-center space-x-3 cursor-pointer">
-            <input type="radio" value="connecting" :checked="filters.stops === 'connecting'"
-              @change="$emit('update:filters', { ...filters, stops: 'connecting' })"
+            <input type="radio" value="1-stop" :checked="filters.stops === '1-stop'"
+              @change="$emit('update:filters', { ...filters, stops: '1-stop' })"
               class="h-4 w-4 text-pink-500 focus:ring-pink-500 border-gray-300">
-            <span class="text-sm text-gray-700">Connecting</span>
+            <span class="text-sm text-gray-700">1 Stop</span>
+          </label>
+          <label class="flex items-center space-x-3 cursor-pointer">
+            <input type="radio" value="2-stop" :checked="filters.stops === '2-stop'"
+              @change="$emit('update:filters', { ...filters, stops: '2-stop' })"
+              class="h-4 w-4 text-pink-500 focus:ring-pink-500 border-gray-300">
+            <span class="text-sm text-gray-700">2 Stops</span>
           </label>
         </div>
       </div>
@@ -200,7 +206,7 @@
           </span>
           <span v-if="filters.stops !== 'all'" 
             class="inline-flex items-center px-3 py-1 rounded-full text-[9px] font-medium bg-pink-100 text-pink-700">
-            Stops: {{ filters.stops === 'nonstop' ? 'Non-stop' : filters.stops }}
+            Stops: {{ filters.stops === 'nonstop' ? 'Non-stop' : (filters.stops === '1-stop' ? '1 Stop' : (filters.stops === '2-stop' ? '2 Stops' : filters.stops)) }}
           </span>
           <span v-if="filters.airline !== 'all'" 
             class="inline-flex items-center px-3 py-1 rounded-full text-[9px] font-medium bg-pink-100 text-pink-700">

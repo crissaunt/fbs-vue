@@ -17,6 +17,13 @@ class AdminLoginView(APIView):
             user = authenticate(username=username, password=password)
             
             if user and user.is_staff:
+                # Log the action
+                from ..models import TrackLog
+                TrackLog.objects.create(
+                    user=user,
+                    action=f"Admin Login: {user.username} successfully logged in to the dashboard."
+                )
+
                 # 1. Get or create DRF token (for legacy support)
                 token, _ = Token.objects.get_or_create(user=user)
                 

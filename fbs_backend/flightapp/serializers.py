@@ -75,6 +75,7 @@ class ScheduleSerializer(serializers.ModelSerializer):
     
     # Helper method for duration (calls the model method)
     flight_duration = serializers.ReadOnlyField(source='duration')
+    total_stops = serializers.ReadOnlyField(source='flight.total_stops')
     
     # Seat class fields
     available_classes = serializers.SerializerMethodField()
@@ -98,6 +99,7 @@ class ScheduleSerializer(serializers.ModelSerializer):
     )
     using_ml_price = serializers.SerializerMethodField()
     price_age_hours = serializers.SerializerMethodField()
+    layovers_data = serializers.JSONField(source='flight.layovers_data', read_only=True)
     # ============================================
     
     def get_available_classes(self, obj):
@@ -153,14 +155,14 @@ class ScheduleSerializer(serializers.ModelSerializer):
             return round(delta.total_seconds() / 3600, 1)
         return None
     # ============================================
-
+    
     class Meta:
         model = Schedule
         fields = [
             'id', 'flight_number', 'airline_name', 'airline_code',
             'origin', 'origin_city', 'destination', 'destination_city',
             'departure_time', 'arrival_time', 'price', 'status', 'gate',
-            'flight_duration', 'available_classes', 'seat_classes', 
+            'flight_duration', 'total_stops', 'layovers_data', 'available_classes', 'seat_classes', 
             'available_seats', 'is_domestic',
             # ML pricing fields
             'ml_base_price', 'ml_price_updated_at', 'using_ml_price', 'price_age_hours'
@@ -314,10 +316,13 @@ class SimpleScheduleSerializer(serializers.ModelSerializer):
     origin = serializers.CharField(source='flight.route.origin_airport.code', read_only=True)
     destination = serializers.CharField(source='flight.route.destination_airport.code', read_only=True)
     
+    total_stops = serializers.ReadOnlyField(source='flight.total_stops')
+    layovers_data = serializers.JSONField(source='flight.layovers_data', read_only=True)
+    
     class Meta:
         model = Schedule
         fields = ['id', 'flight_number', 'airline_code', 'origin', 'destination', 
-                 'departure_time', 'arrival_time', 'price']
+                 'departure_time', 'arrival_time', 'price', 'total_stops', 'layovers_data']
 
 class SimpleSeatSerializer(serializers.ModelSerializer):
     """Simplified seat serializer for booking details"""

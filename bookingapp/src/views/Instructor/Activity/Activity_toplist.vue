@@ -1,0 +1,469 @@
+<template>
+  <div class="p-0 m-0">
+    <div class="flex flex-col h-screen bg-gray-50 font-sans">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-pink-500 to-pink-400 text-white px-6 py-2.5 flex items-center justify-between shadow-sm z-20 border-b border-pink-400">
+        <div class="flex items-center gap-4">
+          <button @click="toggleSidebar" class="p-1.5 hover:bg-pink-600 rounded-md transition-colors focus:outline-none">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-xl shadow-inner">🎓</div>
+            <div>
+              <h1 class="text-[10px] font-bold uppercase tracking-widest text-white/90">Cabagan State University</h1>
+              <p class="text-[9px] uppercase tracking-tighter opacity-60">Faculty Portal</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative">
+          <button @click="toggleDropdown" class="flex items-center gap-2 hover:bg-slate-800 p-1.5 rounded-md transition-colors focus:outline-none">
+            <span class="text-xs font-medium">{{ fullName || 'Instructor' }}</span>
+            <div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center overflow-hidden border border-slate-600">
+              <div class="w-full h-full bg-slate-600 rounded-full flex items-center justify-center text-white text-xs font-bold uppercase">{{ initials }}</div>
+            </div>
+          </button>
+          <div v-if="dropdownOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-100">
+            <button @click="handleLogout" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">Logout</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar -->
+        <div :class="['bg-gradient-to-b from-pink-500 to-pink-400 text-white transition-all duration-300 ease-in-out flex flex-col z-10 shadow-lg border-r border-pink-400/20', sidebarOpen ? 'w-56' : 'w-16']">
+          <div class="flex flex-col h-full overflow-y-auto">
+            <button @click="router.push('/instructor/dashboard')" class="flex items-center py-3 hover:bg-pink-600 transition-colors border-b border-pink-400/20 justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+              <span v-show="sidebarOpen" class="text-sm font-medium ml-3">Home</span>
+            </button>
+
+            <button @click="router.push('/instructor/logs')" class="flex items-center py-3 hover:bg-pink-600 transition-colors border-b border-pink-400/20 justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+              <span v-show="sidebarOpen" class="text-sm font-medium ml-3">Activity Logs</span>
+            </button>
+            <div 
+              v-for="section in sections" 
+              :key="section.id" 
+              @click="goToSection(section.id)" 
+              :class="[
+                'flex items-center py-2.5 hover:bg-pink-600 cursor-pointer transition-colors border-b border-pink-400/10',
+                sidebarOpen ? 'px-5' : 'justify-center'
+              ]"
+            >
+              <div class="w-7 h-7 rounded-full bg-white text-pink-500 flex items-center justify-center font-bold text-[10px] flex-shrink-0 shadow-sm uppercase">
+                {{ section.section_name ? section.section_name.charAt(0) : 'S' }}
+              </div>
+              <span v-show="sidebarOpen" class="ml-3 truncate text-[11px] font-bold tracking-wider uppercase text-white">{{ section.section_name }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto bg-[#FDFBF7] p-8">
+          <div class="max-w-6xl mx-auto">
+            
+            <div class="flex justify-between items-center mb-6">
+              <button @click="router.back()" class="flex items-center text-gray-500 hover:text-black font-bold text-sm uppercase">
+                <span class="mr-2">←</span> BACK
+              </button>
+              <div class="flex gap-6 text-[11px] font-bold uppercase tracking-widest font-sans">
+                <span 
+                  @click="router.push(`/instructor/activity/${activityId}`)"
+                  class="text-gray-400 cursor-pointer hover:text-gray-600"
+                >
+                  Instruction/s
+                </span>
+                <span 
+                  @click="router.push(`/instructor/activity/${activityId}?tab=submissions`)"
+                  class="text-gray-400 cursor-pointer hover:text-gray-600"
+                >
+                  Student work
+                </span>
+                <span 
+                  class="text-green-700 border-b-2 border-green-700 pb-1"
+                >
+                  Overview (Top List)
+                </span>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
+              <div v-if="loading" class="animate-pulse flex flex-col gap-6">
+                <div class="h-8 bg-gray-200 w-1/4 rounded"></div>
+                <div class="h-64 bg-gray-100 w-full rounded-xl"></div>
+              </div>
+
+              <div v-else>
+                <div class="flex justify-between items-end mb-8 border-b border-gray-50 pb-6">
+                  <div>
+                    <h2 class="text-3xl font-black text-gray-900 uppercase tracking-tight">{{ activity?.title }}</h2>
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Class Performance Rankings</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-[10px] font-black text-pink-500 uppercase tracking-widest">Total Points</p>
+                    <p class="text-2xl font-black text-slate-800">{{ activity?.total_points || 100 }}</p>
+                  </div>
+                </div>
+
+                <!-- Top 5 Leaderboard Highlights (Left Aligned) -->
+                <div v-if="topStudents.length > 0" class="flex flex-wrap items-center justify-start gap-4 mb-8 mt-6">
+                  <div v-for="(student, idx) in topStudents.slice(0, 5)" :key="student.student_id" 
+                    class="flex items-center gap-3 px-4 py-2.5 rounded-2xl border bg-white transition-all shadow-sm hover:shadow-md min-w-[180px]"
+                    :class="[
+                      idx === 0 ? 'border-amber-200 bg-amber-50/20 shadow-amber-100/20' : 
+                      idx === 1 ? 'border-slate-200 bg-gray-50/10' : 
+                      'border-gray-100 hover:border-gray-200'
+                    ]"
+                  >
+                    <div class="relative shrink-0">
+                      <div :class="[
+                        'w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-inner border border-black/5',
+                        idx === 0 ? 'bg-amber-400 text-white' : idx === 1 ? 'bg-slate-300 text-white' : idx === 2 ? 'bg-orange-300 text-white' : 'bg-gray-100 text-gray-500'
+                      ]">
+                        {{ idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : (idx + 1) }}
+                      </div>
+                      <div v-if="idx === 0" class="absolute -top-1.5 -right-1.5 text-[10px] drop-shadow-sm">👑</div>
+                    </div>
+                    <div class="truncate">
+                      <p class="text-[8px] font-black uppercase tracking-widest leading-none mb-1" :class="idx === 0 ? 'text-amber-600' : 'text-gray-400'">{{ getRankWithSuffix(idx + 1) }} Place</p>
+                      <h4 class="text-xs font-bold text-gray-900 leading-tight truncate">{{ student.first_name }} {{ student.last_name }}</h4>
+                      <p class="text-[11px] font-black mt-0.5" :class="idx === 0 ? 'text-amber-700' : 'text-gray-600'">{{ getPercentage(student) }}%</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Quick Insights Bar -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
+                  <div class="bg-slate-900 rounded-2xl p-4 text-white shadow-xl flex items-center gap-4">
+                    <div class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-xl">📊</div>
+                    <div>
+                      <p class="text-[9px] font-black uppercase tracking-widest text-white/50">Class Average</p>
+                      <p class="text-xl font-black">{{ classAverage }}%</p>
+                    </div>
+                  </div>
+                  <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center gap-4">
+                    <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-xl border border-green-100">✅</div>
+                    <div>
+                      <p class="text-[9px] font-black uppercase tracking-widest text-gray-400">Pass Rate</p>
+                      <p class="text-xl font-black text-green-600">{{ passRate }}%</p>
+                      <p class="text-[8px] text-gray-400 font-bold mt-0.5 uppercase tracking-tighter">{{ passedCount }} of {{ totalStudents }} Passed</p>
+                    </div>
+                  </div>
+                  <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center gap-4">
+                    <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-xl border border-blue-100">📝</div>
+                    <div>
+                      <p class="text-[9px] font-black uppercase tracking-widest text-gray-400">Participation</p>
+                      <p class="text-xl font-black text-blue-600">{{ participationRate }}%</p>
+                      <p class="text-[8px] text-gray-400 font-bold mt-0.5 uppercase tracking-tighter">{{ participationCount }} of {{ totalStudents }} Active</p>
+                    </div>
+                  </div>
+                  <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center gap-4">
+                    <div class="w-10 h-10 bg-pink-50 rounded-xl flex items-center justify-center text-xl border border-pink-100">⏳</div>
+                    <div>
+                      <p class="text-[9px] font-black uppercase tracking-widest text-gray-400">Pending Release</p>
+                      <p class="text-xl font-black text-pink-500">{{ pendingReleaseCount }}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Filters and Search -->
+                <div class="flex flex-col md:flex-row gap-4 mb-6 items-center justify-between">
+                  <div class="relative w-full md:w-80">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </span>
+                    <input 
+                      v-model="searchQuery" 
+                      type="text" 
+                      placeholder="Search student or ID..." 
+                      class="w-full bg-white border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 text-xs font-medium focus:ring-2 focus:ring-pink-500 outline-none transition-all"
+                    >
+                  </div>
+                  <div class="flex gap-2">
+                    <button 
+                      v-for="f in ['all', 'passed', 'failed', 'not taken']" 
+                      :key="f"
+                      @click="filterStatus = f"
+                      :class="[
+                        'px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border',
+                        filterStatus === f ? 'bg-pink-500 text-white border-pink-500 shadow-md' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
+                      ]"
+                    >
+                      {{ f }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Main Leaderboard Table -->
+                <div class="overflow-hidden border border-gray-100 rounded-xl bg-white shadow-sm">
+                  <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-50 border-b border-gray-100">
+                      <tr>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest w-16 text-center">Rank</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest">Student Information</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Raw Score</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Percentage</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-right">Result</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50 text-print-black">
+                      <tr v-for="(sub, index) in filteredSubmissions" :key="sub.student_id" 
+                        class="hover:bg-gray-50/50 transition-colors"
+                        :class="[sub.grade === null ? 'bg-gray-50/20' : '', index === 0 && sub.grade !== null && filterStatus === 'all' ? 'bg-amber-50/10' : '']"
+                      >
+                        <td class="px-3 py-3">
+                          <div class="flex items-center justify-center">
+                            <span v-if="sub.grade !== null" :class="[
+                              'px-2 py-0.5 rounded-full text-[9px] font-black shadow-sm border border-black/5 whitespace-nowrap',
+                              index === 0 ? 'bg-amber-400 text-white' : index === 1 ? 'bg-slate-300 text-slate-700' : index === 2 ? 'bg-orange-200 text-orange-800' : 'bg-slate-100 text-slate-500'
+                            ]">
+                              {{ getRankWithSuffix(index + 1) }}
+                            </span>
+                            <span v-else class="text-gray-300 font-bold text-[9px]">-</span>
+                          </div>
+                        </td>
+                        <td class="px-3 py-3">
+                          <div class="flex items-center gap-2">
+                            <div class="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center font-bold text-gray-400 text-[9px] uppercase">
+                              {{ sub.first_name[0] }}{{ sub.last_name[0] }}
+                            </div>
+                            <div>
+                              <div class="font-bold text-xs text-gray-900 flex items-center gap-1.5 leading-tight">
+                                {{ sub.first_name }} {{ sub.last_name }}
+                                <span v-if="index === 0 && sub.grade !== null" class="px-1 py-0.5 bg-amber-100 text-amber-700 text-[7px] font-black rounded uppercase tracking-tighter border border-amber-200">Top</span>
+                              </div>
+                              <div class="text-[9px] text-gray-400 font-medium tracking-tight uppercase">{{ sub.student_number }}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td class="px-3 py-3 text-center font-mono font-bold text-xs">
+                          <span v-if="sub.grade !== null" class="text-slate-700">
+                            {{ sub.grade }} <span class="text-gray-300 font-normal">/ {{ activity?.total_points }}</span>
+                          </span>
+                          <span v-else class="text-gray-300 italic text-[9px]">No Grade</span>
+                        </td>
+                        <td class="px-3 py-3 text-center">
+                          <div v-if="sub.grade !== null" class="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-black" 
+                            :class="getPercentage(sub) >= 50 ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'">
+                            {{ getPercentage(sub) }}%
+                          </div>
+                          <span v-else class="text-gray-300 italic text-[9px]">No Data</span>
+                        </td>
+                        <td class="px-3 py-3 text-center">
+                          <span v-if="sub.grade !== null" :class="['px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest', sub.is_released ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600']">
+                            {{ sub.is_released ? 'Released' : 'Pending' }}
+                          </span>
+                          <span v-else class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest bg-gray-100 text-gray-400">
+                            Not Taken
+                          </span>
+                        </td>
+                        <td class="px-3 py-3 text-right">
+                          <div v-if="sub.grade !== null">
+                            <span :class="['text-[9px] font-black uppercase tracking-widest', getPercentage(sub) >= 50 ? 'text-green-600' : 'text-red-600']">
+                              {{ getPercentage(sub) >= 50 ? 'Passed' : 'Failed' }}
+                            </span>
+                            <div class="w-full bg-gray-100 h-1 rounded-full mt-1 overflow-hidden min-w-[50px] ml-auto">
+                              <div :class="['h-full rounded-full', getPercentage(sub) >= 50 ? 'bg-green-500' : 'bg-red-500']" :style="{ width: getPercentage(sub) + '%' }"></div>
+                            </div>
+                          </div>
+                          <span v-else class="text-gray-300 font-bold text-[8px] uppercase tracking-tighter">Incomplete</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div v-if="sortedSubmissions.length === 0" class="py-20 text-center">
+                    <p class="text-gray-400 text-sm italic font-medium">No students enrolled in this section.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { instructorDashboardService } from '@/services/instructor/instructorDashboardService'
+import { activityDetailsService } from '@/services/instructor/activityDetailsService'
+import { useUserStore } from '@/stores/user'
+
+const router = useRouter()
+const route = useRoute()
+const userStore = useUserStore()
+const activityId = route.params.activityId
+
+// --- UI State ---
+const sidebarOpen = ref(false)
+const dropdownOpen = ref(false)
+const loading = ref(true)
+const searchQuery = ref('')
+const filterStatus = ref('all')
+
+// --- Data State ---
+const sections = ref([])
+const user = ref({ first_name: '', last_name: '', username: '' })
+const activity = ref(null)
+const submissions = ref([])
+
+const fullName = computed(() => {
+  if (user.value.first_name && user.value.last_name) return `${user.value.first_name} ${user.value.last_name}`
+  return user.value.username || 'Instructor'
+})
+
+const initials = computed(() => {
+  const u = user.value.username || 'I'
+  return u[0]?.toUpperCase() || 'I'
+})
+
+const toggleSidebar = () => { sidebarOpen.value = !sidebarOpen.value }
+const toggleDropdown = () => { dropdownOpen.value = !dropdownOpen.value }
+
+const goToSection = (id) => {
+  router.push(`/instructor/section/${id}`)
+}
+
+const handleLogout = () => {
+  userStore.logout()
+  router.push('/login')
+}
+
+const fetchData = async () => {
+  loading.value = true
+  try {
+    const dashData = await instructorDashboardService.getDashboard()
+    sections.value = dashData.sections || []
+    user.value = dashData.user || { first_name: '', last_name: '', username: '' }
+
+    const actData = await activityDetailsService.getActivity(activityId)
+    activity.value = actData
+
+    const subData = await activityDetailsService.getSubmissions(activityId)
+    submissions.value = subData.submissions || []
+  } catch (error) {
+    console.error("Error fetching data:", error)
+  } finally {
+    loading.value = false
+  }
+}
+
+const sortedSubmissions = computed(() => {
+  return [...submissions.value].sort((a, b) => {
+    // If one has no grade, put it at the bottom
+    if (a.grade === null && b.grade !== null) return 1
+    if (a.grade !== null && b.grade === null) return -1
+    if (a.grade === null && b.grade === null) return 0
+    
+    // Sort by grade descending
+    return b.grade - a.grade
+  })
+})
+
+const topStudents = computed(() => {
+  return sortedSubmissions.value.filter(s => s.grade !== null)
+})
+
+const filteredSubmissions = computed(() => {
+  let list = sortedSubmissions.value
+  
+  // Apply Search
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    list = list.filter(s => 
+      s.first_name.toLowerCase().includes(q) || 
+      s.last_name.toLowerCase().includes(q) || 
+      s.student_number.toLowerCase().includes(q)
+    )
+  }
+  
+  // Apply Status Filter
+  if (filterStatus.value !== 'all') {
+    if (filterStatus.value === 'passed') {
+      list = list.filter(s => s.grade !== null && getPercentage(s) >= 50)
+    } else if (filterStatus.value === 'failed') {
+      list = list.filter(s => s.grade !== null && getPercentage(s) < 50)
+    } else if (filterStatus.value === 'not taken') {
+      list = list.filter(s => s.grade === null)
+    }
+  }
+  
+  return list
+})
+
+const totalStudents = computed(() => submissions.value.length)
+const participationCount = computed(() => submissions.value.filter(s => s.booking !== null).length)
+const passedCount = computed(() => submissions.value.filter(s => s.grade !== null && getPercentage(s) >= 50).length)
+
+const classAverage = computed(() => {
+  const graded = submissions.value.filter(s => s.grade !== null)
+  if (graded.length === 0) return 0
+  const totalPercentage = graded.reduce((sum, s) => sum + getPercentage(s), 0)
+  return Math.round(totalPercentage / graded.length)
+})
+
+const passRate = computed(() => {
+  if (totalStudents.value === 0) return 0
+  return Math.round((passedCount.value / totalStudents.value) * 100)
+})
+
+const participationRate = computed(() => {
+  if (totalStudents.value === 0) return 0
+  return Math.round((participationCount.value / totalStudents.value) * 100)
+})
+
+const pendingReleaseCount = computed(() => {
+  return submissions.value.filter(s => s.grade !== null && !s.is_released).length
+})
+
+const getPercentage = (sub) => {
+  // Ensure we are working with numbers
+  const grade = sub.grade === null ? 0 : parseFloat(sub.grade)
+  const total = parseFloat(activity.value?.total_points || 100)
+  
+  if (total === 0) return 0
+  
+  // Calculate percentage against activity total points
+  const percentage = (grade / total) * 100
+  return Math.round(percentage)
+}
+
+const getRankWithSuffix = (rank) => {
+  const j = rank % 10,
+        k = rank % 100;
+  if (j == 1 && k != 11) {
+    return rank + "st";
+  }
+  if (j == 2 && k != 12) {
+    return rank + "nd";
+  }
+  if (j == 3 && k != 13) {
+    return rank + "rd";
+  }
+  return rank + "th";
+}
+
+onMounted(fetchData)
+</script>
+
+<style scoped>
+.font-sans {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+</style>

@@ -47,8 +47,8 @@
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-      <!-- Passengers Card -->
-      <div class="group bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
+      <!-- Passengers Card (LMS & Flight) -->
+      <div v-if="userRole === 'superadmin' || userRole === 'lms_admin' || userRole === 'flight_admin'" class="group bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
         <div class="absolute top-0 right-0 w-24 h-24 bg-blue-50/50 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
         <div class="relative flex items-center justify-between">
           <div>
@@ -68,8 +68,8 @@
         </div>
       </div>
 
-      <!-- Revenue Card -->
-      <div class="group bg-[#002D1E] p-6 border border-[#002D1E] rounded-[1px] shadow-sm hover:shadow-2xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
+      <!-- Revenue Card (Flight & Superadmin) -->
+      <div v-if="userRole === 'superadmin' || userRole === 'flight_admin'" class="group bg-[#002D1E] p-6 border border-[#002D1E] rounded-[1px] shadow-sm hover:shadow-2xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
         <div class="absolute top-0 right-0 w-24 h-24 bg-[#fe3787]/10 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
         <div class="relative flex items-center justify-between text-white">
           <div>
@@ -89,8 +89,8 @@
         </div>
       </div>
 
-      <!-- Bookings Card -->
-      <div class="group bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
+      <!-- Bookings Card (Flight & Superadmin) -->
+      <div v-if="userRole === 'superadmin' || userRole === 'flight_admin'" class="group bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
         <div class="absolute top-0 right-0 w-24 h-24 bg-green-50/50 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
         <div class="relative flex items-center justify-between text-[#002D1E]">
           <div>
@@ -107,8 +107,8 @@
         </div>
       </div>
 
-      <!-- Flights Card -->
-      <div class="group bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
+      <!-- Flights Card (Flight & Superadmin) -->
+      <div v-if="userRole === 'superadmin' || userRole === 'flight_admin'" class="group bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
         <div class="absolute top-0 right-0 w-24 h-24 bg-purple-50/50 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
         <div class="relative flex items-center justify-between text-[#002D1E]">
           <div>
@@ -125,8 +125,8 @@
         </div>
       </div>
 
-      <!-- Check-ins Card -->
-      <div class="group bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
+      <!-- Check-ins Card (Flight & Superadmin) -->
+      <div v-if="userRole === 'superadmin' || userRole === 'flight_admin'" class="group bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
         <div class="absolute top-0 right-0 w-24 h-24 bg-pink-50/50 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
         <div class="relative flex items-center justify-between text-[#002D1E]">
           <div>
@@ -145,8 +145,8 @@
       </div>
     </div>
 
-    <!-- Main Charts Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+    <!-- Main Charts Section (Flight & Superadmin) -->
+    <div v-if="userRole === 'superadmin' || userRole === 'flight_admin'" class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
       <!-- Main Sales Chart -->
       <div class="lg:col-span-8 bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm relative overflow-hidden group">
         <div class="absolute top-0 left-0 w-1 h-full bg-[#fe3787] opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -194,8 +194,8 @@
       </div>
     </div>
 
-    <!-- Revenue Performance by Route -->
-    <div class="grid grid-cols-1 gap-6 mb-8">
+    <!-- Revenue Performance by Route (Flight & Superadmin) -->
+    <div v-if="userRole === 'superadmin' || userRole === 'flight_admin'" class="grid grid-cols-1 gap-6 mb-8">
        <div class="bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm relative group overflow-hidden">
           <div class="absolute top-0 left-0 w-1 h-full bg-[#002D1E] opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <h3 class="text-sm font-black text-[#002D1E] poppins uppercase tracking-widest mb-6 relative">Revenue Performance by Route</h3>
@@ -205,8 +205,8 @@
        </div>
     </div>
 
-    <!-- Recent Bookings Ledger -->
-    <div class="grid grid-cols-1 gap-6 mb-8">
+    <!-- Recent Bookings Ledger (Flight & Superadmin) -->
+    <div v-if="userRole === 'superadmin' || userRole === 'flight_admin'" class="grid grid-cols-1 gap-6 mb-8">
        <div class="bg-white border border-gray-200 rounded-[1px] shadow-sm overflow-hidden flex flex-col">
          <div class="p-6 border-b border-gray-200 flex items-center justify-between">
            <h3 class="text-lg font-black text-[#002D1E] poppins flex items-center gap-2">
@@ -248,8 +248,8 @@
        </div>
     </div>
 
-    <!-- Cabin Mix -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+    <!-- Cabin Mix (Flight & Superadmin) -->
+    <div v-if="userRole === 'superadmin' || userRole === 'flight_admin'" class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
       <div class="lg:col-span-5 bg-white border border-gray-200 rounded-[1px] shadow-sm p-6 group relative overflow-hidden">
         <div class="absolute top-0 left-0 w-1 h-full bg-[#fe3787] opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <h3 class="text-sm font-black text-[#002D1E] poppins uppercase tracking-widest flex items-center gap-2 mb-6">
@@ -311,6 +311,7 @@
 import { ref, onMounted, computed, onUnmounted, nextTick } from 'vue'
 import { Chart, registerables } from 'chart.js'
 import api from '@/services/admin/api'
+import AuthStorage from '@/utils/authStorage'
 
 Chart.register(...registerables)
 
@@ -365,6 +366,10 @@ const greeting = computed(() => {
   if (hour < 12) return 'Good Morning'
   if (hour < 18) return 'Good Afternoon'
   return 'Good Evening'
+})
+
+const userRole = computed(() => {
+  return AuthStorage.getRole() || 'admin'
 })
 
 const hasTicketData = computed(() => ticketSalesData.value.data.some(val => val > 0))
@@ -574,11 +579,14 @@ const initSeatClassChart = () => {
   })
 }
 
-const quickActions = [
-  { label: 'Add Flight', description: 'Schedule new departure', icon: 'ph ph-calendar-plus', link: '/admin/manage-flight/schedules', colorClass: 'bg-blue-50 text-blue-600' },
-  { label: 'Check-in Registry', description: 'Manage trainee check-ins', icon: 'ph ph-user-check', link: '/admin/passenger/check-ins', colorClass: 'bg-pink-50 text-[#fe3787]' },
-  { label: 'LMS Performance', description: 'Student success & activities', icon: 'ph ph-student', link: '/admin/student-info/lms-overview', colorClass: 'bg-emerald-50 text-emerald-600' }
-]
+const quickActions = computed(() => {
+  const actions = [
+    { label: 'Add Flight', description: 'Schedule new departure', icon: 'ph ph-calendar-plus', link: '/admin/manage-flight/schedules', colorClass: 'bg-blue-50 text-blue-600', roles: ['superadmin', 'flight_admin'] },
+    { label: 'Check-in Registry', description: 'Manage trainee check-ins', icon: 'ph ph-user-check', link: '/admin/passenger/check-ins', colorClass: 'bg-pink-50 text-[#fe3787]', roles: ['superadmin', 'flight_admin'] },
+    { label: 'LMS Performance', description: 'Student success & activities', icon: 'ph ph-student', link: '/admin/student-info/lms-overview', colorClass: 'bg-emerald-50 text-emerald-600', roles: ['superadmin', 'lms_admin'] }
+  ]
+  return actions.filter(action => action.roles.includes(userRole.value))
+})
 
 const formatNumber = (num) => {
   if (!num) return '0'
