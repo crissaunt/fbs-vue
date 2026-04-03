@@ -1,91 +1,25 @@
 <template>
-  <div class="flex flex-col h-screen bg-[#FDFCF7] font-sans">
-    <LoadingOverlay :loading="isFetching" />
-    <div class="bg-gradient-to-r from-pink-500 to-pink-400 text-white px-6 py-2.5 flex items-center justify-between shadow-sm z-20 border-b border-pink-400">
-      <div class="flex items-center gap-4">
-        <button @click="toggleSidebar" class="p-1.5 hover:bg-pink-600 rounded-md transition-colors focus:outline-none">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
-          </svg>
-        </button>
-        <div class="flex items-center gap-3">
-          <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-xl shadow-inner">🎓</div>
-          <div>
-            <h1 class="text-[10px] font-bold uppercase tracking-widest text-white/90">Cabagan State University</h1>
-            <p class="text-[9px] uppercase tracking-tighter opacity-60">Faculty Portal</p>
-          </div>
-        </div>
+  <div class="p-8 max-w-7xl mx-auto">
+    <!-- Header/Breadcrumbs -->
+    <div class="mb-6">
+      <div class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+        <router-link to="/instructor/dashboard" class="hover:text-pink-500 transition-colors">Dashboard</router-link>
+        <span>/</span>
+        <span class="text-slate-600">{{ section?.section_code }}</span>
       </div>
-
-      <div class="relative">
-        <button @click="toggleDropdown" class="flex items-center gap-2 hover:bg-pink-600 p-1.5 rounded-md transition-colors focus:outline-none">
-          <span class="text-xs font-medium">{{ userFullName }}</span>
-          <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center overflow-hidden border border-pink-300">
-             <div class="w-full h-full bg-gray-300 rounded-full flex items-center justify-center text-gray-600 text-xs font-bold uppercase">{{ initials }}</div>
-          </div>
-        </button>
-        <div v-if="dropdownOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-100">
-           <button @click="handleLogout" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">Logout</button>
+      <div class="flex items-center flex-wrap gap-3">
+        <h2 class="text-2xl font-bold text-slate-800 tracking-tight">
+          {{ section?.section_code }} - {{ section?.section_name }}
+        </h2>
+        <div class="flex gap-2">
+          <span v-if="section?.is_active === false" class="bg-red-50 text-red-600 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border border-red-100 shadow-sm animate-pulse">Disabled</span>
+          <span v-if="section?.is_locked" class="bg-amber-50 text-amber-600 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border border-amber-100 shadow-sm flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Locked
+          </span>
         </div>
       </div>
     </div>
-
-    <div class="flex flex-1 overflow-hidden">
-      <div :class="['bg-gradient-to-b from-pink-500 to-pink-400 text-white transition-all duration-300 ease-in-out flex flex-col z-10 shadow-lg border-r border-pink-400/20', sidebarOpen ? 'w-56' : 'w-16']">
-        <div class="flex flex-col h-full overflow-y-auto">
-           <button @click="$router.push('/instructor/dashboard')" class="flex items-center py-3 hover:bg-pink-600 transition-colors border-b border-pink-400/20 justify-center">
-             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-             </svg>
-             <span v-show="sidebarOpen" class="text-sm font-medium ml-3">Home</span>
-           </button>
-
-           <button @click="$router.push('/instructor/logs')" class="flex items-center py-3 hover:bg-pink-600 transition-colors border-b border-pink-400/20 justify-center">
-             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
-                <polyline points="10 9 9 9 8 9"></polyline>
-             </svg>
-             <span v-show="sidebarOpen" class="text-sm font-medium ml-3">Activity Logs</span>
-           </button>
-           <div 
-             v-for="sidebarSection in sidebarSections" 
-             :key="sidebarSection.id" 
-             @click="goToSection(sidebarSection.id)" 
-             :class="[
-               'flex items-center py-2.5 hover:bg-pink-600 cursor-pointer transition-colors border-b border-pink-400/10', 
-               sidebarOpen ? 'px-5' : 'justify-center',
-               route.params.id == sidebarSection.id ? 'bg-pink-700' : ''
-             ]"
-           >
-              <div class="w-7 h-7 rounded-full bg-white text-pink-500 flex items-center justify-center font-bold text-[10px] flex-shrink-0 shadow-sm uppercase">
-                {{ sidebarSection.section_name.charAt(0) }}
-              </div>
-              <span v-show="sidebarOpen" class="ml-3 truncate text-[11px] font-bold tracking-wider uppercase text-white">{{ sidebarSection.section_name }}</span>
-           </div>
-        </div>
-      </div>
-
-      <div class="flex-1 overflow-auto bg-[#FDFCF7]">
-        <div class="p-8">
-          <div>
-            <div class="flex items-center flex-wrap gap-3">
-              <h2 class="text-2xl font-light text-gray-900 tracking-wide">
-                Course Section: {{ section?.section_code }} — {{ section?.section_name }}
-              </h2>
-              <div class="flex gap-2">
-                <span v-if="section?.is_active === false" class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border border-red-200 shadow-sm animate-pulse">Disabled</span>
-                <span v-if="section?.is_locked" class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-200 shadow-sm flex items-center gap-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                  Locked
-                </span>
-              </div>
-            </div>
-<br>
-          </div>
-          
           <div class="flex items-center gap-8 border-b border-gray-300 mb-8 px-2 relative">
             <button class="pb-3 text-sm font-bold uppercase border-b-4 border-[#0E8028] text-gray-900 tracking-wider">Assessments</button>
             <button 
@@ -207,8 +141,6 @@
               </button>
             </div>
           </div>
-        </div>
-      </div>
     </div>
 
     <!-- Delete Confirmation Modal -->
@@ -884,12 +816,12 @@
           </form>
         </div>
       </div>
-    </div>
   </div>
 </template>
 
 
 <script setup>
+import CTHM from '@/assets/image/cthm-logos.png'
 import { ref, computed, onMounted, watch, reactive, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/services/api/axios'
@@ -897,7 +829,6 @@ import { sectionDetailsService } from '@/services/instructor/sectionDetailsServi
 import { instructorDashboardService } from '@/services/instructor/instructorDashboardService'
 import { activityService } from '@/services/instructor/activityService'
 import flightService from '@/services/booking/flightService'
-import LoadingOverlay from '@/components/instructor/LoadingOverlay.vue'
 import { useUserStore } from '@/stores/user'
 import { useNotificationStore } from '@/stores/notification'
 
@@ -907,11 +838,8 @@ const userStore = useUserStore()
 const notificationStore = useNotificationStore()
 
 const section = ref(null)
-const sidebarSections = ref([])
 const userData = ref(null)
 const isFetching = ref(false)
-const sidebarOpen = ref(false)
-const dropdownOpen = ref(false)
 
 // Activities list
 const activities = ref([])
@@ -2063,7 +1991,14 @@ const submitActivity = async () => {
 }
 
 const toggleSidebar = () => { sidebarOpen.value = !sidebarOpen.value }
-const toggleDropdown = () => { dropdownOpen.value = !dropdownOpen.value }
+const toggleDropdown = () => { 
+  dropdownOpen.value = !dropdownOpen.value 
+  if (dropdownOpen.value) notificationDropdownOpen.value = false
+}
+const toggleNotificationDropdown = () => {
+  notificationDropdownOpen.value = !notificationDropdownOpen.value
+  if (notificationDropdownOpen.value) dropdownOpen.value = false
+}
 
 const userFullName = computed(() => userStore.user ? `${userStore.user.first_name} ${userStore.user.last_name}` : "Instructor")
 const initials = computed(() => userStore.userInitials)

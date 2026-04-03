@@ -1,5 +1,5 @@
 <template>
-  <div class="review-booking-container pb-20 lg:pb-0">
+  <div class="review-booking-container pb-32 lg:pb-0">
     <BookingStatusHeader />
 
     <!-- Loading State -->
@@ -22,15 +22,15 @@
       <main class="main-content">
         <h2 class="page-title">Review Your Booking</h2>
 
-        <div class="itinerary-header mb-8">
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-lg border border-gray-100 shadow-sm">
+        <div class="itinerary-header mb-6 sm:mb-8">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
             <div>
-              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Electronic Ticket Identification (PNR)</p>
-              <h2 class="text-3xl font-mono font-black text-pink-500 tracking-tighter">{{ generatedPNR }}</h2>
+              <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Electronic Ticket Identification (PNR)</p>
+              <h2 class="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tighter">{{ generatedPNR }}</h2>
             </div>
-            <div class="text-right">
-              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Booking Status</p>
-              <span class="px-3 py-1 bg-amber-50 text-amber-700 text-xs font-bold rounded-md border border-amber-100 uppercase">Awaiting Confirmation</span>
+            <div class="text-left sm:text-right">
+              <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Booking Status</p>
+              <span class="inline-flex px-3 py-1 bg-amber-50 text-amber-700 text-[10px] font-black rounded-md border border-amber-100 uppercase tracking-widest">Awaiting Confirmation</span>
             </div>
           </div>
         </div>
@@ -53,75 +53,101 @@
           </div>
           
           <div class="space-y-4">
-            <div v-for="(segment, index) in flightSegments" :key="index" class="boarding-pass-card bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden flex flex-col md:flex-row">
-              <div class="pass-left p-6 flex-1 relative border-r border-dashed border-gray-200">
-                <div class="absolute -top-3 -right-3 w-6 h-6 bg-gray-50 rounded-full"></div>
-                <div class="absolute -bottom-3 -right-3 w-6 h-6 bg-gray-50 rounded-full"></div>
+            <div v-for="(segment, index) in flightSegments" :key="index" class="boarding-pass-card bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col lg:flex-row">
+              <div class="pass-left p-5 sm:p-8 flex-1 relative border-b lg:border-b-0 lg:border-r lg:border-dashed border-slate-200">
+                <div class="absolute -bottom-3 -right-3 w-6 h-6 bg-slate-50 rounded-full hidden lg:block"></div>
+                <div class="absolute -top-3 -right-3 w-6 h-6 bg-slate-50 rounded-full hidden lg:block"></div>
                 
-                <div class="flex items-center justify-between mb-6">
-                  <div class="flex items-center gap-2">
-                    <span class="px-2 py-0.5 bg-gray-900 text-white text-[10px] font-bold rounded uppercase tracking-tighter">{{ segment.flight_number }}</span>
-                    <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">{{ segment.label }}</span>
+                <div class="flex items-center justify-between mb-8">
+                  <div class="flex items-center gap-3">
+                    <div class="airline-brand flex items-center gap-3">
+                       <div :class="['w-10 h-10 rounded-lg flex items-center justify-center font-black text-white text-[10px]', segment.airline_class]">
+                        {{ segment.airline_code }}
+                       </div>
+                       <div>
+                         <div class="text-[10px] font-black text-slate-900 uppercase tracking-widest leading-none mb-1.5">{{ segment.airline_name }}</div>
+                         <div class="flex items-center gap-2">
+                           <span class="px-2 py-0.5 bg-slate-900 text-white text-[9px] font-black rounded uppercase tracking-tighter">{{ segment.flight_number }}</span>
+                           <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{{ segment.label }}</span>
+                         </div>
+                       </div>
+                    </div>
                   </div>
-                  <span class="text-xs font-black text-gray-900 uppercase">Confirmed</span>
+                  <span class="text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded">Confirmed</span>
                 </div>
 
-                <div class="flex items-center justify-between gap-4">
-                  <div class="text-center md:text-left">
-                    <h4 class="text-3xl font-black text-gray-900 tracking-tighter">{{ segment.origin }}</h4>
-                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Departure</p>
+                <div class="flex items-center justify-between gap-4 py-2">
+                  <div class="text-left">
+                    <h4 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tighter leading-none">{{ segment.origin }}</h4>
+                    <p class="text-[9px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-2">Departure</p>
                   </div>
                   
-                  <div class="flex-1 flex flex-col items-center">
-                    <div class="w-full border-t-2 border-dashed border-gray-200 relative">
-                      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-2 bg-white">
-                        <svg class="w-4 h-4 text-pink-500 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div class="flex-1 flex flex-col items-center px-2">
+                    <div class="w-full border-t-2 border-dashed border-slate-200 relative mt-2">
+                      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 bg-white">
+                        <svg class="w-5 h-5 text-pink-500 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                         </svg>
                       </div>
                     </div>
                   </div>
 
-                  <div class="text-center md:text-right">
-                    <h4 class="text-3xl font-black text-gray-900 tracking-tighter">{{ segment.destination }}</h4>
-                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Arrival</p>
+                  <div class="text-right">
+                    <h4 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tighter leading-none">{{ segment.destination }}</h4>
+                    <p class="text-[9px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-2">Arrival</p>
                   </div>
                 </div>
 
-                <div class="mt-8 grid grid-cols-2 md:grid-cols-3 gap-6">
+                <div class="mt-10 grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-4">
                   <div>
-                    <label class="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] block mb-1">Departure Date</label>
-                    <p class="text-xs font-bold text-gray-800">{{ formatDate(segment.departure_time) }}</p>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-1.5">Schedule</label>
+                    <p class="text-xs font-black text-slate-700 leading-tight">{{ formatDate(segment.departure_time) }}</p>
                   </div>
                   <div>
-                    <label class="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] block mb-1">Class & Fare</label>
-                    <p class="text-xs font-bold text-gray-800 uppercase tracking-tighter">
-                      {{ segment.class_type || 'Economy' }} 
-                      <span v-if="bookingStore.fareFamilies[segment.key]" class="text-pink-600 ml-1">
-                        ({{ bookingStore.fareFamilies[segment.key] === 'premium' ? 'Premium' : 'Basic' }})
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-1.5">Class & Fare</label>
+                    <p class="text-xs font-black text-slate-700 uppercase tracking-tighter">
+                      {{ segment.class_type }}
+                      <span v-if="bookingStore.fareFamilyNames?.[segment.key] || bookingStore.fareFamilies[segment.key]" class="text-pink-600">
+                        ({{ bookingStore.fareFamilyNames?.[segment.key] || formatFareFamily(bookingStore.fareFamilies[segment.key]) }})
                       </span>
                     </p>
                   </div>
-                  <div>
-                    <label class="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] block mb-1">Gate/Terminal</label>
-                    <p class="text-xs font-bold text-gray-800 uppercase tracking-tighter">Terminal 2</p>
+                  <div class="hidden sm:block">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-1.5">Terminal</label>
+                    <p class="text-xs font-black text-slate-700 uppercase tracking-tighter">Terminal 2</p>
+                  </div>
+                  <div v-if="segment.aircraft">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-1.5">Aircraft</label>
+                    <p class="text-xs font-black text-slate-700 uppercase tracking-tighter">{{ segment.aircraft }}</p>
                   </div>
                 </div>
               </div>
               
-              <div class="pass-right bg-pink-50/30 p-6 md:w-56 flex flex-col justify-center border-t md:border-t-0 md:border-l border-gray-100">
-                <div class="space-y-4">
-                  <div>
-                    <label class="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] block mb-1">Boarding Info</label>
-                    <div class="flex items-center gap-2">
-                      <div class="w-10 h-10 bg-white rounded-md flex items-center justify-center border border-pink-100">
-                        <span class="text-sm font-black text-pink-500">B</span>
+              <div class="pass-right bg-slate-50/80 p-5 sm:p-8 lg:w-64 flex flex-col justify-center relative">
+                <!-- Tear Line for tear-off effect -->
+                <div class="absolute top-0 left-0 bottom-0 w-px border-l-2 border-dashed border-slate-200 hidden lg:block"></div>
+                
+                <div class="flex lg:flex-col justify-between lg:justify-center items-center gap-6">
+                  <div class="text-left lg:text-center">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-2">Gate Group</label>
+                    <div class="flex items-center lg:justify-center gap-3">
+                      <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-slate-200 shadow-sm">
+                        <span class="text-xl font-black text-slate-900">B</span>
                       </div>
-                      <p class="text-[11px] font-bold text-gray-900 leading-tight">Zone 3<br><span class="text-pink-600">Standard</span></p>
+                      <div class="text-left">
+                        <p class="text-xs font-black text-slate-900 leading-none">Zone 3</p>
+                        <p class="text-[9px] font-bold text-pink-600 uppercase tracking-widest mt-1">Standard</p>
+                      </div>
                     </div>
                   </div>
-                  <div class="pt-4 mt-4 border-t border-pink-100/50">
-                    <p class="text-[10px] font-mono font-bold text-pink-400 tracking-widest text-center truncate">BARCODE DATA: {{ segment.flight_number }}</p>
+                  
+                  <div class="flex flex-col items-center">
+                    <div class="w-20 h-20 bg-white border border-slate-200 rounded-xl p-2 mb-2 shadow-sm ring-4 ring-slate-100/50">
+                      <svg class="w-full h-full text-slate-800" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v2h-3v-2zm-3 0h2v2h-2v-2zm3 3h3v2h-3v-2zm-3 0h2v2h-2v-2zm3 3h3v2h-3v-2zm-3 0h2v2h-2v-2zm-3-3h2v2h-2v-2zm-3 0h2v2h-2v-2zm3 3h2v2h-2v-2zm-3 0h2v2h-2v-2z" />
+                      </svg>
+                    </div>
+                    <p class="text-[7px] font-black text-slate-400 tracking-[0.3em] uppercase">{{ segment.flight_number }}</p>
                   </div>
                 </div>
               </div>
@@ -136,47 +162,113 @@
           </div>
           
           <div v-for="(segment, index) in flightSegments" :key="'addons-' + index" class="review-card" :class="{ 'mt-3': index > 0 }">
-            <div class="segment-header">
-              <h4>{{ segment.label }} Add-ons</h4>
-              <span class="flight-badge" :class="{ 'return': segment.isReturn, 'multi': segment.isMulti }">
-                {{ segment.flight_number }}
-              </span>
+            <div class="summary-header segment-summary-header" :class="{ 'return': segment.isReturn, 'multi': segment.isMultiCity }">
+              <span class="badge" :class="{ 'return': segment.isReturn, 'multi': segment.isMultiCity }">{{ segment.typeLabel }}</span>
+              <span class="segment-route">{{ segment.route }}</span>
             </div>
-            <table class="review-table">
-              <thead>
-                <tr>
-                  <th>Passenger</th>
-                  <th>Seat</th>
-                  <th>Baggage</th>
-                  <th>Meal</th>
-                  <th>Assistance</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="p in bookingStore.passengers" :key="p.key">
-                  <td>
-                    <strong>{{ formatTitle(p.title) }} {{ p.firstName }} {{ p.lastName }}</strong>
-                    <div class="sub-text">
-                      {{ p.type }}
-                      <span v-if="p.phDiscountType === 'senior'" class="text-xs text-pink-600 ml-1 font-bold">(Senior Citizen)</span>
-                      <span v-if="p.phDiscountType === 'pwd'" class="text-xs text-pink-600 ml-1 font-bold">(PWD)</span>
-                    </div>
-                  </td>
-                  <td>{{ getSeatLabel(p.key, segment.key) }}</td>
-                  <td>
-                    <div v-for="item in getBaggageBreakdown(p.key, segment.key)" :key="item.type" class="baggage-item-mini">
-                      <span class="baggage-icon">{{ item.icon }}</span>
-                      <div class="baggage-info">
-                        <span class="baggage-text">{{ item.label }}</span>
-                        <span :class="['baggage-status', item.status.toLowerCase()]">{{ item.status }}</span>
+            <!-- Desktop Table View -->
+            <div class="hidden md:block overflow-x-auto">
+              <table class="review-table">
+                <thead>
+                  <tr>
+                    <th>Passenger</th>
+                    <th>Seat</th>
+                    <th>Baggage</th>
+                    <th>Meal</th>
+                    <th>Assistance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="p in bookingStore.passengers" :key="p.key">
+                    <td class="whitespace-nowrap">
+                      <div class="font-black text-slate-800">{{ formatTitle(p.title) }} {{ p.firstName }} {{ p.lastName }}</div>
+                      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                        {{ p.type }}
+                        <span v-if="p.phDiscountType === 'senior'" class="text-pink-600 ml-1">(Senior Citizen)</span>
+                        <span v-if="p.phDiscountType === 'pwd'" class="text-pink-600 ml-1">(PWD)</span>
                       </div>
+                    </td>
+                    <td class="font-bold text-slate-700">{{ getSeatLabel(p.key, segment.key) }}</td>
+                    <td>
+                      <div v-for="item in getBaggageBreakdown(p.key, segment.key)" :key="item.type" class="flex items-center gap-2 mb-1 last:mb-0">
+                        <span class="text-xs">{{ item.icon }}</span>
+                        <span class="text-[11px] font-bold text-slate-600">{{ item.label }}</span>
+                      </div>
+                    </td>
+                    <td class="text-xs font-bold text-slate-700">{{ getMealLabel(p.key, segment.key) }}</td>
+                    <td class="text-xs font-bold text-slate-700">{{ getAssistanceLabel(p.key, segment.key) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Mobile Card View -->
+            <div class="md:hidden space-y-4">
+              <div v-for="p in bookingStore.passengers" :key="'mob-'+p.key" class="p-4 bg-slate-50/50 rounded-xl border border-slate-100 flex flex-col gap-4">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <div class="font-black text-slate-800">{{ formatTitle(p.title) }} {{ p.firstName }} {{ p.lastName }}</div>
+                    <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{{ p.type }}</div>
+                  </div>
+                  <div class="bg-white px-2 py-1 rounded border border-slate-200 text-[10px] font-black text-slate-900">
+                    SEAT: {{ getSeatLabel(p.key, segment.key).split(' ')[0] }}
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                    <label class="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Baggage</label>
+                    <div v-for="item in getBaggageBreakdown(p.key, segment.key)" :key="'mob-bag-'+item.type" class="flex items-center gap-1.5 mt-1">
+                      <span class="text-[9px] font-black text-slate-700 leading-tight">{{ item.label }}</span>
                     </div>
-                  </td>
-                  <td>{{ getMealLabel(p.key, segment.key) }}</td>
-                  <td>{{ getAssistanceLabel(p.key, segment.key) }}</td>
-                </tr>
-              </tbody>
-            </table>
+                  </div>
+                  <div class="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                    <label class="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Meal & Special</label>
+                    <p class="text-[9px] font-black text-slate-700 mt-1 truncate">{{ getMealLabel(p.key, segment.key) }}</p>
+                    <p class="text-[8px] font-bold text-slate-400 mt-0.5 truncate">{{ getAssistanceLabel(p.key, segment.key) }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Travel Protection Details -->
+        <section v-if="selectedInsurancePlan" class="review-section">
+          <div class="section-header">
+            <span class="icon">🛡️</span>
+            <h3>Travel Protection</h3>
+          </div>
+          <div class="review-card">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center border border-emerald-100">
+                  <span class="text-2xl text-emerald-600">🛡️</span>
+                </div>
+                <div>
+                  <h4 class="text-md font-bold text-gray-900">{{ selectedInsurancePlan.name }}</h4>
+                  <p class="text-xs text-gray-500">Provided by {{ selectedInsurancePlan.provider_name || 'Our Partner' }}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Coverage Status</p>
+                <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-md border border-emerald-100 uppercase">Active</span>
+              </div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="text-xs text-gray-600 leading-relaxed font-semibold">
+                {{ selectedInsurancePlan.description }}
+              </div>
+              <div class="bg-blue-50 rounded-lg p-3 border border-blue-100 h-fit">
+                <p class="text-[10px] font-bold text-blue-800 uppercase tracking-widest mb-1">Standard Policy Coverage Includes:</p>
+                <ul class="text-[11px] text-blue-700 space-y-1 font-medium">
+                  <li>✓ Emergency Medical Expenses abroad</li>
+                  <li>✓ Trip Cancellation & Delays protection</li>
+                  <li>✓ Lost, damaged or delayed baggage</li>
+                  <li>✓ 24/7 Emergency Assistance Hotline</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -186,21 +278,39 @@
             <h3>Fare Rules & Conditions</h3>
           </div>
           <div class="bg-gray-50 border border-gray-100 rounded-lg p-5">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="flex items-start gap-3">
-                <div class="w-2 h-2 rounded-full bg-red-400 mt-1.5 flex-shrink-0"></div>
-                <div>
-                  <p class="text-xs font-bold text-gray-800 uppercase">Cancellation / Refund</p>
-                  <p class="text-[11px] text-gray-500 mt-0.5 leading-relaxed">This fare is non-refundable. Cancellations will result in forfeiture of the total amount unless travel insurance covers the reason.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div v-for="(segment, idx) in flightSegments" :key="'rules-'+idx" class="space-y-4">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-[8px] font-black px-1.5 py-0.5 bg-pink-500 text-white rounded uppercase tracking-widest">{{ segment.label }}</span>
+                  <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{{ segment.class_type }}</span>
+                </div>
+                
+                <div class="flex items-start gap-3">
+                  <div class="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 flex-shrink-0"></div>
+                  <div>
+                    <p class="text-[10px] font-black text-gray-900 uppercase tracking-tighter">Cancellation / Refund</p>
+                    <p class="text-[11px] text-gray-500 mt-0.5 leading-relaxed font-medium">
+                      {{ getRefundRule(segment.key) }}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3">
+                  <div class="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 flex-shrink-0"></div>
+                  <div>
+                    <p class="text-[10px] font-black text-gray-900 uppercase tracking-tighter">Change Policy / Rebooking</p>
+                    <p class="text-[11px] text-gray-500 mt-0.5 leading-relaxed font-medium">
+                      {{ getChangeRule(segment.key) }}
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div class="flex items-start gap-3">
-                <div class="w-2 h-2 rounded-full bg-amber-400 mt-1.5 flex-shrink-0"></div>
-                <div>
-                  <p class="text-xs font-bold text-gray-800 uppercase">Change Policy</p>
-                  <p class="text-[11px] text-gray-500 mt-0.5 leading-relaxed">Changes allowed up to 24 hours before departure with a ₱2,500 fee plus any fare difference.</p>
-                </div>
-              </div>
+            </div>
+            
+            <div class="mt-4 pt-4 border-t border-gray-100">
+               <p class="text-[9px] text-gray-400 font-bold uppercase italic leading-tight">
+                 * Fare rules may vary per airline. Free rebooking usually requires payment of the fare difference. 
+                 Refunds may be processed as a travel fund or to the original payment method depending on the fare family.
+               </p>
             </div>
           </div>
         </section>
@@ -211,26 +321,40 @@
             <h3>Contact Information</h3>
           </div>
           <div class="review-card contact-grid">
-            <div class="contact-item">
-              <label>Full Name</label>
-              <p>{{ formatTitle(bookingStore.contactInfo.title) }} {{ bookingStore.contactInfo.firstName }} {{ bookingStore.contactInfo.lastName }}</p>
+            <div class="contact-item flex items-center gap-4">
+              <div class="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+              </div>
+              <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Primary Contact Name</label>
+                <p class="text-sm font-bold text-slate-800">{{ formatTitle(bookingStore.contactInfo.title) }} {{ bookingStore.contactInfo.firstName }} {{ bookingStore.contactInfo.lastName }}</p>
+              </div>
             </div>
-            <div class="contact-item">
-              <label>Email Address</label>
-              <p>{{ bookingStore.contactInfo.email }}</p>
+            <div class="contact-item flex items-center gap-4">
+              <div class="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+              </div>
+              <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Email Address</label>
+                <p class="text-sm font-bold text-slate-800">{{ bookingStore.contactInfo.email }}</p>
+              </div>
             </div>
-            <div class="contact-item">
-              <label>Phone Number</label>
-              <p>{{ bookingStore.contactInfo.phone }}</p>
+            <div class="contact-item flex items-center gap-4">
+              <div class="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+              </div>
+              <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Phone Number</label>
+                <p class="text-sm font-bold text-slate-800">{{ bookingStore.contactInfo.phone }}</p>
+              </div>
             </div>
           </div>
         </section>
 
-        <div class="footer-nav">
-          <button class="btn-back" @click="$router.back()">EDIT DETAILS</button>
-          <button class="btn-continue" @click="confirmBooking" :disabled="isProcessing">
-            <span v-if="isProcessing">Processing...</span>
-            <span v-else>PROCEED TO PAYMENT</span>
+        <div class="footer-nav mt-10 pb-10">
+          <button class="btn-back flex items-center" @click="$router.back()">
+            <span class="text-lg mr-2">←</span>
+            EDIT BOOKING DETAILS
           </button>
         </div>
       </main>
@@ -238,83 +362,133 @@
       <aside class="sidebar">
         <BookingTimer variant="sidebar" />
         <div class="summary-card sticky">
-          <div class="summary-header">Payment Summary</div>
-          <div class="summary-body">
+          <div class="summary-header">
+            <div class="header-overlay"></div>
+            <div class="header-content pt-8 pb-6 px-4 relative z-10">
+              <div class="flex items-center justify-center gap-2 mb-1">
+                <span class="text-2xl">💳</span>
+                <span class="text-[10px] font-black text-white/60 uppercase tracking-[0.3em]">Secure Checkout</span>
+              </div>
+              <h3 class="text-xl font-black text-white text-center uppercase tracking-tighter">Payment Summary</h3>
+            </div>
+          </div>
+          
+          <div class="summary-body p-6">
             <!-- Flight Base Fares Breakdown -->
-            <div class="flight-base-summary" v-if="hasFlightData">
-              <!-- Adults Breakdown -->
-              <div class="price-line" v-if="bookingStore.passengerCount.adults > 0">
-                <span>{{ bookingStore.passengerCount.adults }} Adult(s) (Total Base Fare)</span> 
-                <AnimatedNumber :value="adultTotalLine" prefix="₱" />
+            <div class="summary-group mb-6" v-if="hasFlightData">
+              <div class="group-header flex items-center gap-2 mb-3">
+                <span class="w-1.5 h-1.5 rounded-full bg-pink-500"></span>
+                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Base Fares</span>
               </div>
               
-              <!-- Children Breakdown -->
-              <div class="price-line" v-if="bookingStore.passengerCount.children > 0">
-                <span>{{ bookingStore.passengerCount.children }} Child(ren) (Total Base Fare)</span> 
-                <AnimatedNumber :value="childTotalLine" prefix="₱" />
-              </div>
-              
-              <!-- Infants Breakdown (50% Base Fare) -->
-              <div class="price-line infant-line" v-if="bookingStore.passengerCount.infants > 0">
-                <span>{{ bookingStore.passengerCount.infants }} Infant(s) (50% Base Fare)</span> 
-                <AnimatedNumber :value="infantTotalLine" prefix="₱" />
-              </div>
-
-              
-              <!-- Granular Taxes Breakdown -->
-              <div v-if="backendTaxDetails && Object.keys(backendTaxDetails).length > 0">
-                <div v-for="(amount, label) in backendTaxDetails" :key="label" class="price-line tax-detail-line">
-                  <span class="tax-label">{{ label }}</span>
-                  <AnimatedNumber :value="amount" prefix="₱" />
+              <div class="space-y-2">
+                <div class="price-line flex justify-between items-center text-sm" v-if="bookingStore.passengerCount.adults > 0">
+                  <span class="text-gray-500 font-medium">{{ bookingStore.passengerCount.adults }} Adult(s)</span> 
+                  <span class="font-bold text-gray-900"><AnimatedNumber :value="adultTotalLine" prefix="₱" /></span>
+                </div>
+                
+                <div class="price-line flex justify-between items-center text-sm" v-if="bookingStore.passengerCount.children > 0">
+                  <span class="text-gray-500 font-medium">{{ bookingStore.passengerCount.children }} Child(ren)</span> 
+                  <span class="font-bold text-gray-900"><AnimatedNumber :value="childTotalLine" prefix="₱" /></span>
+                </div>
+                
+                <div class="price-line flex justify-between items-center text-sm" v-if="bookingStore.passengerCount.infants > 0">
+                  <span class="text-gray-500 font-medium">{{ bookingStore.passengerCount.infants }} Infant(s)</span> 
+                  <span class="font-bold text-gray-900"><AnimatedNumber :value="infantTotalLine" prefix="₱" /></span>
                 </div>
               </div>
+            </div>
+
+            <!-- Taxes & Fees Breakdown -->
+            <div class="summary-group mb-6">
+              <div class="group-header flex items-center gap-2 mb-3">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Taxes & Fees</span>
+              </div>
               
-              <!-- Fallback to single line if no breakdown yet -->
-              <div v-else class="price-line taxes-line">
-                <span>Verification / Taxes & Fees (VAT)</span>
-                <AnimatedNumber :value="bookingStore.totalTaxes" prefix="₱" />
+              <div class="space-y-2">
+                <div v-if="backendTaxDetails && Object.keys(backendTaxDetails).length > 0">
+                  <div v-for="(amount, label) in backendTaxDetails" :key="label" class="price-line flex justify-between items-center text-sm">
+                    <span class="text-gray-500 font-medium">{{ label }}</span>
+                    <span class="font-bold text-gray-900"><AnimatedNumber :value="amount" prefix="₱" /></span>
+                  </div>
+                </div>
+                <div v-else class="price-line flex justify-between items-center text-sm">
+                  <span class="text-gray-500 font-medium">Taxes, VAT & Fees</span>
+                  <span class="font-bold text-gray-900"><AnimatedNumber :value="taxesPrice" prefix="₱" /></span>
+                </div>
               </div>
             </div>
 
             <!-- Add-ons -->
-            <div class="addons-summary">
-              <div class="price-line" v-if="totalSeatsPrice > 0">
-                <span>Seat Selection</span>
-                <AnimatedNumber :value="totalSeatsPrice" prefix="₱" />
+            <div class="summary-group mb-6 border-t border-gray-50 pt-4" v-if="totalSeatsPrice > 0 || totalBaggagePrice > 0 || totalMealsPrice > 0 || totalAssistancePrice > 0 || insurancePrice > 0">
+              <div class="group-header flex items-center gap-2 mb-3">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Optional Services</span>
               </div>
-              <div class="price-line" v-if="totalBaggagePrice > 0">
-                <span>Extra Baggage</span>
-                <AnimatedNumber :value="totalBaggagePrice" prefix="₱" />
-              </div>
-              <div class="price-line" v-if="totalMealsPrice > 0">
-                <span>Meal Selection</span>
-                <AnimatedNumber :value="totalMealsPrice" prefix="₱" />
-              </div>
-              <div class="price-line" v-if="totalAssistancePrice > 0">
-                <span>Special Assistance</span>
-                <AnimatedNumber :value="totalAssistancePrice" prefix="₱" />
-              </div>
-              <div class="price-line" v-if="insurancePrice > 0">
-                <span>Travel Insurance</span>
-                <AnimatedNumber :value="insurancePrice" prefix="₱" />
+              
+              <div class="space-y-2">
+                <div class="price-line flex justify-between items-center text-sm" v-if="totalSeatsPrice > 0">
+                  <span class="text-gray-500 font-medium">Seat Selection</span>
+                  <span class="font-bold text-gray-900"><AnimatedNumber :value="totalSeatsPrice" prefix="₱" /></span>
+                </div>
+                <div class="price-line flex justify-between items-center text-sm" v-if="totalBaggagePrice > 0">
+                  <span class="text-gray-500 font-medium">Extra Baggage</span>
+                  <span class="font-bold text-gray-900"><AnimatedNumber :value="totalBaggagePrice" prefix="₱" /></span>
+                </div>
+                <div class="price-line flex justify-between items-center text-sm" v-if="totalMealsPrice > 0">
+                  <span class="text-gray-500 font-medium">Meal Selection</span>
+                  <span class="font-bold text-gray-900"><AnimatedNumber :value="totalMealsPrice" prefix="₱" /></span>
+                </div>
+                <div class="price-line flex justify-between items-center text-sm" v-if="totalAssistancePrice > 0">
+                  <span class="text-gray-500 font-medium">Special Assistance</span>
+                  <span class="font-bold text-gray-900"><AnimatedNumber :value="totalAssistancePrice" prefix="₱" /></span>
+                </div>
+                <div class="price-line flex justify-between items-center text-sm" v-if="insurancePrice > 0">
+                  <span class="text-gray-500 font-medium">Travel Insurance</span>
+                  <span class="font-bold text-gray-900"><AnimatedNumber :value="insurancePrice" prefix="₱" /></span>
+                </div>
               </div>
             </div>
 
-            <div class="border-t border-gray-200 pt-3 mt-4">
-              <div class="flex justify-between items-center">
-                <span class="text-gray-900 font-black text-lg">Total Amount</span>
-                <span class="text-3xl font-black text-gray-900 flex items-center">
-                  <span class="text-pink-500 text-xl mr-1">₱</span>
-                  <span v-if="isCalculatingPrice" class="text-sm text-gray-400 font-normal">Calculating...</span>
-                  <AnimatedNumber v-else :value="grandTotal" />
-                </span>
+            <div class="total-section bg-gray-50/50 -mx-6 px-6 py-6 border-t border-gray-100">
+              <div class="flex justify-between items-end mb-1">
+                <div>
+                  <span class="text-[11px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Total Amount</span>
+                  <div class="pax-badge bg-white border border-gray-200 rounded px-2 py-0.5 inline-flex items-center gap-1">
+                    <span class="text-[9px] font-black text-gray-900 uppercase">{{ payingPassengerCount }} Passengers</span>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="flex items-center justify-end">
+                    <span class="text-pink-500 font-black text-xl mr-1">₱</span>
+                    <span class="text-4xl font-black text-gray-900 tracking-tighter leading-none">
+                      <span v-if="isCalculatingPrice" class="text-sm text-gray-400 animate-pulse">Wait...</span>
+                      <AnimatedNumber v-else :value="grandTotal" />
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div v-if="isUsingFrontendEstimate && !isCalculatingPrice" class="mt-4 p-2 bg-amber-50 rounded border border-amber-100 flex items-center gap-2">
+                <span class="text-amber-500">⚠️</span>
+                <p class="text-[9px] font-bold text-amber-700 uppercase leading-tight">Estimated total — finalized at payment step</p>
               </div>
             </div>
-            <div v-if="isUsingFrontendEstimate && !isCalculatingPrice" class="estimate-warning">
-              ⚠️ Estimate — exact total confirmed at booking
-            </div>
-            <div class="passenger-count">
-              <small>{{ payingPassengerCount }} paying passengers</small>
+
+            <button class="btn-pay-premium mt-6" @click="confirmBooking" :disabled="isProcessing">
+              <div class="flex items-center justify-center gap-3">
+                <span v-if="!isProcessing" class="text-lg">➔</span>
+                <div v-else class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <span class="tracking-widest uppercase">{{ isProcessing ? 'Processing' : 'Proceed to Payment' }}</span>
+              </div>
+            </button>
+            
+            <div class="secure-checkout mt-6 flex items-center justify-center gap-2 text-[9px] text-gray-400 font-black uppercase tracking-[0.2em]">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              Encrypted Checkout
             </div>
           </div>
         </div>
@@ -326,6 +500,13 @@
       title="Finalizing Your Booking"
       subtitle="Just a few seconds while we create your official reservation."
     />
+
+    <MobileBookingFooter 
+      buttonText="Confirm & Pay"
+      :disabled="isProcessing"
+      :loading="isProcessing"
+      @next="confirmBooking"
+    />
   </div>
 </template>
 
@@ -333,6 +514,7 @@
 import { computed, ref, onMounted } from 'vue';
 import { useBookingStore } from '@/stores/booking';
 import { useRouter } from 'vue-router';
+import api from '@/services/api/axios';
 import { addonService } from '@/services/booking/addonService';
 import { bookingService } from '@/services/booking/bookingService';
 import { useNotificationStore } from '@/stores/notification';
@@ -351,6 +533,7 @@ const isProcessing = ref(false);
 const baggageOptions = ref([]);
 const mealOptions = ref([]);
 const assistanceOptions = ref([]);
+const insurancePlans = ref([]);
 const generatedPNR = ref(Math.random().toString(36).substring(2, 8).toUpperCase());
 
 // Backend Price Data (kept for potential future use but no longer used for display)
@@ -358,6 +541,29 @@ const backendTotal = ref(null);
 const backendBreakdown = ref(null);
 const backendTaxDetails = ref(null);
 const isCalculatingPrice = ref(false);
+
+const baggagePolicies = {
+  '5J': {
+    airline: 'Cebu Pacific',
+    pieces: '1-Piece', // Domestic GO Tiers (20kg)
+    keyRule: 'Max weight per piece: 32kg'
+  },
+  'PR': {
+    airline: 'Philippine Airlines',
+    pieces: '1-Piece', // Domestic standard
+    keyRule: 'Free baggage allowance applies'
+  },
+  'Z2': {
+    airline: 'AirAsia Philippines',
+    pieces: 'Weight Concept',
+    keyRule: 'No piece limit'
+  },
+  'T6': {
+    airline: 'AirSwift',
+    pieces: 'Max 2 pieces',
+    keyRule: 'Small cargo hold'
+  }
+};
 
 onMounted(async () => {
   try {
@@ -374,7 +580,8 @@ onMounted(async () => {
     const results = await Promise.allSettled([
       addonService.getBaggageOptions(airlineId),
       addonService.getMealOptions(airlineId),
-      addonService.getAssistanceServices(airlineId)
+      addonService.getAssistanceServices(airlineId),
+      api.get('/flightapp/api/insurance-plans/').catch(() => null)
     ]);
 
     if (results[0].status === 'fulfilled') {
@@ -388,6 +595,10 @@ onMounted(async () => {
     if (results[2].status === 'fulfilled') {
       const data = results[2].value.data;
       assistanceOptions.value = Array.isArray(data) ? data : (data?.results || []);
+    }
+    if (results[3].status === 'fulfilled' && results[3].value?.data) {
+      const data = results[3].value.data;
+      insurancePlans.value = Array.isArray(data) ? data : (data?.results || []);
     }
 
     // Fetch backend price to show authoritative breakdown
@@ -411,9 +622,8 @@ const fetchBackendPrice = async () => {
       bookingStore.setBackendBreakdown(response);
       backendTotal.value = response.total_amount;
       backendBreakdown.value = response.breakdown;
-      backendTaxDetails.value = response.tax_details || null;
       console.log('✅ Backend price confirmed:', response.total_amount);
-      console.log('📑 Tax Details:', backendTaxDetails.value);
+      console.log('📑 Tax Details from store:', bookingStore.backendTaxDetails);
       
       // Warn if there's a significant mismatch with frontend estimate
       const diff = Math.abs(response.total_amount - bookingStore.grandTotal);
@@ -443,6 +653,12 @@ const infantTotalLine = computed(() => {
   return bookingStore.grandTotalForInfants;
 });
 
+const selectedInsurancePlan = computed(() => {
+  const planId = bookingStore.addons?.insurance?.selectedPlanId;
+  if (!planId || !insurancePlans.value.length) return null;
+  return insurancePlans.value.find(p => p.id == planId);
+});
+
 // Helper functions
 const getItemById = (list, id) => {
   if (!id || !list) return null;
@@ -462,26 +678,80 @@ const getBaggageBreakdown = (passengerKey, segment = 'depart') => {
     ];
   }
 
-  const isPremium = bookingStore.fareFamilies[segment] === 'premium';
+  const ff = (bookingStore.fareFamilies[segment] || 'basic').toLowerCase();
+  const ffName = (bookingStore.fareFamilyNames[segment] || '').toLowerCase();
+  
+  // Revised inclusion logic: exclude all 'basic' or 'saver' types for PAL/5J/Z2
+  const isIncluded = ff !== 'basic' && 
+                     !ffName.includes('saver') && 
+                     !ffName.includes('supersaver') && 
+                     !ffName.includes('promo') && 
+                     !ffName.includes('low fare') && 
+                     !ffName.includes('go basic');
+                     
   const baggage = bookingStore.addons?.baggage?.[segment]?.[passengerKey];
   
+  // Dynamic carry-on based on airline and class
+  const segmentObj = flightSegments.value.find(s => s.key === segment);
+  const flightNumber = segmentObj?.flight_number || '';
+  const airlineCode = flightNumber.substring(0, 2).toUpperCase();
+  
+  let carryOnLabel = '1 x 7kg Carry-on';
+  if (airlineCode === 'PR' && ffName.includes('business')) {
+    carryOnLabel = '2 x 7kg Carry-on';
+  }
+
   const breakdown = [
-    { type: 'hand-carry', label: '1 x 7kg Carry-on', status: 'Included', icon: '🎒' }
+    { type: 'hand-carry', label: carryOnLabel, status: 'Included', icon: '🎒' }
   ];
 
-  if (isPremium) {
-    let weightLabel = '20kg Checked Baggage';
+  // ================= DYNAMIC BAGGAGE INCLUSION FROM FEATURES =================
+  const flight = segment === 'depart' ? bookingStore.selectedOutbound : 
+                 segment === 'return' ? bookingStore.selectedReturn : 
+                 bookingStore.multiCitySegments[parseInt(segment.replace('multi_', ''))]?.selectedFlight;
+  
+  const features = Array.isArray(flight?.seat_class_features) ? flight.seat_class_features : [];
+  const checkedBaggageFeature = features.find(f => typeof f === 'string' && (f.toLowerCase().includes('checked baggage') || f.toLowerCase().includes('check-in baggage')));
+  const handCarryFeature = features.find(f => typeof f === 'string' && (f.toLowerCase().includes('hand-carry') || f.toLowerCase().includes('carry-on')));
+
+  if (checkedBaggageFeature && typeof checkedBaggageFeature === 'string' && !checkedBaggageFeature.toLowerCase().includes('no ')) {
+    // If we have a dynamic feature like "20kg Checked baggage included", use it!
+    let weightLabel = checkedBaggageFeature.replace(' included', '').replace(' included*', '');
+    
+    // Add piece concept if PAL
+    const policy = baggagePolicies[airlineCode];
+    if (policy && policy.pieces && !weightLabel.includes('piece')) {
+       weightLabel = `${weightLabel} (${policy.pieces})`;
+    }
+
     if (baggage) {
       const option = baggageOptions.value.find(o => o.id == (baggage.id || baggage));
-      weightLabel = option ? option.formatted_weight : (typeof baggage === 'object' ? baggage.formatted_weight : '20kg Checked Baggage');
+      weightLabel = option ? option.formatted_weight : (typeof baggage === 'object' ? baggage.formatted_weight : weightLabel);
     }
+    
     breakdown.push({ type: 'checked', label: weightLabel, status: 'Included', icon: '🧳' });
   } else if (baggage) {
     const option = baggageOptions.value.find(o => o.id == (baggage.id || baggage));
     const labelText = option ? option.formatted_weight : (typeof baggage === 'object' ? baggage.formatted_weight : 'Extra Baggage');
-    breakdown.push({ type: 'checked', label: labelText, status: 'Purchased', icon: '🧳' });
+    
+    let finalLabel = labelText;
+    const policy = baggagePolicies[airlineCode];
+    if (policy && policy.pieces) {
+      finalLabel = `${labelText} (${policy.pieces})`;
+    }
+    
+    breakdown.push({ type: 'checked', label: finalLabel, status: 'Purchased', icon: '🧳' });
   } else {
-    breakdown.push({ type: 'checked', label: 'No Checked Baggage', status: 'None', icon: '🧳' });
+    // Check if the feature specifically said "No checked baggage" or "Hand-carry only"
+    const isExplicitlyNoBaggage = (typeof checkedBaggageFeature === 'string' && checkedBaggageFeature.toLowerCase().includes('no ')) || 
+                                 features.some(f => typeof f === 'string' && f.toLowerCase().includes('hand-carry only'));
+    
+    breakdown.push({ 
+      type: 'checked', 
+      label: isExplicitlyNoBaggage ? 'No Checked Baggage' : 'Standard Allowance', 
+      status: isExplicitlyNoBaggage ? 'None' : 'Included', 
+      icon: '🧳' 
+    });
   }
 
   return breakdown;
@@ -492,28 +762,92 @@ const getMealLabel = (passengerKey, segment = 'depart') => {
   if (p?.type === 'Infant') return 'Not Available';
 
   const meals = bookingStore.addons?.meals?.[segment]?.[passengerKey];
-  if (!meals || (Array.isArray(meals) && meals.length === 0)) return 'No meal';
+  const ffName = (bookingStore.fareFamilyNames[segment] || '').toLowerCase();
   
-  const mealArray = Array.isArray(meals) ? meals : [meals];
-  
-  const labels = mealArray.map(m => {
-    if (typeof m === 'object' && m.name) return m.name;
-    const option = mealOptions.value.find(opt => opt.id == (m.id || m));
-    return option ? option.name : 'Pre-ordered Meal';
-  });
-  
+  const getLabels = () => {
+    if (!meals || (Array.isArray(meals) && meals.length === 0)) return [];
+    const mealArray = Array.isArray(meals) ? meals : [meals];
+    return mealArray.map(m => {
+      if (typeof m === 'object' && m.name) return m.name;
+      const option = mealOptions.value.find(opt => opt.id == (m.id || m));
+      return option ? option.name : 'Pre-ordered Meal';
+    });
+  };
+
+  const labels = getLabels();
+
+  if (labels.length === 0) {
+    const segmentObj = flightSegments.value.find(s => s.key === segment);
+    const flightNumber = segmentObj?.flight_number || '';
+    const airlineCode = flightNumber.substring(0, 2).toUpperCase();
+    if (airlineCode === 'PR') return 'Meals & Snacks included';
+    if (airlineCode === 'Z2' && (ffName.includes('value') || ffName.includes('premium'))) return '1 Complimentary Meal included';
+    return 'No meal';
+  }
+
   return labels.join(', ');
+};
+
+const getRefundRule = (segmentKey) => {
+  const flight = segmentKey === 'depart' ? bookingStore.selectedOutbound : 
+                 segmentKey === 'return' ? bookingStore.selectedReturn : 
+                 bookingStore.multiCitySegments[parseInt(segmentKey.replace('multi_', ''))]?.selectedFlight;
+  
+  if (!flight) return 'Subject to airline terms.';
+  
+  const features = Array.isArray(flight.seat_class_features) ? flight.seat_class_features : [];
+  const refundFeature = features.find(f => typeof f === 'string' && f.toLowerCase().includes('refund'));
+  
+  if (refundFeature) return refundFeature;
+  
+  // Airline Fallbacks
+  const airline = flight.airline_code || (flight.flight_number?.substring(0, 2).toUpperCase());
+  if (airline === '5J' || airline === 'Z2') return 'Non-refundable (Convertible to Travel Fund only).';
+  return 'Cancellation fees apply. Non-refundable for promo fares.';
+};
+
+const getChangeRule = (segmentKey) => {
+  const flight = segmentKey === 'depart' ? bookingStore.selectedOutbound : 
+                 segmentKey === 'return' ? bookingStore.selectedReturn : 
+                 bookingStore.multiCitySegments[parseInt(segmentKey.replace('multi_', ''))]?.selectedFlight;
+  
+  if (!flight) return 'Subject to airline terms.';
+  
+  const features = Array.isArray(flight.seat_class_features) ? flight.seat_class_features : [];
+  const changeFeature = features.find(f => typeof f === 'string' && (f.toLowerCase().includes('rebook') || f.toLowerCase().includes('change')));
+  
+  if (changeFeature) return changeFeature;
+  
+  return 'Changes allowed with fee plus fare difference.';
 };
 
 const getAssistanceLabel = (passengerKey, segment = 'depart') => {
   const p = bookingStore.passengers.find(p => p.key === passengerKey);
   if (p?.type === 'Infant') return 'Not Available';
 
-  const assistanceId = bookingStore.addons?.wheelchair?.[segment]?.[passengerKey];
-  if (!assistanceId || !Array.isArray(assistanceOptions.value)) return 'No assistance';
+  const ffName = (bookingStore.fareFamilyNames[segment] || '').toLowerCase();
   
-  const option = assistanceOptions.value.find(a => a.id == assistanceId);
-  return option ? option.name : 'Special Assistance';
+  const assistanceId = bookingStore.addons?.wheelchair?.[segment]?.[passengerKey];
+  
+  const getSelectedLabel = () => {
+    if (!assistanceId || !Array.isArray(assistanceOptions.value)) return null;
+    const option = assistanceOptions.value.find(a => a.id == assistanceId);
+    return option ? option.name : 'Special Assistance';
+  };
+
+  const selectedLabel = getSelectedLabel();
+
+  // Highlight PAL Lounge access for Comfort and Business classes
+  const segmentObj = flightSegments.value.find(s => s.key === segment);
+  const flightNumber = segmentObj?.flight_number || '';
+  const airlineCode = flightNumber.substring(0, 2).toUpperCase();
+  
+  if (airlineCode === 'PR' && (ffName.includes('comfort') || ffName.includes('business'))) {
+    const loungeMsg = 'Mabuhay Lounge access included';
+    return selectedLabel ? `${selectedLabel}, ${loungeMsg}` : loungeMsg;
+  }
+
+  return selectedLabel || 'No assistance';
 };
 
 const getSeatLabel = (passengerKey, segmentKey = 'depart') => {
@@ -527,15 +861,39 @@ const getSeatLabel = (passengerKey, segmentKey = 'depart') => {
     return 'On Lap';
   }
 
-  const isPremium = bookingStore.fareFamilies[segmentKey] === 'premium';
-  const seat = bookingStore.addons?.seats?.[segmentKey]?.[passengerKey] || bookingStore.addons?.seats?.[passengerKey];
+  const ffName = (bookingStore.fareFamilyNames[segmentKey] || '').toLowerCase();
   
-  if (!seat) return 'Not selected';
+  // Get correct airline to apply proper branding
+  const segmentObj = flightSegments.value.find(s => s.key === segmentKey);
+  const flightNumber = segmentObj?.flight_number || '';
+  const airlineCode = flightNumber.substring(0, 2).toUpperCase();
+  
+  // Synchronized inclusion logic with baggage
+  const isIncluded = !ffName.includes('saver') && 
+                     !ffName.includes('supersaver') && 
+                     !ffName.includes('promo') && 
+                     !ffName.includes('low fare') && 
+                     !ffName.includes('go basic');
+                     
+  const seat = bookingStore.addons?.seats?.[segmentKey]?.[passengerKey];
+  
+  if (!seat) {
+    if (airlineCode === 'PR') {
+      if (ffName.includes('saver')) return 'Standard seat (assigned at check-in)';
+      if (ffName.includes('value')) return 'Free Standard Seat selection';
+      if (ffName.includes('flex')) return 'Free Premium Seat selection';
+      if (ffName.includes('comfort')) return 'Free Extra Legroom seat selection';
+    } else if (airlineCode === 'Z2') {
+      if (ffName.includes('value')) return 'Free Standard Seat selection';
+      if (ffName.includes('premium')) return 'Free Premium Seat selection';
+    }
+    return 'Not selected';
+  }
   
   const seatCode = seat.seat_code || 'N/A';
-  const price = isPremium ? 0 : (parseFloat(seat.seat_price) || 0);
+  const price = isIncluded ? 0 : (parseFloat(seat.seat_price) || 0);
   
-  if (isPremium) {
+  if (isIncluded || price === 0) {
     return `${seatCode} (Included)`;
   }
   
@@ -552,48 +910,69 @@ const flightSegments = computed(() => {
     // Check if it's an object with city or name
     return airport.city || airport.name || airport.code || 'N/A';
   };
+  
+  const getAirlineBranding = (flightNumber) => {
+    if (!flightNumber) return { name: 'Unknown Airline', code: '??', class: 'bg-gray-400' };
+    const prefix = flightNumber.substring(0, 2).toUpperCase();
+    const map = {
+      'PR': { name: 'Philippine Airlines', code: 'PR', class: 'bg-[#003870]' },
+      '5J': { name: 'Cebu Pacific Air', code: '5J', class: 'bg-[#FFCC00] !text-black' },
+      'DG': { name: 'Cebgo', code: 'DG', class: 'bg-[#FFCC00] !text-black' },
+      'Z2': { name: 'AirAsia Philippines', code: 'Z2', class: 'bg-[#E31C23]' },
+      'T6': { name: 'AirSwift', code: 'T6', class: 'bg-[#00529B]' },
+      'RW': { name: 'Royal Air Philippines', code: 'RW', class: 'bg-[#D4A017]' }
+    };
+    return map[prefix] || { name: 'Commercial Flight', code: prefix, class: 'bg-gray-900' };
+  };
+  
+  const createSegmentData = (flightStoreObj, label, key, isReturn = false) => {
+    if (!flightStoreObj) return null;
+    const branding = getAirlineBranding(flightStoreObj.flight_number);
+    return {
+      key: key,
+      label: label,
+      origin: getAirportLabel(flightStoreObj.origin),
+      destination: getAirportLabel(flightStoreObj.destination),
+      flight_number: flightStoreObj.flight_number,
+      airline_name: flightStoreObj.airline_name || branding.name,
+      airline_code: branding.code,
+      airline_class: branding.class,
+      aircraft: flightStoreObj.aircraft || 'Airbus A320', // Fallback as a placeholder
+      departure_time: flightStoreObj.departure_time,
+      class_type: flightStoreObj.class_type,
+      price: flightStoreObj.price || 0,
+      isReturn: isReturn
+    };
+  };
 
   if (tripType === 'multi_city' || tripType === 'multi-city') {
-    return bookingStore.multiCitySegments.map((seg, idx) => ({
-      key: idx.toString(),
-      label: `Flight ${idx + 1}`,
-      origin: getAirportLabel(seg.origin),
-      destination: getAirportLabel(seg.destination),
-      flight_number: seg.selectedFlight?.flight_number || 'N/A',
-      departure_time: seg.selectedFlight?.departure_time,
-      class_type: seg.selectedFlight?.class_type,
-      price: seg.selectedFlight?.price || 0,
-      isMulti: true
-    }));
+    return bookingStore.multiCitySegments.map((seg, idx) => {
+      const branding = getAirlineBranding(seg.selectedFlight?.flight_number);
+      return {
+        key: idx.toString(),
+        label: `Flight ${idx + 1}`,
+        origin: getAirportLabel(seg.origin),
+        destination: getAirportLabel(seg.destination),
+        flight_number: seg.selectedFlight?.flight_number || 'N/A',
+        airline_name: seg.selectedFlight?.airline_name || branding.name,
+        airline_code: branding.code,
+        airline_class: branding.class,
+        aircraft: seg.selectedFlight?.aircraft || 'Commercial Jet',
+        departure_time: seg.selectedFlight?.departure_time,
+        class_type: seg.selectedFlight?.class_type,
+        price: seg.selectedFlight?.price || 0,
+        isMulti: true
+      };
+    });
   }
 
   const segments = [];
   if (bookingStore.selectedOutbound) {
-    segments.push({
-      key: 'depart',
-      label: 'Depart',
-      origin: getAirportLabel(bookingStore.selectedOutbound.origin),
-      destination: getAirportLabel(bookingStore.selectedOutbound.destination),
-      flight_number: bookingStore.selectedOutbound.flight_number,
-      departure_time: bookingStore.selectedOutbound.departure_time,
-      class_type: bookingStore.selectedOutbound.class_type,
-      price: bookingStore.selectedOutbound.price || 0,
-      isReturn: false
-    });
+    segments.push(createSegmentData(bookingStore.selectedOutbound, 'Depart', 'depart'));
   }
   
   if (bookingStore.isRoundTrip && bookingStore.selectedReturn) {
-    segments.push({
-      key: 'return',
-      label: 'Return',
-      origin: getAirportLabel(bookingStore.selectedReturn.origin),
-      destination: getAirportLabel(bookingStore.selectedReturn.destination),
-      flight_number: bookingStore.selectedReturn.flight_number,
-      departure_time: bookingStore.selectedReturn.departure_time,
-      class_type: bookingStore.selectedReturn.class_type,
-      price: bookingStore.selectedReturn.price || 0,
-      isReturn: true
-    });
+    segments.push(createSegmentData(bookingStore.selectedReturn, 'Return', 'return', true));
   }
   
   return segments;
@@ -624,6 +1003,12 @@ const formatTitle = (titleCode) => {
   return map[titleCode.toUpperCase()] || titleCode;
 };
 
+const formatFareFamily = (ff) => {
+  if (!ff) return 'Standard';
+  // Capitalize first letter of each word
+  return ff.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+};
+
 // Computed Properties
 const hasFlightData = computed(() => {
   if (bookingStore.tripType === 'multi_city' || bookingStore.tripType === 'multi-city') {
@@ -645,24 +1030,11 @@ const totalAssistancePrice = computed(() => bookingStore.totalAssistancePrice);
 const insurancePrice = computed(() => bookingStore.insurancePrice);
 const combinedBasePriceTotal = computed(() => bookingStore.combinedBasePriceTotal);
 
-const taxesPrice = computed(() => {
-  // If backend provided taxes, use them. Otherwise estimate 12%
-  if (backendBreakdown.value && backendBreakdown.value.taxes) {
-    return parseFloat(backendBreakdown.value.taxes);
-  }
-  return bookingStore.totalTaxes;
-});
+const taxesPrice = computed(() => bookingStore.authoritativeTaxes);
 
 const isBackendTotalLoaded = computed(() => backendTotal.value !== null && !isNaN(backendTotal.value));
 
-const grandTotal = computed(() => {
-  // Use backend confirmed total if available — this is the authoritative total
-  if (isBackendTotalLoaded.value) {
-    return backendTotal.value;
-  }
-  // Fallback: frontend estimate (may be incomplete for round-trip/multi-city)
-  return bookingStore.grandTotal + bookingStore.totalTaxes;
-});
+const grandTotal = computed(() => bookingStore.authoritativeTotal);
 
 const isUsingFrontendEstimate = computed(() => !isBackendTotalLoaded.value);
 
@@ -786,81 +1158,60 @@ const preparePassengersForSubmission = () => {
 
 
 const confirmBooking = async () => {
+  if (isProcessing.value) return;
   isProcessing.value = true;
   
   try {
-    // 1. Prepare data using your existing formatBookingData
     const bookingData = bookingService.formatBookingData(bookingStore);
-    
-    // 2. Check for an existing ID (from store or local storage)
     const existingBookingId = bookingStore.booking_id || 
                              JSON.parse(localStorage.getItem('current_booking'))?.id;
 
     let response;
-    
     if (existingBookingId) {
-      // SCENARIO: User went back from Add-ons/Review to change details
       console.log('🔄 Updating existing booking:', existingBookingId);
       response = await bookingService.updateBooking(existingBookingId, bookingData);
     } else {
-      // SCENARIO: First time clicking "Confirm"
       console.log('🆕 Creating new booking...');
       response = await bookingService.createBooking(bookingData);
     }
     
-    console.log('📊 FULL BOOKING RESPONSE:', response);
-    
-    if (response.success) {
-      // 3. Save ALL booking data to the store using saveBookingConfirmation
+    if (response && response.success) {
       bookingStore.saveBookingConfirmation({
         booking_id: response.booking_id,
         booking_reference: response.booking_reference || `CSUCC${String(response.booking_id).padStart(8, '0')}`,
         status: response.status || 'pending',
-        total_amount: response.total_amount  // Backend is sole source of truth — never fallback to frontend estimate
+        total_amount: response.total_amount
       });
       
-      // 4. Also set individual fields (for backward compatibility)
       bookingStore.setBookingId(response.booking_id);
-      bookingStore.booking_reference = response.booking_reference || `CSUCC${String(response.booking_id).padStart(8, '0')}`;
-      bookingStore.booking_status = response.status || 'pending';
+      bookingStore.booking_reference = response.booking_reference;
+      bookingStore.booking_status = response.status;
       
-      // 5. Persist to LocalStorage so a page refresh doesn't lose the ID
       localStorage.setItem('current_booking', JSON.stringify({
         id: response.booking_id,
-        reference: response.booking_reference || `CSUCC${String(response.booking_id).padStart(8, '0')}`,
-        total: response.total_amount || bookingStore.grandTotal,
-        status: response.status || 'pending'
+        reference: response.booking_reference,
+        total: response.total_amount,
+        status: response.status
       }));
       
-      console.log('✅ Booking saved to store:', {
-        id: bookingStore.booking_id,
-        reference: bookingStore.booking_reference,
-        status: bookingStore.booking_status,
-        total: bookingStore.booking_total
-      });
-      
-      // 6. Move to Payment — pass confirmed amount so Payment doesn't re-derive it.
       const confirmedAmount = bookingStore.booking_total || bookingStore.grandTotal;
       router.push({ 
         name: 'Payment', 
         query: { 
           bookingId: response.booking_id,
-          bookingReference: response.booking_reference || `CSUCC${String(response.booking_id).padStart(8, '0')}`,
+          bookingReference: response.booking_reference,
           amount: confirmedAmount
         } 
       });
     }
   } catch (error) {
     console.error("Booking critical failure:", error);
-    // Global axios interceptor handles specific mapping/toast
+    handleBookingError(error);
   } finally {
     isProcessing.value = false;
   }
 };
 
-/**
- * Extracted error handler to keep confirmBooking clean
- */
 const handleBookingError = (error) => {
   let errorMessage = 'Failed to process booking. Please try again.';
   
@@ -877,546 +1228,399 @@ const handleBookingError = (error) => {
 };
 </script>
 
-
-
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
 .pal-bg { 
-  background: #f4f7f9; 
+  background: var(--color-slate-50);
   min-height: 100vh; 
-  padding: 40px 0; 
+  padding: 60px 0;
+  font-family: 'Outfit', sans-serif;
+  color: var(--color-slate-800);
 }
 
 .review-layout { 
   display: grid; 
-  grid-template-columns: 1fr 350px; 
+  grid-template-columns: 1fr 380px; 
   gap: 30px; 
-  max-width: 1100px; 
+  max-width: 1240px; 
   margin: 0 auto; 
+  padding: 0 15px;
+}
+
+@media (min-width: 640px) {
+  .review-layout {
+    padding: 0 20px;
+  }
 }
 
 .page-title { 
-  color: #003870; 
-  font-weight: 800; 
-  margin-bottom: 25px; 
-  font-size: 1.8rem;
+  color: #0f172a; 
+  font-weight: 900; 
+  margin-bottom: 30px; 
+  font-size: 2.6rem;
+  letter-spacing: -1.5px;
 }
 
+/* Minimalist Review Section */
 .review-section { 
-  margin-bottom: 30px; 
+  margin-bottom: 40px; 
+  animation: fadeIn 0.5s ease-out both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .section-header { 
   display: flex; 
   align-items: center; 
-  gap: 10px; 
-  margin-bottom: 15px; 
+  gap: 12px; 
+  margin-bottom: 20px; 
+}
+
+.section-header .icon {
+  font-size: 1.4rem;
+  background: var(--color-slate-50);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px; /* sm/md */
+  border: 1px solid var(--color-slate-200);
 }
 
 .section-header h3 { 
-  color: #003870; 
+  color: var(--color-slate-950); 
   margin: 0; 
-  font-size: 1.2rem; 
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
+/* Boarding Pass Styling - Minimalist */
+.boarding-pass-card {
+  background: white;
+  border: 1px solid var(--color-slate-200);
+  border-radius: 12px; /* md */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: border-color 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.boarding-pass-card:hover {
+  border-color: var(--color-slate-300);
+}
+
+.pass-left { padding: 24px; }
+.pass-right { 
+  background: var(--color-slate-50); 
+  border-left: 1px dashed var(--color-slate-200);
+  padding: 24px;
+  position: relative;
+}
+
+.airline-brand .airline-code-badge {
+  background: var(--color-slate-950);
+  color: white;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+}
+
+.airport-code {
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: var(--color-slate-950);
+  line-height: 1;
+  letter-spacing: -2px;
+}
+
+.flight-path-divider {
+  flex: 1;
+  height: 2px;
+  background: var(--color-slate-100);
+  position: relative;
+  margin: 0 20px;
+}
+
+.path-airplane {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 0 10px;
+  color: var(--color-pink-600);
+}
+
+/* Info Cards */
 .review-card { 
-  background: white; 
-  border-radius: 12px; 
-  padding: 25px; 
-  box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-  border: 1px solid #eee; 
-}
-
-.review-card.no-padding { 
-  padding: 0; 
-  overflow: hidden; 
-}
-
-.badge { 
-  background: #003870; 
-  color: white; 
-  padding: 2px 8px; 
-  border-radius: 4px; 
-  font-size: 0.7rem; 
-  text-transform: uppercase; 
-  margin-right: 10px; 
-}
-
-.badge.return { 
-  background: #d11241; 
-}
- 
-.badge.multi {
-  background: #FF579A;
-}
-
-.trip-type-badge.multi-city {
-  background: #FFE6F1;
-  color: #FF579A;
-  border: 2px solid #FF579A;
-}
-
-.flight-summary { 
-  padding-bottom: 15px; 
-}
-
-.detail-grid { 
-  display: grid; 
-  grid-template-columns: repeat(3, 1fr); 
-  margin-top: 10px; 
-  color: #555; 
-}
-
-.review-table { 
-  width: 100%; 
-  border-collapse: collapse; 
-}
-
-.review-table th { 
-  background: #f8f9fa; 
-  text-align: left; 
-  padding: 12px 20px; 
-  font-size: 0.85rem; 
-  color: #666; 
-}
-
-.review-table td { 
-  padding: 15px 20px; 
-  border-top: 1px solid #eee; 
-  font-size: 0.95rem; 
-}
-
-.sub-text { 
-  font-size: 0.75rem; 
-  color: #888; 
+  background: white;
+  border-radius: 12px; /* md */
+  padding: 24px; 
+  border: 1px solid var(--color-slate-200);
 }
 
 .contact-grid { 
   display: grid; 
   grid-template-columns: repeat(3, 1fr); 
-  gap: 20px; 
+  gap: 32px;
 }
 
-.contact-item label { 
-  display: block; 
-  font-size: 0.75rem; 
-  color: #888; 
-  text-transform: uppercase; 
+.contact-item label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--color-slate-400);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
 }
 
-.contact-item p { 
-  margin: 5px 0 0; 
-  font-weight: 600; 
-  color: #333; 
+.contact-item p {
+  font-weight: 600;
+  color: var(--color-slate-800);
+  margin: 0;
+  font-size: 0.95rem;
 }
 
-/* Sticky Sidebar */
+.detail-grid { 
+  display: grid; 
+  grid-template-columns: repeat(3, 1fr); 
+  gap: 25px;
+}
+
+.detail-item label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--color-slate-400);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.detail-item p {
+  font-weight: 700;
+  color: var(--color-slate-800);
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* Sidebar & Summary Redesign - Minimalist */
 .summary-card { 
   background: white; 
-  border-radius: 12px; 
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
-}
-
-.sticky { 
-  position: sticky; 
-  top: 20px; 
+  border-radius: 12px; /* md */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+  overflow: hidden;
+  position: sticky;
+  top: 40px;
+  border: 1px solid var(--color-slate-200);
 }
 
 .summary-header { 
-  background: #003870; 
-  color: white; 
-  padding: 20px; 
-  text-align: center; 
-  font-weight: 700; 
-  border-radius: 12px 12px 0 0; 
+  background: var(--color-slate-50);
+  padding: 24px; 
+  border-bottom: 1px solid var(--color-slate-200);
+  position: relative;
 }
 
-.summary-body { 
-  padding: 20px; 
+.header-overlay { display: none; }
+
+.header-content h3 {
+  color: var(--color-slate-950) !important;
 }
 
-.price-line { 
-  display: flex; 
-  justify-content: space-between; 
-  margin-bottom: 10px; 
-  font-size: 0.9rem; 
+.header-content span {
+  color: var(--color-slate-500) !important;
 }
 
-.total-row { 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-  margin-top: 15px; 
-  font-weight: 700; 
+.price-line {
+  transition: opacity 0.2s ease;
 }
 
-.final-amt { 
-  color: #d11241; 
-  font-size: 1.4rem; 
+.btn-pay-premium {
+  width: 100%;
+  padding: 20px;
+  background: var(--color-pink-500);
+  color: white;
+  border: none;
+  border-radius: 8px; /* sm/md */
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  position: relative;
 }
 
-.footer-nav { 
-  display: flex; 
-  justify-content: space-between; 
-  margin-top: 30px; 
+.btn-pay-premium::before { display: none; }
+
+.btn-pay-premium:hover:not(:disabled) {
+  background-color: var(--color-pink-600);
 }
 
-.btn-back { 
-  padding: 12px 25px; 
-  border: 1px solid #ccc; 
-  background: white; 
-  border-radius: 6px; 
-  cursor: pointer; 
-  font-weight: 600;
+.btn-pay-premium:active:not(:disabled) {
+  background-color: var(--color-pink-700);
 }
 
-.btn-continue { 
-  padding: 12px 40px; 
-  background: #d11241; 
-  color: white; 
-  border: none; 
-  border-radius: 6px; 
-  font-weight: 700; 
-  cursor: pointer; 
-}
-
-.btn-continue:disabled {
-  background: #ccc;
+.btn-pay-premium:disabled {
+  background: var(--color-slate-100);
+  color: var(--color-slate-400);
   cursor: not-allowed;
 }
 
-/* Loading and Error States */
-.loading-state, .no-data-message {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-  text-align: center;
-  padding: 40px;
+.calculating-shimmer {
+  display: inline-block;
+  width: 80px;
+  height: 20px;
+  background: var(--color-slate-100);
+  border-radius: 4px;
 }
 
-.loading-state p {
-  color: #666;
-  font-size: 1.2rem;
+/* Footer Nav & Back Button */
+.footer-nav {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.btn-back {
+  background: transparent;
+  border: 1px solid var(--color-slate-200);
+  color: var(--color-slate-500);
+  padding: 14px 28px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+}
+
+.btn-back:hover {
+  background: var(--color-slate-50);
+  color: var(--color-slate-900);
+  border-color: var(--color-slate-300);
+}
+
+/* Trip Badge */
+.trip-type-badge {
+  margin-left: auto;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.trip-type-badge.round-trip { background: #eff6ff; color: #1d4ed8; }
+.trip-type-badge.one-way { background: #faf5ff; color: #7c3aed; }
+
+/* Review Table */
+.review-table { 
+  width: 100%; 
+  border-collapse: collapse; 
   margin-top: 15px;
 }
 
+.review-table th { 
+  text-align: left; 
+  padding: 15px 20px; 
+  font-size: 0.7rem; 
+  font-weight: 800;
+  color: var(--color-slate-400);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.review-table td { 
+  padding: 20px; 
+  border-top: 1px solid var(--color-slate-100); 
+  font-size: 0.95rem; 
+  font-weight: 600;
+}
+
+/* Baggage List */
+.baggage-item-mini {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 10px;
+  background: var(--color-slate-50);
+  border-radius: 8px;
+}
+
+.baggage-status {
+  font-size: 0.6rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.baggage-status.included { background: #dcfce7; color: #166534; }
+.baggage-status.purchased { background: #dbeafe; color: #1e40af; }
+
+/* Loading Spinner */
 .loading-spinner {
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #003870;
+  border: 4px solid var(--color-slate-100);
+  border-top: 4px solid var(--color-pink-500);
   border-radius: 50%;
   width: 50px;
   height: 50px;
   animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-.no-data-message {
-  background: white;
-  border-radius: 12px;
-  max-width: 500px;
-  margin: 40px auto;
-  padding: 40px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-
-.no-data-message h3 {
-  color: #003870;
-  margin-bottom: 15px;
-  font-size: 1.5rem;
-}
-
-.no-data-message p {
-  color: #666;
-  margin-bottom: 25px;
+/* Shared Segment Header for Tables */
+.segment-summary-header {
+  text-align: left;
+  padding: 18px 25px;
+  display: flex;
+  align-items: center;
   font-size: 1rem;
-}
-
-.no-data-message .btn-back {
-  background: #003870;
+  background: var(--color-slate-900);
   color: white;
-  border: none;
-  padding: 12px 30px;
+  border-radius: 8px 8px 0 0;
+  margin: -30px -30px 20px -30px;
 }
 
-/* Responsive Styles */
+.segment-summary-header.return { background: var(--color-pink-600); }
+.segment-summary-header.multi { background: #4f46e5; }
+
+.badge { 
+  background: rgba(255,255,255,0.2);
+  color: white; 
+  padding: 4px 10px; 
+  border-radius: 6px; 
+  font-size: 0.7rem; 
+  font-weight: 900;
+  margin-right: 12px;
+}
+
+/* Responsive - Minimalist Adjustments */
+@media (max-width: 1024px) {
+  .review-layout { grid-template-columns: 1fr; gap: 20px; }
+  .summary-card { position: static; margin-top: 24px; border-radius: 12px; }
+  .main-content { order: 1; }
+  .sidebar { order: 2; }
+}
 @media (max-width: 768px) {
-  .review-layout {
-    grid-template-columns: 1fr;
-  }
-  
   .contact-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
-  
-  .detail-grid {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-  
-  .footer-nav {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .footer-nav button {
-    width: 100%;
-  }
-  
-  .review-table {
-    display: block;
-    overflow-x: auto;
-  }
-}
-
-@media (max-width: 480px) {
-  .pal-bg {
-    padding: 20px 0;
-  }
-  
-  .review-card {
-    padding: 15px;
-  }
-  
   .page-title {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+    text-align: center;
   }
-}
-
-.trip-type-badge {
-  margin-left: auto;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.trip-type-badge.round-trip {
-  background: #e3f2fd;
-  color: #1565c0;
-  border: 1px solid #1565c0;
-}
-
-.trip-type-badge.one-way {
-  background: #f3e5f5;
-  color: #7b1fa2;
-  border: 1px solid #7b1fa2;
-}
-
-.segment-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
-}
-
-.segment-header h4 {
-  margin: 0;
-  color: #003870;
-  font-size: 1.1rem;
-}
-
-.flight-badge {
-  background: #003870;
-  color: white;
-  padding: 4px 12px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: bold;
-}
-
-.flight-badge.return {
-  background: #d11241;
-}
-
-.flight-base-summary {
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px dashed #eee;
-}
-
-.flight-base-summary .price-line {
-  font-size: 0.85rem;
-  color: #666;
-}
-
-.addons-summary {
-  margin-top: 10px;
-}
-
-.passenger-count {
-  text-align: center;
-  margin-top: 10px;
-  color: #888;
-  font-size: 0.85rem;
-}
-
-.tax-detail-line {
-  font-size: 0.85rem;
-  color: #666;
-  padding-left: 1rem;
-  margin-top: 4px;
-}
-
-.tax-label {
-  font-style: italic;
-  opacity: 0.8;
-}
-
-.taxes-line {
-  font-weight: 600;
-  margin-top: 10px;
-}
-
-.estimate-warning {
-  text-align: center;
-  margin-top: 8px;
-  font-size: 0.72rem;
-  color: #b45309;
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
-  border-radius: 6px;
-  padding: 5px 8px;
-}
-
-.total-loading {
-  font-size: 1rem;
-  color: #999;
-  font-style: italic;
-}
-
-.mt-3 {
-  margin-top: 15px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .segment-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .trip-type-badge {
-    margin-left: 0;
-    align-self: flex-start;
-  }
-}
-
-/* Price Loading Styles */
-.price-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 30px 10px;
-  text-align: center;
-}
-
-.price-loading p {
-  margin-top: 15px;
-  color: #666;
-  font-size: 0.9rem;
-  font-style: italic;
-}
-
-.loading-dots {
-  display: flex;
-  gap: 6px;
-}
-
-.loading-dots span {
-  width: 8px;
-  height: 8px;
-  background-color: #003870;
-  border-radius: 50%;
-  display: inline-block;
-  animation: dot-pulse 1.4s infinite ease-in-out both;
-}
-
-.loading-dots span:nth-child(1) { animation-delay: -0.32s; }
-.loading-dots span:nth-child(2) { animation-delay: -0.16s; }
-
-@keyframes dot-pulse {
-  0%, 80%, 100% { transform: scale(0); }
-  40% { transform: scale(1.0); }
-}
-
-/* Baggage Breakdown Styles */
-.baggage-item-mini {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 8px;
-  padding: 8px;
-  background: #f8fafc;
-  border-radius: 8px;
-  border: 1px solid #edf2f7;
-  transition: all 0.2s ease;
-}
-
-.baggage-item-mini:hover {
-  background: white;
-  border-color: #cbd5e0;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.baggage-item-mini:last-child {
-  margin-bottom: 0;
-}
-
-.baggage-icon {
-  font-size: 1.2rem;
-  line-height: 1;
-}
-
-.baggage-info {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.baggage-text {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #2d3748;
-  line-height: 1.2;
-}
-
-.baggage-status {
-  font-size: 0.65rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  padding: 2px 6px;
-  border-radius: 4px;
-  width: fit-content;
-  letter-spacing: 0.5px;
-}
-
-.baggage-status.included {
-  background: #e6fffa;
-  color: #0d9488;
-  border: 1px solid #b2f5ea;
-}
-
-.baggage-status.purchased {
-  background: #eff6ff;
-  color: #2563eb;
-  border: 1px solid #dbeafe;
-}
-
-.baggage-status.none {
-  background: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fee2e2;
-  opacity: 0.8;
 }
 </style>

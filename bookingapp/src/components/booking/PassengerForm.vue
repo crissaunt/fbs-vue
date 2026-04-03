@@ -1,9 +1,9 @@
 <template>
   <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md">
     <!-- Card Header -->
-    <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+    <div class="px-4 sm:px-6 py-3 sm:py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600 font-bold text-sm">
+        <div class="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center text-pink-600 font-bold text-sm">
           {{ index }}
         </div>
         <div>
@@ -24,11 +24,11 @@
       </div>
     </div>
 
-    <div class="p-6 space-y-8">
+    <div class="p-4 sm:p-6 space-y-6 sm:space-y-8">
       <!-- Section: Personal Information -->
       <section>
         <div class="flex items-center gap-2 mb-4">
-          <div class="w-1.5 h-4 bg-rose-500 rounded-full"></div>
+          <div class="w-1.5 h-4 bg-pink-500 rounded-full"></div>
           <h4 class="text-xs font-bold text-slate-400 uppercase tracking-[0.15em]">Personal Information</h4>
         </div>
         
@@ -40,8 +40,8 @@
               <select 
                 v-model="form.title" 
                 @change="emitData"
-                class="w-full h-11 px-4 bg-white border rounded-lg text-sm font-medium transition-all outline-none appearance-none focus:ring-2 focus:ring-rose-500/20"
-                :class="[showErrors && !form.title ? 'border-rose-500 bg-rose-50' : 'border-slate-200 hover:border-slate-300 focus:border-rose-500']"
+                class="w-full h-11 px-4 bg-white border rounded-lg text-sm font-medium transition-all outline-none appearance-none focus:ring-2 focus:ring-pink-500/20"
+                :class="[showErrors && !form.title ? 'border-pink-500 bg-pink-50' : 'border-slate-200 hover:border-slate-300 focus:border-pink-500']"
               >
                 <option value="">Select</option>
                 <option value="MR">Mr.</option>
@@ -52,23 +52,29 @@
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
               </div>
             </div>
+            <p v-if="showErrors && !form.title" class="mt-1 text-[9px] text-pink-500 font-medium ml-1">
+              Title is required
+            </p>
           </div>
 
           <!-- First Name -->
           <div class="md:col-span-4">
             <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5 ml-1">
-              First Name <span class="text-rose-500">*</span>
+              First Name <span class="text-pink-500">*</span>
             </label>
             <input 
               v-model="form.firstName" 
               type="text" 
               placeholder="e.g. Juan"
               @input="handleNameInput('firstName')"
-              class="w-full h-11 px-4 bg-white border rounded-lg text-sm font-medium transition-all outline-none focus:ring-2 focus:ring-rose-500/20"
-              :class="[showErrors && !isNameValid(form.firstName) ? 'border-rose-500 bg-rose-50' : 'border-slate-200 hover:border-slate-300 focus:border-rose-500']"
+              class="w-full h-11 px-4 bg-white border rounded-lg text-sm font-medium transition-all outline-none focus:ring-2 focus:ring-pink-500/20"
+              :class="[showErrors && !isNameValid(form.firstName) ? 'border-pink-500 bg-pink-50' : 'border-slate-200 hover:border-slate-300 focus:border-pink-500']"
             >
-            <p v-if="showErrors && !form.firstName.trim()" class="mt-1.5 text-[10px] text-rose-500 font-medium ml-1 flex items-center gap-1">
-              <span class="w-1 h-1 bg-rose-500 rounded-full"></span> First name is required
+            <p v-if="showErrors && !form.firstName.trim()" class="mt-1 text-[9px] text-pink-500 font-medium ml-1">
+              First name is required
+            </p>
+            <p v-else-if="showErrors && !isNameValid(form.firstName)" class="mt-1 text-[9px] text-pink-500 font-medium ml-1">
+              Invalid characters in name
             </p>
           </div>
 
@@ -81,25 +87,28 @@
               maxlength="1" 
               placeholder="A"
               @input="debounceEmit"
-              class="w-full h-11 px-4 bg-white border border-slate-200 rounded-lg text-sm font-medium transition-all outline-none hover:border-slate-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
+              class="w-full h-11 px-4 bg-white border border-slate-200 rounded-lg text-sm font-medium transition-all outline-none hover:border-slate-300 focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20"
             >
           </div>
 
           <!-- Last Name -->
           <div class="md:col-span-4">
             <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5 ml-1">
-              Last Name <span class="text-rose-500">*</span>
+              Last Name <span class="text-pink-500">*</span>
             </label>
             <input 
               v-model="form.lastName" 
               type="text" 
               placeholder="e.g. Dela Cruz"
               @input="handleNameInput('lastName')"
-              class="w-full h-11 px-4 bg-white border rounded-lg text-sm font-medium transition-all outline-none focus:ring-2 focus:ring-rose-500/20"
-              :class="[showErrors && !isNameValid(form.lastName) ? 'border-rose-500 bg-rose-50' : 'border-slate-200 hover:border-slate-300 focus:border-rose-500']"
+              class="w-full h-11 px-4 bg-white border rounded-lg text-sm font-medium transition-all outline-none focus:ring-2 focus:ring-pink-500/20"
+              :class="[showErrors && !isNameValid(form.lastName) ? 'border-pink-500 bg-pink-50' : 'border-slate-200 hover:border-slate-300 focus:border-pink-500']"
             >
-             <p v-if="showErrors && !form.lastName.trim()" class="mt-1.5 text-[10px] text-rose-500 font-medium ml-1 flex items-center gap-1">
-              <span class="w-1 h-1 bg-rose-500 rounded-full"></span> Last name is required
+             <p v-if="showErrors && !form.lastName.trim()" class="mt-1 text-[9px] text-pink-500 font-medium ml-1">
+              Last name is required
+            </p>
+            <p v-else-if="showErrors && !isNameValid(form.lastName)" class="mt-1 text-[9px] text-pink-500 font-medium ml-1">
+              Invalid characters in name
             </p>
           </div>
         </div>
@@ -107,25 +116,31 @@
         <!-- Date of Birth Row -->
         <div class="mt-6">
           <label class="block text-[11px] font-bold text-slate-500 uppercase mb-2 ml-1">
-            Date of Birth <span class="text-rose-500">*</span>
+            Date of Birth <span class="text-pink-500">*</span>
           </label>
-          <div class="grid grid-cols-3 md:grid-cols-6 gap-3">
+          <div class="grid grid-cols-6 gap-2 sm:gap-3">
             <!-- Day -->
-            <div class="relative">
-              <select v-model="form.dobDay" @change="emitData" class="w-full h-11 px-3 bg-white border border-slate-200 rounded-lg text-sm font-medium focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 outline-none appearance-none">
+            <div class="col-span-2 md:col-span-1 relative">
+              <select v-model="form.dobDay" @change="emitData" 
+                class="w-full h-11 px-3 bg-white border rounded-lg text-sm font-medium focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none appearance-none"
+                :class="[showErrors && !form.dobDay ? 'border-pink-500 bg-pink-50' : 'border-slate-200 hover:border-slate-300']"
+              >
                 <option value="">Day</option>
                 <option v-for="d in 31" :key="d" :value="d">{{ d }}</option>
               </select>
             </div>
             <!-- Month -->
-            <div class="col-span-2 relative">
-              <select v-model="form.dobMonth" @change="emitData" class="w-full h-11 px-3 bg-white border border-slate-200 rounded-lg text-sm font-medium focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 outline-none appearance-none">
+            <div class="col-span-4 md:col-span-2 relative">
+              <select v-model="form.dobMonth" @change="emitData" 
+                class="w-full h-11 px-3 bg-white border rounded-lg text-sm font-medium focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none appearance-none"
+                :class="[showErrors && !form.dobMonth ? 'border-pink-500 bg-pink-50' : 'border-slate-200 hover:border-slate-300']"
+              >
                 <option value="">Month</option>
                 <option v-for="(m, i) in months" :key="i" :value="i+1">{{ m }}</option>
               </select>
             </div>
             <!-- Year -->
-            <div class="md:col-span-2">
+            <div class="col-span-4 md:col-span-2">
               <input 
                 v-model="form.dobYear" 
                 type="number" 
@@ -133,16 +148,20 @@
                 min="1900" 
                 :max="new Date().getFullYear()"
                 @input="debounceEmit"
-                class="w-full h-11 px-4 bg-white border border-slate-200 rounded-lg text-sm font-medium focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 outline-none"
+                class="w-full h-11 px-4 bg-white border rounded-lg text-sm font-medium focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none"
+                :class="[showErrors && !form.dobYear ? 'border-pink-500 bg-pink-50' : 'border-slate-200 hover:border-slate-300']"
               >
             </div>
             <!-- Age Badge (Responsive) -->
-            <div v-if="calculatedAge !== null" class="col-span-3 md:col-span-1 flex items-center justify-center">
-              <div class="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">
+            <div v-if="calculatedAge !== null" class="col-span-2 md:col-span-1 flex items-center justify-end md:justify-center">
+              <div class="px-2 py-1 bg-slate-100 rounded-full text-[9px] font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">
                 Age: {{ calculatedAge }}
               </div>
             </div>
           </div>
+          <p v-if="showErrors && (!form.dobDay || !form.dobMonth || !form.dobYear)" class="mt-1 text-[9px] text-pink-500 font-medium ml-1">
+            Complete date of birth is required
+          </p>
           <p v-if="showAgeWarning" class="mt-2 text-[10px] text-amber-600 font-bold bg-amber-50 p-2 rounded border border-amber-100 flex items-center gap-2">
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             This passenger should be categorized as a {{ correctPassengerType }}
@@ -151,7 +170,7 @@
       </section>
 
       <!-- Section: Travel Documents -->
-      <section class="p-5 bg-slate-50/50 rounded-xl border border-slate-100 space-y-6">
+      <section class="p-4 sm:p-5 bg-slate-50/50 rounded-xl border border-slate-100 space-y-6">
         <div class="flex items-center gap-2 mb-4">
           <div class="w-1.5 h-4 bg-slate-400 rounded-full"></div>
           <h4 class="text-xs font-bold text-slate-400 uppercase tracking-[0.15em]">Travel Documents</h4>
@@ -165,7 +184,7 @@
               <select 
                 v-model="form.nationality" 
                 @change="emitData"
-                class="w-full h-11 px-4 bg-white border border-slate-200 rounded-lg text-sm font-medium transition-all outline-none appearance-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                class="w-full h-11 px-4 bg-white border border-slate-200 rounded-lg text-sm font-medium transition-all outline-none appearance-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
               >
                 <option value="Philippines">Philippines</option>
                 <option value="United States">United States</option>
@@ -179,7 +198,7 @@
               </div>
             </div>
             <div class="mt-2">
-              <span v-if="requiresPassport" class="text-[9px] font-black text-rose-500 uppercase tracking-tighter flex items-center gap-1">
+              <span v-if="requiresPassport" class="text-[9px] font-black text-pink-500 uppercase tracking-tighter flex items-center gap-1">
                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                 Passport Required
               </span>
@@ -193,115 +212,114 @@
           <!-- Passport Number -->
           <div>
             <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5 ml-1">
-              Passport Number <span class="text-rose-500" v-if="requiresPassport">*</span>
+              Passport Number <span class="text-pink-500" v-if="requiresPassport">*</span>
             </label>
             <input 
               v-model="form.passport" 
               type="text" 
               placeholder="P0000000A"
               @input="debounceEmit"
-              class="w-full h-11 px-4 bg-white border rounded-lg text-sm font-medium transition-all outline-none focus:ring-2 focus:ring-rose-500/20"
-              :class="[showErrors && requiresPassport && !form.passport ? 'border-rose-500 bg-rose-50' : 'border-slate-200 hover:border-slate-300 focus:border-rose-500']"
+              class="w-full h-11 px-4 bg-white border rounded-lg text-sm font-medium transition-all outline-none focus:ring-2 focus:ring-pink-500/20"
+              :class="[showErrors && requiresPassport && !form.passport ? 'border-pink-500 bg-pink-50' : 'border-slate-200 hover:border-slate-300 focus:border-pink-500']"
             >
+            <p v-if="showErrors && requiresPassport && !form.passport" class="mt-1 text-[9px] text-pink-500 font-medium ml-1">
+              Passport number is required
+            </p>
           </div>
         </div>
 
         <!-- Passport Expiry -->
         <div v-if="requiresPassport || form.passport" class="space-y-2">
           <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5 ml-1">Passport Expiry</label>
-          <div class="grid grid-cols-3 md:grid-cols-6 gap-3">
-            <div class="relative">
+          <div class="grid grid-cols-6 gap-2 sm:gap-3">
+            <div class="col-span-2 md:col-span-1 relative">
               <select 
                 v-model="form.expiryDay" 
                 @change="emitData" 
-                class="w-full h-11 px-3 rounded-lg text-sm font-medium focus:border-rose-500 outline-none transition-colors appearance-none"
-                :class="[(showErrors || (form.expiryDay && form.expiryMonth && form.expiryYear)) && (requiresPassport || form.passport) && !passportStatus.isValid ? 'border-2 border-rose-500 bg-rose-50 text-rose-700' : 'border border-slate-200 bg-white hover:border-slate-300 focus:ring-2 focus:ring-rose-500/20']"
+                class="w-full h-11 px-3 rounded-lg text-sm font-medium focus:border-pink-500 outline-none transition-colors appearance-none"
+                :class="[(showErrors || (form.expiryDay && form.expiryMonth && form.expiryYear)) && (requiresPassport || form.passport) && !passportStatus.isValid ? 'border-2 border-pink-500 bg-pink-50 text-pink-700' : 'border border-slate-200 bg-white hover:border-slate-300 focus:ring-2 focus:ring-pink-500/20']"
               >
                 <option value="">Day</option>
                 <option v-for="d in 31" :key="d" :value="d">{{ d }}</option>
               </select>
-              <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-              </div>
             </div>
             
-            <div class="col-span-2 relative">
+            <div class="col-span-4 md:col-span-2 relative">
               <select 
                 v-model="form.expiryMonth" 
                 @change="emitData" 
-                class="w-full h-11 px-3 rounded-lg text-sm font-medium focus:border-rose-500 outline-none transition-colors appearance-none"
-                :class="[(showErrors || (form.expiryDay && form.expiryMonth && form.expiryYear)) && (requiresPassport || form.passport) && !passportStatus.isValid ? 'border-2 border-rose-500 bg-rose-50 text-rose-700' : 'border border-slate-200 bg-white hover:border-slate-300 focus:ring-2 focus:ring-rose-500/20']"
+                class="w-full h-11 px-3 rounded-lg text-sm font-medium focus:border-pink-500 outline-none transition-colors appearance-none"
+                :class="[(showErrors || (form.expiryDay && form.expiryMonth && form.expiryYear)) && (requiresPassport || form.passport) && !passportStatus.isValid ? 'border-2 border-pink-500 bg-pink-50 text-pink-700' : 'border border-slate-200 bg-white hover:border-slate-300 focus:ring-2 focus:ring-pink-500/20']"
               >
                 <option value="">Month</option>
                 <option v-for="(m, i) in months" :key="i" :value="i+1">{{ m }}</option>
               </select>
-              <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-              </div>
             </div>
             
-            <input 
-              v-model="form.expiryYear" 
-              type="number" 
-              placeholder="Year" 
-              :min="new Date().getFullYear()" 
-              @input="debounceEmit" 
-              class="md:col-span-2 w-full h-11 px-4 rounded-lg text-sm font-medium focus:border-rose-500 outline-none transition-colors"
-              :class="[(showErrors || (form.expiryDay && form.expiryMonth && form.expiryYear)) && (requiresPassport || form.passport) && !passportStatus.isValid ? 'border-2 border-rose-500 bg-rose-50 text-rose-700 placeholder-rose-300' : 'border border-slate-200 bg-white hover:border-slate-300 focus:ring-2 focus:ring-rose-500/20']"
-            >
+            <div class="col-span-6 md:col-span-2">
+              <input 
+                v-model="form.expiryYear" 
+                type="number" 
+                placeholder="Year" 
+                :min="new Date().getFullYear()" 
+                @input="debounceEmit" 
+                class="w-full h-11 px-4 rounded-lg text-sm font-medium focus:border-pink-500 outline-none transition-colors"
+                :class="[(showErrors || (form.expiryDay && form.expiryMonth && form.expiryYear)) && (requiresPassport || form.passport) && !passportStatus.isValid ? 'border-2 border-pink-500 bg-pink-50 text-pink-700 placeholder-pink-300' : 'border border-slate-200 bg-white hover:border-slate-300 focus:ring-2 focus:ring-pink-500/20']"
+              >
+            </div>
           </div>
-          <p v-if="(showErrors || (form.expiryDay && form.expiryMonth && form.expiryYear)) && (requiresPassport || form.passport) && !passportStatus.isValid" class="text-[10px] text-rose-500 font-bold mt-1">
+          <p v-if="(showErrors || (form.expiryDay && form.expiryMonth && form.expiryYear)) && (requiresPassport || form.passport) && !passportStatus.isValid" class="text-[9px] text-pink-500 font-medium mt-1 ml-1">
             {{ passportStatus.message }}
           </p>
         </div>
       </section>
 
       <!-- Section: PH Discounts -->
-      <div v-if="type === 'Adult'" class="p-5 bg-emerald-50/30 rounded-xl border border-emerald-100/50">
+      <div v-if="type === 'Adult'" class="p-4 sm:p-5 bg-emerald-50/30 rounded-xl border border-emerald-100/50">
         <div class="flex items-center gap-2 mb-4">
           <div class="w-1.5 h-4 bg-emerald-500 rounded-full"></div>
           <h4 class="text-xs font-bold text-emerald-700 uppercase tracking-[0.15em]">PH Resident Discounts</h4>
         </div>
 
-        <div class="flex flex-wrap gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <label 
-            class="flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all shrink-0"
-            :class="[form.phDiscountType === 'none' ? 'bg-white border-emerald-500 ring-2 ring-emerald-500/10' : 'bg-transparent border-slate-200 hover:border-slate-300']"
+            class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all shrink-0"
+            :class="[form.phDiscountType === 'none' ? 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-100' : 'bg-white border-slate-200 hover:border-slate-300']"
           >
             <input type="radio" v-model="form.phDiscountType" value="none" @change="emitData" class="sr-only">
-            <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center" :class="[form.phDiscountType === 'none' ? 'border-emerald-500 bg-emerald-500' : 'border-slate-300']">
-               <div v-if="form.phDiscountType === 'none'" class="w-1.5 h-1.5 bg-white rounded-full"></div>
+            <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0" :class="[form.phDiscountType === 'none' ? 'border-white bg-white' : 'border-slate-300']">
+               <div v-if="form.phDiscountType === 'none'" class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
             </div>
-            <span class="text-xs font-bold text-slate-700">None</span>
+            <span class="text-xs font-black uppercase tracking-widest">None</span>
           </label>
 
           <label 
-            class="flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all shrink-0"
+            class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all shrink-0"
             :class="[
-              isSeniorDisabled ? 'opacity-50 cursor-not-allowed border-slate-100 bg-slate-50' : 
-              form.phDiscountType === 'senior' ? 'bg-white border-emerald-500 ring-2 ring-emerald-500/10' : 'bg-transparent border-slate-200 hover:border-slate-300'
+              isSeniorDisabled ? 'opacity-40 cursor-not-allowed border-slate-100 bg-slate-50' : 
+              form.phDiscountType === 'senior' ? 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-100' : 'bg-white border-slate-200 hover:border-slate-300'
             ]"
           >
             <input type="radio" v-model="form.phDiscountType" value="senior" :disabled="isSeniorDisabled" @change="emitData" class="sr-only">
-            <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center" :class="[form.phDiscountType === 'senior' ? 'border-emerald-500 bg-emerald-500' : 'border-slate-300']">
-               <div v-if="form.phDiscountType === 'senior'" class="w-1.5 h-1.5 bg-white rounded-full"></div>
+            <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0" :class="[form.phDiscountType === 'senior' ? 'border-white bg-white' : 'border-slate-300']">
+               <div v-if="form.phDiscountType === 'senior'" class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
             </div>
-            <span class="text-xs font-bold text-slate-700">Senior Citizen</span>
+            <span class="text-xs font-black uppercase tracking-widest">Senior ID</span>
           </label>
 
           <label 
-            class="flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all shrink-0"
-            :class="[form.phDiscountType === 'pwd' ? 'bg-white border-emerald-500 ring-2 ring-emerald-500/10' : 'bg-transparent border-slate-200 hover:border-slate-300']"
+            class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all shrink-0"
+            :class="[form.phDiscountType === 'pwd' ? 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-100' : 'bg-white border-slate-200 hover:border-slate-300']"
           >
             <input type="radio" v-model="form.phDiscountType" value="pwd" @change="emitData" class="sr-only">
-            <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center" :class="[form.phDiscountType === 'pwd' ? 'border-emerald-500 bg-emerald-500' : 'border-slate-300']">
-               <div v-if="form.phDiscountType === 'pwd'" class="w-1.5 h-1.5 bg-white rounded-full"></div>
+            <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0" :class="[form.phDiscountType === 'pwd' ? 'border-white bg-white' : 'border-slate-300']">
+               <div v-if="form.phDiscountType === 'pwd'" class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
             </div>
-            <span class="text-xs font-bold text-slate-700">PWD</span>
+            <span class="text-xs font-black uppercase tracking-widest">PWD ID</span>
           </label>
         </div>
 
-        <div v-if="form.phDiscountType !== 'none'" class="mt-5 max-w-sm">
+        <div v-if="form.phDiscountType !== 'none'" class="mt-5 w-full sm:max-w-sm">
           <label class="block text-[10px] font-bold text-emerald-700 uppercase mb-1.5 ml-1">
             {{ form.phDiscountType === 'senior' ? 'Senior ID Number' : 'PWD ID Number' }}
           </label>
@@ -312,17 +330,20 @@
             @input="debounceEmit"
             class="w-full h-11 px-4 bg-white border border-emerald-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
           >
+          <p v-if="showErrors && form.phDiscountType !== 'none' && !form.phDiscountId.trim()" class="mt-1 text-[9px] text-pink-500 font-medium ml-1">
+            ID number is required for discount
+          </p>
         </div>
       </div>
 
       <!-- Section: Infant Lap Selection -->
-       <div v-if="type === 'Infant'" class="p-5 bg-rose-50/50 rounded-xl border border-rose-100">
+       <div v-if="type === 'Infant'" class="p-5 bg-pink-50/50 rounded-xl border border-pink-100">
         <div class="flex items-center gap-2 mb-4">
-          <div class="w-1.5 h-4 bg-rose-500 rounded-full"></div>
-          <h4 class="text-xs font-bold text-rose-700 uppercase tracking-[0.15em]">Associate with Adult</h4>
+          <div class="w-1.5 h-4 bg-pink-500 rounded-full"></div>
+          <h4 class="text-xs font-bold text-pink-700 uppercase tracking-[0.15em]">Associate with Adult</h4>
         </div>
         
-        <p class="text-xs text-rose-600/70 italic mb-4">This infant must be assigned to an adult's lap.</p>
+        <p class="text-xs text-pink-600/70 italic mb-4">This infant must be assigned to an adult's lap.</p>
         
         <div v-if="adultOptions && adultOptions.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button 
@@ -334,8 +355,8 @@
             class="flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left"
             :class="[
               form.associatedAdult === adult.number 
-                ? 'bg-white border-rose-500 shadow-sm' 
-                : adult.alreadyHasInfant ? 'bg-slate-50 border-slate-100 opacity-50 cursor-not-allowed' : 'bg-white border-slate-100 hover:border-rose-200'
+                ? 'bg-white border-pink-500 shadow-sm' 
+                : adult.alreadyHasInfant ? 'bg-slate-50 border-slate-100 opacity-50 cursor-not-allowed' : 'bg-white border-slate-100 hover:border-pink-200'
             ]"
           >
             <div>
@@ -343,10 +364,10 @@
               <div class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Adult {{ adult.number }}</div>
             </div>
             
-            <div v-if="form.associatedAdult === adult.number" class="w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center text-white">
+            <div v-if="form.associatedAdult === adult.number" class="w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center text-white">
               <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
             </div>
-            <div v-else-if="adult.alreadyHasInfant" class="text-[8px] font-black text-rose-400 uppercase">Assigned</div>
+            <div v-else-if="adult.alreadyHasInfant" class="text-[8px] font-black text-pink-400 uppercase">Assigned</div>
           </button>
         </div>
         
@@ -790,6 +811,16 @@ onUnmounted(() => {
   }
 });
 </script>
+
+<style scoped>
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+</style>
 
 <style scoped>
 /* Scoped styles removed in favor of Tailwind CSS */

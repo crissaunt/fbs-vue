@@ -1,14 +1,36 @@
 <template>
   <div class="p-6 poppins">
-    <!-- Header Section -->
-    <div class="flex justify-between items-center mb-6">
-      <button 
-        @click="openModal()" 
-        class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[14px] rounded-[1px] shadow-sm transition-all"
-      >
-        <i class="ph ph-plus"></i> Add Airline
-      </button>
-    </div>
+    <!-- Header & Tools Section -->
+    <AdminTableTool 
+      v-model="searchQuery" 
+      placeholder="Search airlines or IATA code..."
+    >
+      <template #actions>
+        <div class="flex items-center gap-2">
+          <button 
+            @click="showImportModal = true" 
+            class="bg-[#002D1E] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#014d33] font-semibold poppins text-[12px] rounded-[1px] shadow-sm transition-all"
+          >
+            <i class="ph ph-file-csv text-[14px]"></i> Import
+          </button>
+          <button 
+            @click="openModal()" 
+            class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[12px] rounded-[1px] shadow-sm transition-all"
+          >
+            <i class="ph ph-plus text-[14px]"></i> Add
+          </button>
+        </div>
+      </template>
+    </AdminTableTool>
+
+    <!-- Import Modal -->
+    <ImportModal 
+      :show="showImportModal" 
+      title="Airlines" 
+      model-type="airlines" 
+      @close="showImportModal = false"
+      @refresh="fetchAirlines"
+    />
 
     <!-- Table Section -->
     <div class="bg-white border border-gray-200 rounded-[1px] overflow-hidden shadow-sm">
@@ -135,15 +157,19 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '@/services/admin/api';
 import { useModalStore } from '@/stores/modal';
+import ImportModal from '@/components/admin/ImportModal.vue';
+import AdminTableTool from '@/components/admin/AdminTableTool.vue';
 
 const modalStore = useModalStore();
 
 const airlines = ref([]);
 const isModalOpen = ref(false);
+const showImportModal = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
 const highlightedId = ref(null);
 const route = useRoute();
+const searchQuery = ref('');
 
 // Pagination State
 const currentPage = ref(1);
@@ -151,14 +177,27 @@ const itemsPerPage = 10;
 
 const form = ref({ name: '', code: '' });
 
+// Search Logic
+const filteredAirlines = computed(() => {
+  let result = airlines.value;
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase();
+    result = result.filter(a => 
+      a.name.toLowerCase().includes(q) || 
+      a.code.toLowerCase().includes(q)
+    );
+  }
+  return result;
+});
+
 // Pagination Logic
-const totalPages = computed(() => Math.ceil(airlines.value.length / itemsPerPage));
+const totalPages = computed(() => Math.ceil(filteredAirlines.value.length / itemsPerPage));
 const paginatedAirlines = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
-  return airlines.value.slice(start, start + itemsPerPage);
+  return filteredAirlines.value.slice(start, start + itemsPerPage);
 });
 const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage);
-const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, airlines.value.length));
+const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, filteredAirlines.value.length));
 
 const visiblePages = computed(() => {
   const pages = [];

@@ -1,22 +1,43 @@
 <template>
   <div class="p-6 poppins">
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-2">
-        <button 
-          @click="exportInstructors" 
-          class="bg-white border border-gray-200 text-gray-700 px-4 py-2 flex items-center gap-2 hover:bg-gray-50 font-semibold poppins text-[14px] rounded-[1px] shadow-sm transition-all"
-        >
-          <i class="ph ph-export"></i> Export CSV
-        </button>
-        <button 
-          @click="openAddModal" 
-          class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-bold poppins text-[14px] rounded-[1px] shadow-lg shadow-[#fe3787]/20 transition-all"
-        >
-          <i class="ph ph-plus-circle"></i> New Instructor
-        </button>
-      </div>
-    </div>
+    <!-- Header & Tools Section -->
+    <AdminTableTool 
+      v-model="searchQuery" 
+      placeholder="Search instructors by name, ID or email..."
+      @update:modelValue="debounceSearch"
+    >
+      <template #actions>
+        <div class="flex items-center gap-2">
+          <button 
+            @click="exportInstructors" 
+            class="bg-white border border-gray-200 text-gray-700 px-4 py-2 flex items-center gap-2 hover:bg-gray-50 font-semibold poppins text-[12px] rounded-[1px] shadow-sm transition-all"
+          >
+            <i class="ph ph-export text-[14px]"></i> Export
+          </button>
+          <button 
+            @click="showImportModal = true" 
+            class="bg-[#002D1E] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#014d33] font-semibold poppins text-[12px] rounded-[1px] shadow-sm transition-all"
+          >
+            <i class="ph ph-file-csv text-[14px]"></i> Import
+          </button>
+          <button 
+            @click="openAddModal" 
+            class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-bold poppins text-[12px] rounded-[1px] shadow-lg shadow-[#fe3787]/20 transition-all"
+          >
+            <i class="ph ph-plus-circle text-[14px]"></i> Add
+          </button>
+        </div>
+      </template>
+    </AdminTableTool>
+
+    <!-- Import Modal -->
+    <ImportModal 
+      :show="showImportModal" 
+      title="Instructors" 
+      model-type="instructors" 
+      @close="showImportModal = false"
+      @refresh="fetchInstructors"
+    />
 
     <!-- Stats Section -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -37,32 +58,7 @@
       </div>
     </div>
 
-    <!-- Filter Bar -->
-    <div class="bg-white border border-gray-200 rounded-[1px] shadow-sm p-4 mb-6">
-      <div class="flex flex-col md:flex-row md:items-center gap-4">
-        <div class="relative flex-1">
-          <i class="ph ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-          <input 
-            v-model="searchQuery" 
-            type="text" 
-            placeholder="Search instructors by name or ID..." 
-            class="pl-10 pr-4 py-2 border border-gray-200 rounded-[1px] w-full outline-none focus:border-[#fe3787] transition-all poppins text-sm"
-            @input="debounceSearch"
-          />
-        </div>
-        
-        <div class="flex items-center gap-2 border border-gray-100 bg-gray-50/50 px-3 py-1.5 rounded-[1px]">
-          <span class="text-[10px] font-bold text-gray-400 capitalize underline">Active Directory</span>
-        </div>
 
-        <button 
-          @click="clearFilters" 
-          class="bg-gray-100 text-gray-600 px-6 py-2 rounded-[1px] hover:bg-gray-200 font-bold poppins text-sm transition-all"
-        >
-          Reset Filters
-        </button>
-      </div>
-    </div>
 
     <!-- Data Table -->
     <div class="bg-white border border-gray-200 rounded-[1px] shadow-sm overflow-hidden">
@@ -328,6 +324,8 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/services/admin/api'
 import { useModalStore } from '@/stores/modal'
+import ImportModal from '@/components/admin/ImportModal.vue'
+import AdminTableTool from '@/components/admin/AdminTableTool.vue';
 
 const modalStore = useModalStore()
 const route = useRoute()
@@ -336,6 +334,7 @@ const route = useRoute()
 const instructors = ref([])
 const loading = ref(false)
 const showModal = ref(false)
+const showImportModal = ref(false)
 const showDetailsModal = ref(false)
 const selectedInstructor = ref(null)
 const isEditing = ref(false)

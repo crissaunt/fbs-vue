@@ -204,6 +204,12 @@ class ActivityStudentBinding(models.Model):
     assigned_seats = models.JSONField(null=True, blank=True)
     is_released = models.BooleanField(default=False)
     
+    # Time Limit Tracking
+    started_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    time_limit_minutes = models.PositiveIntegerField(null=True, blank=True)
+    is_failed_due_to_time = models.BooleanField(default=False)
+    
     class Meta:
         unique_together = ('activity', 'student')  # Prevent duplicate bindings
         ordering = ['-assigned_at']
@@ -307,3 +313,30 @@ class InstructorLog(models.Model):
 
     def __str__(self):
         return f"{self.action_type} - {self.actor.username if self.actor else 'System'} - {self.timestamp}"
+
+
+class StudentNotification(models.Model):
+    """
+    In-app notification for students. Created when an activity is activated/bound.
+    """
+    student = models.ForeignKey(
+        'app.Students',
+        on_delete=models.CASCADE,
+        related_name='notifications'
+    )
+    activity = models.ForeignKey(
+        Activity,
+        on_delete=models.CASCADE,
+        related_name='notifications'
+    )
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{'READ' if self.is_read else 'UNREAD'}] {self.student} - {self.title}"
+

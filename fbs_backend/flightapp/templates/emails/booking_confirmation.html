@@ -312,7 +312,7 @@
                                                         Class</h4>
                                                     <p
                                                         style="margin: 0; font-size: 14px; font-weight: 600; color: #334155;">
-                                                        {{ detail.seat_class.name|default:"Economy" }}</p>
+                                                        {{ detail.fare_family_name|default:detail.seat_class.name|default:"Economy" }}</p>
                                                 </td>
                                                 {% if detail.seat %}
                                                 <td width="33%">
@@ -469,7 +469,7 @@
                                                         Class</h4>
                                                     <p
                                                         style="margin: 0; font-size: 14px; font-weight: 600; color: #334155;">
-                                                        {{ detail.seat_class.name|default:"Economy" }}</p>
+                                                        {{ detail.fare_family_name|default:detail.seat_class.name|default:"Economy" }}</p>
                                                 </td>
                                                 {% if detail.seat %}
                                                 <td width="33%">
@@ -523,6 +523,45 @@
                                 </tr>
                                 {% endfor %}
                             </table>
+
+                            {% if addons_summary %}
+                            <!-- Add-ons Section -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                                style="margin-bottom: 16px;">
+                                <tr>
+                                    <td
+                                        style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0;">
+                                        Add-ons & Travel Benefits
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                                style="margin-bottom: 32px;">
+                                {% for addon in addons_summary %}
+                                <tr>
+                                    <td
+                                        style="padding: 12px 16px; background-color: #f0f9ff; border-radius: 6px; border-left: 2px solid #0ea5e9; margin-bottom: 8px;">
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0"
+                                            width="100%">
+                                            <tr>
+                                                <td>
+                                                    <div style="font-size: 13px; font-weight: 600; color: #0369a1;">{{ addon.item }}</div>
+                                                    <div style="font-size: 11px; color: #0ea5e9; margin-top: 2px;">Passenger: {{ addon.passenger }}</div>
+                                                </td>
+                                                <td align="right">
+                                                    <span
+                                                        style="font-size: 12px; font-weight: 700; color: #0369a1;">
+                                                        {% if addon.price > 0 %}₱{{ addon.price|floatformat:2 }}{% else %}Included{% endif %}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                            {% endif %}
 
                             <!-- Payment Summary -->
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"

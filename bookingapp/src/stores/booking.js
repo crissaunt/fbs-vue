@@ -50,6 +50,8 @@ export const useBookingStore = defineStore('booking', {
     activityId: null,             // ID of the activity
     isPractice: false,            // Whether this is a practice booking
     hasActivityCodeValidation: false, // Whether student has completed activity code step
+    activityExpiresAt: null,      // ISO string from backend
+    activityTimeLimitMinutes: null,
 
     nonStopOnly: false,
     stopPreference: 'all', // 'all', 'nonstop', 'direct', 'connecting'
@@ -59,10 +61,17 @@ export const useBookingStore = defineStore('booking', {
 
     // Fare Families (Basic vs Premium)
     fareFamilies: {
-      depart: 'basic', // 'basic' or 'premium'
+      depart: 'basic', // fare family code: 'basic', 'standard', 'flex', etc.
       return: 'basic'
     },
+    // Branded fare family display names (e.g. 'GO Basic', 'Value Pack')
+    fareFamilyNames: {
+      depart: '',
+      return: ''
+    },
     backendBreakdown: null, // Authoritative Backend Pricing Breakdown
+    backendTaxDetails: null, // Specific Tax & Fees breakdown
+    currentTime: Date.now()   // Reactive timestamp for timers
   }),
 
   persist: {
@@ -97,22 +106,22 @@ export const useBookingStore = defineStore('booking', {
     },
 
     // Flexible segments getter
-    allSegments: (state) => {
-      if (state.isMultiCity) {
-        return state.multiCitySegments;
+    allSegments() {
+      if (this.isMultiCity) {
+        return this.multiCitySegments;
       }
 
       const segments = [];
-      if (state.selectedOutbound) {
+      if (this.selectedOutbound) {
         segments.push({
           type: 'depart',
-          selectedFlight: state.selectedOutbound
+          selectedFlight: this.selectedOutbound
         });
       }
-      if (state.isRoundTrip && state.selectedReturn) {
+      if (this.isRoundTrip && this.selectedReturn) {
         segments.push({
           type: 'return',
-          selectedFlight: state.selectedReturn
+          selectedFlight: this.selectedReturn
         });
       }
       return segments;
@@ -343,9 +352,36 @@ export const useBookingStore = defineStore('booking', {
       const bPrice = parseFloat(this.combinedBasePriceTotal) || 0;
       const aPrice = parseFloat(this.totalAddonsPrice) || 0;
       const iPrice = parseFloat(this.insurancePrice) || 0;
+      const tPrice = parseFloat(this.totalTaxes) || 0;
 
-      const rawTotal = bPrice + aPrice + iPrice;
+      const rawTotal = bPrice + aPrice + iPrice + tPrice;
       return Math.ceil(rawTotal);
+    },
+
+    // NEW: Authoritative Taxes (includes priorities)
+    authoritativeTaxes(state) {
+      if (state.backendBreakdown?.taxes) {
+        return parseFloat(state.backendBreakdown.taxes);
+      }
+      return this.totalTaxes || 0;
+    },
+
+    // NEW: Authoritative Grand Total (The "Payable" Amount)
+    authoritativeTotal(state) {
+      // Priority 1: Confirmed backend total (Finalized)
+      if (state.booking_total > 0) {
+        return state.booking_total;
+      }
+      // Priority 2: Estimated backend total (from Review page confirm_price)
+      if (state.backendBreakdown?.total_amount) {
+        return state.backendBreakdown.total_amount;
+      }
+      // Priority 3: Frontend Estimate Fallback
+      const baseTotal = this.combinedBasePriceTotal || 0;
+      const addonsTotal = this.totalAddonsPrice || 0;
+      const insuranceTotal = this.insurancePrice || 0;
+      const taxesTotal = this.totalTaxes || 0;
+      return Math.ceil(baseTotal + addonsTotal + insuranceTotal + taxesTotal);
     },
 
     // Backward compatibility or internal use
@@ -373,16 +409,18 @@ export const useBookingStore = defineStore('booking', {
     },
 
     timeLeftFormatted(state) {
-      if (!state.sessionExpiry) return '00:00';
-      const diff = Math.max(0, Math.round((state.sessionExpiry - Date.now()) / 1000));
+      const expiry = state.activityExpiresAt ? new Date(state.activityExpiresAt).getTime() : state.sessionExpiry;
+      if (!expiry) return '00:00';
+      const diff = Math.max(0, Math.round((expiry - state.currentTime) / 1000));
       const mins = Math.floor(diff / 60);
       const secs = diff % 60;
       return `${mins}:${secs.toString().padStart(2, '0')}`;
     },
 
     secondsLeft(state) {
-      if (!state.sessionExpiry) return 0;
-      return Math.max(0, Math.round((state.sessionExpiry - Date.now()) / 1000));
+      const expiry = state.activityExpiresAt ? new Date(state.activityExpiresAt).getTime() : state.sessionExpiry;
+      if (!expiry) return 0;
+      return Math.max(0, Math.round((expiry - state.currentTime) / 1000));
     },
 
     // NEW: Get seats by segment
@@ -466,24 +504,32 @@ export const useBookingStore = defineStore('booking', {
     },
 
     checkSession() {
-      if (!this.sessionExpiry) {
-        console.log('❌ No active session found');
-        this.resetBooking();
-        return { valid: false, reason: 'No active session', expired: true };
+      // Update reactive timestamp
+      this.currentTime = Date.now();
+      
+      const expiryTime = this.activityExpiresAt ? new Date(this.activityExpiresAt).getTime() : this.sessionExpiry;
+      
+      if (!expiryTime) {
+        if (!this.sessionExpiry && !this.activityExpiresAt) {
+          console.log('❌ No active session or activity found');
+          this.resetBooking();
+          return { valid: false, reason: 'No active session', expired: true };
+        }
+        return { valid: true };
       }
 
-      const now = Date.now();
-      const timeLeft = this.sessionExpiry - now;
+      const timeLeft = expiryTime - this.currentTime;
       const minutesLeft = Math.floor(timeLeft / (60 * 1000));
-      const secondsLeft = Math.floor((timeLeft % (60 * 1000)) / 1000);
+      const secondsLeftValue = Math.floor((timeLeft % (60 * 1000)) / 1000);
 
       if (timeLeft <= 0) {
-        console.log('⏰ Session expired, resetting booking');
+        const type = this.activityExpiresAt ? 'Activity' : 'Session';
+        console.log(`⏰ ${type} expired, resetting booking`);
         this.clearActivityCodeValidation();
         this.resetBooking();
         return {
           valid: false,
-          reason: 'Session expired',
+          reason: `${type} expired`,
           expired: true
         };
       }
@@ -492,8 +538,8 @@ export const useBookingStore = defineStore('booking', {
         valid: true,
         timeLeft,
         minutesLeft,
-        secondsLeft,
-        expiresAt: new Date(this.sessionExpiry).toLocaleString()
+        secondsLeft: secondsLeftValue,
+        expiresAt: new Date(expiryTime).toLocaleString()
       };
     },
 
@@ -594,15 +640,18 @@ export const useBookingStore = defineStore('booking', {
       this.activityCode = code;
       if (activityData && activityData.id) {
         this.activityId = activityData.id;
-        console.log('🆔 Activity ID stored in booking store:', this.activityId);
+        this.activityExpiresAt = activityData.expires_at || null;
+        this.activityTimeLimitMinutes = activityData.time_limit_minutes || null;
+        console.log('🆔 Activity info stored in booking store:', { 
+          id: this.activityId, 
+          expires: this.activityExpiresAt,
+          limit: this.activityTimeLimitMinutes
+        });
       }
       this.isPractice = false;
       this.hasActivityCodeValidation = true;
       this.startSession();
       console.log('✅ Activity code set:', code);
-      if (activityData) {
-        console.log('📋 Activity details:', activityData);
-      }
     },
 
     setPracticeMode() {
@@ -683,8 +732,9 @@ export const useBookingStore = defineStore('booking', {
           class_type: flight.class_type || flight.selected_seat_class || flight.seat_class || 'Economy'
         };
 
-        // Store fare family for this segment
+        // Store fare family code and branded name for this segment
         this.fareFamilies[index.toString()] = flight.fare_family || 'basic';
+        this.fareFamilyNames[index.toString()] = flight.fare_family_name || flight.name || '';
 
         console.log(`✅ Flight selected for segment ${index}:`, flight.flight_number, '| Fare:', flight.fare_family);
       }
@@ -755,6 +805,7 @@ export const useBookingStore = defineStore('booking', {
 
       const segKey = type === 'outbound' ? 'depart' : 'return';
       this.fareFamilies[segKey] = flight.fare_family || 'basic';
+      this.fareFamilyNames[segKey] = flight.fare_family_name || flight.name || '';
 
       if (type === 'outbound') {
         this.selectedOutbound = flightWithSeatClass;
@@ -1146,6 +1197,13 @@ export const useBookingStore = defineStore('booking', {
       this.booking_total = Number.isFinite(backendTotal) && backendTotal > 0
         ? backendTotal
         : (this.grandTotal || 0);
+
+      // Force update backendBreakdown total to match confirmed total if they differ
+      if (this.backendBreakdown && this.backendBreakdown.total_amount !== this.booking_total) {
+        console.log('🔄 Syncing backendBreakdown total with confirmed total:', this.booking_total);
+        this.backendBreakdown.total_amount = this.booking_total;
+      }
+
       this.sessionExpiry = Date.now() + (30 * 60 * 1000);
 
       localStorage.setItem('current_booking_id', this.booking_id);
@@ -1183,6 +1241,7 @@ export const useBookingStore = defineStore('booking', {
         'current_booking_reference',
         'current_booking_total',
         'current_booking_status',
+        'booking_session_id', // Added missing key
         'payment_session',
         'booking',
         'current_booking',
@@ -1206,6 +1265,9 @@ export const useBookingStore = defineStore('booking', {
       } catch (error) {
         console.warn('Could not clear sessionStorage:', error);
       }
+
+      const newSessionId = `sess_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`;
+      localStorage.setItem('booking_session_id', newSessionId);
 
       this.$patch({
         booking_id: null,
@@ -1248,11 +1310,19 @@ export const useBookingStore = defineStore('booking', {
         activityId: null,
         sessionExpiry: null,
         isFreshSession: true,
+        bookingSessionId: newSessionId, // Generated fresh start
         fareFamilies: {
           depart: 'basic',
           return: 'basic'
         },
-        backendBreakdown: null
+        fareFamilyNames: {
+          depart: '',
+          return: ''
+        },
+        nonStopOnly: false,
+        stopPreference: 'all',
+        backendBreakdown: null,
+        backendTaxDetails: null
       });
 
       console.log("✅ Booking Store has been completely reset.");
@@ -1388,6 +1458,25 @@ export const useBookingStore = defineStore('booking', {
         sessionValid: this.isSessionValid,
         sessionExpiry: this.sessionExpiry ? new Date(this.sessionExpiry).toLocaleString() : 'No expiry',
         grandTotal: this.grandTotal
+      };
+    },
+
+    // Insurance Actions
+    selectInsurancePlan(planId, price) {
+      console.log('🛡️ Insurance Plan Selected:', planId, price);
+      this.addons.insurance = {
+        id: planId, // Added id field for backwards compatibility with some views
+        selectedPlanId: planId,
+        price: parseFloat(price) || 0
+      };
+    },
+
+    clearInsurance() {
+      console.log('🛡️ Insurance Cleared');
+      this.addons.insurance = {
+        id: null,
+        selectedPlanId: null,
+        price: 0
       };
     }
   }

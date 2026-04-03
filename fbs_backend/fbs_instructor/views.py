@@ -1438,10 +1438,12 @@ def activate_activity(request, activity_id):
             activity.save()
 
         # 2. Bind Students
-        # If student_ids is empty, we don't bind anyone (new selective behavior)
-        # Note: If this is the FIRST activation, and student_ids is empty, the activity 
-        # is marked active but no one gets it yet. This is fine.
-        enrolled_students_count = Activity_Student_Bind(activity, student_ids=student_ids)
+        time_limit_minutes = request.data.get('time_limit_minutes')
+        enrolled_students_count = Activity_Student_Bind(
+            activity, 
+            student_ids=student_ids, 
+            time_limit_minutes=time_limit_minutes
+        )
         
         return Response({
             "message": "Activity Activated Successfully" if enrolled_students_count > 0 else "Activity updated successfully",
@@ -2017,7 +2019,7 @@ def generate_random_seats(activity, count):
         
     return random.sample(all_possible_seats, count)
 
-def Activity_Student_Bind(activity, student_ids=None):
+def Activity_Student_Bind(activity, student_ids=None, time_limit_minutes=None):
     from .models import ActivityStudentBinding
     
     section = activity.section
@@ -2042,23 +2044,39 @@ def Activity_Student_Bind(activity, student_ids=None):
         if total_seats_needed > 0:
             assigned_seats = generate_random_seats(activity, total_seats_needed)
             
+        # Use provided limit OR activity's default
+        final_time_limit = time_limit_minutes if time_limit_minutes is not None else activity.time_limit_minutes
+
         binding, created = ActivityStudentBinding.objects.get_or_create(
             activity=activity,
             student=student,
             defaults={
                 'assigned_at': timezone.now(),
                 'status': 'assigned',
-                'assigned_seats': assigned_seats
+                'assigned_seats': assigned_seats,
+                'time_limit_minutes': final_time_limit
             }
         )
         
-        # If binding already existed but has no seats, assign them now
-        if not created and not binding.assigned_seats and assigned_seats:
-            binding.assigned_seats = assigned_seats
+        # If binding already existed but we're re-activating with a new limit
+        if not created:
+            if time_limit_minutes is not None:
+                binding.time_limit_minutes = time_limit_minutes
+            if not binding.assigned_seats and assigned_seats:
+                binding.assigned_seats = assigned_seats
             binding.save()
         if created:
             students_bound += 1
             bound_students_list.append(student)
+
+            # Create in-app notification
+            from .models import StudentNotification
+            StudentNotification.objects.create(
+                student=student,
+                activity=activity,
+                title="New Activity Available",
+                message=f"An activity '{activity.title}' has been assigned to you."
+            )
             
     # Dispatch emails in the background (slow network operations)
     if bound_students_list:
@@ -2388,6 +2406,48 @@ def list_sessions(request):
 
 
 
+@api_view(['POST'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def start_activity(request, activity_id):
+    """
+    Start the activity timer for the current student.
+    Sets started_at and expires_at if not already set.
+    """
+    user = request.user
+    
+    try:
+        activity = Activity.objects.get(id=activity_id)
+        # Verify student enrollment/binding
+        binding = ActivityStudentBinding.objects.get(activity=activity, student__user=user)
+        
+        if not binding.started_at:
+            now = timezone.now()
+            binding.started_at = now
+            binding.status = 'in_progress'
+            
+            # Use binding's limit (which falls back to activity's limit)
+            limit = binding.time_limit_minutes
+            if limit:
+                binding.expires_at = now + timezone.timedelta(minutes=limit)
+            
+            binding.save()
+            print(f"?? Timer started for {user.username} on Activity {activity.id}. Expires at: {binding.expires_at}")
+        
+        return Response({
+            "message": "Activity started",
+            "started_at": binding.started_at,
+            "expires_at": binding.expires_at,
+            "time_limit_minutes": binding.time_limit_minutes
+        })
+        
+    except (Activity.DoesNotExist, ActivityStudentBinding.DoesNotExist):
+        return Response({"error": "Activity or binding not found"}, status=404)
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=500)
+
+
 # ==========================================
 # 3. STUDENT DASHBOARD (Session-Based)
 # ==========================================
@@ -2533,6 +2593,16 @@ def student_dashboard(request):
             binding.save()
             print(f"  ? Auto-graded dashboard activity {activity.id}: {score_data['total']}")
 
+        # ? NEW: Time Limit Check (Auto-fail if expired)
+        if binding.status in ['assigned', 'in_progress'] and not booking_obj:
+            if binding.expires_at and timezone.now() > binding.expires_at:
+                binding.status = 'graded' # Mark as graded so it counts as done
+                binding.grade = 0.0
+                binding.is_failed_due_to_time = True
+                binding.feedback = "Time limit reached. Activity failed."
+                binding.save()
+                print(f"  ⚠️ Activity {activity.id} failed due to time limit for {user.username}")
+
         # ? Manual Grade Release Check
         effective_grade = float(binding.grade) if (binding.grade is not None and (binding.is_released or activity.grades_released)) else None
 
@@ -2540,6 +2610,7 @@ def student_dashboard(request):
             'id': activity.id,
             'title': activity.title,
             'description': activity.description or '',
+            'instructions': activity.instructions or '',
             'activity_type': activity.activity_type,
             'due_date': activity.due_date.strftime('%B %d, %Y') if activity.due_date else None,
             'total_points': float(activity.total_points),
@@ -2559,6 +2630,10 @@ def student_dashboard(request):
             'section_code': section.section_code,
             'grade': effective_grade,
             'submitted_at': binding.submitted_at.isoformat() if binding.submitted_at else None,
+            'time_limit_minutes': binding.time_limit_minutes,
+            'started_at': binding.started_at.isoformat() if binding.started_at else None,
+            'expires_at': binding.expires_at.isoformat() if binding.expires_at else None,
+            'is_failed_due_to_time': binding.is_failed_due_to_time,
             
             # ? NEW: Add completion status and booking ID
             'completed': booking_obj is not None,
@@ -2773,6 +2848,17 @@ def student_activity_details(request, activity_id):
                     binding.submitted_at = booking_obj.submitted_at
                 binding.save()
                 print(f"? Auto-graded student {user.username}: {submission_score_data['total']}")
+
+        # ? NEW: Time limit check in details
+        is_timed_out = False
+        if binding.status in ['assigned', 'in_progress'] and binding.expires_at and timezone.now() > binding.expires_at:
+            is_timed_out = True
+            if not booking_obj:
+                binding.status = 'graded'
+                binding.grade = 0.0
+                binding.is_failed_due_to_time = True
+                binding.feedback = "Time limit reached."
+                binding.save()
             
     except Exception as e:
         print(f"? Error with ActivityStudentBinding: {str(e)}")
@@ -2892,7 +2978,8 @@ def student_activity_details(request, activity_id):
         activity_data = {
             'id': activity.id,
             'title': activity.title,
-            'description': activity.description or activity.instructions or '',
+            'description': activity.description or '',
+            'instructions': activity.instructions or '',
             'activity_type': activity.activity_type,
             'due_date': safe_date_format(activity.due_date),
             'total_points': float(activity.total_points) if activity.total_points else 0.0,
@@ -2990,7 +3077,12 @@ def student_activity_details(request, activity_id):
                 for aa in activity.activity_addons.all()
             ],
             'completed': booking_obj is not None,
-            'confirmed_booking_id': booking_obj.id if booking_obj else None
+            'confirmed_booking_id': booking_obj.id if booking_obj else None,
+            'time_limit_minutes': binding.time_limit_minutes,
+            'started_at': binding.started_at.isoformat() if binding.started_at else None,
+            'expires_at': binding.expires_at.isoformat() if binding.expires_at else None,
+            'is_failed_due_to_time': binding.is_failed_due_to_time,
+            'is_timed_out': is_timed_out
         }
         
         # Import serializer locally to include full booking data in-place
@@ -3342,3 +3434,101 @@ def log_report_print(request):
     )
     
     return Response({"message": "Print action logged successfully."}, status=status.HTTP_200_OK)
+
+
+# ============================================
+# STUDENT NOTIFICATIONS
+# ============================================
+
+@api_view(['GET'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_student_notifications(request):
+    """
+    Get all notifications for the authenticated student.
+    Returns unread count and latest 20 notifications.
+    """
+    from .models import StudentNotification
+    from app.models import Students
+    
+    try:
+        # Get the student record
+        student = None
+        if hasattr(request.user, 'student_profile'):
+            student = request.user.student_profile
+        else:
+            student = Students.objects.get(user=request.user)
+            
+        if not student:
+            return Response({"error": "Student profile not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+        # Get notifications
+        notifications = StudentNotification.objects.filter(student=student)
+        unread_count = notifications.filter(is_read=False).count()
+        latest = notifications.order_by('-created_at')[:20]
+        
+        # Serialize
+        data = []
+        for notif in latest:
+            data.append({
+                'id': notif.id,
+                'title': notif.title,
+                'message': notif.message,
+                'is_read': notif.is_read,
+                'created_at': notif.created_at,
+                'activity_id': notif.activity.id,
+                'activity_code': notif.activity.activity_code,
+            })
+            
+        return Response({
+            'unread_count': unread_count,
+            'notifications': data
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['PATCH'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def mark_notifications_read(request):
+    """
+    Mark specific notifications or all notifications as read for the student.
+    """
+    from .models import StudentNotification
+    from app.models import Students
+    
+    try:
+        student = None
+        if hasattr(request.user, 'student_profile'):
+            student = request.user.student_profile
+        else:
+            student = Students.objects.get(user=request.user)
+            
+        if not student:
+            return Response({"error": "Student profile not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+        notification_ids = request.data.get('notification_ids', [])
+        
+        if notification_ids:
+            # Mark specific as read
+            StudentNotification.objects.filter(
+                student=student, 
+                id__in=notification_ids
+            ).update(is_read=True)
+        else:
+            # Mark ALL as read
+            StudentNotification.objects.filter(
+                student=student, 
+                is_read=False
+            ).update(is_read=True)
+            
+        return Response({"status": "success"})
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

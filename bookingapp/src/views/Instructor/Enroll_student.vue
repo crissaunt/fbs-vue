@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col h-screen bg-[#FDFCF7] font-sans">
-    <div class="bg-gradient-to-r from-pink-500 to-pink-400 text-white px-6 py-2.5 flex items-center justify-between shadow-sm z-20 border-b border-pink-400">
+    <div class="bg-[#F9F9F9] text-gray-800 px-6 py-2.5 flex items-center justify-between shadow-sm z-20 border-b border-gray-100">
       <div class="flex items-center gap-4">
         <button @click="toggleSidebar" class="p-1.5 hover:bg-pink-600 rounded-md transition-colors focus:outline-none">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -17,10 +17,10 @@
       </div>
 
       <div class="relative">
-        <button @click="toggleDropdown" class="flex items-center gap-2 hover:bg-pink-600 p-1.5 rounded-md transition-colors focus:outline-none">
+        <button @click="toggleDropdown" class="flex items-center gap-2 hover:bg-gray-100 p-1.5 rounded-md transition-colors focus:outline-none">
           <span class="text-xs font-medium">{{ userFullName }}</span>
-          <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center overflow-hidden border border-pink-300">
-             <div class="w-full h-full bg-gray-300 rounded-full flex items-center justify-center text-gray-600 text-xs font-bold uppercase">{{ initials }}</div>
+          <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center overflow-hidden border border-gray-200">
+             <div class="w-full h-full bg-pink-100 flex items-center justify-center text-pink-700 font-bold text-xs font-bold uppercase">{{ initials }}</div>
           </div>
         </button>
         <div v-if="dropdownOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-100">
@@ -30,17 +30,17 @@
     </div>
 
     <div class="flex flex-1 overflow-hidden">
-      <div :class="['bg-gradient-to-b from-pink-500 to-pink-400 text-white transition-all duration-300 ease-in-out flex flex-col z-10 shadow-lg border-r border-pink-400/20', sidebarOpen ? 'w-56' : 'w-16']">
+      <div :class="['bg-[#F9F9F9] text-gray-600 transition-all duration-300 ease-in-out flex flex-col z-10 shadow-sm border-r border-gray-200', sidebarOpen ? 'w-56' : 'w-16']">
         <div class="flex flex-col h-full overflow-y-auto">
-           <button @click="$router.push('/instructor/dashboard')" class="flex items-center py-3 hover:bg-pink-600 transition-colors border-b border-pink-400/20 justify-center">
-             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+           <button @click="$router.push('/instructor/dashboard')" class="flex items-center py-3 hover:bg-[#FF579A]/10 hover:text-[#FF579A] transition-colors border-b border-gray-100 justify-center group">
+             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
              </svg>
              <span v-show="sidebarOpen" class="text-sm font-medium ml-3">Home</span>
            </button>
 
-           <button @click="$router.push('/instructor/logs')" class="flex items-center py-3 hover:bg-pink-600 transition-colors border-b border-pink-400/20 justify-center">
-             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+           <button @click="$router.push('/instructor/logs')" class="flex items-center py-3 hover:bg-[#FF579A]/10 hover:text-[#FF579A] transition-colors border-b border-gray-100 justify-center group">
+             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                 <polyline points="14 2 14 8 20 8"></polyline>
                 <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -54,13 +54,13 @@
              :key="sidebarSection.id" 
              @click="goToSection(sidebarSection.id)" 
              :class="[
-               'flex items-center py-2.5 hover:bg-pink-600 cursor-pointer transition-colors border-b border-pink-400/10',
+               'flex items-center py-3 hover:bg-[#FF579A]/10 hover:text-[#FF579A] cursor-pointer transition-colors border-b border-gray-100 group',
                sidebarOpen ? 'px-5' : 'justify-center',
                route.params.id == sidebarSection.id ? 'bg-pink-700' : ''
              ]"
            >
-              <div class="w-7 h-7 rounded-full bg-white text-pink-500 flex items-center justify-center font-bold text-[10px] flex-shrink-0 shadow-sm uppercase">{{ sidebarSection.section_name.charAt(0) }}</div>
-              <span v-show="sidebarOpen" class="ml-3 truncate text-[11px] font-bold tracking-wider uppercase text-white">{{ sidebarSection.section_name }}</span>
+              <div class="w-8 h-8 rounded-lg bg-pink-100 text-pink-600 group-hover:bg-[#FF579A] group-hover:text-white flex items-center justify-center font-bold text-xs flex-shrink-0 transition-colors uppercase">{{ sidebarSection.section_name.charAt(0) }}</div>
+              <span v-show="sidebarOpen" class="ml-3 truncate text-xs font-semibold uppercase text-gray-700 group-hover:text-[#FF579A] transition-colors">{{ sidebarSection.section_name }}</span>
            </div>
         </div>
       </div>
@@ -113,7 +113,7 @@
                     </div>
                   </div>
                   <button class="text-gray-400 hover:text-red-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
                 </div>
                 <div v-if="students.length === 0" class="p-12 text-center text-gray-400 italic">No students enrolled yet.</div>
@@ -174,6 +174,7 @@
 </template>
 
 <script setup>
+import CTHM from '@/assets/image/cthm-logos.png'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { sectionDetailsService } from '@/services/instructor/sectionDetailsService'

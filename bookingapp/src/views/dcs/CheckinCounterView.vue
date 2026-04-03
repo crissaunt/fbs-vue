@@ -396,32 +396,144 @@
                   </div>
                 </div>
 
-                <!-- Seat Picker Simulation / Detail -->
-                <div class="bg-pink-50/30 rounded-[5px] border-2 border-pink-100 p-10 flex flex-col items-center justify-center text-center relative overflow-hidden">
-                   <div v-if="activeSeatPicker" class="w-full space-y-8 animate-in zoom-in duration-300">
-                      <div>
-                         <span class="text-[10px] font-black text-pink-600 uppercase tracking-widest">Configuration For</span>
-                         <h4 class="text-2xl font-black text-slate-900 tracking-tight mt-1">{{ activeSeatPicker.passenger_name }}</h4>
+                <!-- Seat Picker — Aircraft Cabin Map -->
+                <div class="bg-slate-950 rounded-[5px] border border-slate-800 overflow-hidden flex flex-col h-full">
+                   <div v-if="activeSeatPicker" class="flex flex-col h-full animate-in zoom-in duration-300">
+
+                      <!-- Header -->
+                      <div class="px-5 pt-5 pb-3 border-b border-slate-800">
+                         <span class="text-[9px] font-black text-pink-500 uppercase tracking-[0.2em]">Assigning Slot For</span>
+                         <h4 class="text-base font-black text-white tracking-tight leading-tight mt-0.5">{{ activeSeatPicker.passenger_name }}</h4>
                       </div>
 
-                      <div class="grid grid-cols-5 gap-3 max-h-[250px] overflow-y-auto p-2">
-                         <button 
-                            v-for="seat in availableSeats" 
-                            :key="seat.id"
-                            @click="assignSeatLocal(activeSeatPicker.booking_detail_id, seat.seat_number)"
-                            class="h-14 bg-white border border-slate-200 rounded-xl font-black text-xs text-slate-600 hover:border-pink-600 hover:text-pink-600 transition-all active:scale-90"
-                         >
-                            {{ seat.seat_number }}
-                         </button>
+                      <!-- Cabin Map -->
+                      <div class="flex-1 overflow-y-auto px-4 py-3">
+
+                         <!-- Forward cabin label -->
+                         <div class="flex items-center justify-center gap-2 mb-3">
+                            <div class="h-px flex-1 bg-slate-800"></div>
+                            <span class="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">▲ Forward Cabin</span>
+                            <div class="h-px flex-1 bg-slate-800"></div>
+                         </div>
+
+                         <!-- Column headers -->
+                         <div class="flex items-center gap-1 mb-1.5 px-7">
+                            <div class="w-5 shrink-0"></div> <!-- row num spacer -->
+                            <div class="flex gap-1 flex-1">
+                               <span v-for="col in ['A','B','C']" :key="col" class="flex-1 text-center text-[8px] font-black text-slate-500 uppercase">{{ col }}</span>
+                            </div>
+                            <div class="w-5 shrink-0"></div> <!-- aisle spacer -->
+                            <div class="flex gap-1 flex-1">
+                               <span v-for="col in ['D','E','F']" :key="col" class="flex-1 text-center text-[8px] font-black text-slate-500 uppercase">{{ col }}</span>
+                            </div>
+                         </div>
+
+                         <!-- Seat rows -->
+                         <div v-if="cabinLayout.length > 0" class="space-y-1">
+                            <div v-for="rowData in cabinLayout" :key="rowData.row" class="flex items-center gap-1">
+                               <!-- Row number -->
+                               <span class="w-5 text-[8px] font-black text-slate-600 text-center shrink-0">{{ rowData.row }}</span>
+
+                               <!-- Left seats: A B C -->
+                               <div class="flex gap-1 flex-1">
+                                  <template v-for="col in ['A','B','C']" :key="col">
+                                     <button
+                                        v-if="rowData.seats[col]"
+                                        @click="getSeatState(rowData.seats[col], activeSeatPicker) === 'available' && assignSeat(activeSeatPicker.booking_detail_id, rowData.seats[col])"
+                                        :disabled="isSavingSeat || getSeatState(rowData.seats[col], activeSeatPicker) !== 'available'"
+                                        :class="[
+                                          'flex-1 h-8 rounded-[3px] font-black text-[8px] transition-all border relative',
+                                          getSeatState(rowData.seats[col], activeSeatPicker) === 'available'
+                                            ? 'bg-white/10 border-slate-600 text-slate-300 hover:bg-pink-600 hover:border-pink-500 hover:text-white cursor-pointer active:scale-95'
+                                          : getSeatState(rowData.seats[col], activeSeatPicker) === 'current'
+                                            ? 'bg-pink-600 border-pink-500 text-white cursor-default'
+                                          : getSeatState(rowData.seats[col], activeSeatPicker) === 'group'
+                                            ? 'bg-amber-500/20 border-amber-500/40 text-amber-400 cursor-default'
+                                          : 'bg-slate-800/50 border-slate-800 text-slate-700 cursor-not-allowed'
+                                        ]"
+                                     >
+                                        <span v-if="isSavingSeat && getSeatState(rowData.seats[col], activeSeatPicker) === 'available'" class="absolute inset-0 flex items-center justify-center">
+                                          <span class="w-2 h-2 border border-pink-400 border-t-transparent rounded-full animate-spin"></span>
+                                        </span>
+                                        <span v-else>{{ col }}</span>
+                                     </button>
+                                     <div v-else class="flex-1 h-8"></div>
+                                  </template>
+                               </div>
+
+                               <!-- Aisle -->
+                               <div class="w-5 flex items-center justify-center shrink-0">
+                                  <div class="h-full w-px bg-slate-800"></div>
+                               </div>
+
+                               <!-- Right seats: D E F -->
+                               <div class="flex gap-1 flex-1">
+                                  <template v-for="col in ['D','E','F']" :key="col">
+                                     <button
+                                        v-if="rowData.seats[col]"
+                                        @click="getSeatState(rowData.seats[col], activeSeatPicker) === 'available' && assignSeat(activeSeatPicker.booking_detail_id, rowData.seats[col])"
+                                        :disabled="isSavingSeat || getSeatState(rowData.seats[col], activeSeatPicker) !== 'available'"
+                                        :class="[
+                                          'flex-1 h-8 rounded-[3px] font-black text-[8px] transition-all border relative',
+                                          getSeatState(rowData.seats[col], activeSeatPicker) === 'available'
+                                            ? 'bg-white/10 border-slate-600 text-slate-300 hover:bg-pink-600 hover:border-pink-500 hover:text-white cursor-pointer active:scale-95'
+                                          : getSeatState(rowData.seats[col], activeSeatPicker) === 'current'
+                                            ? 'bg-pink-600 border-pink-500 text-white cursor-default'
+                                          : getSeatState(rowData.seats[col], activeSeatPicker) === 'group'
+                                            ? 'bg-amber-500/20 border-amber-500/40 text-amber-400 cursor-default'
+                                          : 'bg-slate-800/50 border-slate-800 text-slate-700 cursor-not-allowed'
+                                        ]"
+                                     >
+                                        <span v-if="isSavingSeat && getSeatState(rowData.seats[col], activeSeatPicker) === 'available'" class="absolute inset-0 flex items-center justify-center">
+                                          <span class="w-2 h-2 border border-pink-400 border-t-transparent rounded-full animate-spin"></span>
+                                        </span>
+                                        <span v-else>{{ col }}</span>
+                                     </button>
+                                     <div v-else class="flex-1 h-8"></div>
+                                  </template>
+                               </div>
+                            </div>
+                         </div>
+
+                         <!-- Fallback: flat grid if seats don't follow A-F lettering -->
+                         <div v-else class="grid grid-cols-5 gap-1.5">
+                            <button
+                               v-for="seat in availableSeats"
+                               :key="seat.id"
+                               @click="assignSeat(activeSeatPicker.booking_detail_id, seat)"
+                               :disabled="isSavingSeat"
+                               class="h-8 bg-white/10 border border-slate-700 rounded-[3px] font-black text-[9px] text-slate-300 hover:bg-pink-600 hover:border-pink-500 hover:text-white transition-all active:scale-95 disabled:opacity-30"
+                            >
+                               {{ seat.seat_number }}
+                            </button>
+                         </div>
                       </div>
 
-                      <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">
-                        Selecting a slot updates the central manifest in real-time.
-                      </p>
+                      <!-- Legend -->
+                      <div class="px-5 py-3 border-t border-slate-800 flex items-center justify-center gap-4">
+                         <div class="flex items-center gap-1.5">
+                            <div class="w-3 h-3 rounded-[2px] bg-white/10 border border-slate-600"></div>
+                            <span class="text-[8px] font-black text-slate-500 uppercase tracking-widest">Open</span>
+                         </div>
+                         <div class="flex items-center gap-1.5">
+                            <div class="w-3 h-3 rounded-[2px] bg-pink-600 border border-pink-500"></div>
+                            <span class="text-[8px] font-black text-slate-500 uppercase tracking-widest">Selected</span>
+                         </div>
+                         <div class="flex items-center gap-1.5">
+                            <div class="w-3 h-3 rounded-[2px] bg-amber-500/20 border border-amber-500/40"></div>
+                            <span class="text-[8px] font-black text-slate-500 uppercase tracking-widest">Group</span>
+                         </div>
+                         <div class="flex items-center gap-1.5">
+                            <div class="w-3 h-3 rounded-[2px] bg-slate-800/50 border border-slate-800"></div>
+                            <span class="text-[8px] font-black text-slate-500 uppercase tracking-widest">Taken</span>
+                         </div>
+                      </div>
+
                    </div>
-                   <div v-else class="flex flex-col items-center justify-center">
-                      <div class="w-20 h-20 border-4 border-slate-100 rounded-full border-t-pink-600 animate-spin mb-8"></div>
-                      <h4 class="text-lg font-black text-slate-400 italic">Select Passenger to Configure</h4>
+                   <div v-else class="flex-1 flex flex-col items-center justify-center p-10">
+                      <div class="w-12 h-12 border-2 border-slate-800 rounded-full border-t-pink-600 animate-spin mb-6"></div>
+                      <h4 class="text-sm font-black text-slate-500 uppercase tracking-widest">Select Passenger</h4>
+                      <p class="text-[9px] text-slate-600 font-bold uppercase tracking-widest mt-1">to open cabin map</p>
                    </div>
                 </div>
              </div>
@@ -535,8 +647,10 @@ const activeSeatPicker = ref(null)
 
 const isLoading = ref(true)
 const isProcessing = ref(false)
+const isSavingSeat = ref(false)
 const error = ref(null)
 const checkinSuccess = ref(false)
+const allSeats = ref([])  // ALL seats for cabin map (available + occupied)
 
 const steps = [
   { shortLabel: 'Presence' },
@@ -573,7 +687,8 @@ const selectedPassengers = computed(() => {
 })
 
 const totalAllowedWeight = computed(() => {
-    return selectedPassengers.value.reduce((sum, p) => sum + (p.allowed_baggage_weight || 0), 0)
+    // Default to 20 KG standard domestic allowance if the backend doesn't provide the field
+    return selectedPassengers.value.reduce((sum, p) => sum + (p.allowed_baggage_weight || 20), 0)
 })
 
 const excessWeight = computed(() => {
@@ -586,6 +701,36 @@ const allSelected = computed(() => {
     const checkable = (passengers.value || []).filter(p => p.status !== 'checkin')
     return checkable.length > 0 && selectedIds.value.size === checkable.length
 })
+
+// Build a structured cabin layout from all seats
+const cabinLayout = computed(() => {
+  const rows = {}
+  allSeats.value.forEach(seat => {
+    const match = (seat.seat_number || '').match(/^(\d+)([A-Fa-f])$/)
+    if (!match) return
+    const [, row, col] = match
+    if (!rows[row]) rows[row] = {}
+    rows[row][col.toUpperCase()] = seat
+  })
+  return Object.keys(rows)
+    .sort((a, b) => parseInt(a) - parseInt(b))
+    .map(row => ({ row, seats: rows[row] }))
+})
+
+// Seats already assigned to passengers in the current group
+const groupAssignedSeats = computed(() => {
+  return new Set(selectedPassengers.value.map(p => p.seat).filter(Boolean))
+})
+
+// Get state of a seat cell for styling
+const getSeatState = (seat, activePax) => {
+  if (!seat) return 'empty'
+  const currentPaxSeat = activePax?.seat
+  if (seat.seat_number === currentPaxSeat) return 'current'
+  if (groupAssignedSeats.value.has(seat.seat_number)) return 'group'
+  if (!seat.is_available) return 'occupied'
+  return 'available'
+}
 
 onMounted(async () => {
     try {
@@ -606,9 +751,11 @@ onMounted(async () => {
             }
         })
 
-        // Fetch available seats for later use
+        // Fetch ALL seats to build the full cabin map
         const seatsRes = await dcsService.getAvailableSeats(schedule.value.id)
-        availableSeats.value = (seatsRes.data.seats || []).filter(s => s.is_available)
+        const allSeatData = seatsRes.data.seats || []
+        allSeats.value = allSeatData
+        availableSeats.value = allSeatData.filter(s => s.is_available)
 
     } catch (err) {
         error.value = "Failed to synchronize node with central authority."
@@ -622,6 +769,10 @@ const togglePassenger = (id) => {
         selectedIds.value.delete(id)
     } else {
         selectedIds.value.add(id)
+        // Ensure security clearance is initialized when a passenger is added
+        if (securityClearance.value[id] === undefined) {
+            securityClearance.value[id] = true
+        }
     }
 }
 
@@ -639,16 +790,34 @@ const toggleSecurity = (id) => {
   securityClearance.value[id] = !securityClearance.value[id]
 }
 
-const assignSeatLocal = (pId, seatNum) => {
-  const p = passengers.value.find(px => px.booking_detail_id === pId)
-  if (p) p.seat = seatNum
-  activeSeatPicker.value = null
+const assignSeat = async (pId, seat) => {
+  if (isSavingSeat.value) return
+  isSavingSeat.value = true
+  try {
+    // Call the backend to persist the seat assignment
+    await dcsService.assignSeat(pId, seat.id)
+    
+    // Update local passenger state on success
+    const p = passengers.value.find(px => px.booking_detail_id === pId)
+    if (p) p.seat = seat.seat_number
+    
+    // Remove the seat from available pool so it can't be double-booked
+    availableSeats.value = availableSeats.value.filter(s => s.id !== seat.id)
+    
+    activeSeatPicker.value = null
+  } catch (err) {
+    console.error('Failed to assign seat:', err)
+    alert(`Seat assignment failed: ${err?.response?.data?.error || 'System error. Please try again.'}`)
+  } finally {
+    isSavingSeat.value = false
+  }
 }
 
 const canProceed = computed(() => {
   if (selectedIds.value.size === 0) return false
   if (currentStep.value === 1) return checks.value.pnrVerified && checks.value.passportsInspected && checks.value.visaSyncOk
-  if (currentStep.value === 2) return Object.values(securityClearance.value).every(v => v)
+  // Bug fix: Only check clearance for SELECTED passengers, not all keys in the object
+  if (currentStep.value === 2) return selectedPassengers.value.every(p => securityClearance.value[p.booking_detail_id])
   if (currentStep.value === 3) return actualWeight.value !== '' && (isOverWeight.value ? excessFeePaid.value : true)
   if (currentStep.value === 4) return selectedPassengers.value.every(p => p.seat && p.seat !== 'TBA')
   return true
@@ -692,7 +861,8 @@ const goBack = () => {
 
 const downloadAllPasses = () => {
   selectedPassengers.value.forEach(p => {
-    window.open(`http://localhost:8000/api/dcs/boarding-pass/${p.booking_detail_id}/`, '_blank')
+    // Bug fix: Use relative URL via dcsService instead of hardcoded localhost
+    window.open(`/api/dcs/boarding-pass/${p.booking_detail_id}/`, '_blank')
   })
 }
 </script>

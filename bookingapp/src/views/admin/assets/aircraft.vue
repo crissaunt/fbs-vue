@@ -1,14 +1,32 @@
 <template>
   <div class="p-6 poppins">
-    <!-- Header Section -->
-    <div class="flex justify-between items-center mb-6">
-      <button 
-        @click="openModal()" 
-        class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[14px] rounded-[1px] shadow-sm transition-all"
-      >
-        <i class="ph ph-plus"></i> Add Aircraft
-      </button>
-    </div>
+    <!-- Header & Tools Section -->
+    <AdminTableTool 
+      v-model="searchQuery" 
+      placeholder="Search aircraft model or fleet ID..."
+    >
+      <template #filters>
+        <div class="flex items-center gap-2">
+          <select 
+            v-model="filterAirline"
+            class="text-[11px] font-bold border border-gray-200 px-3 py-2 bg-white rounded-[1px] outline-none focus:border-[#fe3787] poppins cursor-pointer"
+          >
+            <option value="all">Any Airline</option>
+            <option v-for="airline in airlines" :key="airline.id" :value="airline.id">
+              {{ airline.name }}
+            </option>
+          </select>
+        </div>
+      </template>
+      <template #actions>
+        <button 
+          @click="openModal()" 
+          class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[12px] rounded-[1px] shadow-sm transition-all"
+        >
+          <i class="ph ph-plus text-[14px]"></i> Add
+        </button>
+      </template>
+    </AdminTableTool>
 
     <!-- Table Section -->
     <div class="bg-white border border-gray-200 rounded-[1px] overflow-hidden shadow-sm">
@@ -124,10 +142,12 @@
         <form @submit.prevent="saveAircraft" class="space-y-4">
           <div>
             <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Airline Owner</label>
-            <select v-model="form.airline" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px] bg-white" required>
-              <option value="" disabled>Select Airline</option>
-              <option v-for="a in airlines" :key="a.id" :value="a.id">{{ a.name }} ({{ a.code }})</option>
-            </select>
+            <SearchableSelect
+              v-model="form.airline"
+              :options="airlineOptions"
+              placeholder="Search and select airline..."
+              label="Airline"
+            />
           </div>
           <div>
             <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Aircraft Model</label>
@@ -155,16 +175,24 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '@/services/admin/api';
 import { useModalStore } from '@/stores/modal';
+import SearchableSelect from '@/components/admin/SearchableSelect.vue';
+import AdminTableTool from '@/components/admin/AdminTableTool.vue';
 
 const modalStore = useModalStore();
 
 const aircraftList = ref([]);
 const airlines = ref([]);
+
+const airlineOptions = computed(() =>
+  airlines.value.map(a => ({ value: a.id, label: a.name, sublabel: `IATA: ${a.code}` }))
+);
 const isModalOpen = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
 const highlightedId = ref(null);
 const route = useRoute();
+const searchQuery = ref('');
+const filterAirline = ref('all');
 
 // Pagination State
 const currentPage = ref(1);
@@ -172,14 +200,34 @@ const itemsPerPage = 10;
 
 const form = ref({ model: '', capacity: 0, airline: '' });
 
+// Search & Filter Logic
+const filteredAircraft = computed(() => {
+  let result = aircraftList.value;
+  
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase();
+    result = result.filter(a => 
+      a.model.toLowerCase().includes(q) || 
+      String(a.id).includes(q) ||
+      (a.airline_name && a.airline_name.toLowerCase().includes(q))
+    );
+  }
+
+  if (filterAirline.value !== 'all') {
+    result = result.filter(a => a.airline === filterAirline.value);
+  }
+  
+  return result;
+});
+
 // Pagination Logic
-const totalPages = computed(() => Math.ceil(aircraftList.value.length / itemsPerPage));
+const totalPages = computed(() => Math.ceil(filteredAircraft.value.length / itemsPerPage));
 const paginatedAircraft = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
-  return aircraftList.value.slice(start, start + itemsPerPage);
+  return filteredAircraft.value.slice(start, start + itemsPerPage);
 });
 const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage);
-const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, aircraftList.value.length));
+const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, filteredAircraft.value.length));
 
 const visiblePages = computed(() => {
   const pages = [];

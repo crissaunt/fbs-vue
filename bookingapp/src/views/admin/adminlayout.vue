@@ -3,7 +3,7 @@
     <nav
       :class="[
         'sidebar text-white bg-[#fe3787] flex flex-col items-start transition-all duration-300 fixed h-screen z-50 ',
-        collapsed ? 'w-16' : 'w-64'
+        collapsed ? 'w-16' : 'w-48'
       ]"
     >
     <button
@@ -15,10 +15,10 @@
       <i :class="collapsed ? 'ph ph-caret-right' : 'ph ph-caret-left'" class="text-xs"></i>
     </button>
 
-      <div id="sidebar-content" class="w-full h-full overflow-y-auto flex flex-col py-4">
-      <div class="mt-4 mb-8 flex items-center w-full px-4">
-        <img src="@/assets/admin/cthm-logos.png" class="w-12 h-12 flex-shrink-0" />
-        <span v-if="!collapsed" class="ml-3 font-bold leading-tight text-white text-[15px] poppins">
+      <div id="sidebar-content" class="w-full h-full overflow-y-auto flex flex-col py-2">
+      <div class="mt-2 mb-4 flex items-center w-full px-4">
+        <img src="@/assets/admin/cthm-logos.png" class="w-8 h-8 flex-shrink-0" />
+        <span v-if="!collapsed" class="ml-3 font-bold leading-tight text-white text-[13px] poppins">
           Caraga State University <br/>
           <span class="font-semibold opacity-90">Cabadbaran Campus</span>
         </span>
@@ -32,11 +32,20 @@
         </div>
         <router-link 
           to="/admin/dashboard" 
-          class="flex items-center px-4 py-3 text-white hover:bg-white/10 transition-colors group"
+          class="flex items-center px-4 py-1.5 text-white hover:bg-white/10 transition-colors group"
           active-class="bg-white/10 border-l-4 border-white"
         >
-          <i class="ph ph-squares-four text-xl"></i>
-          <span v-if="!collapsed" class="ml-3 text-[14px] font-medium">Dashboard</span>
+          <i class="ph ph-squares-four text-lg"></i>
+          <span v-if="!collapsed" class="ml-3 text-[12px] font-medium">Dashboard</span>
+        </router-link>
+
+        <router-link 
+          to="/admin/bulk-import" 
+          class="flex items-center px-4 py-1.5 text-white hover:bg-white/10 transition-colors group"
+          active-class="bg-white/10 border-l-4 border-white"
+        >
+          <i class="ph ph-database text-lg"></i>
+          <span v-if="!collapsed" class="ml-3 text-[12px] font-medium">Bulk Import</span>
         </router-link>
 
         <!-- LMS ADMIN PRIVILEGES: Users & LMS Info (Flat List) -->
@@ -45,24 +54,24 @@
             <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">User Management</p>
           </div>
           
-          <router-link to="/admin/instructor-info/list" class="flex items-center px-4 py-3 text-white hover:bg-white/10 transition-colors group" active-class="bg-white/10 border-l-4 border-white">
-            <i class="ph ph-chalkboard-teacher text-xl"></i>
-            <span v-if="!collapsed" class="ml-3 text-[14px] font-medium">Instructors</span>
+          <router-link to="/admin/instructor-info/list" class="flex items-center px-4 py-1.5 text-white hover:bg-white/10 transition-colors group" active-class="bg-white/10 border-l-4 border-white">
+            <i class="ph ph-chalkboard-teacher text-lg"></i>
+            <span v-if="!collapsed" class="ml-3 text-[12px] font-medium">Instructors</span>
           </router-link>
 
-          <router-link to="/admin/student-info/list" class="flex items-center px-4 py-3 text-white hover:bg-white/10 transition-colors group" active-class="bg-white/10 border-l-4 border-white">
-            <i class="ph ph-student text-xl"></i>
-            <span v-if="!collapsed" class="ml-3 text-[14px] font-medium">Students</span>
+          <router-link to="/admin/student-info/list" class="flex items-center px-4 py-1.5 text-white hover:bg-white/10 transition-colors group" active-class="bg-white/10 border-l-4 border-white">
+            <i class="ph ph-student text-lg"></i>
+            <span v-if="!collapsed" class="ml-3 text-[12px] font-medium">Students</span>
           </router-link>
 
-          <router-link to="/admin/student-info/track-log" class="flex items-center px-4 py-3 text-white hover:bg-white/10 transition-colors group" active-class="bg-white/10 border-l-4 border-white">
-            <i class="ph ph-clipboard-text text-xl"></i>
-            <span v-if="!collapsed" class="ml-3 text-[14px] font-medium">Audit Logs</span>
+          <router-link to="/admin/student-info/track-log" class="flex items-center px-4 py-1.5 text-white hover:bg-white/10 transition-colors group" active-class="bg-white/10 border-l-4 border-white">
+            <i class="ph ph-clipboard-text text-lg"></i>
+            <span v-if="!collapsed" class="ml-3 text-[12px] font-medium">Audit Logs</span>
           </router-link>
 
-          <router-link to="/admin/student-info/lms-overview" class="flex items-center px-4 py-3 text-white hover:bg-white/10 transition-colors group" active-class="bg-white/10 border-l-4 border-white">
-            <i class="ph ph-chart-line-up text-xl"></i>
-            <span v-if="!collapsed" class="ml-3 text-[14px] font-medium">LMS Overview</span>
+          <router-link to="/admin/student-info/lms-overview" class="flex items-center px-4 py-1.5 text-white hover:bg-white/10 transition-colors group" active-class="bg-white/10 border-l-4 border-white">
+            <i class="ph ph-chart-line-up text-lg"></i>
+            <span v-if="!collapsed" class="ml-3 text-[12px] font-medium">LMS Overview</span>
           </router-link>
         </template>
 
@@ -156,12 +165,12 @@
     </nav>
 
     <main 
-      :class="['flex-1 flex flex-col min-h-screen transition-all duration-300', collapsed ? 'ml-16' : 'ml-64']"
+      :class="['flex-1 flex flex-col min-h-screen transition-all duration-300', collapsed ? 'ml-16' : 'ml-48']"
     >
-      <header class="h-16 flex items-center justify-between px-12 sticky top-0 z-40 
+      <header class="h-12 flex items-center justify-between px-4 sticky top-0 z-40 
                bg-white/30 backdrop-blur-md border-b border-transparent">
         <div>
-         <h1 class="text-xl font-bold text-[#002D1E] poppins">
+          <h1 class="text-lg font-bold text-[#002D1E] poppins leading-none">
           {{ pageTitle }}
           </h1>
           <p class="text-xs text-gray-500">Welcome back! All systems are online.</p>
@@ -204,7 +213,7 @@
         </div>
       </header>
 
-      <div class="p-6 bg-gray-100 flex-1">
+      <div class="p-3 bg-gray-100 flex-1">
         <router-view />
       </div>
     </main>

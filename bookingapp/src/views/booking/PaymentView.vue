@@ -61,13 +61,13 @@
               </div>
             </div>
             
-            <div class="bg-gradient-to-br from-gray-50/50 to-white p-8 rounded-md">
+            <div class="bg-gradient-to-br from-gray-50/50 to-white p-5 sm:p-8 rounded-md">
               <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
-                  <h2 class="text-sm font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">Total Amount to Pay</h2>
+                  <h2 class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-2 sm:mb-3">Total Amount to Pay</h2>
                   <div class="flex items-baseline">
-                    <span class="text-2xl font-light text-gray-400 mr-2">₱</span>
-                    <span class="text-6xl font-black text-gray-900 tracking-tight">{{ totalAmount.toLocaleString() }}</span>
+                    <span class="text-xl sm:text-2xl font-light text-gray-400 mr-2">₱</span>
+                    <span class="text-4xl sm:text-5xl md:text-6xl font-black text-gray-900 tracking-tight leading-none">{{ totalAmount.toLocaleString() }}</span>
                   </div>
                   <p class="text-gray-400 text-xs mt-3 flex items-center">
                     <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -101,7 +101,7 @@
               </div>
             </div>
             
-            <div class="p-8">
+            <div class="p-5 sm:p-8">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <!-- Flight Info -->
                 <div class="space-y-6">
@@ -174,51 +174,88 @@
 
         <!-- Right Column - Payment Panel -->
         <div class="lg:col-span-4 space-y-6">
-          <div class="bg-white rounded-lg border border-gray-100 shadow-lg shadow-pink-100/20 overflow-hidden">
-            <div class="p-8">
+          <div class="bg-white rounded-xl border border-gray-100 shadow-lg shadow-pink-100/20 overflow-hidden">
+            <div class="p-6 sm:p-8">
               <h3 class="text-xl font-bold text-gray-900 mb-2">Secure Checkout</h3>
               <p class="text-xs text-gray-400 mb-6 leading-relaxed">You will be redirected to our secure PayMongo payment gateway to complete your transaction.</p>
 
             
-              <div v-if="priceBreakdown" class="mb-8 p-6 bg-gray-50/50 rounded-xl border border-gray-100/50 space-y-4">
+              <div class="mb-8 p-6 bg-gray-50/50 rounded-xl border border-gray-100/50 space-y-4">
                 <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Price Summary</p>
                 
                 <div class="space-y-2.5">
-                
-                  <div v-if="priceBreakdown.adult_base > 0" class="flex justify-between items-center text-sm">
-                    <span class="text-gray-500 font-medium">Adult Base Fare</span>
-                    <span class="text-gray-900 font-bold">₱{{ priceBreakdown.adult_base.toLocaleString() }}</span>
+                  <!-- Base Fares -->
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-pink-500"></span>
+                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Base Fares</span>
                   </div>
-                  <div v-if="priceBreakdown.child_base > 0" class="flex justify-between items-center text-sm">
-                    <span class="text-gray-500 font-medium">Child Base Fare</span>
-                    <span class="text-gray-900 font-bold">₱{{ priceBreakdown.child_base.toLocaleString() }}</span>
+                  <div v-if="bookingStore.passengerCount.adults > 0" class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500 font-medium">{{ bookingStore.passengerCount.adults }} Adult(s)</span>
+                    <span class="text-gray-900 font-bold"><AnimatedNumber :value="adultTotalLine" prefix="₱" /></span>
                   </div>
-                  <div v-if="priceBreakdown.infant_base > 0" class="flex justify-between items-center text-sm">
-                    <span class="text-gray-500 font-medium">Infant Base Fare</span>
-                    <span class="text-gray-900 font-bold">₱{{ priceBreakdown.infant_base.toLocaleString() }}</span>
+                  <div v-if="bookingStore.passengerCount.children > 0" class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500 font-medium">{{ bookingStore.passengerCount.children }} Child(ren)</span>
+                    <span class="text-gray-900 font-bold"><AnimatedNumber :value="childTotalLine" prefix="₱" /></span>
                   </div>
-
-               
-                  <div v-if="priceBreakdown.taxes > 0" class="flex justify-between items-center text-sm">
-                    <span class="text-gray-500 font-medium">Taxes & Fees</span>
-                    <span class="text-gray-900 font-bold">₱{{ priceBreakdown.taxes.toLocaleString() }}</span>
+                  <div v-if="bookingStore.passengerCount.infants > 0" class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500 font-medium">{{ bookingStore.passengerCount.infants }} Infant(s)</span>
+                    <span class="text-gray-900 font-bold"><AnimatedNumber :value="infantTotalLine" prefix="₱" /></span>
                   </div>
 
-              
-                  <div v-if="priceBreakdown.addons > 0" class="flex justify-between items-center text-sm">
-                    <span class="text-gray-500 font-medium">Selected Add-ons</span>
-                    <span class="text-gray-900 font-bold">₱{{ priceBreakdown.addons.toLocaleString() }}</span>
+                  <!-- Taxes & Fees Breakdown -->
+                  <div class="border-t border-gray-100 pt-3 mt-1">
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                      <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Taxes & Fees</span>
+                    </div>
+                    <div v-if="backendTaxDetails && Object.keys(backendTaxDetails).length > 0">
+                      <div v-for="(amount, label) in backendTaxDetails" :key="label" class="flex justify-between items-center text-sm mb-1 last:mb-0">
+                        <span class="text-gray-500 font-medium">{{ label }}</span>
+                        <span class="text-gray-900 font-bold"><AnimatedNumber :value="amount" prefix="₱" /></span>
+                      </div>
+                    </div>
+                    <div v-else class="flex justify-between items-center text-sm">
+                      <span class="text-gray-500 font-medium">Taxes, VAT & Fees</span>
+                      <span class="text-gray-900 font-bold"><AnimatedNumber :value="taxesPrice" prefix="₱" /></span>
+                    </div>
                   </div>
 
-                  
-                  <div v-if="priceBreakdown.insurance > 0" class="flex justify-between items-center text-sm">
-                    <span class="text-gray-500 font-medium">Travel Insurance</span>
-                    <span class="text-gray-900 font-bold">₱{{ priceBreakdown.insurance.toLocaleString() }}</span>
+                  <!-- Optional Services -->
+                  <div v-if="totalSeatsPrice > 0 || totalBaggagePrice > 0 || totalMealsPrice > 0 || totalAssistancePrice > 0 || insurancePrice > 0" class="border-t border-gray-100 pt-3 mt-1 space-y-2">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                      <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Optional Services</span>
+                    </div>
+                    <div v-if="totalSeatsPrice > 0" class="flex justify-between items-center text-sm">
+                      <span class="text-gray-500 font-medium">Seat Selection</span>
+                      <span class="text-gray-900 font-bold"><AnimatedNumber :value="totalSeatsPrice" prefix="₱" /></span>
+                    </div>
+                    <div v-if="totalBaggagePrice > 0" class="flex justify-between items-center text-sm">
+                      <span class="text-gray-500 font-medium">Extra Baggage</span>
+                      <span class="text-gray-900 font-bold"><AnimatedNumber :value="totalBaggagePrice" prefix="₱" /></span>
+                    </div>
+                    <div v-if="totalMealsPrice > 0" class="flex justify-between items-center text-sm">
+                      <span class="text-gray-500 font-medium">Meal Selection</span>
+                      <span class="text-gray-900 font-bold"><AnimatedNumber :value="totalMealsPrice" prefix="₱" /></span>
+                    </div>
+                    <div v-if="totalAssistancePrice > 0" class="flex justify-between items-center text-sm">
+                      <span class="text-gray-500 font-medium">Special Assistance</span>
+                      <span class="text-gray-900 font-bold"><AnimatedNumber :value="totalAssistancePrice" prefix="₱" /></span>
+                    </div>
+                    <div v-if="insurancePrice > 0" class="flex justify-between items-center text-sm">
+                      <span class="text-gray-500 font-medium">Travel Insurance</span>
+                      <span class="text-gray-900 font-bold"><AnimatedNumber :value="insurancePrice" prefix="₱" /></span>
+                    </div>
                   </div>
 
-                  <div class="border-t border-gray-200 pt-3 mt-4">
-                    <div class="flex justify-between items-center">
-                      <span class="text-gray-900 font-black text-lg">Total Amount</span>
+                  <div class="border-t border-gray-200 pt-5 mt-4">
+                    <div class="flex justify-between items-end">
+                      <div>
+                        <span class="text-gray-900 font-black text-lg block leading-none mb-1">Total Amount</span>
+                        <div class="bg-white border border-gray-200 rounded px-2 py-0.5 inline-flex items-center gap-1">
+                          <span class="text-[9px] font-black text-gray-900 uppercase">{{ (bookingStore.passengerCount.adults || 0) + (bookingStore.passengerCount.children || 0) }} Passengers</span>
+                        </div>
+                      </div>
                       <span class="text-3xl font-black text-gray-900 flex items-center">
                         <span class="text-pink-500 text-xl mr-1">₱</span>
                         <AnimatedNumber :value="totalAmount" />
@@ -344,6 +381,7 @@ import { useRouter, useRoute } from 'vue-router';
 import api from '@/services/booking/api';
 import BookingStatusHeader from '@/components/booking/BookingStatusHeader.vue';
 import LoadingOverlay from '@/components/common/LoadingOverlay.vue';
+import AnimatedNumber from '@/components/common/AnimatedNumber.vue';
 
 const bookingStore = useBookingStore();
 const router = useRouter();
@@ -369,30 +407,41 @@ const contactName = computed(() => {
 
 const priceBreakdown = computed(() => bookingStore.backendBreakdown?.breakdown);
 
-const totalAmount = computed(() => {
-  // Priority 1: Backend breakdown from Store (Authoritative - synced in Review page)
-  if (bookingStore.backendBreakdown?.total_amount) {
-    console.log('💰 PaymentView: Using Store backendBreakdown total:', bookingStore.backendBreakdown.total_amount);
-    return bookingStore.backendBreakdown.total_amount;
-  }
-  
-  // Priority 2: Amount passed as query param from Review (booking creation response.total_amount)
-  const queryAmount = parseFloat(route.query.amount);
-  if (Number.isFinite(queryAmount) && queryAmount > 0) {
-    console.log('💰 PaymentView: Using query amount:', queryAmount);
-    return queryAmount;
-  }
-
-  // Priority 3: Store's booking_total (legacy sync)
-  if (bookingStore.booking_total > 0) {
-    console.log('💰 PaymentView: Using Store booking_total:', bookingStore.booking_total);
-    return bookingStore.booking_total;
-  }
-  
-  // Priority 4: Client-computed grand total (fallback)
-  console.log('⚠️ PaymentView: Falling back to Store grandTotal:', bookingStore.grandTotal);
-  return bookingStore.grandTotal || 0;
+const adultTotalLine = computed(() => {
+  if (priceBreakdown.value?.adult_base) return priceBreakdown.value.adult_base;
+  return bookingStore.grandTotalForAdults;
 });
+
+const childTotalLine = computed(() => {
+  if (priceBreakdown.value?.child_base) return priceBreakdown.value.child_base;
+  return bookingStore.grandTotalForChildren;
+});
+
+const infantTotalLine = computed(() => {
+  if (priceBreakdown.value?.infant_base) return priceBreakdown.value.infant_base;
+  return bookingStore.grandTotalForInfants;
+});
+
+const insurancePrice = computed(() => {
+  // Prioritize insurance from backend-confirmed breakdown
+  if (priceBreakdown.value?.insurance !== undefined) {
+    const val = parseFloat(priceBreakdown.value.insurance);
+    if (val > 0) return val;
+  }
+  // Fallback to store getter (which handles pax count correctly)
+  return bookingStore.insurancePrice;
+});
+
+const totalSeatsPrice = computed(() => bookingStore.totalSeatsPrice);
+const totalBaggagePrice = computed(() => bookingStore.totalBaggagePrice);
+const totalMealsPrice = computed(() => bookingStore.totalMealsPrice);
+const totalAssistancePrice = computed(() => bookingStore.totalAssistancePrice);
+
+const taxesPrice = computed(() => bookingStore.authoritativeTaxes);
+
+const backendTaxDetails = computed(() => bookingStore.backendTaxDetails);
+
+const totalAmount = computed(() => bookingStore.authoritativeTotal);
 
 const hasFlightInfo = computed(() => {
   return bookingStore.selectedOutbound || bookingStore.selectedReturn;

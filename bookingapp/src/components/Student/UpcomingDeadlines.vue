@@ -1,28 +1,38 @@
 <template>
-  <div class="bg-white border border-gray-300 rounded-lg p-4 text-gray-800 shadow-sm">
-    <h3 class="text-sm font-bold text-gray-800 mb-3">Upcoming Deadlines</h3>
-    <div class="flex flex-col gap-3 ">
+  <div class="bg-white border border-slate-200 rounded-sm p-6 shadow-sm flex flex-col h-fit">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="text-xs font-black text-slate-900 uppercase tracking-widest leading-none">Upcoming Schedule</h3>
+      <div class="w-1.5 h-1.5 rounded-full bg-[#FF579A] animate-pulse"></div>
+    </div>
+    
+    <div class="flex flex-col gap-2">
       <div
-          v-for="activity in deadlines"
-          :key="activity.id"
-          class="flex justify-between border-b border-gray-300 items-center p-2.5 bg-white rounded-md 
-                cursor-pointer hover:bg-gray-50 transition-colors"
-          @click="$emit('view', activity.id)"
-        >
+        v-for="activity in deadlines"
+        :key="activity.id"
+        class="flex justify-between items-center p-4 bg-pink-50/20 border border-pink-100/50 rounded-sm cursor-pointer hover:bg-pink-50 transition-all group"
+        @click="$emit('view', activity.id)"
+      >
         <div class="flex-1">
-          <p class="text-xs font-semibold text-gray-800">{{ activity.title }}</p>
-          <small class="block text-[10px] text-orange-600 font-medium mt-0.5">
-            Due: {{ activity.due_date || 'No due date' }}
-          </small>
+          <p class="text-[11px] font-black text-slate-800 uppercase tracking-tight group-hover:text-[#FF579A] transition-colors">{{ activity.title }}</p>
+          <div class="flex items-center gap-1.5 mt-1">
+            <i class="ph ph-calendar-blank text-[10px] text-[#FF579A]"></i>
+            <span class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+              {{ activity.due_date || 'No due date' }}
+            </span>
+          </div>
         </div>
+        <i class="ph ph-caret-right text-slate-300 group-hover:text-[#FF579A] transition-colors"></i>
       </div>
       
       <!-- Placeholder if no activities -->
       <div 
         v-if="deadlines.length === 0"
-        class="bg-white rounded-md p-4 text-center border border-dashed border-gray-300"
+        class="bg-slate-50 rounded-sm p-2 text-center border border-dashed border-slate-200"
       >
-        <p class="text-xs text-gray-500">No upcoming deadlines</p>
+        <div class="w-6 h-6 bg-white rounded-sm flex items-center justify-center mx-auto mb-3 border border-slate-100 text-slate-300">
+           <i class="ph ph-calendar-x"></i>
+        </div>
+        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Clear Schedule</p>
       </div>
     </div>
   </div>

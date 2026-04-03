@@ -1,15 +1,50 @@
 <template>
   <div class="p-6 poppins">
-    <!-- Header Section -->
-    <div class="flex justify-between items-center mb-6">
-      <button 
-        @click="openModal()" 
-        class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[14px] rounded-[1px] shadow-sm transition-all"
-      >
-        <i class="ph ph-plus"></i>
-        Create Flight
-      </button>
-    </div>
+    <!-- Header & Tools Section -->
+    <AdminTableTool 
+      v-model="searchQuery" 
+      placeholder="Search flight number..."
+    >
+      <template #filters>
+        <div class="flex items-center gap-2">
+          <select 
+            v-model="filterAirline"
+            class="text-[11px] font-bold border border-gray-200 px-3 py-2 bg-white rounded-[1px] outline-none focus:border-[#fe3787] poppins cursor-pointer min-w-[150px]"
+          >
+            <option value="all">Any Airline</option>
+            <option v-for="airline in airlines" :key="airline.id" :value="airline.id">
+              {{ airline.name }}
+            </option>
+          </select>
+        </div>
+      </template>
+
+      <template #actions>
+        <div class="flex items-center gap-2">
+          <button 
+            @click="showImportModal = true" 
+            class="bg-[#002D1E] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#014d33] font-semibold poppins text-[12px] rounded-[1px] shadow-sm transition-all"
+          >
+            <i class="ph ph-file-csv text-[14px]"></i> Import
+          </button>
+          <button 
+            @click="openModal()" 
+            class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[12px] rounded-[1px] shadow-sm transition-all"
+          >
+            <i class="ph ph-plus text-[14px]"></i> Add
+          </button>
+        </div>
+      </template>
+    </AdminTableTool>
+
+    <!-- Import Modal -->
+    <ImportModal 
+      :show="showImportModal" 
+      title="Flights" 
+      model-type="flights" 
+      @close="showImportModal = false"
+      @refresh="fetchData"
+    />
 
     <!-- Stats Section -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -35,12 +70,12 @@
       <table class="w-full text-left">
         <thead class="bg-gray-50 text-gray-600 text-[14px] uppercase font-semibold border-b border-gray-200">
           <tr>
-            <th class="px-6 py-4 poppins">Flight #</th>
-            <th class="px-6 py-4 poppins">Airline</th>
-            <th class="px-6 py-4 poppins">Aircraft</th>
-            <th class="px-6 py-4 poppins">Route</th>
-            <th class="px-6 py-4 poppins">Stops</th>
-            <th class="px-6 py-4 poppins text-right">Actions</th>
+            <th class="px-6 py-4 poppins uppercase">Flight #</th>
+            <th class="px-6 py-4 poppins uppercase">Airline</th>
+            <th class="px-6 py-4 poppins uppercase">Aircraft</th>
+            <th class="px-6 py-4 poppins uppercase">Route</th>
+            <th class="px-6 py-4 poppins uppercase text-center">Profile Status</th>
+            <th class="px-6 py-4 poppins text-right uppercase">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
@@ -102,12 +137,12 @@
                 {{ f.route_display || 'No Route' }}
               </router-link>
             </td>
-            <td class="px-6 py-4">
+            <td class="px-6 py-4 text-center">
               <span 
-                :class="f.total_stops === 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'"
-                class="px-3 py-1 rounded-[1px] text-[10px] font-bold uppercase poppins"
+                :class="f.is_active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'"
+                class="px-3 py-1 rounded-[1px] text-[9px] font-black uppercase poppins border"
               >
-                {{ f.total_stops === 0 ? 'Non-stop' : `${f.total_stops} ${f.total_stops === 1 ? 'Stop' : 'Stops'}` }}
+                {{ f.is_active !== false ? 'Active Profile' : 'Inactive' }}
               </span>
             </td>
             <td class="px-6 py-4 text-right">
@@ -186,35 +221,47 @@
 
           <div>
             <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Airline Owner</label>
-            <select v-model="form.airline" class="w-full border p-2 text-sm bg-white outline-none focus:border-[#fe3787] transition-all rounded-[1px]" required>
-              <option value="" disabled>Select Airline</option>
-              <option v-for="a in airlines" :key="a.id" :value="a.id">{{ a.name }}</option>
-            </select>
+            <SearchableSelect
+              v-model="form.airline"
+              :options="airlineOptions"
+              placeholder="Search and select airline..."
+              label="Airline"
+            />
           </div>
 
           <div>
             <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Aircraft Model</label>
-            <select v-model="form.aircraft" class="w-full border p-2 text-sm bg-white outline-none focus:border-[#fe3787] transition-all rounded-[1px]" required :disabled="!form.airline">
-              <option value="" disabled>{{ form.airline ? 'Select Aircraft' : 'Select Airline First' }}</option>
-              <option v-for="ac in filteredAircrafts" :key="ac.id" :value="ac.id">
-                {{ ac.model }} ({{ ac.capacity }} seats)
-              </option>
-            </select>
+            <SearchableSelect
+              v-model="form.aircraft"
+              :options="aircraftOptions"
+              :disabled="!form.airline"
+              :placeholder="form.airline ? 'Search and select aircraft...' : 'Select an airline first'"
+              label="Aircraft"
+            />
           </div>
 
           <div>
             <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Flight Route</label>
-            <select v-model="form.route" class="w-full border p-2 text-sm bg-white outline-none focus:border-[#fe3787] transition-all rounded-[1px]" required>
-              <option value="" disabled>Select Route</option>
-              <option v-for="r in routes" :key="r.id" :value="r.id">
-                {{ r.origin_info }} → {{ r.destination_info }}
-              </option>
-            </select>
+            <SearchableSelect
+              v-model="form.route"
+              :options="routeOptions"
+              placeholder="Search by airport or city..."
+              label="Route"
+            />
           </div>
 
-          <div>
-            <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Total Stops</label>
-            <input v-model="form.total_stops" type="number" min="0" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px]" placeholder="0 for non-stop" required>
+          <div class="flex items-center justify-between bg-gray-50 p-3 border border-gray-100 rounded-[1px] group transition-all hover:border-[#fe3787]">
+            <div class="flex flex-col">
+              <span class="text-[10px] font-bold uppercase text-[#002D1E] poppins">Active Profile</span>
+              <span class="text-[9px] text-gray-400 font-medium poppins">Enable this flight for live monitoring</span>
+            </div>
+            <div 
+              @click="form.is_active = !form.is_active"
+              class="w-10 h-5 rounded-full relative cursor-pointer transition-all duration-300"
+              :class="form.is_active ? 'bg-emerald-500' : 'bg-gray-300'"
+            >
+              <div class="absolute w-4 h-4 bg-white rounded-full top-0.5 transition-all duration-300" :class="form.is_active ? 'left-5.5' : 'left-0.5'"></div>
+            </div>
           </div>
 
           <div class="flex justify-end gap-3 pt-6 border-t mt-4">
@@ -234,6 +281,9 @@ import { ref, onMounted, watch, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '@/services/admin/api';
 import { useModalStore } from '@/stores/modal';
+import ImportModal from '@/components/admin/ImportModal.vue';
+import SearchableSelect from '@/components/admin/SearchableSelect.vue';
+import AdminTableTool from '@/components/admin/AdminTableTool.vue';
 
 const modalStore = useModalStore();
 
@@ -242,7 +292,19 @@ const airlines = ref([]);
 const allAircrafts = ref([]);
 const filteredAircrafts = ref([]);
 const routes = ref([]);
+
+// Searchable select options
+const airlineOptions = computed(() =>
+  airlines.value.map(a => ({ value: a.id, label: a.name, sublabel: `Code: ${a.code}` }))
+);
+const aircraftOptions = computed(() =>
+  filteredAircrafts.value.map(ac => ({ value: ac.id, label: ac.model, sublabel: `${ac.capacity} seats` }))
+);
+const routeOptions = computed(() =>
+  routes.value.map(r => ({ value: r.id, label: `${r.origin_info} → ${r.destination_info}` }))
+);
 const isModalOpen = ref(false);
+const showImportModal = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
 
@@ -253,6 +315,9 @@ const form = ref({
   route: '',
   total_stops: 0
 });
+
+const searchQuery = ref('');
+const filterAirline = ref('all');
 
 // Pagination State
 const currentPage = ref(1);
@@ -267,14 +332,30 @@ const statsItems = computed(() => {
   };
 });
 
+// Search & Filter Logic
+const filteredFlights = computed(() => {
+  let result = flights.value;
+  
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase();
+    result = result.filter(f => f.flight_number.toLowerCase().includes(q));
+  }
+
+  if (filterAirline.value !== 'all') {
+    result = result.filter(f => f.airline === filterAirline.value);
+  }
+  
+  return result;
+});
+
 // Pagination Logic
-const totalPages = computed(() => Math.ceil(flights.value.length / itemsPerPage));
+const totalPages = computed(() => Math.ceil(filteredFlights.value.length / itemsPerPage));
 const paginatedFlights = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
-  return flights.value.slice(start, start + itemsPerPage);
+  return filteredFlights.value.slice(start, start + itemsPerPage);
 });
 const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage);
-const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, flights.value.length));
+const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, filteredFlights.value.length));
 
 const visiblePages = computed(() => {
   const pages = [];
@@ -424,7 +505,7 @@ const openModal = (flight = null) => {
       total_stops: flight.total_stops
     };
   } else {
-    form.value = { flight_number: '', airline: '', aircraft: '', route: '', total_stops: 0 };
+    form.value = { flight_number: '', airline: '', aircraft: '', route: '', total_stops: 0, is_active: true };
   }
   isModalOpen.value = true;
 };

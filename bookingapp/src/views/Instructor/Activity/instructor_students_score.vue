@@ -1,20 +1,21 @@
 <template>
-  <div class="min-h-screen bg-gray-50 font-sans text-gray-900 p-8">
-    <!-- Navigation Back Link -->
-    <div class="max-w-7xl mx-auto mb-6">
-      <button @click="goBack" class="text-sm font-semibold text-gray-500 hover:text-black transition-all flex items-center gap-2">
-        ← Back to Submissions
-      </button>
-    </div>
+  <div class="p-8 max-w-7xl mx-auto space-y-8">
+          <!-- Navigation Back Link -->
+          <div class="mb-6">
+            <button @click="goBack" class="text-sm font-semibold text-gray-500 hover:text-black transition-all flex items-center gap-2">
+              ← Back to Submissions
+            </button>
+          </div>
 
-    <div v-if="loading" class="flex flex-col items-center justify-center py-20">
-      <div class="w-12 h-1 bg-gray-200 rounded-full overflow-hidden mb-4">
-        <div class="h-full bg-blue-500 w-1/3 animate-[loading_1s_infinite_linear]"></div>
-      </div>
-      <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Generating Assessment Analysis...</p>
-    </div>
+          <div v-if="loading" class="flex flex-col items-center justify-center py-20">
+            <div class="w-12 h-1 bg-gray-200 rounded-full overflow-hidden mb-4">
+              <div class="h-full bg-blue-500 w-1/3 animate-[loading_1s_infinite_linear]"></div>
+            </div>
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Generating Assessment Analysis...</p>
+          </div>
 
-    <main v-else class="max-w-7xl mx-auto space-y-8">
+          <div v-else class="space-y-8">
+
       
 
       <!-- Top Card: Activity Summary & Score -->
@@ -444,14 +445,7 @@
       </div>
 
 
-    <!-- Actions Footer removed for Automated Grading -->
-      <div class="flex justify-start items-center gap-4 pb-20">
-        <button @click="goBack" class="px-8 py-4 border-2 border-gray-200 rounded-xl text-sm font-bold hover:bg-white transition-all uppercase tracking-widest text-[#FFC145]">← Back to Student Submissions</button>
-      </div>
-    </main>
-
-    <!-- Success Overlay removed for Automated Grading -->
-
+    </div>
   </div>
 </template>
 
@@ -461,9 +455,16 @@ import { useRoute, useRouter } from 'vue-router';
 import { activityDetailsService } from '@/services/instructor/activityDetailsService';
 import { bookingService } from '@/services/booking/bookingService';
 import { useNotificationStore } from '@/stores/notification';
+import { useUserStore } from '@/stores/user';
+import { instructorDashboardService } from '@/services/instructor/instructorDashboardService';
+import CTHM from '@/assets/image/cthm-logos.png';
 
 const route = useRoute();
 const router = useRouter();
+const userStore = useUserStore();
+
+const sidebarOpen = ref(false);
+const sections = ref([]);
 
 // Normalize a trip type string to a canonical raw code form (e.g. "One Way" -> "one_way", "Round Trip" -> "round_trip")
 const normalizeTripTypeToCode = (str) => {
@@ -491,6 +492,9 @@ const fetchData = async () => {
     loading.value = true;
     error.value = null;
     try {
+        const dashData = await instructorDashboardService.getDashboard().catch(() => ({ sections: [] }));
+        sections.value = dashData.sections || [];
+
         const actData = await activityDetailsService.getActivity(activityId);
         activity.value = actData.activity || actData;
 

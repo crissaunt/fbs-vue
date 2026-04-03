@@ -110,6 +110,7 @@ class ScheduleSerializer(serializers.ModelSerializer):
     
     status = serializers.ReadOnlyField(source='automatic_status')
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    available_seat_classes = serializers.SerializerMethodField()
 
     class Meta:
         model = Schedule
@@ -117,7 +118,7 @@ class ScheduleSerializer(serializers.ModelSerializer):
             'id', 
             'flight', 
             'flight_number',
-            'flight_detail',  # Add this for nested data
+            'flight_detail',
             'aircraft_name',
             'aircraft_capacity',
             'departure_time', 
@@ -125,8 +126,16 @@ class ScheduleSerializer(serializers.ModelSerializer):
             'price', 
             'status', 
             'status_display', 
-            'duration_display'
+            'duration_display',
+            'available_seat_classes'
         ]
+
+    def get_available_seat_classes(self, obj):
+        """Get seat classes from aircraft layout config"""
+        if obj.flight and obj.flight.aircraft:
+            config = obj.flight.aircraft.get_layout_config()
+            return config.get('seat_classes', [])
+        return []
 
 
 class SeatRequirementSerializer(serializers.ModelSerializer):
@@ -327,7 +336,7 @@ class TravelInsurancePlanSerializer(serializers.ModelSerializer):
     provider_name = serializers.ReadOnlyField(source='provider.name')
     class Meta:
         model = TravelInsurancePlan
-        fields = ['id', 'name', 'provider', 'provider_name', 'retail_price', 'is_active', 'display_order']
+        fields = ['id', 'name', 'provider', 'provider_name', 'retail_price', 'is_active', 'display_order', 'description', 'airlines']
 
 class PlanCoverageSerializer(serializers.ModelSerializer):
     plan_name = serializers.ReadOnlyField(source='insurance_plan.name')

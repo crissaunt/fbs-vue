@@ -82,7 +82,7 @@
     <div class="p-6 bg-slate-50 text-right">
       <div class="flex justify-between items-center mb-1">
         <span class="text-base font-bold text-slate-900">Total Amount</span>
-        <span class="text-xl font-bold text-rose-500">₱{{ (totalAmount || 0).toLocaleString() }}</span>
+        <span class="text-xl font-bold text-pink-500">₱{{ (totalAmount || 0).toLocaleString() }}</span>
       </div>
       <div class="text-[10px] text-slate-400">Taxes & fees calculated at review</div>
     </div>

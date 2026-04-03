@@ -1,19 +1,37 @@
 <template>
   <div class="p-6 poppins">
-    <!-- Action Buttons -->
-    <div class="flex items-center mb-6">
-      <div class="flex items-center gap-2">
-        <button @click="exportPassengers" class="bg-white border border-gray-200 text-gray-700 px-4 py-2 flex items-center gap-2 hover:bg-gray-50 font-semibold poppins text-[14px] rounded-[1px] shadow-sm transition-all">
-          <i class="ph ph-export"></i> Export CSV
-        </button>
-        <button @click="refreshData" class="bg-white border border-gray-200 text-gray-700 px-4 py-2 flex items-center gap-2 hover:bg-gray-50 font-semibold poppins text-[14px] rounded-[1px] shadow-sm transition-all">
-          <i class="ph ph-arrows-clockwise"></i> Refresh
-        </button>
-        <button @click="openAddModal" class="bg-[#fe3787] text-white px-6 py-2 flex items-center gap-2 hover:bg-[#e6327a] font-bold poppins text-[14px] rounded-[1px] shadow-md transition-all ml-auto">
-          <i class="ph ph-plus-circle"></i> Enroll Trainee
-        </button>
-      </div>
-    </div>
+    <!-- Header & Tools Section -->
+    <AdminTableTool 
+      v-model="searchQuery" 
+      placeholder="Search trainee name or passport..."
+      @update:modelValue="debounceSearch"
+    >
+      <template #filters>
+        <div class="flex items-center gap-2">
+          <select 
+            v-model="selectedType" 
+            class="text-[11px] font-bold border border-gray-200 px-3 py-2 bg-white rounded-[1px] outline-none focus:border-[#fe3787] poppins cursor-pointer"
+            @change="fetchPassengers"
+          >
+            <option value="">Any Type</option>
+            <option value="Adult">Adult</option>
+            <option value="Child">Child</option>
+            <option value="Infant">Infant</option>
+          </select>
+        </div>
+      </template>
+
+      <template #actions>
+        <div class="flex items-center gap-2">
+          <button @click="exportPassengers" class="bg-white border border-gray-200 text-gray-700 px-4 py-2 flex items-center gap-2 hover:bg-gray-50 font-semibold poppins text-[12px] rounded-[1px] shadow-sm transition-all">
+            <i class="ph ph-export text-[14px]"></i> Export
+          </button>
+          <button @click="openAddModal" class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#e6327a] font-bold poppins text-[12px] rounded-[1px] shadow-md transition-all">
+            <i class="ph ph-plus-circle text-[14px]"></i> Enroll
+          </button>
+        </div>
+      </template>
+    </AdminTableTool>
 
     <!-- Passenger Stats -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -34,39 +52,7 @@
       </div>
     </div>
 
-    <!-- Search and Filter -->
-    <div class="bg-white border border-gray-200 rounded-[1px] shadow-sm p-4 mb-6">
-      <div class="flex flex-col md:flex-row md:items-center gap-4">
-        <div class="relative flex-1">
-          <i class="ph ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-          <input 
-            v-model="searchQuery" 
-            type="text" 
-            placeholder="Search by name, passport..." 
-            class="pl-10 pr-4 py-2 border border-gray-200 rounded-[1px] w-full outline-none focus:border-[#fe3787] transition-all poppins text-sm"
-            @input="debounceSearch"
-          />
-        </div>
-        
-        <select 
-          v-model="selectedType" 
-          class="border border-gray-200 px-3 py-2 rounded-[1px] outline-none focus:border-[#fe3787] transition-all poppins text-sm bg-white min-w-[150px]"
-          @change="fetchPassengers"
-        >
-          <option value="">All Types</option>
-          <option value="Adult">Adult</option>
-          <option value="Child">Child</option>
-          <option value="Infant">Infant</option>
-        </select>
 
-        <button 
-          @click="clearFilters" 
-          class="bg-gray-100 text-gray-600 px-6 py-2 rounded-[1px] hover:bg-gray-200 font-bold poppins text-sm transition-all"
-        >
-          Reset
-        </button>
-      </div>
-    </div>
 
     <!-- Main Table -->
     <div class="bg-white border border-gray-200 rounded-[1px] shadow-sm overflow-hidden">
@@ -266,6 +252,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/services/admin/api'
 import { useModalStore } from '@/stores/modal'
+import AdminTableTool from '@/components/admin/AdminTableTool.vue';
 
 const modalStore = useModalStore()
 const route = useRoute()

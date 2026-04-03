@@ -2,13 +2,14 @@
   <div class="min-h-screen bg-slate-50 pb-20 lg:pb-10 font-sans">
     <BookingStatusHeader />
     
-    <div class="max-w-[1500px] mx-auto px-5 lg:px-10 mt-10">
-      <div class="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
+    <div class="max-w-[1100px] mx-auto px-5 lg:px-10 mt-10">
+      <div>
+
         
         <!-- Main Content -->
         <main class="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-8 items-start">
           
-          <!-- Left Sidebar - Passenger Selection -->
+          <!-- Left Sidebar / Mobile Navigation -->
           <PassengerSidebar 
             :total-travelers="totalTravelers"
             :active-index="activeIndex"
@@ -28,26 +29,33 @@
           <div class="flex flex-col gap-8">
             <!-- Header -->
             <div class="flex flex-col sm:flex-row justify-between items-start border-b border-slate-200 pb-5 gap-4">
-              <h1 class="text-2xl font-bold text-slate-900">Passenger Details</h1>
-              <div class="text-right sm:text-right">
-                <span class="block text-[11px] text-slate-500 mb-1">Currently editing:</span>
-                <span class="text-lg font-bold text-rose-500 flex items-center gap-3">
-                  Passenger {{ activeIndex }} - {{ getPassengerType(activeIndex) }}
-                  
-                  <span v-if="getPassengerType(activeIndex) === 'Infant' && getInfantAdultName(activeIndex)" class="text-sm font-normal text-slate-500 ml-2">
-                    (with {{ getInfantAdultName(activeIndex) }})
-                  </span>
+              <div>
+                <h1 class="text-2xl font-black text-slate-900 tracking-tight">Passenger Details</h1>
+                <p class="text-[11px] text-slate-500 font-bold uppercase tracking-wider mt-1 md:hidden">
+                  Completing {{ completedPassengersCount }} of {{ totalTravelers }} Travelers
+                </p>
+              </div>
+              <div class="text-left sm:text-right w-full sm:w-auto p-3 bg-white sm:bg-transparent rounded-lg border border-slate-100 sm:border-0 shadow-sm sm:shadow-none">
+                <span class="block text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Currently editing:</span>
+                <span class="text-sm sm:text-lg font-black text-pink-500 flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-pink-500 animate-pulse"></span>
+                  PAX {{ activeIndex }} — {{ getPassengerType(activeIndex) }}
                 </span>
+                <div v-if="getPassengerType(activeIndex) === 'Infant' && getInfantAdultName(activeIndex)" class="text-[9px] font-bold text-slate-400 uppercase mt-1">
+                  Assigned to {{ getInfantAdultName(activeIndex).split('(')[0] }}
+                </div>
               </div>
             </div>
 
             <div class="flex flex-col gap-4">
-              <!-- Passenger Information -->
-              <div class="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
-                <h2 class="text-xl font-bold text-slate-900 mb-1">Personal Information</h2>
-                <p class="text-[11px] text-slate-500 mb-6">Please enter details exactly as they appear on official ID</p>
+              <!-- Passenger Information Card -->
+              <div class="bg-white rounded-xl p-4 sm:p-8 border border-slate-200 shadow-sm">
+                <div class="mb-6">
+                  <h2 class="text-xl font-black text-slate-900 mb-1">Personal Information</h2>
+                  <p class="text-[11px] text-slate-500 font-medium">Enter details exactly as they appear on official ID or Passport</p>
+                </div>
                 
-                <div class="mb-8">
+                <div class="mb-2">
                   <div v-for="n in totalTravelers" :key="'form-'+n">
                     <div v-show="activeIndex === n">
                       <PassengerForm 
@@ -86,7 +94,7 @@
                   <button 
                     v-if="activeIndex < totalTravelers" 
                     type="button" 
-                    class="flex-1 sm:flex-none py-3 px-5 border border-rose-500 text-rose-500 bg-white rounded-md text-sm font-medium hover:bg-rose-500 hover:text-white transition-all"
+                    class="flex-1 sm:flex-none py-3 px-5 border border-pink-500 text-pink-500 bg-white rounded-md text-sm font-medium hover:bg-pink-500 hover:text-white transition-all"
                     @click="goToNextGuest"
                   >
                     Next →
@@ -95,7 +103,7 @@
                 
                 <button 
                   type="button" 
-                  class="w-full sm:w-auto py-3.5 px-8 bg-rose-500 text-white rounded-md text-sm font-bold hover:bg-rose-600 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                  class="w-full sm:w-auto py-3.5 px-8 bg-pink-500 text-white rounded-md text-sm font-bold hover:bg-pink-600 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
                   @click="handleContinueToAddons"
                   :disabled="isSaving"
                 >
@@ -106,25 +114,6 @@
             </div>
           </div>
         </main>
-
-        <!-- Right Sidebar - Booking Summary -->
-        <aside class="sticky top-10 h-fit space-y-6">
-          <BookingTimer variant="sidebar" />
-          <BookingSummaryCard 
-            :is-multi-city="bookingStore.isMultiCity"
-            :multi-city-segments="bookingStore.multiCitySegments"
-            :selected-flight="selectedFlight"
-            :selected-return="selectedReturn"
-            :is-round-trip="isRoundTrip"
-            :adult-count="adultCount"
-            :child-count="childCount"
-            :infant-count="infantCount"
-            :adult-total="bookingStore.grandTotalForAdults"
-            :child-total="bookingStore.grandTotalForChildren"
-            :infant-total="bookingStore.grandTotalForInfants"
-            :total-amount="calculateTotal()"
-          />
-        </aside>
       </div>
     </div>
     
@@ -148,12 +137,10 @@ import { useBookingStore } from '@/stores/booking';
 import { useNotificationStore } from '@/stores/notification';
 import { useRouter } from 'vue-router';
 import PassengerForm from '@/components/booking/PassengerForm.vue';
-import BookingTimer from '@/components/booking/BookingTimer.vue';
 import BookingStatusHeader from '@/components/booking/BookingStatusHeader.vue';
 import MobileBookingFooter from '@/components/booking/MobileBookingFooter.vue';
 import PassengerSidebar from '@/components/booking/PassengerSidebar.vue';
 import ContactForm from '@/components/booking/ContactForm.vue';
-import BookingSummaryCard from '@/components/booking/BookingSummaryCard.vue';
 import LoadingOverlay from '@/components/common/LoadingOverlay.vue';
 
 const bookingStore = useBookingStore();
@@ -178,9 +165,6 @@ const contact = ref({
 });
 
 // --- COMPUTED ---
-const selectedFlight = computed(() => bookingStore.selectedOutbound);
-const selectedReturn = computed(() => bookingStore.selectedReturn); 
-const isRoundTrip = computed(() => bookingStore.isRoundTrip); 
 const adultCount = computed(() => bookingStore.passengerCount.adults || 1);
 const childCount = computed(() => bookingStore.passengerCount.children || 0);
 const infantCount = computed(() => bookingStore.passengerCount.infants || 0);
@@ -293,9 +277,6 @@ const handlePassengerValidation = ({ index, isValid }) => {
   passengerValidation.value[`pax_${index}`] = isValid;
 };
 
-const calculateTotal = () => {
-  return bookingStore.grandTotal || 0;
-};
 
 const isPassengerComplete = (index) => {
   const key = `pax_${index}`;
@@ -362,6 +343,7 @@ const saveAllPassengersToStore = async () => {
     bookingStore.setContactInfo(contact.value);
     return true;
   } catch (error) {
+    showValidation.value = true;
     notificationStore.warn(error.message);
     return false;
   } finally {
@@ -373,12 +355,14 @@ const handleContinueToAddons = async () => {
   if (await saveAllPassengersToStore()) {
     bookingStore.snapshotToServer();
     
-    // REDIRECTION LOGIC: If any segment is "Premium", go directly to Seat Selection
-    // This aligns with real-world premium-first booking flows.
-    const hasPremium = Object.values(bookingStore.fareFamilies).some(fare => fare === 'premium');
+    // REDIRECTION LOGIC: If the fare includes a seat (Standard, Flex, Business, etc.), go directly to Seat Selection
+    // This ensures users with bundled fares can "claim" their included seat immediately.
+    const hasIncludedSeat = Object.values(bookingStore.fareFamilies).some(fare => 
+      ['standard', 'flex', 'business', 'business_plus', 'premium'].includes(fare)
+    );
     
-    if (hasPremium) {
-      console.log('💎 Premium fare detected! Redirecting directly to Seat Selection...');
+    if (hasIncludedSeat) {
+      console.log('💎 Tiered fare detected! Prioritizing Seat Selection...');
       router.push({ name: 'SeatSelection' });
     } else {
       router.push({ name: 'Addons' });

@@ -1,14 +1,19 @@
 <template>
   <div class="p-6 poppins">
-    <!-- Header Section -->
-    <div class="flex justify-between items-center mb-6">
-      <button 
-        @click="openModal()" 
-        class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[14px] rounded-[1px] shadow-sm transition-all"
-      >
-        <i class="ph ph-plus"></i> Add Requirement
-      </button>
-    </div>
+    <!-- Header & Tools Section -->
+    <AdminTableTool 
+      v-model="searchQuery" 
+      placeholder="Search requirement name or code..."
+    >
+      <template #actions>
+        <button 
+          @click="openModal()" 
+          class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[12px] rounded-[1px] shadow-sm transition-all"
+        >
+          <i class="ph ph-plus text-[14px]"></i> Add
+        </button>
+      </template>
+    </AdminTableTool>
 
     <!-- Table Section -->
     <div class="bg-white border border-gray-200 rounded-[1px] overflow-hidden shadow-sm">
@@ -166,6 +171,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '@/services/admin/api';
 import { useModalStore } from '@/stores/modal';
+import AdminTableTool from '@/components/admin/AdminTableTool.vue';
 
 const modalStore = useModalStore();
 
@@ -176,6 +182,7 @@ const isEditing = ref(false);
 const currentId = ref(null);
 const highlightedId = ref(null);
 const route = useRoute();
+const searchQuery = ref('');
 
 // Pagination State
 const currentPage = ref(1);
@@ -188,14 +195,24 @@ const form = ref({
   description: ''
 });
 
+// Search Logic
+const filteredRequirements = computed(() => {
+  if (!searchQuery.value) return requirements.value;
+  const q = searchQuery.value.toLowerCase();
+  return requirements.value.filter(r => 
+    r.name.toLowerCase().includes(q) || 
+    r.code.toLowerCase().includes(q)
+  );
+});
+
 // Pagination Logic
-const totalPages = computed(() => Math.ceil(requirements.value.length / itemsPerPage));
+const totalPages = computed(() => Math.ceil(filteredRequirements.value.length / itemsPerPage));
 const paginatedRequirements = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
-  return requirements.value.slice(start, start + itemsPerPage);
+  return filteredRequirements.value.slice(start, start + itemsPerPage);
 });
 const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage);
-const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, requirements.value.length));
+const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, filteredRequirements.value.length));
 
 const visiblePages = computed(() => {
   const pages = [];

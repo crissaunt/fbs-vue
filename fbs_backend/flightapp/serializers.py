@@ -80,15 +80,20 @@ class ScheduleSerializer(serializers.ModelSerializer):
     # Seat class fields
     available_classes = serializers.SerializerMethodField()
     seat_classes = serializers.SerializerMethodField()
+    available_seat_classes = serializers.SerializerMethodField()
     available_seats = serializers.SerializerMethodField()
     is_domestic = serializers.SerializerMethodField()
+    
+    # Aircraft info
+    aircraft_name = serializers.ReadOnlyField(source='flight.aircraft.model')
+    aircraft_capacity = serializers.ReadOnlyField(source='flight.aircraft.capacity')
     
     # ============ ML PRICING FIELDS ============
     # Override price to use ML price first
     price = serializers.SerializerMethodField()
     ml_base_price = serializers.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
+        max_digits=30, 
+        decimal_places=15, 
         read_only=True,
         allow_null=True
     )
@@ -102,6 +107,13 @@ class ScheduleSerializer(serializers.ModelSerializer):
     layovers_data = serializers.JSONField(source='flight.layovers_data', read_only=True)
     # ============================================
     
+    def get_available_seat_classes(self, obj):
+        """Get seat classes from aircraft layout config (Same as admin portal)"""
+        if obj.flight and obj.flight.aircraft:
+            config = obj.flight.aircraft.get_layout_config()
+            return config.get('seat_classes', [])
+        return []
+
     def get_available_classes(self, obj):
         """Get unique seat classes with available seats"""
         from app.models import Seat
@@ -163,6 +175,7 @@ class ScheduleSerializer(serializers.ModelSerializer):
             'origin', 'origin_city', 'destination', 'destination_city',
             'departure_time', 'arrival_time', 'price', 'status', 'gate',
             'flight_duration', 'total_stops', 'layovers_data', 'available_classes', 'seat_classes', 
+            'available_seat_classes', 'aircraft_name', 'aircraft_capacity',
             'available_seats', 'is_domestic',
             # ML pricing fields
             'ml_base_price', 'ml_price_updated_at', 'using_ml_price', 'price_age_hours'
@@ -188,6 +201,8 @@ class SeatSerializer(serializers.ModelSerializer):
             'is_window', 'is_aisle', 'has_extra_legroom', 'is_exit_row', 
             'is_wheelchair_accessible', 'has_bassinet', 'has_nut_allergy', 
             'is_unaccompanied_minor', 'is_bulkhead', 'price_adjustment_manual',
+            'has_medical_oxygen', 'has_pet_in_cabin', 'is_deaf_blind',
+            'is_large_persona', 'has_stretcher', 'has_sports_equipment',
             'features', 'is_locked', 'is_locked_by_me'
         ]
     
@@ -254,6 +269,21 @@ class SeatSerializer(serializers.ModelSerializer):
             features.append("Window")
         if obj.is_aisle:
             features.append("Aisle")
+        
+        # 2026 Simulation Specialized Requirements
+        if obj.has_medical_oxygen:
+            features.append("Medical Oxygen")
+        if obj.has_pet_in_cabin:
+            features.append("Pet in Cabin")
+        if obj.is_deaf_blind:
+            features.append("Deaf/Blind Asst")
+        if obj.is_large_persona:
+            features.append("Large Persona")
+        if obj.has_stretcher:
+             features.append("Stretcher")
+        if obj.has_sports_equipment:
+             features.append("Sports Equipment")
+             
         return features
 
 

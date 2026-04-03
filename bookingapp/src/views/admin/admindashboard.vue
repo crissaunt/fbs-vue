@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6 space-y-6 bg-gray-100 min-h-screen">
+  <div class="p-0.5 space-y-2 bg-gray-100 min-h-screen">
     <!-- Loading Overlay -->
     <div v-if="loading" class="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
       <div class="flex flex-col items-center">
@@ -15,7 +15,7 @@
     </div>
 
     <!-- Glassmorphism Welcome Header -->
-    <div class="relative overflow-hidden p-8 rounded-[1px] border border-white/20 shadow-2xl bg-gradient-to-br from-[#002D1E] to-[#013d29] mb-8 group">
+    <div class="relative overflow-hidden p-3 rounded-[1px] border border-white/20 shadow-2xl bg-gradient-to-br from-[#002D1E] to-[#013d29] mb-2 group">
       <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
       <div class="absolute -right-20 -top-20 w-64 h-64 bg-[#fe3787] rounded-full blur-[100px] opacity-20 group-hover:opacity-30 transition-opacity"></div>
       
@@ -27,36 +27,36 @@
               <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
           </div>
-          <h1 class="text-4xl font-black text-white poppins tracking-tight mb-2">
+          <h1 class="text-xl font-black text-white poppins tracking-tight mb-2">
             {{ greeting }}, <span class="text-[#fe3787] drop-shadow-sm font-black italic">Administrator</span>
           </h1>
           <p class="text-gray-300 poppins text-sm max-w-md">Welcome to your command center. Flight operations and booking metrics are currently optimized.</p>
         </div>
         
-        <div class="flex items-center gap-4 bg-black/20 backdrop-blur-xl p-4 rounded-[1px] border border-white/10 shadow-inner">
+        <div class="flex items-center gap-3 bg-black/20 backdrop-blur-xl p-3 rounded-[1px] border border-white/10 shadow-inner">
           <div class="w-12 h-12 rounded-[1px] bg-[#fe3787] flex items-center justify-center shadow-lg">
             <i class="ph ph-calendar-check text-white text-2xl"></i>
           </div>
           <div>
             <p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest poppins mb-1">Session Data</p>
-            <p class="text-lg font-black text-white poppins leading-none">{{ currentDate }}</p>
+            <p class="text-sm font-black text-white poppins leading-none">{{ currentDate }}</p>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2 mb-2">
       <!-- Passengers Card (LMS & Flight) -->
-      <div v-if="userRole === 'superadmin' || userRole === 'lms_admin' || userRole === 'flight_admin'" class="group bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
+      <div v-if="userRole === 'superadmin' || userRole === 'lms_admin' || userRole === 'flight_admin'" class="group bg-white p-2.5 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
         <div class="absolute top-0 right-0 w-24 h-24 bg-blue-50/50 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
         <div class="relative flex items-center justify-between">
           <div>
             <p class="text-[10px] uppercase font-bold text-gray-500 tracking-[0.2em] poppins">Passenger Traffic</p>
-            <p class="text-4xl font-black text-[#002D1E] poppins mt-2 tracking-tighter">{{ stats.passengersToday }}</p>
+            <p class="text-xl font-black text-[#002D1E] poppins mt-1 tracking-tighter">{{ stats.passengersToday }}</p>
           </div>
           <div class="w-14 h-14 rounded-[1px] bg-blue-50 flex items-center justify-center border border-blue-100 shadow-inner">
-            <i class="ph ph-student text-blue-600 text-3xl transition-transform group-hover:rotate-12"></i>
+            <i class="ph ph-student text-blue-600 text-xl transition-transform group-hover:rotate-12"></i>
           </div>
         </div>
         <div class="mt-6 flex items-center text-xs poppins">
@@ -69,15 +69,15 @@
       </div>
 
       <!-- Revenue Card (Flight & Superadmin) -->
-      <div v-if="userRole === 'superadmin' || userRole === 'flight_admin'" class="group bg-[#002D1E] p-6 border border-[#002D1E] rounded-[1px] shadow-sm hover:shadow-2xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
+      <div v-if="userRole === 'superadmin' || userRole === 'flight_admin'" class="group bg-[#002D1E] p-2.5 border border-[#002D1E] rounded-[1px] shadow-sm hover:shadow-2xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
         <div class="absolute top-0 right-0 w-24 h-24 bg-[#fe3787]/10 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
         <div class="relative flex items-center justify-between text-white">
           <div>
             <p class="text-[10px] uppercase font-bold text-gray-400 tracking-[0.2em] poppins">Net Revenue</p>
-            <p class="text-4xl font-black text-[#fe3787] poppins mt-2 tracking-tighter">₱{{ formatNumber(stats.totalRevenue) }}</p>
+            <p class="text-xl font-black text-[#fe3787] poppins mt-1 tracking-tighter">₱{{ formatNumber(stats.totalRevenue) }}</p>
           </div>
           <div class="w-14 h-14 rounded-[1px] bg-white/5 flex items-center justify-center border border-white/10 shadow-inner backdrop-blur-sm">
-            <i class="ph ph-hand-coins text-[#fe3787] text-3xl transition-transform group-hover:rotate-12"></i>
+            <i class="ph ph-hand-coins text-[#fe3787] text-xl transition-transform group-hover:rotate-12"></i>
           </div>
         </div>
         <div class="mt-6 flex items-center text-xs poppins">
@@ -90,15 +90,15 @@
       </div>
 
       <!-- Bookings Card (Flight & Superadmin) -->
-      <div v-if="userRole === 'superadmin' || userRole === 'flight_admin'" class="group bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
+      <div v-if="userRole === 'superadmin' || userRole === 'flight_admin'" class="group bg-white p-2.5 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
         <div class="absolute top-0 right-0 w-24 h-24 bg-green-50/50 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
         <div class="relative flex items-center justify-between text-[#002D1E]">
           <div>
             <p class="text-[10px] uppercase font-bold text-gray-500 tracking-[0.2em] poppins">Total Bookings</p>
-            <p class="text-4xl font-black poppins mt-2 tracking-tighter">{{ stats.totalBookings }}</p>
+            <p class="text-xl font-black poppins mt-1 tracking-tighter">{{ stats.totalBookings }}</p>
           </div>
           <div class="w-14 h-14 rounded-[1px] bg-green-50 flex items-center justify-center border border-green-100 shadow-inner">
-            <i class="ph ph-ticket text-green-600 text-3xl transition-transform group-hover:rotate-12"></i>
+            <i class="ph ph-ticket text-green-600 text-xl transition-transform group-hover:rotate-12"></i>
           </div>
         </div>
         <div class="mt-6 flex items-center text-xs poppins font-bold">
@@ -108,15 +108,15 @@
       </div>
 
       <!-- Flights Card (Flight & Superadmin) -->
-      <div v-if="userRole === 'superadmin' || userRole === 'flight_admin'" class="group bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
+      <div v-if="userRole === 'superadmin' || userRole === 'flight_admin'" class="group bg-white p-2.5 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
         <div class="absolute top-0 right-0 w-24 h-24 bg-purple-50/50 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
         <div class="relative flex items-center justify-between text-[#002D1E]">
           <div>
             <p class="text-[10px] uppercase font-bold text-gray-500 tracking-[0.2em] poppins">Active Flights</p>
-            <p class="text-4xl font-black poppins mt-2 tracking-tighter">{{ stats.activeFlights }}</p>
+            <p class="text-xl font-black poppins mt-1 tracking-tighter">{{ stats.activeFlights }}</p>
           </div>
           <div class="w-14 h-14 rounded-[1px] bg-purple-50 flex items-center justify-center border border-purple-100 shadow-inner">
-            <i class="ph ph-airplane text-purple-600 text-3xl transition-transform group-hover:rotate-12"></i>
+            <i class="ph ph-airplane text-purple-600 text-xl transition-transform group-hover:rotate-12"></i>
           </div>
         </div>
         <div class="mt-6 flex items-center text-xs poppins font-bold">
@@ -126,15 +126,15 @@
       </div>
 
       <!-- Check-ins Card (Flight & Superadmin) -->
-      <div v-if="userRole === 'superadmin' || userRole === 'flight_admin'" class="group bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
+      <div v-if="userRole === 'superadmin' || userRole === 'flight_admin'" class="group bg-white p-2.5 border border-gray-200 rounded-[1px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
         <div class="absolute top-0 right-0 w-24 h-24 bg-pink-50/50 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
         <div class="relative flex items-center justify-between text-[#002D1E]">
           <div>
             <p class="text-[10px] uppercase font-bold text-gray-500 tracking-[0.2em] poppins">Check-ins</p>
-            <p class="text-4xl font-black poppins mt-2 tracking-tighter">{{ stats.checkins }}</p>
+            <p class="text-xl font-black poppins mt-1 tracking-tighter">{{ stats.checkins }}</p>
           </div>
           <div class="w-14 h-14 rounded-[1px] bg-pink-50 flex items-center justify-center border border-pink-100 shadow-inner">
-            <i class="ph ph-user-check text-[#fe3787] text-3xl transition-transform group-hover:rotate-12"></i>
+            <i class="ph ph-user-check text-[#fe3787] text-xl transition-transform group-hover:rotate-12"></i>
           </div>
         </div>
         <div class="mt-6 flex items-center text-xs poppins font-bold">
@@ -148,7 +148,7 @@
     <!-- Main Charts Section (Flight & Superadmin) -->
     <div v-if="userRole === 'superadmin' || userRole === 'flight_admin'" class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
       <!-- Main Sales Chart -->
-      <div class="lg:col-span-8 bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm relative overflow-hidden group">
+      <div class="lg:col-span-8 bg-white p-3 border border-gray-200 rounded-[1px] shadow-sm relative overflow-hidden group">
         <div class="absolute top-0 left-0 w-1 h-full bg-[#fe3787] opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <div class="flex items-center justify-between mb-8">
           <div>
@@ -166,7 +166,7 @@
             <option value="365">Year</option>
           </select>
         </div>
-        <div class="h-[340px] relative">
+        <div class="h-[200px] relative">
           <canvas ref="ticketChartRef"></canvas>
           <div v-if="!hasTicketData && !loading" class="absolute inset-0 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm">
              <i class="ph ph-chart-line-up text-3xl text-gray-200 mb-4"></i>
@@ -176,7 +176,7 @@
       </div>
 
       <!-- Fee Distribution -->
-      <div class="lg:col-span-4 bg-white p-6 border border-gray-200 rounded-[1px] shadow-sm relative group overflow-hidden flex flex-col">
+      <div class="lg:col-span-4 bg-white p-3 border border-gray-200 rounded-[1px] shadow-sm relative group overflow-hidden flex flex-col">
           <div class="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
           <h3 class="text-sm font-black text-[#002D1E] poppins uppercase tracking-widest mb-6 relative">Fee Distribution</h3>
           <div class="flex-grow flex items-center justify-center min-h-[200px]">
@@ -250,13 +250,13 @@
 
     <!-- Cabin Mix (Flight & Superadmin) -->
     <div v-if="userRole === 'superadmin' || userRole === 'flight_admin'" class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
-      <div class="lg:col-span-5 bg-white border border-gray-200 rounded-[1px] shadow-sm p-6 group relative overflow-hidden">
+      <div class="lg:col-span-5 bg-white border border-gray-200 rounded-[1px] shadow-sm p-4 group relative overflow-hidden">
         <div class="absolute top-0 left-0 w-1 h-full bg-[#fe3787] opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <h3 class="text-sm font-black text-[#002D1E] poppins uppercase tracking-widest flex items-center gap-2 mb-6">
           <i class="ph ph-chart-donut text-[#fe3787]"></i>
           Seat Class Distribution
         </h3>
-        <div class="flex items-center justify-center h-52 relative">
+        <div class="flex items-center justify-center h-32 relative">
           <div v-if="seatclassLoading" class="animate-spin text-[#fe3787] text-4xl">
             <i class="ph ph-spinner-gap"></i>
           </div>
@@ -270,7 +270,7 @@
         </div>
       </div>
 
-      <div class="lg:col-span-7 bg-white border border-gray-200 rounded-[1px] shadow-sm p-6">
+      <div class="lg:col-span-7 bg-white border border-gray-200 rounded-[1px] shadow-sm p-4">
         <h3 class="text-sm font-black text-[#002D1E] poppins uppercase tracking-widest mb-6">Class Breakdown</h3>
         <div class="space-y-4">
           <div v-for="cls in seatclassDist.classes" :key="cls.label">

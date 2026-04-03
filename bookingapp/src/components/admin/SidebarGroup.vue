@@ -1,17 +1,17 @@
 <template>
   <div class="w-full">
-    <div 
-      @click="toggle"
-      class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-white/10 transition-colors group"
-      :class="{ 'bg-white/5': isOpen }"
-    >
-      <div class="flex items-center">
-        <i :class="['ph', icon, 'text-xl']"></i>
-        
-        <span v-if="!isCollapsed" class="ml-3 text-[14px] font-medium whitespace-nowrap">
-          {{ title }}
-        </span>
-      </div>
+      <div 
+        @click="toggle"
+        class="flex items-center justify-between px-4 py-1.5 cursor-pointer hover:bg-white/10 transition-colors group"
+        :class="{ 'bg-white/5': isOpen }"
+      >
+        <div class="flex items-center">
+          <i :class="['ph', icon, 'text-lg']"></i>
+          
+          <span v-if="!isCollapsed" class="ml-3 text-[12px] font-medium whitespace-nowrap">
+            {{ title }}
+          </span>
+        </div>
 
       <i 
         v-if="!isCollapsed"

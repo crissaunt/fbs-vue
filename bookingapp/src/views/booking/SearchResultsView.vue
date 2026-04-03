@@ -213,7 +213,10 @@
                 <div class="border-l-4 border-pink-500 pl-4">
                   <div class="flex justify-between items-start">
                     <div>
-                      <div class="font-medium text-gray-800">Outbound • {{ bookingStore.selectedOutbound?.flight_number }}</div>
+                      <div class="font-medium text-gray-800">
+                        Outbound • {{ bookingStore.selectedOutbound?.flight_number }}
+                        <span v-if="bookingStore.selectedOutbound?.aircraft_name" class="ml-1 text-xs text-gray-400 font-normal">({{ bookingStore.selectedOutbound.aircraft_name }})</span>
+                      </div>
                       <div v-if="bookingStore.selectedOutbound?.selected_seat_class" class="text-sm text-pink-600 mt-1">
                         Seat Class: {{ bookingStore.selectedOutbound.selected_seat_class }}
                       </div>
@@ -238,7 +241,10 @@
                 <div class="border-l-4 border-pink-300 pl-4">
                   <div class="flex justify-between items-start">
                     <div>
-                      <div class="font-medium text-gray-800">Return • {{ selectedFlight?.flight_number }}</div>
+                      <div class="font-medium text-gray-800">
+                        Return • {{ selectedFlight?.flight_number }}
+                        <span v-if="selectedFlight?.aircraft_name" class="ml-1 text-xs text-gray-400 font-normal">({{ selectedFlight.aircraft_name }})</span>
+                      </div>
                       <div v-if="selectedFlight?.selected_seat_class" class="text-sm text-pink-600 mt-1">
                         Seat Class: {{ selectedFlight.selected_seat_class }}
                       </div>
@@ -282,6 +288,7 @@
                 <div class="flex items-center space-x-2">
                   <div class="font-medium text-gray-800">{{ selectedFlight?.flight_number }}</div>
                   <div class="text-sm text-gray-500">• {{ selectedFlight?.airline_name }}</div>
+                  <div v-if="selectedFlight?.aircraft_name" class="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded ml-1">{{ selectedFlight.aircraft_name }}</div>
                 </div>
                 
                 <div v-if="selectedFlight?.selected_seat_class" class="bg-pink-100 border border-pink-200 rounded-lg p-3">
@@ -430,39 +437,39 @@
       <!-- Header -->
       <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
         <!-- Step Indicator -->
-        <div v-if="isRoundTrip || isMultiCity" class="mb-6">
-          <div class="flex items-center space-x-4 overflow-x-auto pb-2">
+        <div v-if="isRoundTrip || isMultiCity" class="mb-4 sm:mb-6">
+          <div class="flex items-center space-x-2 sm:space-x-4 overflow-x-auto pb-2 scrollbar-hide">
             <template v-if="isRoundTrip">
-              <div :class="['flex-1 text-center py-2 rounded-md min-w-[120px]', 
+              <div :class="['flex-1 text-center py-1.5 sm:py-2 rounded-md min-w-[100px] sm:min-w-[120px] text-[10px] sm:text-xs', 
                        selectionPhase === 'outbound' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-600']">
-                <div class="font-medium">1. Select Outbound</div>
+                <div class="font-bold sm:font-medium">1. Select Outbound</div>
               </div>
-              <div class="w-8 h-px bg-gray-300 shrink-0"></div>
-              <div :class="['flex-1 text-center py-2 rounded-md min-w-[120px]', 
+              <div class="w-4 sm:w-8 h-px bg-gray-300 shrink-0"></div>
+              <div :class="['flex-1 text-center py-1.5 sm:py-2 rounded-md min-w-[100px] sm:min-w-[120px] text-[10px] sm:text-xs', 
                        selectionPhase === 'return' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-600']">
-                <div class="font-medium">2. Select Return</div>
+                <div class="font-bold sm:font-medium">2. Select Return</div>
               </div>
             </template>
             <template v-else-if="isMultiCity">
               <div v-for="(seg, idx) in multiSegments" :key="idx" class="flex items-center flex-1">
-                <div :class="['flex-1 text-center py-2 rounded-md min-w-[120px]', 
+                <div :class="['flex-1 text-center py-1.5 sm:py-2 rounded-md min-w-[100px] sm:min-w-[120px] text-[10px] sm:text-xs', 
                          currentSegmentIndex === idx ? 'bg-pink-500 text-white' : (idx < currentSegmentIndex ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600')]">
-                  <div class="font-medium">{{ idx + 1 }}. {{ seg.selectedFrom?.code || seg.origin }} → {{ seg.selectedTo?.code || seg.destination }}</div>
+                  <div class="font-bold sm:font-medium">{{ idx + 1 }}. {{ seg.selectedFrom?.code || seg.origin }} → {{ seg.selectedTo?.code || seg.destination }}</div>
                 </div>
-                <div v-if="idx < multiSegments.length - 1" class="w-4 h-px bg-gray-300 mx-2 shrink-0"></div>
+                <div v-if="idx < multiSegments.length - 1" class="w-2 sm:w-4 h-px bg-gray-300 mx-1 sm:mx-2 shrink-0"></div>
               </div>
             </template>
           </div>
         </div>
         
         <!-- Trip Type and Edit Button -->
-        <div class="flex items-center justify-between ">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <!-- Left Content -->
-          <div class="min-w-0 space-y-1 ">
+          <div class="min-w-0 space-y-1">
             <!-- Top Row -->
-            <div class="flex flex-wrap items-center gap-2 mb-1 text-[9px] font-semibold ">
+            <div class="flex flex-wrap items-center gap-2 mb-1 text-[8px] sm:text-[9px] font-semibold">
               <span
-                class="rounded-full px-2 py-0.5 "
+                class="rounded-full px-2 py-0.5"
                 :class="isMultiCity 
                   ? 'bg-blue-100 text-blue-700' 
                   : (isRoundTrip ? 'bg-pink-100 text-pink-700' : 'bg-green-100 text-gray-700')"
@@ -470,28 +477,28 @@
                 {{ isMultiCity ? 'MULTI CITY' : (isRoundTrip ? 'ROUND TRIP' : 'ONE WAY') }}
               </span>
 
-              <span class="rounded-full bg-green-100 px-2 py-0.5  text-gray-700">
+              <span class="rounded-full bg-green-100 px-2 py-0.5 text-gray-700 whitespace-nowrap">
                 {{ formatDateShort(phaseRouteInfo.date) }}
               </span>
 
-              <span class="rounded-full bg-green-100 px-2 py-0.5 text-gray-700">
+              <span class="rounded-full bg-green-100 px-2 py-0.5 text-gray-700 whitespace-nowrap">
                 {{ Number(route.query.adults) + Number(route.query.children) }} Travelers
               </span>
 
               <span
                 v-if="selectionPhase === 'return' && hasOutboundSelected"
-                class="rounded-full bg-green-100 px-2 py-0.5  font-medium text-green-700"
+                class="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-700 whitespace-nowrap"
               >
                 ✓ Outbound Selected
               </span>
             </div>
 
             <!-- Route Line -->
-            <div class="truncate text-xs  text-gray-400 flex flex-col ">
-              <span class="text-[9px]">
+            <div class="truncate text-gray-400 flex flex-col">
+              <span class="text-[8px] sm:text-[9px]">
                     {{ selectionPhase === 'outbound' ? 'Departing:' : 'Returning:' }}
               </span>
-              <span class="font-bold text-2xl text-black">
+              <span class="font-black text-lg sm:text-2xl text-black truncate">
                 {{ phaseRouteInfo.origin }} → {{ phaseRouteInfo.destination }}
               </span>
             </div>
@@ -500,14 +507,15 @@
           <!-- Edit Button -->
           <button
             @click="initializeEditSearch"
-            class="inline-flex shrink-0 items-center gap-1.5 rounded border bg-[#FF579A] border-gray-300 px-5 py-1 text-lg font-medium text-white hover:bg-[#FF579A]/80 cursor-pointer transition"
+            class="inline-flex shrink-0 items-center justify-center gap-1.5 rounded border bg-[#FF579A] border-gray-300 px-3 sm:px-5 py-1.5 sm:py-1 text-sm sm:text-lg font-medium text-white hover:bg-[#FF579A]/80 cursor-pointer transition active:scale-95"
           >
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
               />
             </svg>
-            Edit Search
+            <span class="hidden xs:inline">Edit Search</span>
+            <span class="xs:hidden">Edit</span>
           </button>
         </div>
         
@@ -527,96 +535,53 @@
         
         <!-- Selected Flights Summary (Mobile Only) -->
         <div v-if="selectedFlightsSummary.length > 0" class="mt-6 pt-6 border-t border-gray-100 lg:hidden">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Your Selection</h3>
-          <div class="space-y-4">
-            <div v-for="item in selectedFlightsSummary" :key="item.type" 
-              class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <div class="flex justify-between items-center mb-3">
-                <span class="text-[10px] font-black text-pink-600 uppercase tracking-widest">{{ item.type }}</span>
-                <span class="text-[10px] font-bold text-gray-500">{{ item.flight }} • {{ item.aircraft }}</span>
-              </div>
-              
-              <div class="flex justify-between items-center">
-                <div class="space-y-1">
-                  <div class="text-sm font-black text-gray-800">{{ item.route }}</div>
-                  <div class="text-xs text-gray-500">{{ item.time }} • {{ item.date }}</div>
-                  <div class="text-[10px] font-bold" :class="item.stops > 0 ? 'text-orange-500' : 'text-green-600'">
-                    {{ item.stops === 0 ? 'Non-stop' : `${item.stops} Stop${item.stops > 1 ? 's' : ''}` }} • {{ item.duration }}
-                  </div>
-                  <div v-if="item.selected_seat_class" class="inline-block mt-1 px-1.5 py-0.5 bg-pink-100 text-pink-700 rounded text-[9px] font-bold uppercase">
-                    {{ item.selected_seat_class }}
-                  </div>
-                  
-                  <!-- Layovers -->
-                  <div v-if="item.layovers.length > 0" class="mt-2 space-y-1">
-                    <div v-for="(layover, idx) in item.layovers" :key="idx" class="text-[9px] text-orange-600 font-bold">
-                       Stop {{ idx + 1 }}: {{ layover.airport }} ({{ layover.duration }})
-                    </div>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div class="text-lg font-black text-pink-600">₱{{ item.price }}</div>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Total Price for Round Trips -->
-            <div v-if="isRoundTrip && selectedFlightsSummary.length > 1" 
-              class="flex justify-between items-center pt-4 mt-4 border-t border-gray-200">
-              <div class="font-semibold text-gray-900">Total:</div>
-              <div class="text-xl font-bold text-pink-500">₱{{ totalPrice.toLocaleString() }}</div>
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-black text-gray-900 uppercase tracking-tighter">Your Selection</h3>
+            <div v-if="isRoundTrip && selectedFlightsSummary.length > 1" class="text-sm font-black text-pink-500">
+               ₱{{ totalPrice.toLocaleString() }}
             </div>
           </div>
           
-          <!-- Progress Indicators for Round Trips -->
-          <div v-if="isRoundTrip" class="mt-4">
-            <div v-if="!hasOutboundSelected" class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div class="flex items-center text-yellow-700">
-                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                </svg>
-                <span class="font-medium">Select your outbound flight to continue</span>
-              </div>
-            </div>
-            
-            <div v-else-if="!hasReturnSelected && selectionPhase === 'outbound'" class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div class="flex items-center text-blue-700">
-                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                </svg>
-                <span class="font-medium">Outbound flight selected! Click "Continue to Return Flight" above</span>
+          <div class="space-y-3">
+            <div v-for="item in selectedFlightsSummary" :key="item.type" 
+              class="bg-white rounded-xl p-3 border border-pink-100 shadow-sm relative overflow-hidden">
+              <div class="flex justify-between items-start">
+                <div class="space-y-1 flex-1">
+                  <div class="flex items-center gap-2">
+                    <span class="text-[8px] font-black px-1.5 py-0.5 bg-pink-500 text-white rounded uppercase tracking-widest">{{ item.type }}</span>
+                    <span class="text-[10px] font-bold text-gray-800">{{ item.origin }} → {{ item.destination }}</span>
+                  </div>
+                  <div class="flex items-center gap-3 text-[9px] text-gray-500 font-bold">
+                    <span>{{ item.time }}</span>
+                    <span>•</span>
+                    <span>{{ item.date }}</span>
+                    <span>•</span>
+                    <span :class="item.stops > 0 ? 'text-orange-500' : 'text-green-600'">{{ item.stops === 0 ? 'Non-stop' : `${item.stops} Stop` }}</span>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-xs font-black text-gray-900">₱{{ item.price }}</div>
+                  <div v-if="item.selected_seat_class" class="text-[8px] font-bold text-pink-500 uppercase">{{ item.selected_seat_class }}</div>
+                </div>
               </div>
             </div>
           </div>
           
           <!-- Phase Navigation (Round Trips Only) -->
-          <div v-if="isRoundTrip" class="mt-6 flex flex-wrap gap-3">
+          <div v-if="isRoundTrip" class="mt-6 flex flex-wrap gap-2">
             <button v-if="selectionPhase === 'return'" @click="goBackToOutbound" 
-              class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors text-sm">
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Back to Outbound Flight
+              class="flex-1 inline-flex justify-center items-center px-4 py-2 bg-gray-100 rounded-lg text-gray-700 hover:bg-gray-200 transition-colors text-[10px] font-black uppercase tracking-widest">
+              Back to Outbound
             </button>
-            
-            <!-- Show "Continue to Return Flight" only when outbound is selected AND we're in outbound phase -->
             <button v-if="selectionPhase === 'outbound' && hasOutboundSelected && !hasReturnSelected" 
               @click="goToReturnPhase" 
-              class="inline-flex items-center px-4 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-600 transition-colors text-sm">
-              Continue to Return Flight
-              <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
+              class="flex-1 inline-flex justify-center items-center px-4 py-2 bg-[#FF579A] text-white rounded-lg hover:bg-[#FF579A]/90 transition-colors text-[10px] font-black uppercase tracking-widest">
+              Choose Return
             </button>
-            
-            <!-- Show "Proceed to Passenger Details" when both flights are selected -->
             <button v-if="hasOutboundSelected && hasReturnSelected" 
               @click="proceedToPassengerDetails"
-              class="inline-flex items-center px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-sm">
-              Proceed to Passenger Details
-              <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
+              class="flex-1 inline-flex justify-center items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-[10px] font-black uppercase tracking-widest">
+              Confirm & Continue
             </button>
           </div>
         </div>
@@ -802,27 +767,32 @@
               </div>
               
               <!-- Quick Sort Tabs -->
-              <div class="bg-white rounded-lg border border-gray-200 p-1 flex shadow-sm mb-4">
+              <div class="grid grid-cols-3 gap-2 bg-gray-100 p-1 rounded-2xl shadow-inner mb-6">
                 <button 
                   v-for="tab in quickSortTabs" 
                   :key="tab.value"
                   @click="setQuickSort(tab.value)"
                   :class="[
-                    'flex-1 py-3 px-4 text-center rounded-md text-sm font-medium transition-colors relative',
+                    'flex-1 py-3 px-2 rounded-xl transition-all duration-300 group relative overflow-hidden',
                     filters.sortBy === tab.value 
-                      ? 'bg-pink-50 text-pink-700 shadow-sm' 
-                      : 'text-gray-600 hover:bg-gray-50'
+                      ? 'bg-white text-pink-600 shadow-md ring-1 ring-pink-100' 
+                      : 'text-gray-500 hover:bg-white/50 hover:text-gray-800'
                   ]"
                 >
-                  <div class="flex flex-col items-center gap-1">
-                    <span class="uppercase tracking-wider text-[10px] font-bold">{{ tab.label }}</span>
-                    <span v-if="tab.price" class="text-lg font-black" :class="filters.sortBy === tab.value ? 'text-pink-600' : 'text-gray-800'">
+                  <div class="flex flex-col items-center justify-center space-y-1 relative z-10">
+                    <div class="flex items-center gap-1.5">
+                      <svg v-if="tab.label === 'Cheapest'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <svg v-if="tab.label === 'Best'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-7.714 2.143L11 21l-2.286-6.857L1 12l7.714-2.143L11 3z" /></svg>
+                      <svg v-if="tab.label === 'Quickest'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                      <span class="uppercase tracking-tighter text-[9px] font-black">{{ tab.label }}</span>
+                    </div>
+                    <div v-if="tab.price" class="text-xs sm:text-base font-black leading-none" :class="filters.sortBy === tab.value ? 'text-pink-600' : 'text-gray-900'">
                       ₱{{ Number(tab.price).toLocaleString() }}
-                    </span>
-                    <span v-if="tab.duration" class="text-xs text-gray-500">{{ tab.duration }}</span>
+                    </div>
+                    <div v-if="tab.duration" class="text-[8px] sm:text-[9px] font-bold text-gray-400 opacity-80">{{ tab.duration }} avg.</div>
                   </div>
-                  <!-- Selection Indicator -->
-                  <div v-if="filters.sortBy === tab.value" class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-pink-500 rounded-t-md"></div>
+                  <!-- Selection Glow -->
+                  <div v-if="filters.sortBy === tab.value" class="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-transparent"></div>
                 </button>
               </div>
             </div>
@@ -856,140 +826,63 @@
           </div>
         </main>
 
-        <!-- Right Sidebar for Selection Summary (Desktop Only) -->
-        <aside v-if="selectedFlightsSummary.length > 0" class="w-full lg:w-[320px] shrink-0 sticky top-8 z-10 hidden lg:block">
-           <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">Your Selection</h3>
-              <div class="space-y-4">
+        <!-- Right Sidebar (Desktop Select Summary) -->
+        <aside v-if="selectedFlightsSummary.length > 0" class="w-full lg:w-[280px] shrink-0 sticky top-8 z-10 hidden lg:block">
+           <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+              <div class="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+                 <h3 class="text-xs font-black text-gray-900 uppercase tracking-tighter">Your Itinerary</h3>
+                 <div v-if="selectedFlightsSummary.length > 1" class="text-xs font-black text-[#FF579A]">₱{{ totalPrice.toLocaleString() }}</div>
+              </div>
+              
+              <div class="p-4 space-y-4">
                 <div v-for="item in selectedFlightsSummary" :key="item.type" 
-                  class="bg-gray-50 rounded-lg p-5 border border-gray-200">
-                  <div class="flex justify-between items-center mb-4">
-                    <span class="text-xs font-black text-pink-600 uppercase tracking-widest">{{ item.type }}</span>
-                    <div class="px-2 py-0.5 bg-gray-200 text-gray-700 text-[9px] font-bold rounded uppercase">
-                      {{ item.flight }}
-                    </div>
+                  class="bg-white rounded-xl p-4 border border-gray-100 relative group transition-colors hover:border-pink-200">
+                  <div class="flex justify-between items-center mb-3">
+                    <span class="text-[8px] font-black px-1.5 py-0.5 bg-pink-500 text-white rounded uppercase tracking-widest">{{ item.type }}</span>
+                    <span class="text-[9px] font-bold text-gray-400 uppercase">{{ item.flight }}</span>
                   </div>
 
-                  <!-- Route & Logistics -->
                   <div class="space-y-3">
-                    <div class="flex items-center gap-3">
-                      <div class="flex flex-col items-center gap-1">
-                        <div class="text-lg font-black text-gray-900 leading-none">{{ item.origin }}</div>
-                        <div class="text-[9px] text-gray-500 font-bold uppercase truncate max-w-[60px]">{{ item.origin_city }}</div>
-                      </div>
+                    <div class="flex items-center justify-between">
+                      <div class="text-sm font-black text-gray-900">{{ item.origin }}</div>
                       <div class="flex-1 flex flex-col items-center px-2">
-                        <div class="w-full border-t-2 border-dashed border-gray-300 relative my-2">
-                          <div class="absolute -top-1.5 left-1/2 -translate-x-1/2 bg-gray-50 px-1">
-                            <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                            </svg>
-                          </div>
+                        <div class="w-full border-t border-dashed border-gray-200 relative my-1">
+                          <svg class="w-2.5 h-2.5 text-pink-300 absolute -top-1.5 left-1/2 -translate-x-1/2" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
                         </div>
-                        <div class="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">{{ item.duration }}</div>
                       </div>
-                      <div class="flex flex-col items-center gap-1">
-                        <div class="text-lg font-black text-gray-900 leading-none">{{ item.destination }}</div>
-                        <div class="text-[9px] text-gray-500 font-bold uppercase truncate max-w-[60px]">{{ item.destination_city }}</div>
-                      </div>
+                      <div class="text-sm font-black text-gray-900">{{ item.destination }}</div>
                     </div>
 
-                    <!-- Time & Aircraft Info -->
-                    <div class="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100">
-                      <div>
-                        <div class="text-[9px] font-bold text-gray-400 uppercase">Departure</div>
-                        <div class="text-xs font-black text-gray-800">{{ item.time }}</div>
-                        <div class="text-[9px] text-gray-500">{{ item.date }}</div>
-                      </div>
-                      <div class="text-right">
-                        <div class="text-[9px] font-bold text-gray-400 uppercase">Stops</div>
-                        <div class="text-xs font-black" :class="item.stops > 0 ? 'text-orange-500' : 'text-green-600'">
-                          {{ item.stops === 0 ? 'Non-stop' : `${item.stops} Stop${item.stops > 1 ? 's' : ''}` }}
-                        </div>
-                        <div class="text-[9px] text-gray-500 italic">{{ item.aircraft }}</div>
-                      </div>
-                    </div>
-
-                    <!-- Layovers Detail (if any) -->
-                    <div v-if="item.layovers.length > 0" class="pt-3 border-t border-gray-100 space-y-2">
-                       <div v-for="(layover, idx) in item.layovers" :key="idx" class="flex items-start gap-2">
-                          <div class="w-1.5 h-1.5 rounded-full bg-orange-400 mt-1"></div>
-                          <div class="flex-1">
-                             <div class="text-[10px] font-bold text-gray-700">Stop {{ idx + 1 }}: {{ layover.airport }} ({{ layover.city }})</div>
-                             <div class="text-[9px] text-gray-400 font-medium">Layover: {{ layover.duration }}</div>
-                          </div>
-                       </div>
-                    </div>
-
-                    <!-- Seat Class & Price -->
-                    <div v-if="item.selected_seat_class" class="flex justify-between items-end pt-3 mt-1">
+                    <div class="flex justify-between items-end border-t border-gray-50 pt-2">
                       <div class="space-y-0.5">
-                        <div class="text-[9px] font-bold text-gray-400 uppercase">Class</div>
-                        <div class="inline-flex items-center px-1.5 py-0.5 bg-pink-100 text-pink-700 rounded text-[9px] font-bold">
-                          {{ item.selected_seat_class }}
-                        </div>
+                        <div class="text-[10px] font-black text-gray-900 leading-none">{{ item.time }}</div>
+                        <div class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">{{ item.date }}</div>
                       </div>
                       <div class="text-right">
-                        <div class="text-lg font-black text-pink-600">₱{{ item.price }}</div>
+                        <div class="text-[10px] font-black text-pink-600">₱{{ item.price }}</div>
+                        <div v-if="item.selected_seat_class" class="text-[8px] font-bold text-gray-400 uppercase italic">{{ item.selected_seat_class }}</div>
                       </div>
                     </div>
                   </div>
                 </div>
-                
-                <!-- Total Price for Round Trips -->
-                <div v-if="isRoundTrip && selectedFlightsSummary.length > 1" 
-                  class="flex justify-between items-center pt-4 mt-4 border-t border-gray-200">
-                  <div class="font-bold text-gray-900 uppercase tracking-widest text-xs">Total Amount:</div>
-                  <div class="text-2xl font-black text-pink-600">₱{{ totalPrice.toLocaleString() }}</div>
-                </div>
               </div>
               
-              <!-- Progress Indicators for Round Trips -->
-              <div v-if="isRoundTrip" class="mt-6">
-                <div v-if="!hasOutboundSelected" class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg shadow-sm">
-                  <div class="flex items-start text-yellow-700 gap-3">
-                    <svg class="w-5 h-5 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                    </svg>
-                    <span class="font-bold text-sm">Select your outbound flight to continue</span>
-                  </div>
-                </div>
-                
-                <div v-else-if="!hasReturnSelected && selectionPhase === 'outbound'" class="p-4 bg-blue-50 border border-blue-200 rounded-lg shadow-sm">
-                  <div class="flex items-start text-blue-700 gap-3">
-                    <svg class="w-5 h-5 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                    </svg>
-                    <span class="font-bold text-sm">Outbound flight selected! Click "Continue to Return Flight" below</span>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Phase Navigation (Round Trips Only) -->
-              <div v-if="isRoundTrip" class="mt-6 flex flex-col gap-3">
-                <button v-if="selectionPhase === 'return'" @click="goBackToOutbound" 
-                  class="w-full inline-flex justify-center items-center px-4 py-2 border-2 border-gray-200 rounded-md text-gray-600 hover:bg-gray-100 transition-colors text-sm font-bold shadow-sm active:scale-95">
-                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                  </svg>
-                  Back to Outbound
+              <div v-if="isRoundTrip" class="px-4 pb-4 space-y-3">
+                <button v-if="selectionPhase === 'return' || hasReturnSelected" @click="goBackToOutbound" 
+                  class="w-full py-2 bg-gray-50 border border-gray-100 rounded-xl text-gray-500 hover:bg-gray-100 transition-all text-[10px] font-black uppercase tracking-widest">
+                  Modify Outbound
                 </button>
                 
                 <button v-if="selectionPhase === 'outbound' && hasOutboundSelected && !hasReturnSelected" 
                   @click="goToReturnPhase" 
-                  class="w-full inline-flex justify-center items-center px-4 py-3 bg-pink-500 text-white rounded-md hover:bg-pink-600 transition-colors text-sm font-black shadow-md shadow-pink-200 active:scale-95">
-                  Continue to Return
-                  <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
+                  class="w-full py-3 bg-[#FF579A] text-white rounded-xl hover:bg-[#FF579A]/90 transition-all text-[10px] font-black uppercase tracking-widest shadow-lg shadow-pink-100">
+                  Select Return Flight
                 </button>
                 
                 <button v-if="hasOutboundSelected && hasReturnSelected" 
                   @click="proceedToPassengerDetails"
-                  class="w-full inline-flex justify-center items-center px-4 py-3 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-sm font-black shadow-lg shadow-green-200 active:scale-95">
-                  Proceed to Passenger Details
-                  <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
+                  class="w-full py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all text-[10px] font-black uppercase tracking-widest shadow-lg shadow-green-100">
+                  Checkout Now
                 </button>
               </div>
            </div>
@@ -1365,37 +1258,95 @@ const formatPrice = (flight) => {
   };
 };
 
+// Markups for different fare families
+const BUNDLE_MARKUPS = {
+  'basic': 0,           // Legacy fallback
+  'super_saver': 0,     // PAL Super Saver / budget basic
+  'saver': 1000,        // PAL Saver
+  'value': 2200,        // PAL Value
+  'standard': 2000,     // General standard
+  'flex': 4500,         // PAL Flex / high flexibility
+  'comfort': 6500,      // PAL Comfort
+  'premium': 6000,      // General premium
+  'business': 12000,    // General business
+  'business_value': 12000, // PAL Business Value
+  'business_flex': 18000   // PAL Business Flex
+};
+
 // Calculate price with selected seat class
 const calculateSeatClassPrice = (basePrice, className, flight = null, fareFamily = 'basic') => {
   let price = 0;
   
-  // Use ML predicted seat class prices if available
-  if (flight && flight.seat_class_prices && flight.seat_class_prices[className.toLowerCase()]) {
-    price = flight.seat_class_prices[className.toLowerCase()];
-  } else {
-    // Fallback to multipliers
-    const priceMultipliers = {
-      'economy': 1.0,
-      'business': 1.8,
-      'first': 2.5,
-      'premium_economy': 1.3,
-      'first_class': 2.5,
-      'business_class': 1.8
-    };
-    
-    const key = className.toLowerCase().replace(' ', '_');
-    const multiplier = priceMultipliers[key] || 1.0;
-    price = Math.round(basePrice * multiplier);
+  // 1. First priority: Check if we have dynamic seat class data with a multiplier
+  if (flight && Array.isArray(flight.available_seat_classes)) {
+    const sc = flight.available_seat_classes.find(s => 
+      s.name.toLowerCase() === className.toLowerCase() || 
+      normalizeClassKey(s.name, flight.airline_code) === normalizeClassKey(className, flight.airline_code)
+    );
+    if (sc && sc.price_multiplier) {
+      price = Math.round(basePrice * Number(sc.price_multiplier));
+      // If we found a direct match with a multiplier, we can skip the next steps
+    }
   }
 
-  // Add Fare Family markup based on the bundle tier
-  if (fareFamily === 'standard') {
-    price += 1200;
-  } else if (fareFamily === 'premium' || fareFamily === 'flex') {
-    price += 2500;
+  // 2. Second priority: ML predicted seat class prices (if not already set)
+  if (price === 0) {
+    if (flight && flight.seat_class_prices && flight.seat_class_prices[className.toLowerCase()]) {
+      price = flight.seat_class_prices[className.toLowerCase()];
+    } else {
+      // 3. Fallback: Hardcoded multipliers
+      const priceMultipliers = {
+        'economy': 1.0,
+        'business': 1.8,
+        'first': 2.5,
+        'premium_economy': 1.4,
+        'comfort_class': 1.2,
+        'first_class': 2.5,
+        'business_class': 1.8,
+      };
+      
+      const key = normalizeClassKey(className, flight?.airline_code);
+      const multiplier = priceMultipliers[key] || 1.0;
+      price = Math.round(basePrice * multiplier);
+    }
+  }
+
+  // Add Fare Family markup
+  const markup = BUNDLE_MARKUPS[fareFamily] || 0;
+  price += markup;
+
+  // NEW: Trip Type Pricing Logic - 10% discount for Round-Trip on budget carriers
+  if (isRoundTrip.value && (flight?.airline_code === '5J' || flight?.airline_code === 'Z2')) {
+    price = Math.round(price * 0.9);
   }
 
   return price;
+};
+
+// Helper to normalize seat class names into standardized keys
+const normalizeClassKey = (name, airlineCode = null) => {
+  if (!name) return 'unknown';
+  let key = name.toLowerCase().replace(' ', '_');
+  
+  // Standard CABIN class normalization
+  if (key.includes('economy') && !key.includes('premium')) return 'economy';
+  // Standardize Business Class (including PAL's Mabuhay Class)
+  if (key.includes('business') || key.includes('mabuhay')) return 'business';
+  if (key.includes('first') && !key.includes('class')) return 'first';
+  
+  // BRANDED Cabin Normalization: 
+  // ONLY use comfort_class if explicitly named 'comfort' or 'comfort_class'
+  if (key.includes('comfort')) {
+    return 'comfort_class';
+  }
+  
+  // Standard Premium Economy
+  if (key.includes('premium') && key.includes('economy')) return 'premium_economy';
+  
+  // Any other "Premium" class should have its own unique key to avoid de-duplication merging
+  if (key.includes('premium')) return key;
+  
+  return key;
 };
 
 // =================================================
@@ -1405,30 +1356,56 @@ const updateSeatClassFilterOptions = () => {
   // Start with default "All Classes" option
   const seatClassOptions = [{ value: 'all', label: 'All Classes' }];
   
-  // Add seat classes from loaded features
-  if (Object.keys(seatClassFeatures.value).length > 0) {
-    Object.keys(seatClassFeatures.value).forEach(className => {
-      const formattedName = className.split('_').map(word => 
-        word.charAt(0).toUpperCase() + word.slice(1)
-      ).join(' ');
+  // Collect all unique classes from the actual flight results
+  const classesInResults = new Set();
+  flights.value.forEach(f => {
+    // Collect from all possible sources
+    const classes = [
+      ...(f.available_seat_classes || []).map(sc => sc.name),
+      ...(f.available_classes || []),
+      ...(f.seat_classes || []).map(sc => typeof sc === 'string' ? sc : (sc.name || sc.class_name || sc.value))
+    ];
+
+    classes.forEach(name => {
+      if (!name) return;
+      const key = normalizeClassKey(name, f.airline_code);
+      classesInResults.add(key);
+    });
+  });
+
+  // Always at least include what's in the results
+  if (classesInResults.size > 0) {
+    // Sort keys to maintain consistent order (Economy, Comfort, Business)
+    const orderPriority = ['economy', 'premium_economy', 'comfort_class', 'business', 'first'];
+    const sortedKeys = Array.from(classesInResults).sort((a, b) => {
+      const posA = orderPriority.indexOf(a) !== -1 ? orderPriority.indexOf(a) : 99;
+      const posB = orderPriority.indexOf(b) !== -1 ? orderPriority.indexOf(b) : 99;
+      return posA - posB;
+    });
+
+    sortedKeys.forEach(key => {
+      const label = key === 'economy' ? 'Economy' : 
+                    key === 'business' ? 'Business' : 
+                    key === 'comfort_class' ? 'Comfort Class' : 
+                    key === 'premium_economy' ? 'Premium Economy' : 
+                    key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
       
-      seatClassOptions.push({
-        value: className,
-        label: formattedName
-      });
+      seatClassOptions.push({ value: key, label });
     });
   } else {
-    // Fallback to default seat classes
+    // Fallback if no flights or results yet
     seatClassOptions.push(
       { value: 'economy', label: 'Economy' },
-      { value: 'business', label: 'Business' },
-      { value: 'first', label: 'First Class' },
-      { value: 'premium_economy', label: 'Premium Economy' }
+      { value: 'comfort_class', label: 'Comfort Class' },
+      { value: 'business', label: 'Business' }
     );
   }
   
   filterOptions.value.seatClasses = seatClassOptions;
 };
+
+// Define the prop value used by the sidebar component
+const availableSeatClassOptions = computed(() => filterOptions.value.seatClasses);
 
 // Use trip type from Pinia store
 const tripType = computed(() => bookingStore.tripType || route.query.tripType);
@@ -1705,119 +1682,339 @@ const showSeatClasses = (flight) => {
 };
 
 // Extract seat classes from flight data
+// 2026 Philippine Airline Fare Families Mapping
+const AIRLINE_FARE_FAMILIES = {
+  'PR': { // Philippine Airlines (2024 Domestic Fare Families)
+    'economy': [
+      { 
+        name: 'Super Saver', 
+        code: 'super_saver', 
+        features: [
+          '7kg Carry-on baggage only', 
+          'No checked baggage included', 
+          '10% Mabuhay Miles', 
+          'Rebooking: ₱2,500 + fare diff', 
+          'Non-refundable'
+        ] 
+      },
+      { 
+        name: 'Saver', 
+        code: 'saver', 
+        features: [
+          '10kg Checked baggage included', 
+          '7kg Carry-on baggage', 
+          '50% Mabuhay Miles', 
+          'Rebooking: ₱2,000 + fare diff', 
+          'Refundable (₱2,500 fee)'
+        ] 
+      },
+      { 
+        name: 'Value', 
+        code: 'value', 
+        features: [
+          '20kg Checked baggage included', 
+          '7kg Carry-on baggage', 
+          '75% Mabuhay Miles', 
+          'Rebooking: ₱1,500 + fare diff', 
+          'Refundable (₱2,000 fee)'
+        ] 
+      },
+      { 
+        name: 'Flex', 
+        code: 'flex', 
+        features: [
+          '20kg Checked baggage included', 
+          '7kg Carry-on baggage', 
+          '100% Mabuhay Miles', 
+          'FREE Rebooking (+ fare diff)', 
+          'FREE Refund'
+        ] 
+      }
+    ],
+    'comfort_class': [
+      { 
+        name: 'Comfort', 
+        code: 'comfort', 
+        features: [
+          '25kg Checked baggage included', 
+          '115% Mabuhay Miles', 
+          'Front cabin / Extra legroom', 
+          'Priority check-in & boarding', 
+          'FREE Rebooking (+ fare diff)', 
+          'Refundable (₱1,000 fee)'
+        ] 
+      }
+    ],
+    'business': [
+      { 
+        name: 'Business Value', 
+        code: 'business_value', 
+        features: [
+          '30kg Checked baggage included', 
+          '125% Mabuhay Miles', 
+          'Mabuhay Lounge access', 
+          'Rebooking: ₱500 + fare diff', 
+          'Refundable (₱1,200 fee)'
+        ] 
+      },
+      { 
+        name: 'Business Flex', 
+        code: 'business_flex', 
+        features: [
+          '35kg Checked baggage included', 
+          '150% Mabuhay Miles', 
+          'Mabuhay Lounge access', 
+          'FREE Rebooking (+ fare diff)', 
+          'FREE Refund'
+        ] 
+      }
+    ]
+  },
+  '5J': { // Cebu Pacific (GO Tiers)
+    'economy': [
+      { 
+        name: 'Go Basic', 
+        code: 'basic', 
+        description: 'Best for light travelers',
+        features: [
+          '7kg Hand-carry (1 piece)', 
+          'No checked baggage included', 
+          'Seat Selection: Extra Fee', 
+          'Flexibility: Change fees apply',
+          'Non-refundable'
+        ] 
+      },
+      { 
+        name: 'Go Easy', 
+        code: 'standard', 
+        description: 'Essential for typical trips',
+        features: [
+          '7kg Hand-carry (1 piece)', 
+          '20kg Checked baggage (1 piece)', 
+          'Standard Seat included', 
+          'Flexibility: Change fees apply',
+          'Non-refundable'
+        ] 
+      },
+      { 
+        name: 'Go Flexi', 
+        code: 'flex', 
+        description: 'Maximum peace of mind',
+        features: [
+          '7kg Hand-carry (1 piece)', 
+          '20kg Checked baggage (1 piece)', 
+          'Standard Seat included', 
+          'NO CHANGE FEES*', 
+          'Refundable to Travel Fund'
+        ] 
+      }
+    ]
+  },
+  'Z2': { // AirAsia Philippines (Weight Concept)
+    'economy': [
+      { 
+        name: 'Low Fare', 
+        code: 'basic', 
+        description: 'Lowest price for minimal travel needs',
+        features: [
+          '7kg Hand-carry only', 
+          'No checked baggage', 
+          'Standard seats at extra fee',
+          'Non-refundable'
+        ] 
+      },
+      { 
+        name: 'Value Pack', 
+        code: 'standard', 
+        description: 'Essential value with baggage and meal',
+        features: [
+          '7kg Hand-carry (1 piece)', 
+          '20kg Checked Baggage (Weight Concept)', 
+          'Standard Seat Selection', 
+          '1 Complimentary Meal',
+          'Non-refundable'
+        ] 
+      },
+      { 
+        name: 'Premium Flex', 
+        code: 'flex', 
+        description: 'Total flexibility and better service',
+        features: [
+          '7kg Hand-carry (1 piece)', 
+          '20kg Checked Baggage (Weight Concept)', 
+          'Premium Seat Selection', 
+          'Xpress Boarding & Baggage',
+          'UNLIMITED FLIGHT CHANGES*',
+          'Subject to AirAsia Refund Policy'
+        ] 
+      }
+    ]
+  },
+  'T6': { // AirSwift
+    'economy': [
+      { name: 'Promo/Basic', code: 'basic', features: ['7kg Hand-carry', 'Strict rebooking'] },
+      { name: 'Value', code: 'standard', features: ['7kg Hand-carry', '10kg Checked Baggage'] },
+      { name: 'Premium', code: 'premium', features: ['7kg Hand-carry', '20kg Checked Baggage', 'Free rebooking (fees apply)'] }
+    ]
+  }
+};
+
 const extractSeatClassesFromFlight = (flight) => {
   if (!flight) return [];
+  
+  // Deriving the airline primarily from the flight number prefix to ensure accuracy
+  const flightNumber = flight.flight_number || '';
+  const prefix2 = flightNumber.substring(0, 2).toUpperCase();
+  const prefix3 = flightNumber.substring(0, 3).toUpperCase();
+  const airlineName = (flight.airline_name || '').toLowerCase();
+  
+  let airline = 'Other';
+  if (prefix2 === 'PR' || prefix3 === 'PAL' || airlineName.includes('philippine airlines') || airlineName.includes('pal')) {
+    airline = 'PR';
+  } else if (prefix2 === '5J' || prefix3 === 'CEB' || prefix2 === 'DG' || airlineName.includes('cebu pacific')) {
+    airline = '5J';
+  } else if (prefix2 === 'Z2' || airlineName.includes('airasia')) {
+    airline = 'Z2';
+  } else if (prefix2 === 'T6' || airlineName.includes('airswift')) {
+    airline = 'T6';
+  } else {
+    airline = flight.airline_code || 'Other';
+  }
+                  
+  const isPALDomestic = (airline === 'PR') && (flight.trip_category === 'domestic' || flight.is_domestic);
   
   let rawSeatClasses = [];
   
   // Extract raw seat classes based on available structures
-  if (Array.isArray(flight.available_classes) && flight.available_classes.length > 0) {
+  if (Array.isArray(flight.available_seat_classes) && flight.available_seat_classes.length > 0) {
+    rawSeatClasses = flight.available_seat_classes.map(sc => ({
+      name: sc.name,
+      price_multiplier: sc.price_multiplier,
+      id: sc.class_id
+    }));
+  } else if (Array.isArray(flight.available_classes) && flight.available_classes.length > 0) {
     rawSeatClasses = flight.available_classes.map(name => ({ name }));
   } else if (Array.isArray(flight.seat_classes) && flight.seat_classes.length > 0) {
     rawSeatClasses = flight.seat_classes.map(sc => typeof sc === 'string' ? { name: sc } : sc);
   } else if (Object.keys(seatClassFeatures.value).length > 0) {
     rawSeatClasses = Object.keys(seatClassFeatures.value).map(name => ({ name }));
   } else {
-    rawSeatClasses = [{ name: 'Economy' }, { name: 'Business' }, { name: 'First Class' }];
+    rawSeatClasses = [{ name: 'Economy' }, { name: 'Business' }];
   }
 
   const finalClasses = [];
-
+  const seenClassKeys = new Set();
   rawSeatClasses.forEach(sc => {
-    const className = sc.name || sc.class_name || sc.value || 'Unknown';
-    const isEconomy = className.toLowerCase().includes('economy');
+    let className = sc.name || sc.class_name || sc.value || 'Unknown';
+    
+    // No transformation here anymore, we use the original className from rawSeatClasses
+    
+    let classKey = normalizeClassKey(className, airline);
+    
+    // DE-DUPLICATION: Only process EACH classKey once!
+    if (seenClassKeys.has(classKey)) return;
+    seenClassKeys.add(classKey);
 
-    if (isEconomy) {
-      // Split Economy into Bundles if available from backend
-      const classKey = className.toLowerCase().replace(' ', '_');
-      const backendBundles = fareBundlesData.value[classKey];
+    // Standardize display name for the tab based on branding ONLY if it's standard.
+    // If it's a specific custom class (like 'premium_class' vs 'premium_economy'), keep it!
+    let displayClassName = className;
+    if (classKey === 'economy') displayClassName = 'Economy';
+    else if (classKey === 'business') displayClassName = 'Business';
+    else if (classKey === 'comfort_class') displayClassName = 'Comfort Class';
+    else if (classKey === 'premium_economy') displayClassName = 'Premium Economy';
+    else if (classKey === 'first') displayClassName = 'First Class';
+    // If airline is PR and it's domestic AND classKey is comfort_class, ensure Comfort Class name
+    if (isPALDomestic && classKey === 'comfort_class') displayClassName = 'Comfort Class';
+    // If it's the premium_class key specifically, keep it as Premium Class
+    if (classKey.includes('premium')) displayClassName = className;
 
-      if (backendBundles && backendBundles.length > 0) {
-        // Map backend bundles
-        backendBundles.forEach(bundle => {
+    // LCCs like Cebu Pacific (5J) and AirAsia (Z2) only operate Economy cabins
+    const isStrictLCC = ['5J', 'Z2'].includes(airline);
+    if (isStrictLCC && classKey !== 'economy') {
+      return; 
+    }
+
+    // 1. Check specialized carrier families first (branded dynamic)
+    const specializedFamilies = AIRLINE_FARE_FAMILIES[airline]?.[classKey];
+    
+    // 2. Check API-provided bundles (fully dynamic from DB)
+    const dbBundles = fareBundlesData.value[classKey];
+
+    // Priority: specialized mappings for known airlines (PR, 5J, Z2, T6), then DB
+    const familiesToUse = specializedFamilies || dbBundles;
+
+    if (familiesToUse && familiesToUse.length > 0) {
+      familiesToUse.forEach(bundle => {
+        finalClasses.push({
+          travel_class: displayClassName,
+          name: bundle.name,
+          fare_family: bundle.name.toLowerCase().includes('flex') ? 'flex' : (bundle.code || bundle.type_code || 'standard'),
+          description: bundle.description || getSeatClassDescription(displayClassName),
+          price: calculateSeatClassPrice(flight.price, displayClassName, flight, bundle.code || bundle.type_code || 'standard') + (Number(bundle.markup_fee) || 0),
+          icon: bundle.icon_svg || getSeatClassIcon(displayClassName),
+          features: Array.isArray(bundle.features) ? bundle.features : [],
+          ml_predicted: flight.ml_predicted
+        });
+      });
+    } else {
+      // Fallback: Default bundles for Economy if no specialized or DB rules exist
+      if (classKey.includes('economy')) {
+        const defaultBundles = [
+          { name: 'Saver', code: 'basic', features: ['Hand-carry only'] },
+          { name: 'Standard', code: 'standard', features: ['Hand-carry', '20kg Checked Bag'] },
+          { name: 'Flex', code: 'flex', features: ['Hand-carry', '30kg Checked Bag', 'Free Rebook'] }
+        ];
+        
+        defaultBundles.forEach(bundle => {
           finalClasses.push({
             travel_class: className,
-            name: bundle.name,
-            fare_family: bundle.type_code,
-            description: bundle.description,
-            price: calculateSeatClassPrice(flight.price, className, flight, bundle.type_code) + Number(bundle.markup_fee),
-            icon: bundle.icon_svg || 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
-            features: bundle.features.map(f => f.feature_text),
+            name: `${className} ${bundle.name}`,
+            fare_family: bundle.code,
+            description: getSeatClassDescription(className),
+            price: calculateSeatClassPrice(flight.price, className, flight, bundle.code),
+            icon: getSeatClassIcon(className),
+            features: bundle.features,
             ml_predicted: flight.ml_predicted
           });
         });
       } else {
-        // Fallback to hardcoded bundles if no backend bundles exist
-        
-        // 1. Economy Saver
+        // Standard non-economy class
         finalClasses.push({
           travel_class: className,
-          name: `${className} Saver`,
-          fare_family: 'basic',
-          description: 'Travel light with our most affordable fare. Essential services for your journey.',
-          price: calculateSeatClassPrice(flight.price, className, flight, 'basic'),
-          icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', // Person icon
-          features: [
-            '7kg Carry-on baggage only',
-            'Standard seat (assigned at check-in)',
-            'Non-refundable',
-            'High change fee'
-          ],
-          ml_predicted: flight.ml_predicted
-        });
-
-        // 2. Economy Value
-        finalClasses.push({
-          travel_class: className,
-          name: `${className} Value`,
-          fare_family: 'standard',
-          description: 'The smart choice. Includes checked baggage and free standard seat selection.',
-          price: calculateSeatClassPrice(flight.price, className, flight, 'standard'),
-          icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10', // Box/Baggage icon
-          features: [
-            '7kg Carry-on baggage',
-            '20kg Checked baggage included',
-            'Free Standard Seat selection',
-            'Rebookable with reduced fee',
-            'Priority check-in'
-          ],
-          ml_predicted: flight.ml_predicted
-        });
-        
-        // 3. Economy Flex
-        finalClasses.push({
-          travel_class: className,
-          name: `${className} Flex`,
+          name: className,
           fare_family: 'premium',
-          description: 'Maximum flexibility and comfort. Premium priority perks and fully refundable.',
-          price: calculateSeatClassPrice(flight.price, className, flight, 'premium'),
-          icon: 'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z', // Star icon
-          features: [
-            '7kg Carry-on baggage',
-            '30kg Checked baggage included',
-            'Free Premium Seat selection',
-            'Free cancellations (Refundable)',
-            'No change fee (Fare diff applies)'
-          ],
-          ml_predicted: flight.ml_predicted
+          description: sc.description || getSeatClassDescription(className),
+          price: sc.price || calculateSeatClassPrice(flight.price, className, flight, 'premium'),
+          icon: getSeatClassIcon(className),
+          features: sc.features || getSeatClassFeatures(className),
+          ml_predicted: sc.ml_predicted || flight.ml_predicted
         });
       }
-    } else {
-      // For other classes, use standard mapping
-      finalClasses.push({
-        travel_class: className,
-        name: className,
-        fare_family: 'premium',
-        description: sc.description || getSeatClassDescription(className),
-        price: sc.price || calculateSeatClassPrice(flight.price, className, flight, 'premium'),
-        icon: getSeatClassIcon(className),
-        features: sc.features || getSeatClassFeatures(className),
-        ml_predicted: sc.ml_predicted || flight.ml_predicted
-      });
     }
   });
 
-  return finalClasses;
+  // SORTING ENGINE: Business > Premium/Comfort > Economy
+  const CLASS_RANK = {
+    'business': 100,
+    'comfort': 80,
+    'premium': 70,
+    'economy': 50
+  };
+
+  return finalClasses.sort((a, b) => {
+    const aKey = a.travel_class.toLowerCase();
+    const bKey = b.travel_class.toLowerCase();
+    
+    let aRank = 0;
+    Object.keys(CLASS_RANK).forEach(k => { if (aKey.includes(k)) aRank = Math.max(aRank, CLASS_RANK[k]); });
+    
+    let bRank = 0;
+    Object.keys(CLASS_RANK).forEach(k => { if (bKey.includes(k)) bRank = Math.max(bRank, CLASS_RANK[k]); });
+
+    // Primary sort by rank (descending), secondary by price (ascending)
+    if (bRank !== aRank) return bRank - aRank;
+    return a.price - b.price;
+  });
 };
 
 // Helper function to get seat class description
@@ -1840,12 +2037,27 @@ const getSeatClassDescription = (className) => {
 const getSeatClassIcon = (className) => {
   const icons = {
     'economy': 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
+    'comfort': 'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-7.714 2.143L11 21l-2.286-6.857L1 12l7.714-2.143L11 3z', // Star/Comfort icon
+    'premium': 'M5 13l4 4L19 7M12 19l9 2-9-18-9 18 9-2zm0 0v-8', // Up/Premium icon
     'business': 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
     'first': 'M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7'
   };
   
-  const key = className.toLowerCase().split(' ')[0];
-  return icons[key] || icons.economy;
+  const lowName = className.toLowerCase();
+  if (lowName.includes('comfort')) return icons.comfort;
+  if (lowName.includes('premium')) return icons.premium;
+  if (lowName.includes('business')) return icons.business;
+  if (lowName.includes('first')) return icons.first;
+  return icons.economy;
+};
+
+// Helper function to get seat class color
+const getClassColor = (name) => {
+  if (!name) return '#003870';
+  const n = name.toLowerCase();
+  if (n.includes('business')) return '#7c3aed'; // Purple
+  if (n.includes('premium') || n.includes('comfort')) return '#f59e0b'; // Amber/Gold
+  return '#003870'; // PAL Blue / Default
 };
 
 // Helper function to get seat class features (Dynamically from API or fallback)
@@ -1923,9 +2135,11 @@ const handleInlineSeatClassSelection = ({ flight, seatClass }) => {
     price: seatClass.price,
     original_price: flight.original_price || flight.price,
     base_price: flight.base_price || flight.price,
+    travel_class: travelClass,           // 'Economy', 'Business', etc.
     seat_class: seatClass.name,
     selected_seat_class: seatClass.name,
     fare_family: seatClass.fare_family || 'basic',
+    fare_family_name: seatClass.name,           // Branded bundle name e.g. 'GO Basic', 'Value Pack'
     class_type: fullClassName, // Set the specific bundle as the class type for the backend
     seat_class_details: seatClass,
     seat_class_features: seatClass.features,
@@ -2290,24 +2504,14 @@ const applyFilters = () => {
   
   // Seat class filter
   if (filters.value.seatClass !== 'all') {
+    const targetClass = filters.value.seatClass.toLowerCase();
     result = result.filter(f => {
-      if (f.available_classes && Array.isArray(f.available_classes)) {
-        return f.available_classes.includes(filters.value.seatClass);
-      }
-      
-      if (f.seat_classes && Array.isArray(f.seat_classes)) {
-        return f.seat_classes.some(seatClass => {
-          if (typeof seatClass === 'string') {
-            return seatClass.toLowerCase() === filters.value.seatClass.toLowerCase();
-          } else if (seatClass && typeof seatClass === 'object') {
-            const className = seatClass.name || seatClass.class_name || seatClass.value || '';
-            return className.toLowerCase() === filters.value.seatClass.toLowerCase();
-          }
-          return false;
-        });
-      }
-      
-      return true;
+      const flightClasses = f.available_classes || f.seat_classes || [];
+      return flightClasses.some(sc => {
+        const name = typeof sc === 'string' ? sc : (sc.name || sc.class_name || sc.value || '');
+        const key = normalizeClassKey(name, f.airline_code);
+        return key === targetClass;
+      });
     });
   }
   
@@ -2391,16 +2595,16 @@ const resetDateFilter = async () => {
 
 // Get unique airlines from flights
 const extractAirlines = (flightsList) => {
-  const airlinesSet = new Set();
+  const airlinesMap = new Map();
   flightsList.forEach(flight => {
-    if (flight.airline_code && flight.airline_name) {
-      airlinesSet.add({
+    if (flight.airline_code && flight.airline_name && !airlinesMap.has(flight.airline_code)) {
+      airlinesMap.set(flight.airline_code, {
         code: flight.airline_code,
         name: flight.airline_name
       });
     }
   });
-  return Array.from(airlinesSet);
+  return Array.from(airlinesMap.values());
 };
 
 // Get price range for price slider
@@ -3067,52 +3271,7 @@ const selectButtonText = computed(() => {
   return 'Select Flight';
 });
 
-// Get available seat class options from flights
-const availableSeatClassOptions = computed(() => {
-  // Start with "All Classes"
-  const options = [{ value: 'all', label: 'All Classes' }];
-  
-  // Get unique seat classes from flights
-  const uniqueClasses = new Set();
-  
-  flights.value.forEach(flight => {
-    if (flight.available_classes && Array.isArray(flight.available_classes)) {
-      flight.available_classes.forEach(className => {
-        const key = className.toLowerCase().replace(' ', '_');
-        uniqueClasses.add(key);
-      });
-    }
-    
-    if (flight.seat_classes && Array.isArray(flight.seat_classes)) {
-      flight.seat_classes.forEach(seatClass => {
-        if (typeof seatClass === 'string') {
-          const key = seatClass.toLowerCase().replace(' ', '_');
-          uniqueClasses.add(key);
-        } else if (typeof seatClass === 'object') {
-          const className = seatClass.name || seatClass.class_name || '';
-          if (className) {
-            const key = className.toLowerCase().replace(' ', '_');
-            uniqueClasses.add(key);
-          }
-        }
-      });
-    }
-  });
-  
-  // Convert to options
-  Array.from(uniqueClasses).forEach(className => {
-    const formattedName = className.split('_').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-    
-    options.push({
-      value: className,
-      label: formattedName
-    });
-  });
-  
-  return options;
-});
+
 </script>
 
 

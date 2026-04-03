@@ -149,7 +149,15 @@ const fetchActiveFlights = async () => {
   mapLoading.value = true
   try {
     const res = await api.get('/dashboard/active_flights_map/')
-    activeFlights.value = res.data || []
+    const rawData = res.data || []
+    // Filter to only show flights that are 'On Flight' (In-Air) according to the master schedule
+    activeFlights.value = rawData.filter(flight => {
+      const progress = getFlightProgress(flight)
+      const inTimeWindow = progress > 0 && progress < 1
+      // If the API provides status, we use it as the source of truth
+      // Otherwise we fall back to the live progress window
+      return flight.status === 'On Flight' || (inTimeWindow && (!flight.status || flight.status === 'Open'))
+    })
     if (mapInstance) {
       updateMapMarkers()
     } else {
@@ -325,7 +333,7 @@ const startFlightAnimation = () => {
   if (mapRefreshInterval) clearInterval(mapRefreshInterval)
   
   animationInterval = setInterval(updateMapMarkers, 30000)
-  mapRefreshInterval = setInterval(fetchActiveFlights, 60000)
+  mapRefreshInterval = setInterval(fetchActiveFlights, 20000) // Much faster refresh (20s) for 'Always Updated' feel
 }
 
 const toggleFullScreen = () => {

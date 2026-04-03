@@ -1,78 +1,9 @@
 <template>
   <div class="p-0 m-0">
     <!-- Main Application UI (Hidden during print) -->
-    <div v-if="!isPrinting" class="flex flex-col h-screen bg-gray-50 font-sans">
-      <!-- Header -->
-      <div class="bg-gradient-to-r from-pink-500 to-pink-400 text-white px-6 py-2.5 flex items-center justify-between shadow-sm z-20 border-b border-pink-400">
-        <div class="flex items-center gap-4">
-          <button @click="toggleSidebar" class="p-1.5 hover:bg-pink-600 rounded-md transition-colors focus:outline-none">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
-            </svg>
-          </button>
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-xl shadow-inner">🎓</div>
-          <div>
-            <h1 class="text-[10px] font-bold uppercase tracking-widest text-white/90">Cabagan State University</h1>
-            <p class="text-[9px] uppercase tracking-tighter opacity-60">Faculty Portal</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="relative">
-        <button @click="toggleDropdown" class="flex items-center gap-2 hover:bg-slate-800 p-1.5 rounded-md transition-colors focus:outline-none">
-          <span class="text-xs font-medium">{{ fullName || 'Instructor' }}</span>
-          <div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center overflow-hidden border border-slate-600">
-             <div class="w-full h-full bg-slate-600 rounded-full flex items-center justify-center text-white text-xs font-bold uppercase">{{ initials }}</div>
-          </div>
-        </button>
-        <div v-if="dropdownOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-100">
-          <button @click="handleLogout" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">Logout</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="flex flex-1 overflow-hidden">
-      <!-- Sidebar -->
-      <div :class="['bg-gradient-to-b from-pink-500 to-pink-400 text-white transition-all duration-300 ease-in-out flex flex-col z-10 shadow-lg border-r border-pink-400/20', sidebarOpen ? 'w-56' : 'w-16']">
-        <div class="flex flex-col h-full overflow-y-auto">
-          <button @click="router.push('/instructor/dashboard')" class="flex items-center py-3 hover:bg-pink-600 transition-colors border-b border-pink-400/20 justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-            </svg>
-            <span v-show="sidebarOpen" class="text-sm font-medium ml-3">Home</span>
-          </button>
-
-          <button @click="router.push('/instructor/logs')" class="flex items-center py-3 hover:bg-pink-600 transition-colors border-b border-pink-400/20 justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-            <span v-show="sidebarOpen" class="text-sm font-medium ml-3">Activity Logs</span>
-          </button>
-          <div 
-            v-for="section in sections" 
-            :key="section.id" 
-            @click="goToSection(section.id)" 
-            :class="[
-              'flex items-center py-2.5 hover:bg-pink-600 cursor-pointer transition-colors border-b border-pink-400/10',
-              sidebarOpen ? 'px-5' : 'justify-center'
-            ]"
-          >
-            <div class="w-7 h-7 rounded-full bg-white text-pink-500 flex items-center justify-center font-bold text-[10px] flex-shrink-0 shadow-sm uppercase">
-              {{ section.section_name ? section.section_name.charAt(0) : 'S' }}
-            </div>
-            <span v-show="sidebarOpen" class="ml-3 truncate text-[11px] font-bold tracking-wider uppercase text-white">{{ section.section_name }}</span>
-          </div>
-        </div>
-      </div>
-
+    <div v-if="!isPrinting" class="max-w-7xl mx-auto p-4 lg:p-8">
       <!-- Main Content -->
-      <main class="flex-1 overflow-y-auto bg-[#FDFBF7] p-8" :data-date="new Date().toLocaleDateString()">
-        <div class="max-w-5xl mx-auto">
+      <div class="max-w-5xl mx-auto">
           
           <div class="flex justify-between items-center mb-6">
             <button @click="router.back()" class="flex items-center text-gray-500 hover:text-black font-bold text-sm uppercase">
@@ -509,16 +440,16 @@
                   <table class="w-full text-left border-collapse">
                     <thead class="bg-gray-50 border-b border-gray-100">
                       <tr>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest">Student</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Accuracy</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Tech</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Org</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Comp</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Prof</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest">Grade</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Sub</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Rel</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest print:hidden text-right">Action</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest">STUDENT</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 tracking-widest text-center">Accuracy</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 tracking-widest text-center">Tech Skill</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 tracking-widest text-center">Organization</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 tracking-widest text-center">Completeness</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 tracking-widest text-center">Professionalism</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest">TOTAL GRADE</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">STATUS</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">RELEASED</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest print:hidden text-right">ACTION</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-50">
@@ -531,37 +462,37 @@
                           <span v-if="sub.booking" class="text-[10px] font-bold" :class="getRubricStats(sub).accuracy.ratio > 0 ? 'text-green-600' : 'text-gray-400'">
                             {{ getRubricStats(sub).accuracy.level }}
                           </span>
-                          <span v-else class="text-gray-300">-</span>
+                          <span v-else class="text-gray-300 text-[10px]">—</span>
                         </td>
                         <td class="px-3 py-3 text-center">
                           <span v-if="sub.booking" class="text-[10px] font-bold" :class="getRubricStats(sub).tech.ratio > 0 ? 'text-blue-600' : 'text-gray-400'">
                             {{ getRubricStats(sub).tech.level }}
                           </span>
-                          <span v-else class="text-gray-300">-</span>
+                          <span v-else class="text-gray-300 text-[10px]">—</span>
                         </td>
                         <td class="px-3 py-3 text-center">
                           <span v-if="sub.booking" class="text-[10px] font-bold" :class="getRubricStats(sub).org.ratio > 0 ? 'text-amber-600' : 'text-gray-400'">
                             {{ getRubricStats(sub).org.level }}
                           </span>
-                          <span v-else class="text-gray-300">-</span>
+                          <span v-else class="text-gray-300 text-[10px]">—</span>
                         </td>
                         <td class="px-3 py-3 text-center">
                           <span v-if="sub.booking" class="text-[10px] font-bold" :class="getRubricStats(sub).comp.ratio > 0 ? 'text-pink-600' : 'text-gray-400'">
                             {{ getRubricStats(sub).comp.level }}
                           </span>
-                          <span v-else class="text-gray-300">-</span>
+                          <span v-else class="text-gray-300 text-[10px]">—</span>
                         </td>
                         <td class="px-3 py-3 text-center">
                           <span v-if="sub.booking" class="text-[10px] font-bold" :class="getRubricStats(sub).prof.ratio > 0 ? 'text-purple-600' : 'text-gray-400'">
                             {{ getRubricStats(sub).prof.level }}
                           </span>
-                          <span v-else class="text-gray-300">-</span>
+                          <span v-else class="text-gray-300 text-[10px]">—</span>
                         </td>
-                        <td class="px-3 py-3 text-[11px] font-bold text-gray-700">
+                        <td class="px-3 py-3 text-[11px] font-bold text-pink-500">
                           <span v-if="sub.booking" class="text-pink-500 font-black">
                             {{ Math.round((getRubricStats(sub).total / (activity?.total_points || 100)) * 100) }}%
                           </span>
-                          <span v-else class="text-gray-300">-</span>
+                          <span v-else class="text-gray-300 text-[10px]">—</span>
                         </td>
                         <td class="px-3 py-3 text-center">
                           <span :class="['px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider', getStatusClass(sub.status)]">
@@ -602,8 +533,54 @@
               </button>
             </div>
           </div>
-        </div>
-      </main>
+      </div>
+    </div>
+
+    <!-- Strictly Table-Only Print Layout (Shown only during print) -->
+    <div v-else class="bg-white" style="padding: 0; margin: 0;">
+      <div style="border: 1px solid #e5e7eb; border-radius: 8px; margin: 12px; overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; line-height: 1.2; font-family: Arial, sans-serif; table-layout: fixed;">
+          <colgroup>
+            <col style="width: 22%;">
+            <col style="width: 11%;">
+            <col style="width: 11%;">
+            <col style="width: 12%;">
+            <col style="width: 12%;">
+            <col style="width: 14%;">
+            <col style="width: 11%;">
+          </colgroup>
+          <thead style="background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+            <tr>
+              <th style="padding: 6px 12px; font-size: 9px; font-weight: 900; color: #6b7280; letter-spacing: 0.08em; text-transform: uppercase;">STUDENT</th>
+              <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Accuracy</th>
+              <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Tech Skill</th>
+              <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Organization</th>
+              <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Completeness</th>
+              <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Professionalism</th>
+              <th style="padding: 6px 8px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Total Grade</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="sub in submissions" :key="sub.student_id" style="border-bottom: 1px solid #f3f4f6;">
+              <td style="padding: 3px 12px;">
+                <div style="font-weight: 700; font-size: 10px; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ sub.first_name }} {{ sub.last_name }}</div>
+                <div style="font-size: 8px; color: #9ca3af; white-space: nowrap;">{{ sub.student_number }}</div>
+              </td>
+              <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).accuracy.level + '' : '—' }}</td>
+              <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).tech.level + '' : '—' }}</td>
+              <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).org.level + '' : '—' }}</td>
+              <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).comp.level + '' : '—' }}</td>
+              <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).prof.level + '' : '—' }}</td>
+              <td style="padding: 3px 12px; text-align: center; font-size: 11px; font-weight: 900; color: #ec4899;">
+                <span v-if="sub.booking">
+                  {{ Math.round((getRubricStats(sub).total / (activity?.total_points || 100)) * 100) }}%
+                </span>
+                <span v-else>—</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Success Modal -->
@@ -642,7 +619,7 @@
         <!-- Selection Controls -->
         <div class="px-8 py-4 bg-white border-b border-gray-50 flex items-center justify-between">
           <label class="flex items-center gap-3 cursor-pointer group">
-            <div class="relative flex items-center justify-center w-5 h-5 border-2 border-gray-200 rounded-md group-hover:border-pink-300 transition-colors" :class="isAllSelected ? 'bg-pink-500 border-pink-500' : 'bg-white'">
+            <div class="relative flex items-center justify-center w-5 h-5 border-2 border-gray-200 rounded-md group-hover:border-gray-200 transition-colors" :class="isAllSelected ? 'bg-pink-500 border-pink-500' : 'bg-white'">
               <input type="checkbox" class="absolute inset-0 opacity-0 cursor-pointer" :checked="isAllSelected" @change="toggleSelectAll">
               <svg v-if="isAllSelected" class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4">
                 <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
@@ -659,6 +636,22 @@
             All enrolled students have already received this activity.
           </div>
           <div v-else class="space-y-2">
+            <!-- Time Limit Input -->
+            <div class="mb-6 p-4 bg-white rounded-2xl border border-pink-100 shadow-sm">
+              <label class="block text-[10px] font-black text-pink-500 uppercase tracking-widest mb-2">Activity Time Limit (Minutes)</label>
+              <div class="flex items-center gap-4">
+                <input 
+                  type="number" 
+                  v-model="timeLimit"
+                  min="1"
+                  class="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition-all"
+                  placeholder="Enter minutes..."
+                >
+                <div class="text-[10px] font-bold text-gray-400 uppercase">Minutes</div>
+              </div>
+              <p class="mt-2 text-[9px] text-gray-400 italic">Students will have this much time to complete the activity once they start.</p>
+            </div>
+
             <div 
               v-for="student in eligibleStudents" 
               :key="student.id"
@@ -701,57 +694,10 @@
       </div>
     </div>
   </div>
-
-  <!-- Strictly Table-Only Print Layout (Shown only during print) -->
-  <div v-else class="bg-white" style="padding: 0; margin: 0;">
-    <div style="border: 1px solid #e5e7eb; border-radius: 8px; margin: 12px; overflow: hidden;">
-      <table style="width: 100%; border-collapse: collapse; text-align: left; line-height: 1.2; font-family: Arial, sans-serif; table-layout: fixed;">
-        <colgroup>
-          <col style="width: 22%;">
-          <col style="width: 11%;">
-          <col style="width: 11%;">
-          <col style="width: 12%;">
-          <col style="width: 12%;">
-          <col style="width: 14%;">
-          <col style="width: 11%;">
-        </colgroup>
-        <thead style="background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
-          <tr>
-            <th style="padding: 6px 12px; font-size: 9px; font-weight: 900; color: #6b7280; letter-spacing: 0.08em; text-transform: uppercase;">STUDENT</th>
-            <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Accuracy</th>
-            <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Tech Skill</th>
-            <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Organization</th>
-            <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Completeness</th>
-            <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Professionalism</th>
-            <th style="padding: 6px 8px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Total Grade</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="sub in submissions" :key="sub.student_id" style="border-bottom: 1px solid #f3f4f6;">
-            <td style="padding: 3px 12px;">
-              <div style="font-weight: 700; font-size: 10px; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ sub.first_name }} {{ sub.last_name }}</div>
-              <div style="font-size: 8px; color: #9ca3af; white-space: nowrap;">{{ sub.student_number }}</div>
-            </td>
-            <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).accuracy.level + '' : '-' }}</td>
-            <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).tech.level + '' : '-' }}</td>
-            <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).org.level + '' : '-' }}</td>
-            <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).comp.level + '' : '-' }}</td>
-            <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).prof.level + '' : '-' }}</td>
-            <td style="padding: 3px 12px; text-align: center; font-size: 11px; font-weight: 900; color: #ec4899;">
-              <span v-if="sub.booking">
-                {{ Math.round((getRubricStats(sub).total / (activity?.total_points || 100)) * 100) }}%
-              </span>
-              <span v-else>-</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
 </template>
 
 <script setup>
+import CTHM from '@/assets/image/cthm-logos.png'
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { instructorDashboardService } from '@/services/instructor/instructorDashboardService'
@@ -826,8 +772,6 @@ const getStatusClass = (status) => {
 }
 
 // --- UI State ---
-const sidebarOpen = ref(false) 
-const dropdownOpen = ref(false)
 const showSuccessModal = ref(false)
 const showActivationModal = ref(false)
 const isPrinting = ref(false)
@@ -841,6 +785,7 @@ const releasingGrades = ref(false)
 // Selective Activation State
 const eligibleStudents = ref([])
 const selectedStudentIds = ref([])
+const timeLimit = ref(60) // Default 60 minutes
 const isAllSelected = computed(() => {
   return eligibleStudents.value.length > 0 && selectedStudentIds.value.length === eligibleStudents.value.length
 })
@@ -852,15 +797,6 @@ const activity = ref(null)
 const submissions = ref([])
 
 // --- Computed ---
-const fullName = computed(() => {
-  if (user.value.first_name && user.value.last_name) return `${user.value.first_name} ${user.value.last_name}`
-  return user.value.username || 'Instructor'
-})
-
-const initials = computed(() => {
-  const u = user.value.username || 'I'
-  return u[0]?.toUpperCase() || 'I'
-})
 
 const hasUnreleasedGradedSubmissions = computed(() => {
   return submissions.value.some(sub => sub.grade !== null && !sub.is_released)
@@ -890,17 +826,6 @@ const getPassengerAddons = (passenger) => {
 }
 
 // --- Actions ---
-const toggleSidebar = () => { sidebarOpen.value = !sidebarOpen.value }
-const toggleDropdown = () => { dropdownOpen.value = !dropdownOpen.value }
-
-const goToSection = (id) => {
-  router.push(`/instructor/section/${id}`)
-}
-
-const handleLogout = () => {
-  userStore.logout()
-  router.push('/login')
-}
 
 const fetchData = async () => {
   loading.value = true
@@ -1010,6 +935,10 @@ const toggleSelectAll = () => {
 const openActivationModal = async () => {
   await fetchEligibleStudents()
   selectedStudentIds.value = eligibleStudents.value.map(s => s.id) // Default checked all
+  // Set default time limit from activity if available
+  if (activity.value?.time_limit_minutes) {
+    timeLimit.value = activity.value.time_limit_minutes
+  }
   showActivationModal.value = true
 }
 
@@ -1019,8 +948,8 @@ const confirmActivation = async () => {
   activating.value = true
   
   try {
-    console.log('Confirming activation for students:', selectedStudentIds.value)
-    const res = await activityDetailsService.activateActivity(activity.value.id, selectedStudentIds.value)
+    console.log('Confirming activation for students:', selectedStudentIds.value, 'with time limit:', timeLimit.value)
+    const res = await activityDetailsService.activateActivity(activity.value.id, selectedStudentIds.value, timeLimit.value)
     
     console.log('Activation response:', res)
     

@@ -1,14 +1,48 @@
 <template>
   <div class="p-6 poppins">
-    <!-- Header Section -->
-    <div class="flex justify-between items-center mb-6">
-      <button 
-        @click="openModal()" 
-        class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[14px] rounded-[1px] shadow-sm transition-all"
-      >
-        <i class="ph ph-plus"></i> Add Airport
-      </button>
-    </div>
+    <!-- Header & Tools Section -->
+    <AdminTableTool 
+      v-model="searchQuery" 
+      placeholder="Search airports, codes or city..."
+    >
+      <template #filters>
+        <div class="flex items-center gap-2">
+          <select 
+            v-model="filterType"
+            class="text-[11px] font-bold border border-gray-200 px-3 py-2 bg-white rounded-[1px] outline-none focus:border-[#fe3787] poppins cursor-pointer"
+          >
+            <option value="all">Any Type</option>
+            <option value="domestic">Domestic</option>
+            <option value="international">International</option>
+          </select>
+        </div>
+      </template>
+      <template #actions>
+        <div class="flex items-center gap-2">
+          <button 
+            @click="showImportModal = true" 
+            class="bg-[#002D1E] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#014d33] font-semibold poppins text-[12px] rounded-[1px] shadow-sm transition-all"
+          >
+            <i class="ph ph-file-csv text-[14px]"></i> Import
+          </button>
+          <button 
+            @click="openModal()" 
+            class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[12px] rounded-[1px] shadow-sm transition-all"
+          >
+            <i class="ph ph-plus text-[14px]"></i> Add
+          </button>
+        </div>
+      </template>
+    </AdminTableTool>
+
+    <!-- Import Modal -->
+    <ImportModal 
+      :show="showImportModal" 
+      title="Airports" 
+      model-type="airports" 
+      @close="showImportModal = false"
+      @refresh="fetchAirports"
+    />
 
     <!-- Table Section -->
     <div class="bg-white border border-gray-200 rounded-[1px] overflow-hidden shadow-sm">
@@ -173,16 +207,21 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '@/services/admin/api';
 import { useModalStore } from '@/stores/modal';
+import ImportModal from '@/components/admin/ImportModal.vue';
+import AdminTableTool from '@/components/admin/AdminTableTool.vue';
 
 const modalStore = useModalStore();
 
 // State
 const airports = ref([]);
 const isModalOpen = ref(false);
+const showImportModal = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
 const highlightedId = ref(null);
 const route = useRoute();
+const searchQuery = ref('');
+const filterType = ref('all');
 
 // Pagination State
 const currentPage = ref(1);
@@ -196,14 +235,35 @@ const form = ref({
   airport_type: 'domestic'
 });
 
+// Search & Filter Logic
+const filteredAirports = computed(() => {
+  let result = airports.value;
+  
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase();
+    result = result.filter(a => 
+      a.name.toLowerCase().includes(q) || 
+      a.code.toLowerCase().includes(q) || 
+      a.city.toLowerCase().includes(q) ||
+      (a.country_name && a.country_name.toLowerCase().includes(q))
+    );
+  }
+
+  if (filterType.value !== 'all') {
+    result = result.filter(a => a.airport_type === filterType.value);
+  }
+  
+  return result;
+});
+
 // Pagination Logic
-const totalPages = computed(() => Math.ceil(airports.value.length / itemsPerPage));
+const totalPages = computed(() => Math.ceil(filteredAirports.value.length / itemsPerPage));
 const paginatedAirports = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
-  return airports.value.slice(start, start + itemsPerPage);
+  return filteredAirports.value.slice(start, start + itemsPerPage);
 });
 const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage);
-const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, airports.value.length));
+const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, filteredAirports.value.length));
 
 const visiblePages = computed(() => {
   const pages = [];

@@ -31,57 +31,64 @@
     </div> -->
 
     <!-- TABS - Only show if section exists -->
-    <div v-if="section" class="mx-3 sm:mx-6 mt-4 sm:mt-5 flex items-center justify-between border-b border-gray-200">
+    <div v-if="section" class="mx-3 sm:mx-6 mt-4 sm:mt-5 flex items-center justify-between border-b border-slate-200">
       <div class="flex overflow-x-auto no-scrollbar">
         <button 
           v-for="tab in tabs" 
           :key="tab.name"
           :class="[
-            'px-5 py-2 text-xs font-semibold transition-all uppercase tracking-wide border-b-2 flex-shrink-0',
+            'px-5 py-2 text-[10px] font-black transition-all uppercase tracking-widest border-b-2 flex-shrink-0',
             activeTab === tab.name 
-              ? 'text-[#FF579A] border-[#FF579A]  cursor-pointer' 
-              : 'text-gray-600 border-transparent hover:text-pink-600 cursor-pointer hover:bg-gray-400/30'
+              ? 'text-[#FF579A] border-[#FF579A] cursor-pointer' 
+              : 'text-slate-400 border-transparent hover:text-[#FF579A] cursor-pointer hover:bg-pink-50/50'
           ]"
           @click="activeTab = tab.name"
         >
           {{ tab.label }}
-          <span class="ml-1.5 px-1.5 py-0.5 bg-[#FF579A] text-white rounded-full text-[9px]">
+          <span class="ml-1.5 px-1.5 py-0.5 bg-[#FF579A] text-white rounded-sm text-[8px]">
             {{ getTabCount(tab.name) }}
           </span>
         </button>
       </div>
       
       <!-- Desktop Section Display -->
-      <div class="hidden md:flex items-center gap-2 px-4 py-2 border border-b-0 border-gray-100/50 bg-white rounded-full ml-4">
+      <div class="hidden md:flex items-center gap-2 px-4 py-2 border border-b-0 border-slate-100 bg-white rounded-t-sm ml-4 shadow-sm">
         <div class="w-1.5 h-1.5 rounded-full bg-[#FF579A] animate-pulse"></div>
-        <span class="text-[10px] font-black text-gray-900 uppercase tracking-widest">{{ sectionDisplayName }}</span>
+        <span class="text-[10px] font-black text-[#FF579A] uppercase tracking-widest">{{ sectionDisplayName }}</span>
       </div>
     </div>
 
     <!-- CONTENT AREA -->
     <div :class="[
       'px-4 sm:px-6 py-4 sm:py-6 mx-3 sm:mx-6 mb-4 sm:mb-6',
-      section ? ' rounded-b-lg ' : 'bg-transparent'
+      section ? 'bg-transparent' : 'bg-transparent'
     ]">
+      <!-- Performance Hub (Desktop) -->
+      <PerformanceAnalytics v-if="section && activeTab === 'all'" class="hidden lg:grid" :activities="activities" />
+
       <!-- Content when section exists -->
-      <div v-if="section" class="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6">
+      <div v-if="section" class="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8">
         <!-- Dashboard Toolbar for Mobile -->
-        <div class="lg:hidden grid grid-cols-1 gap-3 mb-2">
+        <div class="lg:hidden grid grid-cols-2 gap-3 mb-6">
           <button 
             @click="showSimulationModal = true"
-            class="w-full bg-[#0F0F0F] text-white py-4 px-6 rounded-2xl shadow-xl shadow-blue-100 font-bold flex items-center justify-between group active:scale-[0.98] transition-all relative overflow-hidden"
+            class="w-full bg-gray-900 text-white py-5 px-6 rounded-sm shadow-xl font-bold flex flex-col items-center justify-center group active:scale-[0.98] transition-all relative overflow-hidden border border-white/10"
           >
-            <div class="absolute right-0 top-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10 blur-xl"></div>
-            <div class="flex items-center gap-3 relative z-10">
-              <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm shadow-inner">
-                <i class="ph ph-terminal-window text-xl"></i>
-              </div>
-              <div class="text-left">
-                <span class="block text-sm font-black uppercase tracking-tight">Start Simulation</span>
-                <span class="block text-[10px] font-medium opacity-70 uppercase tracking-tighter">Training Hub</span>
-              </div>
+            <div class="absolute right-0 top-0 w-16 h-16 bg-white/5 rounded-full -mr-8 -mt-8 blur-xl"></div>
+            <div class="w-10 h-10 bg-white/10 rounded-sm flex items-center justify-center mb-3">
+              <i class="ph ph-terminal-window text-xl"></i>
             </div>
-            <i class="ph ph-caret-right text-white/60 group-hover:translate-x-1 transition-transform relative z-10"></i>
+            <span class="text-[10px] font-black uppercase tracking-widest text-center">Training Hub</span>
+          </button>
+
+          <button 
+            @click="showPerformanceModal = true"
+            class="w-full bg-white text-slate-900 py-5 px-6 rounded-sm shadow-xl font-bold flex flex-col items-center justify-center group active:scale-[0.98] transition-all relative overflow-hidden border border-slate-100"
+          >
+             <div class="w-10 h-10 bg-pink-50 text-[#FF579A] rounded-sm flex items-center justify-center mb-3 border border-pink-100">
+              <i class="ph ph-chart-line-up text-xl"></i>
+            </div>
+            <span class="text-[10px] font-black uppercase tracking-widest text-center">Performance</span>
           </button>
         </div>
 
@@ -93,28 +100,27 @@
           />
 
           <!-- Consolidated Simulation Console Button -->
-          <div class="hidden lg:block bg-[#0F0F0F] rounded-lg p-6 text-white shadow-xl hover:shadow-2xl transition-all relative overflow-hidden group cursor-pointer border border-white/10" @click="showSimulationModal = true">
+          <div class="hidden lg:block bg-gray-900 rounded-sm p-6 text-white shadow-lg transition-all relative overflow-hidden group cursor-pointer border border-white/10" @click="showSimulationModal = true">
             <div class="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
-            <div class="absolute -left-10 -bottom-10 w-24 h-24 bg-blue-400/20 rounded-full blur-2xl"></div>
             
             <div class="relative z-10">
-              <div class="flex items-center gap-3 mb-4">
-                <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md shadow-inner">
-                  <i class="ph ph-terminal-window text-xl"></i>
+              <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 bg-white/10 rounded-sm flex items-center justify-center backdrop-blur-md shadow-inner border border-white/10">
+                  <i class="ph ph-terminal-window text-2xl"></i>
                 </div>
                 <div>
-                  <h3 class="text-sm font-black uppercase tracking-widest poppins leading-none mb-1">Training Hub</h3>
-                  <p class="text-[10px] text-blue-100 font-medium opacity-80 uppercase tracking-tighter">Simulation & Logs</p>
+                  <h3 class="text-xs font-black uppercase tracking-widest poppins leading-none mb-1 text-white">Training Hub</h3>
+                  <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Flight Simulation Console</p>
                 </div>
               </div>
               
 
 
               <button 
-                class="w-full bg-white text-[#0F0F0F] py-3.5 rounded-md text-xs font-black cursor-pointer uppercase tracking-[0.15em] hover:bg-blue-50 transition-all active:scale-[0.97] shadow-lg flex items-center justify-center gap-2 group/btn"
+                class="w-full bg-white text-gray-900 py-4 rounded-sm text-[10px] font-black cursor-pointer uppercase tracking-[0.2em] hover:bg-slate-50 transition-all active:scale-[0.97] shadow-xl flex items-center justify-center gap-3 group/btn border border-transparent"
               >
-                Start Simulation
-                <i class="ph ph-rocket-launch text-lg transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5"></i>
+                Access Portal
+                <i class="ph ph-arrow-square-out text-lg transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5"></i>
               </button>
             </div>
           </div>
@@ -123,16 +129,21 @@
 
         <!-- RIGHT PANEL - Activities -->
         <div class="flex flex-col gap-5">
-          <ActivityCard 
-            v-if="filteredActivities.length > 0"
-            v-for="activity in filteredActivities" 
-            :key="activity.id"
-            :activity="activity"
-            @view="viewActivityDetails"
-            @compare="openComparisonModal"
-          />
-          <div v-else class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-10 text-center">
-            <p class="text-gray-600 font-semibold text-sm">No activities found</p>
+          <TransitionGroup name="list" tag="div" class="space-y-4">
+            <ActivityCard 
+              v-if="filteredActivities.length > 0"
+              v-for="activity in filteredActivities" 
+              :key="activity.id"
+              :activity="activity"
+              @view="viewActivityDetails"
+              @compare="openComparisonModal"
+            />
+          </TransitionGroup>
+          <div v-if="filteredActivities.length === 0" class="bg-white border-2 border-dashed border-slate-200 rounded-sm p-12 text-center shadow-sm">
+            <div class="w-16 h-16 bg-slate-50 rounded-sm flex items-center justify-center mx-auto mb-4 border border-slate-100 text-slate-300 text-2xl">
+              <i class="ph ph-clipboard-text"></i>
+            </div>
+            <p class="text-slate-500 font-black text-[10px] uppercase tracking-widest">No activities found in this category</p>
           </div>
         </div>
       </div>
@@ -149,85 +160,118 @@
     />
 
     <!-- Simulation Console Modal (Mobile Only) -->
-    <div v-if="showSimulationModal" class="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" @click="showSimulationModal = false"></div>
-      
-      <div class="relative w-full max-w-md bg-white rounded-t-[2rem] sm:rounded-2xl shadow-2xl overflow-hidden animate-slide-up sm:animate-fade-in">
-        <!-- Modal Header -->
-        <div class="px-6 py-6 border-b border-gray-100 flex items-center justify-between bg-white relative overflow-hidden">
-          <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-          <div class="relative z-10">
-            <h3 class="text-lg font-black text-gray-900 poppins uppercase tracking-tight">Simulation Console</h3>
-            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Aviation Training Environment</p>
-          </div>
-          <button @click="showSimulationModal = false" class="relative z-10 w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
-            <i class="ph ph-x text-xl"></i>
-          </button>
+    <Transition name="fade">
+      <div v-if="showSimulationModal" class="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" @click="showSimulationModal = false"></div>
+        
+        <Transition name="slide-up">
+          <div v-if="showSimulationModal" class="relative w-full max-w-md bg-white rounded-t-xl sm:rounded-sm shadow-2xl overflow-hidden">
+            <!-- Modal Header -->
+            <div class="px-6 py-6 border-b border-white/10 flex items-center justify-between bg-gray-900 relative overflow-hidden">
+              <div class="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+              <div class="relative z-10">
+                <h3 class="text-lg font-black text-white poppins uppercase tracking-tight">Simulation Console</h3>
+                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Unified Training Environment</p>
+              </div>
+              <button @click="showSimulationModal = false" class="relative z-10 w-10 h-10 rounded-sm bg-white/5 flex items-center justify-center text-slate-300 hover:text-white transition-all border border-white/10">
+                <i class="ph ph-x text-xl"></i>
+              </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="p-6 space-y-5 max-h-[70vh] overflow-y-auto no-scrollbar">
+              <!-- Primary Actions Section -->
+              <div>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4 px-1">Simulation Modules</p>
+                  <div class="grid grid-cols-1 gap-3">
+                     <button 
+                        @click="startPracticeBooking(); showSimulationModal = false"
+                        class="flex items-center gap-4 p-5 bg-gray-50 rounded-sm border border-slate-200 text-left hover:bg-slate-100 transition-all group relative overflow-hidden"
+                     >
+                        <div class="w-12 h-12 bg-gray-900 rounded-sm flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform">
+                          <i class="ph ph-airplane text-2xl"></i>
+                        </div>
+                        <div class="relative z-10">
+                          <span class="block text-xs font-black text-slate-900 uppercase tracking-tight">Practice Booking</span>
+                          <span class="block text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Global Reservation Training</span>
+                        </div>
+                     </button>
+  
+                     <button 
+                        @click="$router.push('/dcs/dashboard'); showSimulationModal = false"
+                        class="flex items-center gap-4 p-5 bg-gray-50 rounded-sm border border-slate-200 text-left hover:bg-slate-100 transition-all group relative overflow-hidden"
+                     >
+                        <div class="w-12 h-12 bg-gray-900 rounded-sm flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform">
+                          <i class="ph ph-monitor text-2xl"></i>
+                        </div>
+                        <div class="relative z-10">
+                          <span class="block text-xs font-black text-slate-900 uppercase tracking-tight">DCS Operations</span>
+                          <span class="block text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Control & Check-in Console</span>
+                        </div>
+                     </button>
+                  </div>
+              </div>
+
+              <!-- Logs & Registry Section -->
+              <div>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4 px-1">Registry Access</p>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div @click="$router.push('/student/booking-registry'); showSimulationModal = false" class="p-5 bg-white border border-slate-100 rounded-sm hover:border-gray-900 hover:bg-slate-50 transition-all cursor-pointer group shadow-sm">
+                      <div class="w-10 h-10 bg-slate-50 text-slate-400 rounded-sm flex items-center justify-center mb-4 group-hover:bg-gray-900 group-hover:text-white transition-all border border-slate-100">
+                        <i class="ph ph-scroll text-xl"></i>
+                      </div>
+                      <span class="block text-[10px] font-black text-slate-900 uppercase tracking-tighter leading-tight">Booking<br/>Registry</span>
+                    </div>
+                    
+                    <div @click="$router.push('/student/checkin-registry'); showSimulationModal = false" class="p-5 bg-white border border-slate-100 rounded-sm hover:border-gray-900 hover:bg-slate-50 transition-all cursor-pointer group shadow-sm">
+                      <div class="w-10 h-10 bg-slate-50 text-slate-400 rounded-sm flex items-center justify-center mb-4 group-hover:bg-gray-900 group-hover:text-white transition-all border border-slate-100">
+                        <i class="ph ph-users-four text-xl"></i>
+                      </div>
+                      <span class="block text-[10px] font-black text-slate-900 uppercase tracking-tighter leading-tight">DCS<br/>Registry</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Modal Footer -->
+              <div class="p-4 bg-gray-50 flex justify-center border-t border-gray-100 shrink-0">
+                <p class="text-[9px] text-gray-400 font-medium uppercase tracking-widest">Aviation Training System v2.0</p>
+              </div>
+            </div>
+          </Transition>
         </div>
+      </Transition>
 
-        <!-- Modal Content -->
-        <div class="p-6 space-y-5 max-h-[70vh] overflow-y-auto no-scrollbar">
-          <!-- Primary Actions Section -->
-          <div>
-            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-1">Active Modules</p>
-            <div class="grid grid-cols-1 gap-3">
-               <button 
-                  @click="startPracticeBooking(); showSimulationModal = false"
-                  class="flex items-center gap-4 p-4 bg-blue-50/50 rounded-2xl border border-blue-100 text-left hover:bg-blue-100/50 transition-all group relative overflow-hidden"
-               >
-                  <div class="absolute right-0 top-0 w-24 h-24 bg-blue-600/5 rounded-full -mr-8 -mt-8"></div>
-                  <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
-                    <i class="ph ph-airplane-tilt text-2xl"></i>
-                  </div>
-                  <div class="relative z-10">
-                    <span class="block text-sm font-black text-blue-900 uppercase tracking-tight">Practice Booking</span>
-                    <span class="block text-[10px] text-blue-700/70 font-medium">Start a non-graded booking simulation</span>
-                  </div>
-               </button>
+    <!-- Performance Modal (Mobile Only) -->
+    <Transition name="fade">
+      <div v-if="showPerformanceModal" class="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 lg:hidden">
+        <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" @click="showPerformanceModal = false"></div>
+        
+        <Transition name="slide-up">
+          <div v-if="showPerformanceModal" class="relative w-full max-w-2xl bg-white rounded-t-xl sm:rounded-sm shadow-2xl overflow-hidden h-[90vh] flex flex-col">
+            <!-- Modal Header -->
+            <div class="px-6 py-6 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+              <div>
+                <h3 class="text-lg font-black text-slate-900 uppercase tracking-tight">Academic Analytics</h3>
+                <p class="text-[9px] text-[#FF579A] font-bold uppercase tracking-widest">Performance Insights</p>
+              </div>
+              <button @click="showPerformanceModal = false" class="w-10 h-10 rounded-sm bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all border border-slate-100">
+                <i class="ph ph-x text-xl"></i>
+              </button>
+            </div>
 
-               <button 
-                  @click="$router.push('/dcs/dashboard'); showSimulationModal = false"
-                  class="flex items-center gap-4 p-4 bg-[#fff1f7] rounded-2xl border border-[#ffe4f1] text-left hover:bg-[#ffe4f1] transition-all group relative overflow-hidden"
-               >
-                  <div class="absolute right-0 top-0 w-24 h-24 bg-[#fe3787]/5 rounded-full -mr-8 -mt-8"></div>
-                  <div class="w-12 h-12 bg-[#fe3787] rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
-                    <i class="ph ph-monitor text-2xl"></i>
-                  </div>
-                  <div class="relative z-10">
-                    <span class="block text-sm font-black text-[#8d1d4d] uppercase tracking-tight poppins">DCS Console</span>
-                    <span class="block text-[10px] text-[#e6327a]/70 font-medium">Manage Departure Control Systems</span>
-                  </div>
-               </button>
+            <!-- Modal Content -->
+            <div class="p-4 overflow-y-auto no-scrollbar flex-1">
+               <PerformanceAnalytics :activities="activities" />
+            </div>
+            
+            <div class="p-4 bg-slate-50 border-t border-slate-100 shrink-0 text-center">
+               <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Global Academic Tracker</p>
             </div>
           </div>
-
-          <!-- Logs & Registry Section -->
-          <div>
-            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-1">System Logs</p>
-            <div class="grid grid-cols-2 gap-3">
-              <div @click="$router.push('/student/booking-registry'); showSimulationModal = false" class="p-4 bg-white border border-gray-100 rounded-2xl hover:border-blue-200 hover:bg-blue-50/20 transition-all cursor-pointer group">
-                <div class="w-10 h-10 bg-gray-50 text-gray-400 rounded-lg flex items-center justify-center mb-3 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                  <i class="ph ph-scroll text-xl"></i>
-                </div>
-                <span class="block text-[11px] font-black text-gray-800 uppercase tracking-tighter leading-tight">Booking<br/>Activity Log</span>
-              </div>
-              
-              <div @click="$router.push('/student/checkin-registry'); showSimulationModal = false" class="p-4 bg-white border border-gray-100 rounded-2xl hover:border-[#fe3787]/30 hover:bg-[#fff1f7]/20 transition-all cursor-pointer group">
-                <div class="w-10 h-10 bg-gray-50 text-gray-400 rounded-lg flex items-center justify-center mb-3 group-hover:bg-[#fe3787] group-hover:text-white transition-all">
-                  <i class="ph ph-users-four text-xl"></i>
-                </div>
-                <span class="block text-[11px] font-black text-gray-800 uppercase tracking-tighter leading-tight">DCS / Check-in<br/>Activity Log</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Modal Footer -->
-        <div class="p-4 bg-gray-50 flex justify-center border-t border-gray-100">
-          <p class="text-[9px] text-gray-400 font-medium uppercase tracking-widest">Aviation Training System v2.0</p>
-        </div>
+        </Transition>
       </div>
-    </div>
+    </Transition>
 
   </div>
 </template>
@@ -236,6 +280,7 @@
 import ComparisonModal from '@/components/common/ComparisonModal.vue';
 import UpcomingDeadlines from '@/components/Student/UpcomingDeadlines.vue';
 import ActivityCard from '@/components/Student/ActivityCard.vue';
+import PerformanceAnalytics from '@/components/Student/PerformanceAnalytics.vue';
 import { comparisonService } from '@/services/Student/comparisonService';
 import { useUserStore } from '@/stores/user'
 import { useModalStore } from '@/stores/modal'
@@ -261,7 +306,8 @@ export default {
   components: {
     ComparisonModal,
     UpcomingDeadlines,
-    ActivityCard
+    ActivityCard,
+    PerformanceAnalytics
   },
   data() {
     return {
@@ -275,6 +321,7 @@ export default {
       ],
       showComparison: false,
       showSimulationModal: false,
+      showPerformanceModal: false,
       comparisonActivity: null,
       comparisonBooking: null,
       isLoadingBooking: false,
@@ -405,5 +452,39 @@ export default {
 
 .animate-fade-in {
   animation: fade-in 0.3s ease-out;
+}
+
+/* Vue Transitions */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+.slide-up-enter-active, .slide-up-leave-active {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.slide-up-enter-from, .slide-up-leave-to {
+  transform: translateY(100%);
+  opacity: 0;
+}
+@media (min-width: 640px) {
+  .slide-up-enter-from, .slide-up-leave-to {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+}
+
+/* List Transitions */
+.list-enter-active, .list-leave-active {
+  transition: all 0.4s ease;
+}
+.list-enter-from, .list-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+.list-move {
+  transition: transform 0.4s ease;
 }
 </style>

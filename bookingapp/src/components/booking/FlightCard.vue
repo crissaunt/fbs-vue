@@ -1,175 +1,156 @@
 <template>
   <div class="bg-white rounded-lg shadow-sm border border-gray-200 hover:border-pink-300 hover:shadow-md transition-all duration-200">
-    <div class="px-6 py-3">
+    <div class="px-3 sm:px-6 py-4">
       <!-- Flight Header -->
-      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4 pb-4 border-b border-gray-100">
-        <div class="flex items-center space-x-4 flex ">
-          <div>
-            <div class="font-bold text-sm text-pink-500">{{ flight.airline_name }}</div>
-            <div class="text-[11px] text-green-500">{{ flight.flight_number }}</div>
+      <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-5 pb-5 border-b border-slate-100">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+             <!-- Placeholder for Airline Logo -->
+             <span class="text-[10px] font-black text-slate-400">LOGO</span>
           </div>
-          <div v-if="flight.is_domestic !== undefined" 
-            :class="['px-3 py-1 rounded-full text-[9px] font-medium',
-                     flight.is_domestic ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700']">
-            {{ flight.is_domestic ? 'Domestic' : 'International' }}
-          </div>
-          <div v-if="(flight.total_stops || 0) === 0" 
-            class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-[9px] font-medium">
-            Non-stop
-          </div>
-          <div v-else 
-            class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-[9px] font-medium">
-            {{ flight.total_stops }} {{ flight.total_stops === 1 ? 'Stop' : 'Stops' }}
+          <div class="min-w-0">
+            <h4 class="font-black text-slate-800 text-sm sm:text-base leading-tight truncate">{{ flight.airline_name }}</h4>
+            <div class="flex items-center gap-2 mt-1">
+              <span class="text-[10px] font-bold text-pink-500 uppercase tracking-wider">{{ flight.flight_number }}</span>
+              <span v-if="flight.aircraft_name" class="text-[10px] text-slate-400 font-medium px-2 border-l border-slate-200 truncate max-w-[120px] sm:max-w-none">
+                {{ flight.aircraft_name }}
+              </span>
+            </div>
           </div>
         </div>
         
-        <div class="text-center">
-          <div class="text-xs text-gray-700">{{ formatDate(flight.departure_time) }}</div>
-          <div class=" font-bold text-gray-500">{{ formatDay(flight.departure_time) }}</div>
-        </div>
-        
-        <div class="text-right flex flex-col items-end">
-          <div class="text-xl font-bold" :class="flight.ml_predicted ? 'text-pink-600' : 'text-pink-500'">
-            ₱{{ Number(flight.price).toLocaleString() }}
+        <div class="flex items-end sm:items-center justify-between sm:justify-end gap-6 sm:gap-8">
+          <div class="hidden md:block text-center px-4 border-r border-slate-100">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{{ formatDay(flight.departure_time) }}</div>
+            <div class="text-xs font-black text-slate-700 whitespace-nowrap">{{ formatDate(flight.departure_time) }}</div>
           </div>
-          <button 
-            v-if="flight.ml_predicted" 
-            @click="$emit('view-pricing', flight)"
-            class="text-[10px] text-pink-400 hover:text-pink-600 font-medium flex items-center gap-1 mt-1 uppercase tracking-wider transition-colors"
-          >
-            Price Insights
-            <svg class="w-3 h-3" :class="{'rotate-180': showPricingDetails && selectedPriceId === flight.price_id}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
+          
+          <div class="text-right">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Starting from</div>
+            <div class="text-xl sm:text-2xl font-black text-pink-500 leading-none">
+              ₱{{ Number(flight.price).toLocaleString() }}
+            </div>
+            <button 
+              v-if="flight.ml_predicted" 
+              @click="$emit('view-pricing', flight)"
+              class="text-[9px] text-pink-400 hover:text-pink-600 font-black flex items-center gap-1 mt-1.5 uppercase tracking-widest transition-colors ml-auto"
+            >
+              Insights
+              <svg class="w-3 h-3" :class="{'rotate-180': showPricingDetails && selectedPriceId === flight.price_id}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Price Insights Breakdown Overlay -->
+      <!-- Price Insights Breakdown Overlay (Always remains responsive) -->
       <div v-if="showPricingDetails && selectedPriceId === flight.price_id" 
-           class="mb-4 p-4 bg-pink-50/50 rounded-lg border border-pink-100 animate-in fade-in slide-in-from-top-2 duration-300">
-        <div class="flex justify-between items-center mb-2">
-          <h4 class="text-xs font-bold text-pink-600 uppercase tracking-widest">Price Breakdown</h4>
-          <span class="text-[10px] text-gray-400">ML ID: {{ flight.price_id }}</span>
+           class="mb-5 p-4 bg-pink-50/50 rounded-lg border border-pink-100/50 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div class="flex justify-between items-center mb-3">
+          <h4 class="text-[10px] font-black text-pink-600 uppercase tracking-widest">Pricing Analysis</h4>
+          <span class="text-[9px] font-bold text-slate-400 uppercase">ML-Engine: {{ flight.price_id.slice(0, 8) }}</span>
         </div>
         
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div class="space-y-1">
-            <div class="text-[10px] text-gray-500 uppercase">Base Prediction</div>
-            <div class="text-sm font-bold text-gray-700">₱{{ Number(flight.ml_base_price).toLocaleString() }}</div>
+            <div class="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">Market Base</div>
+            <div class="text-sm font-black text-slate-800">₱{{ Number(flight.ml_base_price).toLocaleString() }}</div>
           </div>
           
           <div v-for="(factor, key) in flight.ml_factors" :key="key" class="space-y-1">
-            <div class="text-[10px] text-gray-500 uppercase">{{ getFactorLabel(key) }}</div>
-            <div class="text-sm font-bold" :class="factor > 1 ? 'text-orange-500' : (factor < 1 ? 'text-green-600' : 'text-gray-600')">
-              {{ factor > 1 ? '+' : '' }}{{ ((factor - 1) * 100).toFixed(0) }}%
-              <span class="text-[10px] font-normal text-gray-400 ml-1">(x{{ factor.toFixed(2) }})</span>
+            <div class="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">{{ getFactorLabel(key) }}</div>
+            <div class="text-sm font-black flex items-baseline gap-1" :class="factor > 1 ? 'text-orange-500' : (factor < 1 ? 'text-green-600' : 'text-slate-600')">
+              {{ factor > 1 ? '↑' : (factor < 1 ? '↓' : '') }} {{ Math.abs(((factor - 1) * 100)).toFixed(0) }}%
+              <span class="text-[9px] font-bold opacity-40 ml-0.5 whitespace-nowrap">(x{{ factor.toFixed(2) }})</span>
             </div>
           </div>
-        </div>
-        
-        <div class="mt-3 pt-3 border-t border-pink-100 flex items-center gap-2">
-          <div class="w-2 h-2 rounded-full bg-pink-400 animate-pulse"></div>
-          <p class="text-[10px] text-pink-500 italic">This price includes real-time surge protection and local holiday adjustments.</p>
         </div>
       </div>
       
-      <!-- Schedule Info - NEW VISUAL TIMELINE -->
-      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-4 mt-2 px-2">
+      <!-- Schedule Info - REFINED TIMELINE -->
+      <div class="flex items-center justify-between gap-3 sm:gap-6 mb-6 px-1">
         <!-- Departure -->
-        <div class="text-right w-24 shrink-0">
-          <div class="text-2xl font-black text-gray-900 leading-none">{{ formatTime(flight.departure_time) }}</div>
-          <div class="text-sm font-bold text-gray-500 mt-1">{{ flight.origin_airport_code }}</div>
+        <div class="text-left sm:text-right w-16 sm:w-24 shrink-0">
+          <div class="text-xl sm:text-2xl font-black text-slate-900 leading-none">{{ formatTime(flight.departure_time) }}</div>
+          <div class="text-xs sm:text-sm font-black text-slate-500 mt-1.5 uppercase tracking-tighter">{{ flight.origin_airport_code }}</div>
         </div>
         
-        <!-- Visual Timeline -->
-        <div class="flex-1 flex flex-col items-center justify-center relative min-w-[150px]">
-          <div class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-widest">
+        <!-- Refined Visual Timeline (Kept horizontal but cleaner) -->
+        <div class="flex-1 flex flex-col items-center justify-center relative min-w-0">
+          <div class="text-[9px] font-black text-slate-400 mb-2.5 uppercase tracking-[0.2em] whitespace-nowrap">
             {{ flight.flight_duration || formatDuration(flight.duration_minutes) }}
           </div>
-                  <!-- The Line -->
-          <div class="w-full relative flex items-center h-2">
-            <!-- connecting line -->
-            <div class="absolute left-0 right-0 h-[2px] bg-gray-300"></div>
+          
+          <div class="w-full relative flex items-center h-4">
+            <div class="absolute left-0 right-0 h-[3px] bg-slate-100 rounded-full"></div>
             
-            <!-- Origin Dot -->
-            <div class="absolute left-0 w-2 h-2 rounded-full border-2 border-pink-500 bg-white z-10 transition-transform hover:scale-125"></div>
+            <div class="absolute left-0 w-2.5 h-2.5 rounded-full border-[3px] border-pink-500 bg-white z-10"></div>
             
-            <!-- Layover Dots (Dynamic for multiple stops) -->
-            <div v-if="(flight.total_stops || 0) > 0" class="flex justify-around absolute left-0 right-0 px-8">
+            <!-- Layover indicator labels -->
+            <div v-if="(flight.total_stops || 0) > 0" class="flex justify-around absolute left-0 right-0 px-4">
               <div v-for="n in (flight.total_stops || 0)" :key="n" 
-                class="w-3 h-3 rounded-full bg-orange-200 border-2 border-orange-500 z-10 shadow-sm relative group cursor-help hover:bg-orange-400 hover:border-orange-600 transition-all">
-                <div class="hidden group-hover:block absolute -top-10 left-1/2 -translate-x-1/2 bg-orange-500 text-white text-[9px] font-bold py-1.5 px-3 rounded-md shadow-xl z-20 whitespace-nowrap">
-                  <span class="flex items-center gap-1.5">
-                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Stop {{ n }} ({{ flight.aircraft || 'Commercial Jet' }})
-                  </span>
-                </div>
+                class="w-2 h-2 rounded-full bg-orange-400 ring-4 ring-orange-50 z-10 transition-all hover:ring-orange-200">
               </div>
             </div>
             
-            <!-- Destination Dot -->
-            <div class="absolute right-0 w-2 h-2 rounded-full border-2 border-pink-500 bg-pink-500 z-10"></div>
+            <div class="absolute right-0 w-2.5 h-2.5 rounded-full border-[3px] border-pink-500 bg-pink-500 z-10 shadow-[0_0_8px_rgba(236,72,153,0.3)]"></div>
+          </div>
+          
+          <div class="mt-2.5 text-[9px] font-black uppercase tracking-widest" :class="flight.total_stops > 0 ? 'text-orange-500' : 'text-green-600'">
+             {{ flight.total_stops === 0 ? 'Non-stop' : `${flight.total_stops} Stop${flight.total_stops > 1 ? 's' : ''}` }}
           </div>
         </div>
         
         <!-- Arrival -->
-        <div class="text-left w-24 shrink-0">
-          <div class="text-2xl font-black text-gray-900 leading-none">{{ formatTime(flight.arrival_time) }}</div>
-          <div class="text-sm font-bold text-gray-500 mt-1">{{ flight.destination_airport_code }}</div>
+        <div class="text-right w-16 sm:w-24 shrink-0">
+          <div class="text-xl sm:text-2xl font-black text-slate-900 leading-none">{{ formatTime(flight.arrival_time) }}</div>
+          <div class="text-xs sm:text-sm font-black text-slate-500 mt-1.5 uppercase tracking-tighter">{{ flight.destination_airport_code }}</div>
         </div>
       </div>
       
       <!-- Footer: Amenities & Actions -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-gray-100 bg-gray-50/50 -mx-6 px-6 -mb-3 pb-3 rounded-b-lg">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pt-5 border-t border-slate-100 bg-slate-50/50 -mx-6 px-6 -mb-4 pb-4">
         
-        <!-- Amenity Icons Preview -->
-        <div class="flex items-center gap-4 text-gray-500">
+        <!-- Amenity Icons Preview (Compact and Scaled) -->
+        <div class="flex items-center flex-wrap gap-4 text-slate-400">
           <div class="flex items-center gap-1.5" title="Personal Item Included">
-             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-             <span class="text-[10px] font-medium hidden sm:inline">Included</span>
+             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+             <span class="text-[9px] font-black uppercase tracking-tighter hidden xs:inline">Small Bag</span>
           </div>
           <div class="flex items-center gap-1.5" title="USB Power">
-             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-          </div>
-          <div class="flex items-center gap-1.5" title="Standard Legroom">
-             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
-             <span class="text-[10px] font-medium hidden sm:inline">29" Pitch</span>
+             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+             <span class="text-[9px] font-black uppercase tracking-tighter hidden xs:inline">Power</span>
           </div>
           
-          <div class="flex items-center gap-1.5 ml-2">
-             <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-             <span :class="['text-[10px] font-bold uppercase tracking-widest', (flight.available_seats || 0) < 10 ? 'text-orange-500 animate-pulse' : 'text-gray-500']">
-                {{ flight.available_seats ?? 0 }} Seats Available
+          <div class="flex items-center gap-2 sm:ml-2">
+             <div class="w-2 h-2 rounded-full" :class="(flight.available_seats || 0) < 10 ? 'bg-orange-500 animate-pulse' : 'bg-slate-300'"></div>
+             <span :class="['text-[9px] font-black uppercase tracking-[0.1em]', (flight.available_seats || 0) < 10 ? 'text-orange-500' : 'text-slate-500']">
+                {{ flight.available_seats ?? 0 }} Seats Left
              </span>
           </div>
         </div>
         
-        <div class="flex space-x-3 items-center">
-          <!-- Selected Indicator Text -->
-          <div v-if="isSelected" class="text-[11px] text-pink-600 font-bold uppercase tracking-wider mr-2">
-            ✓ {{ selectedClassName }}
+        <div class="flex items-center justify-end gap-3">
+          <div v-if="isSelected" class="text-[10px] text-pink-600 font-black uppercase tracking-[0.2em] animate-in slide-in-from-right-1">
+            {{ selectedClassName }}
           </div>
           
-          <template v-if="isSelected">
-            <button class="px-5 py-2 bg-green-500 text-white rounded font-bold shadow-sm shadow-green-200 text-sm">
-              ✓ {{ selectionLabel }}
-            </button>
-            <button @click="$emit('select-flight', flight)" 
-              class="px-4 py-2 border-2 border-gray-200 text-gray-600 rounded hover:bg-gray-100 transition-colors font-bold text-sm">
-              {{ isExpanded ? 'Cancel' : 'Change' }}
-            </button>
-          </template>
-          <template v-else>
-            <!-- Expanding indicator instead of direct select if not handling inline yet -->
-            <button @click="$emit('select-flight', flight)" 
-              class="px-6 py-2.5 bg-pink-500 cursor-pointer text-white text-sm rounded-md shadow-md shadow-pink-200 hover:bg-pink-600 hover:-translate-y-0.5 transition-all font-bold whitespace-nowrap flex items-center gap-2">
-              {{ isExpanded ? 'Close' : selectButtonText }}
-              <svg class="w-4 h-4 transition-transform duration-200" :class="isExpanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-            </button>
-          </template>
+          <div class="flex gap-2">
+            <template v-if="isSelected">
+              <button @click="$emit('select-flight', flight)" 
+                class="px-4 py-2 border-2 border-slate-200 text-slate-600 rounded-md hover:bg-slate-100 transition-colors font-black text-[10px] uppercase tracking-widest active:scale-95">
+                {{ isExpanded ? 'Close' : 'Modify' }}
+              </button>
+            </template>
+            <template v-else>
+              <button @click="$emit('select-flight', flight)" 
+                class="px-6 py-2.5 bg-pink-500 cursor-pointer text-white text-xs sm:text-sm rounded-md shadow-lg shadow-pink-100 hover:bg-pink-600 active:scale-[0.98] transition-all font-black uppercase tracking-widest whitespace-nowrap flex items-center gap-2">
+                {{ isExpanded ? 'Close' : 'Select Flight' }}
+                <svg class="w-4 h-4 transition-transform duration-300" :class="isExpanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+              </button>
+            </template>
+          </div>
         </div>
       </div>
       
@@ -186,10 +167,10 @@
             :class="[
               selectedTravelClass === tClass 
                 ? (getTabColor(tClass) === 'blue' ? 'border-blue-500 bg-blue-100/50' : 
-                   getTabColor(tClass) === 'rose' ? 'border-rose-400 bg-rose-100/50' : 
+                   getTabColor(tClass) === 'rose' ? 'border-pink-400 bg-pink-100/50' : 
                    'border-yellow-500 bg-yellow-100/50')
                 : (getTabColor(tClass) === 'blue' ? 'border-blue-200 bg-blue-50/40 text-gray-500 hover:bg-blue-100/40' : 
-                   getTabColor(tClass) === 'rose' ? 'border-rose-200 bg-rose-50/40 text-gray-500 hover:bg-rose-100/40' : 
+                   getTabColor(tClass) === 'rose' ? 'border-pink-200 bg-pink-50/40 text-gray-500 hover:bg-pink-100/40' : 
                    'border-yellow-200 bg-yellow-50/40 text-gray-500 hover:bg-yellow-100/40')
             ]"
           >
@@ -248,7 +229,7 @@
                 <svg class="w-4 h-4 text-green-500 mr-2 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>
-                <span class="leading-tight">{{ feature }}</span>
+                <span class="leading-tight">{{ typeof feature === 'object' && feature !== null ? (feature.feature_text || feature.text || JSON.stringify(feature)) : feature }}</span>
               </li>
             </ul>
             
@@ -304,7 +285,8 @@ const groupedClasses = computed(() => {
     }
     
     // Capitalize properly
-    tClass = tClass.charAt(0).toUpperCase() + tClass.slice(1);
+    // Ensure Title Case (e.g., "Comfort Class" or "Premium Economy")
+    tClass = tClass.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
     
     if (!acc[tClass]) acc[tClass] = [];
     acc[tClass].push(sc);

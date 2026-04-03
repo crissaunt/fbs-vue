@@ -1,14 +1,33 @@
 <template>
   <div class="p-6 poppins">
-    <!-- Header Section -->
-    <div class="flex justify-between items-center mb-6">
-      <button 
-        @click="openModal()" 
-        class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[14px] rounded-[1px] shadow-sm transition-all"
-      >
-        <i class="ph ph-plus"></i> Add Schedule
-      </button>
-    </div>
+    <!-- Header & Tools Section -->
+    <AdminTableTool 
+      v-model="searchQuery" 
+      placeholder="Search flight number or schedule ID..."
+    >
+      <template #filters>
+        <div class="flex items-center gap-2">
+          <select 
+            v-model="filterStatus"
+            class="text-[11px] font-bold border border-gray-200 px-3 py-2 bg-white rounded-[1px] outline-none focus:border-[#fe3787] poppins cursor-pointer"
+          >
+            <option value="all">Any Status</option>
+            <option value="Open">Open</option>
+            <option value="Closed">Closed</option>
+            <option value="On Flight">On Flight</option>
+            <option value="Arrived">Arrived</option>
+          </select>
+        </div>
+      </template>
+      <template #actions>
+        <button 
+          @click="openModal()" 
+          class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[12px] rounded-[1px] shadow-sm transition-all"
+        >
+          <i class="ph ph-plus text-[14px]"></i> Add
+        </button>
+      </template>
+    </AdminTableTool>
 
     <!-- Stats Section -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -174,10 +193,12 @@
         <form @submit.prevent="saveSchedule" class="space-y-6">
           <div>
             <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Select Flight Number</label>
-            <select v-model="form.flight" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px] bg-white" required>
-              <option :value="null" disabled>Choose a flight number...</option>
-              <option v-for="f in flightList" :key="f.id" :value="f.id">{{ f.flight_number }}</option>
-            </select>
+            <SearchableSelect
+              v-model="form.flight"
+              :options="flightOptions"
+              placeholder="Type a flight number (e.g. PR101)..."
+              label="Flight"
+            />
           </div>
 
           <div class="grid grid-cols-2 gap-4">
@@ -210,16 +231,24 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '@/services/admin/api';
 import { useModalStore } from '@/stores/modal';
+import SearchableSelect from '@/components/admin/SearchableSelect.vue';
+import AdminTableTool from '@/components/admin/AdminTableTool.vue';
 
 const modalStore = useModalStore();
 const route = useRoute();
 
 const schedules = ref([]);
 const flightList = ref([]);
+
+const flightOptions = computed(() =>
+  flightList.value.map(f => ({ value: f.id, label: f.flight_number }))
+);
 const isModalOpen = ref(false);
 const loading = ref(false);
 const errorMessage = ref(null);
 const highlightedId = ref(null);
+const searchQuery = ref('');
+const filterStatus = ref('all');
 
 const form = ref({
   flight: null,
@@ -241,14 +270,33 @@ const statsItems = computed(() => {
   };
 });
 
+// Search & Filter Logic
+const filteredSchedules = computed(() => {
+  let result = schedules.value;
+  
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase();
+    result = result.filter(s => 
+      s.flight_number.toLowerCase().includes(q) || 
+      String(s.id).includes(q)
+    );
+  }
+
+  if (filterStatus.value !== 'all') {
+    result = result.filter(s => s.status === filterStatus.value);
+  }
+  
+  return result;
+});
+
 // Pagination Logic
-const totalPages = computed(() => Math.ceil(schedules.value.length / itemsPerPage));
+const totalPages = computed(() => Math.ceil(filteredSchedules.value.length / itemsPerPage));
 const paginatedSchedules = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
-  return schedules.value.slice(start, start + itemsPerPage);
+  return filteredSchedules.value.slice(start, start + itemsPerPage);
 });
 const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage);
-const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, schedules.value.length));
+const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, filteredSchedules.value.length));
 
 const visiblePages = computed(() => {
   const pages = [];

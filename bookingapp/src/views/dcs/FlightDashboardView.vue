@@ -10,8 +10,8 @@
       <div class="flex items-center gap-4">
         <div class="bg-white border border-slate-200 p-1.5 rounded-[5px] shadow-sm flex items-center gap-1">
           <div class="bg-slate-50 px-5 py-3 rounded-[2px] flex flex-col min-w-[120px]">
-            <span class="text-[10px] text-slate-400 font-black uppercase tracking-tighter mb-0.5">Global Flights</span>
-            <span class="text-2xl font-black text-slate-900 leading-none tracking-tighter">{{ dcsStore.flights.length }}</span>
+            <span class="text-[10px] text-slate-400 font-black uppercase tracking-tighter mb-0.5">Network Flights</span>
+            <span class="text-2xl font-black text-slate-900 leading-none tracking-tighter">{{ activeAirlineFlights.length }}</span>
           </div>
           <div class="bg-pink-600 px-5 py-3 rounded-[2px] flex flex-col min-w-[120px] shadow-lg shadow-pink-100">
             <span class="text-[10px] text-pink-200 font-black uppercase tracking-tighter mb-0.5">Today's Dispatch</span>
@@ -42,14 +42,6 @@
 
       <!-- Quick Action Filters -->
       <div class="flex items-center gap-2 w-full lg:w-auto p-1">
-        <select 
-          v-model="selectedAirline"
-          class="flex-1 lg:w-48 pl-4 pr-10 py-3.5 bg-slate-50 border-2 border-transparent focus:border-pink-500/20 rounded-[2px] text-xs font-black uppercase tracking-widest appearance-none cursor-pointer text-slate-600"
-        >
-          <option value="">All Carriers</option>
-          <option v-for="airline in uniqueAirlines" :key="airline" :value="airline">{{ airline }}</option>
-        </select>
-        
         <button 
           @click="showTodayOnly = !showTodayOnly"
           :class="[
@@ -273,7 +265,6 @@ const dcsStore = useDcsStore()
 
 // Filter State
 const searchQuery = ref('')
-const selectedAirline = ref('')
 const showTodayOnly = ref(false)
 
 onMounted(() => {
@@ -281,43 +272,38 @@ onMounted(() => {
 })
 
 // Recommendations & Derived Data
-const uniqueAirlines = computed(() => {
-  const airlines = (dcsStore.flights || []).map(f => f.airline_name).filter(Boolean)
-  return [...new Set(airlines)].sort()
+const activeAirlineFlights = computed(() => {
+  if (!dcsStore.activeAirline) return []
+  return (dcsStore.flights || []).filter(f => f.airline_name === dcsStore.activeAirline)
 })
 
 const todayFlightsCount = computed(() => {
-  return (dcsStore.flights || []).filter(f => isToday(f.departure_time)).length
+  return activeAirlineFlights.value.filter(f => isToday(f.departure_time)).length
 })
 
 const hasFilters = computed(() => {
-  return searchQuery.value || selectedAirline.value || showTodayOnly.value
+  return searchQuery.value || showTodayOnly.value
 })
 
 const filteredFlights = computed(() => {
-  return (dcsStore.flights || []).filter(flight => {
+  return activeAirlineFlights.value.filter(flight => {
     // 1. Search Query (Number, Origin, Dest)
     const q = searchQuery.value.toLowerCase().trim()
     const matchesSearch = !q || 
-      flight.flight_number.toLowerCase().includes(q) ||
-      flight.origin.toLowerCase().includes(q) ||
-      flight.destination.toLowerCase().includes(q) ||
-      flight.airline_name.toLowerCase().includes(q)
+      (flight.flight_number || '').toLowerCase().includes(q) ||
+      (flight.origin || '').toLowerCase().includes(q) ||
+      (flight.destination || '').toLowerCase().includes(q) ||
+      (flight.airline_name || '').toLowerCase().includes(q)
 
-    // 2. Airline Filter
-    const matchesAirline = !selectedAirline.value || 
-      flight.airline_name === selectedAirline.value
-
-    // 3. Today Only
+    // 2. Today Only
     const matchesToday = !showTodayOnly.value || isToday(flight.departure_time)
 
-    return matchesSearch && matchesAirline && matchesToday
+    return matchesSearch && matchesToday
   })
 })
 
 const resetFilters = () => {
   searchQuery.value = ''
-  selectedAirline.value = ''
   showTodayOnly.value = false
 }
 

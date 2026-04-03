@@ -299,9 +299,11 @@ const cancelBooking = async () => {
   <div class="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 flex justify-center items-center p-5">
     
     <!-- Loading State - SHOWS WHILE POLLING -->
-    <div v-if="loading" class="bg-white border border-gray-300 rounded-[5px] p-8 md:p-10 text-center max-w-lg w-full">
-      <div class="w-12 h-12 border-4 border-gray-200 border-t-pink-500 rounded-[2px] animate-spin mx-auto mb-6"
-           style="border-color: #e5e7eb; border-top-color: #FF5794;"></div>
+    <div v-if="loading" class="bg-white rounded-3xl border border-gray-100 shadow-2xl p-8 sm:p-12 text-center max-w-lg w-full ring-1 ring-black/5">
+      <div class="relative w-16 h-16 mx-auto mb-8">
+        <div class="absolute inset-0 border-4 border-pink-100 rounded-full"></div>
+        <div class="absolute inset-0 border-4 border-pink-500 rounded-full animate-spin border-t-transparent shadow-lg shadow-pink-200"></div>
+      </div>
       
       <p class="text-lg font-semibold text-gray-800 mb-2">{{ processingStatus }}</p>
       
@@ -324,86 +326,94 @@ const cancelBooking = async () => {
     </div>
 
     <!-- Incomplete Payment State -->
-    <div v-else-if="showIncompleteState" class="bg-white border border-gray-300 rounded-[5px] p-8 md:p-10 text-center max-w-2xl w-full">
-      <div class="text-6xl mb-4">🔄</div>
+    <div v-else-if="showIncompleteState" class="bg-white rounded-3xl border border-gray-100 shadow-2xl p-8 sm:p-12 text-center max-w-2xl w-full">
+      <div class="w-20 h-20 bg-rose-50 border border-rose-100 rounded-2xl flex items-center justify-center mx-auto mb-8 text-4xl shadow-inner scale-110">
+        🔄
+      </div>
       
-      <h1 class="text-3xl font-bold text-gray-800 mb-3">Payment Not Completed</h1>
+      <h1 class="text-3xl font-black text-gray-900 mb-3 tracking-tight">Payment Not Completed</h1>
       
-      <p class="text-lg text-gray-600 mb-6">
-        It looks like you didn't complete the payment on PayMongo's checkout page.
+      <p class="text-[15px] text-gray-500 font-medium mb-8 max-w-lg mx-auto">
+        It looks like the payment process was interrupted. Don't worry, your booking details are saved!
       </p>
       
-      <div class="bg-gray-50 border border-gray-300 rounded-[5px] p-5 text-left mb-6">
-        <p class="font-semibold text-gray-800 mb-3">What happened:</p>
-        <ul class="space-y-2 text-gray-600 ml-5">
-          <li class="list-disc">You were redirected to PayMongo's secure payment page</li>
-          <li class="list-disc">The payment was not completed</li>
-          <li class="list-disc">You returned to this page without finishing the transaction</li>
+      <div class="bg-gray-50/50 border border-gray-100 rounded-2xl p-6 text-left mb-8 space-y-4">
+        <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">Next Steps</p>
+        <ul class="space-y-3">
+          <li class="flex items-start gap-3">
+            <div class="mt-1 w-1.5 h-1.5 rounded-full bg-pink-400 shrink-0"></div>
+            <p class="text-sm font-medium text-gray-600">The transaction was cancelled or timed out during the checkout process.</p>
+          </li>
+          <li class="flex items-start gap-3">
+            <div class="mt-1 w-1.5 h-1.5 rounded-full bg-pink-400 shrink-0"></div>
+            <p class="text-sm font-medium text-gray-600">You can safely retry the payment now to confirm your seats immediately.</p>
+          </li>
         </ul>
       </div>
       
-      <div class="bg-amber-50 border border-amber-300 rounded-[5px] p-5 text-left mb-6">
-        <div class="space-y-2">
-          <p class="text-gray-700">
-            <strong class="font-semibold">Booking Reference:</strong> 
-            {{ bookingStore.booking_reference || `CSUCC${bookingId?.toString().padStart(8, '0')}` }}
-          </p>
-          <p class="text-gray-700">
-            <strong class="font-semibold">Amount:</strong> 
-            ₱{{ bookingStore.booking_total?.toLocaleString() || bookingStore.grandTotal?.toLocaleString() }}
-          </p>
-          <p class="text-gray-700">
-            <strong class="font-semibold">Status:</strong> 
-            <span class="inline-block bg-yellow-100 border border-yellow-400 text-yellow-800 px-3 py-1 rounded-[5px] text-sm font-semibold ml-2">
-              Payment Pending
-            </span>
-          </p>
+      <div class="bg-white border border-gray-100 rounded-2xl p-6 text-left mb-8 shadow-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Booking Reference</p>
+            <p class="text-lg font-mono font-black text-pink-500">
+              {{ bookingStore.booking_reference || `CSUCC${bookingId?.toString().padStart(8, '0')}` }}
+            </p>
+          </div>
+          <div class="sm:text-right">
+            <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Amount</p>
+            <p class="text-lg font-black text-gray-900 leading-none">
+              ₱{{ bookingStore.booking_total?.toLocaleString() || bookingStore.grandTotal?.toLocaleString() }}
+            </p>
+            <div class="mt-2 inline-flex items-center gap-1.5 bg-amber-50 px-2 py-1 rounded-md text-amber-600 text-[10px] font-black uppercase border border-amber-100 italic">
+               Payment Pending
+            </div>
+          </div>
         </div>
       </div>
       
-      <div class="flex flex-col md:flex-row gap-3 mb-6">
+      <div class="flex flex-col sm:flex-row gap-4 mb-8">
         <button @click="retryPayment" 
-                class="flex-1 border border-gray-300 rounded-[5px] px-6 py-3 font-semibold text-white transition-colors"
-                style="background-color: #FF5794;">
-          Complete Payment Now
+                class="flex-1 bg-pink-500 hover:bg-pink-600 text-white px-8 py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-pink-100 active:scale-[0.98]">
+          Complete Payment
         </button>
         <button @click="cancelBooking" 
-                class="flex-1 bg-white border border-gray-300 rounded-[5px] px-6 py-3 font-semibold text-red-600 hover:bg-red-50 transition-colors">
+                class="flex-1 bg-white border-2 border-gray-100 hover:border-gray-200 px-8 py-4 rounded-xl font-black text-sm uppercase tracking-widest text-gray-400 hover:text-gray-600 transition-all active:scale-[0.98]">
           Cancel Booking
         </button>
       </div>
       
-      <p class="text-sm text-gray-500 border-t border-gray-200 pt-4">
-        Your booking will be held for 24 hours. Complete payment to confirm your seats.
+      <p class="text-[11px] text-gray-400 border-t border-gray-100 pt-6">
+        Secure bookings are held while your session is active.
       </p>
     </div>
 
-    <!-- Error State - NO SUCCESS STATE HERE -->
-    <div v-else class="bg-white border border-gray-300 rounded-[5px] p-8 md:p-10 text-center max-w-lg w-full">
-      <div class="text-6xl mb-4">❌</div>
+    <!-- Error State -->
+    <div v-else class="bg-white rounded-3xl border border-gray-100 shadow-2xl p-8 sm:p-12 text-center max-w-lg w-full">
+      <div class="w-20 h-20 bg-rose-50 border border-rose-100 rounded-2xl flex items-center justify-center mx-auto mb-8 text-4xl shadow-inner scale-110">
+        ❌
+      </div>
       
-      <h1 class="text-3xl font-bold text-gray-800 mb-3">Payment Unsuccessful</h1>
+      <h1 class="text-3xl font-black text-gray-900 mb-3 tracking-tight">Payment Unsuccessful</h1>
       
-      <p class="text-lg text-red-600 mb-6">
+      <p class="text-lg font-bold text-rose-500 mb-8 leading-relaxed">
         {{ errorMessage || 'We couldn\'t confirm your payment.' }}
       </p>
       
-      <div class="flex flex-col md:flex-row gap-3 mb-6">
+      <div class="flex flex-col gap-4 mb-8">
         <button @click="retryPayment" 
-                class="flex-1 border border-gray-300 rounded-[5px] px-6 py-3 font-semibold text-white transition-colors"
-                style="background-color: #FF5794;">
+                class="w-full bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-pink-100 active:scale-[0.98]">
           Try Payment Again
         </button>
         <button @click="goHome" 
-                class="flex-1 bg-white border border-gray-300 rounded-[5px] px-6 py-3 font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                class="w-full bg-white border-2 border-gray-100 hover:border-gray-200 py-4 rounded-xl font-black text-sm uppercase tracking-widest text-gray-400 hover:text-gray-600 transition-all active:scale-[0.98]">
           Return to Home
         </button>
       </div>
       
-      <div class="border-t border-gray-200 pt-6">
-        <p class="text-sm text-gray-600">
-          If this issue persists, please contact our support team at 
-          <a href="mailto:support@airlines.com" class="font-medium underline" style="color: #FF5794;">
+      <div class="pt-6 border-t border-gray-100">
+        <p class="text-xs text-gray-400 font-medium">
+          If issues persist, contact our support team at 
+          <a href="mailto:support@airlines.com" class="font-black text-pink-500 hover:underline ml-1">
             support@airlines.com
           </a>
         </p>

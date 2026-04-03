@@ -140,8 +140,13 @@
             ]">
               {{ activity.is_active ? 'Active' : 'Inactive' }}
             </span>
-            <span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
-              Grade Weight: 100%
+            <span 
+              :class="[
+                'px-3 py-1 text-xs font-bold rounded-full',
+                activity.is_failed_due_to_time ? 'bg-red-100 text-red-700 border border-red-200 uppercase font-black' : 'bg-purple-100 text-purple-700'
+              ]"
+            >
+              {{ activity.is_failed_due_to_time ? 'FAIL' : 'Grade Weight: 100%' }}
             </span>
             <span v-if="isOverdue && activity.status !== 'submitted' && activity.status !== 'graded'" class="px-3 py-1 bg-red-100 text-red-700 text-xs font-black rounded-full uppercase animate-pulse border border-red-200 shadow-sm">
               Overdue
@@ -149,9 +154,17 @@
           </div>
         </div>
 
+        <!-- Description Section -->
+        <div v-if="activity.description" class="px-8 py-6 border-b border-gray-200 bg-gray-50/30">
+          <h2 class="text-base font-bold text-gray-900 mb-2">Activity Overview</h2>
+          <div class="text-sm text-gray-600 leading-relaxed italic">
+            <p class="whitespace-pre-wrap">{{ activity.description }}</p>
+          </div>
+        </div>
+
         <!-- Instructions Section -->
         <div class="px-8 py-6 border-b border-gray-200">
-          <h2 class="text-base font-bold text-gray-900 mb-3">Instructions</h2>
+          <h2 class="text-base font-bold text-gray-900 mb-3">Detailed Instructions</h2>
           <div class="text-sm text-gray-700 leading-relaxed space-y-3">
             <p class="whitespace-pre-wrap">{{ dynamicInstructions }}</p>
           </div>
@@ -562,12 +575,27 @@
 
           <!-- Start Button -->
           <div class="flex flex-col items-center gap-3 mt-8">
+            <div v-if="timeLeftLive && !activity.completed && activity.status !== 'graded' && activity.status !== 'submitted'" class="mb-4 p-4 bg-pink-50 border border-pink-100 rounded-xl flex items-center justify-between shadow-sm animate-fade-in w-full max-w-md">
+              <div class="flex items-center gap-3">
+                <div :class="['w-10 h-10 rounded-full flex items-center justify-center', secondsLeftLive < 120 ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-pink-100 text-pink-600']">
+                  <i class="ph ph-timer text-xl"></i>
+                </div>
+                <div>
+                  <p class="text-[10px] font-black text-pink-500 uppercase tracking-widest leading-none mb-1">Time Remaining</p>
+                  <p class="text-lg font-mono font-black text-slate-800 leading-none">{{ timeLeftLive }}</p>
+                </div>
+              </div>
+              <div v-if="secondsLeftLive < 120" class="text-[9px] font-black text-red-500 uppercase tracking-tighter animate-pulse">
+                Hurry up!
+              </div>
+            </div>
+
             <button 
               @click="openCodeModal"
-              :disabled="!activity.is_active || activity.grade !== null || activity.status === 'submitted' || activity.status === 'graded' || isOverdue"
+              :disabled="!activity.is_active || activity.grade !== null || activity.status === 'submitted' || activity.status === 'graded' || isOverdue || (activity.expires_at && secondsLeftLive <= 0) || activity.is_failed_due_to_time"
               :class="[
                 'w-full max-w-md py-4 rounded-lg font-bold text-sm uppercase tracking-wider transition-all shadow-md',
-                activity.is_active && activity.grade === null && !isOverdue
+                activity.is_active && activity.grade === null && !isOverdue && !(activity.expires_at && secondsLeftLive <= 0) && !activity.is_failed_due_to_time
                   ? 'bg-[#f5c842] hover:bg-[#e5b832] text-gray-900' 
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               ]"
@@ -732,13 +760,14 @@ export default {
       errorMessage: '',
       verifying: false,
 
-      // Comparison Modal State
-      showComparison: false,
-      comparisonBooking: null,
-      isLoadingBooking: false,
-      comparisonError: null
+      comparisonError: null,
+      
+      // Live Timer State
+      timeLeftLive: '',
+      secondsLeftLive: 0,
+      timerInterval: null
     }
-  },
+},
   computed: {
     fullName() {
       return `${this.studentFirstName} ${this.studentLastName}`.trim() || 'Student';
@@ -765,7 +794,11 @@ export default {
     },
     dynamicInstructions() {
       if (!this.activity.instructions && !this.activity.description) return 'No instructions provided.';
-      let text = this.activity.instructions || this.activity.description || '';
+      let text = this.activity.instructions || (this.activity.description ? 'Please refer to the activity overview above.' : '');
+      
+      if (!text && this.activity.description) {
+        text = 'Follow the requirements outlined in the overview.';
+      }
       
       // If we have assigned seats, try to inject them into the passenger list instructions
       if (this.activity.assigned_seats && this.activity.assigned_seats.length > 0) {
@@ -884,6 +917,7 @@ export default {
           // Status
           status: activityData.status || 'assigned',
           is_active: activityData.is_active || false,
+          is_failed_due_to_time: activityData.is_failed_due_to_time || false,
           
           // Activity Code
           activity_code: activityData.activity_code || '',
@@ -896,10 +930,14 @@ export default {
           completed: activityData.completed || false,
           created_at: activityData.created_at,
           segments: activityData.segments || [],
-          analysis: activityData.analysis || null,
           grades_released: activityData.grades_released || false,
-          assigned_seats: activityData.assigned_seats || []
+          assigned_seats: activityData.assigned_seats || [],
+          expires_at: activityData.expires_at // ✅ Added for live timer
         };
+        
+        if (this.activity.expires_at && !this.activity.completed && this.activity.status !== 'graded' && !this.activity.is_failed_due_to_time) {
+          this.startLiveTimer();
+        }
         
         console.log('✅ Activity populated with code:', this.activity.activity_code);
         
@@ -1007,25 +1045,38 @@ export default {
       const activityCodeClean = (this.activity.activity_code || '').trim().toUpperCase();
       
       if (enteredCodeClean === activityCodeClean) {
-        console.log('✅ Code verified successfully!');
+        console.log('✅ Code verified successfully! Starting activity timer...');
         
-        // Update the booking store
-        const bookingStore = useBookingStore();
-        bookingStore.setActivityCode(this.enteredCode, {
-          id: this.activity.id,
-          title: this.activity.title
-        });
-        
-        // Store code verification in localStorage (optional)
-        const verificationKey = `activity_${this.activity.id}_verified`;
-        localStorage.setItem(verificationKey, 'true');
-        localStorage.setItem(`${verificationKey}_timestamp`, Date.now().toString());
-        
-        // Close modal
-        this.closeCodeModal();
-        
-        // Navigate to home route
-        this.$router.push('/');
+        try {
+          // 1. Call the backend to start the timer
+          const startRes = await studentActivityDetailsService.startActivity(this.activity.id);
+          console.log('⏲️ Timer started:', startRes.data);
+          
+          // 2. Update the booking store with activity info and expiry
+          const bookingStore = useBookingStore();
+          bookingStore.setActivityCode(this.enteredCode, {
+            id: this.activity.id,
+            title: this.activity.title,
+            expires_at: startRes.data.expires_at,
+            time_limit_minutes: startRes.data.time_limit_minutes
+          });
+          
+          // Store code verification in localStorage (optional)
+          const verificationKey = `activity_${this.activity.id}_verified`;
+          localStorage.setItem(verificationKey, 'true');
+          localStorage.setItem(`${verificationKey}_timestamp`, Date.now().toString());
+          
+          // Close modal
+          this.closeCodeModal();
+          
+          // Navigate to home route
+          this.$router.push('/');
+        } catch (error) {
+          console.error('❌ Failed to start activity timer:', error);
+          this.showError = true;
+          this.errorMessage = error.response?.data?.error || 'Failed to initialize activity. Please try again.';
+          this.verifying = false;
+        }
       } else {
         console.log('❌ Invalid code entered');
         this.showError = true;
@@ -1106,11 +1157,15 @@ export default {
     },
     
     getButtonText() {
+      if (this.activity.is_failed_due_to_time) {
+        return 'Time Limit Reach';
+      }
       if (this.activity.completed || this.activity.grade !== null || this.activity.status === 'submitted' || this.activity.status === 'graded') {
         return 'Activity Completed';
       }
       if (this.isOverdue) return 'Deadline Passed';
       if (!this.activity.is_active) return 'Activity Not Active';
+      if (this.activity.expires_at) return 'Continue Activity';
       return 'Start';
     },
 
@@ -1143,7 +1198,41 @@ export default {
       if (val === 'mrs' || val === 'female') return 'Mrs.';
       if (val === 'ms') return 'Ms.';
       return g.charAt(0).toUpperCase() + g.slice(1);
+    },
+    
+    startLiveTimer() {
+      if (this.timerInterval) clearInterval(this.timerInterval);
+      
+      this.timerInterval = setInterval(() => {
+        if (!this.activity.expires_at) {
+          this.timeLeftLive = '';
+          this.secondsLeftLive = 0;
+          return;
+        }
+        
+        const expiry = new Date(this.activity.expires_at).getTime();
+        const now = Date.now();
+        const diff = Math.max(0, Math.round((expiry - now) / 1000));
+        
+        this.secondsLeftLive = diff;
+        
+        const mins = Math.floor(diff / 60);
+        const secs = diff % 60;
+        this.timeLeftLive = `${mins}:${secs.toString().padStart(2, '0')}`;
+        
+        if (diff <= 0) {
+          clearInterval(this.timerInterval);
+          // If time is up, we might need to refresh to show auto-fail
+          // ONLY if not already failed to prevent infinite loop/flickering
+          if (!this.activity.is_failed_due_to_time) {
+            this.loadActivityDetails();
+          }
+        }
+      }, 1000);
     }
+  },
+  beforeUnmount() {
+    if (this.timerInterval) clearInterval(this.timerInterval);
   }
 }
 </script>

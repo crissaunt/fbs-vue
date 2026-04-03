@@ -15,17 +15,11 @@ export const activityDetailsService = {
         }
     },
 
-    /**
-     * Activate an activity and generate/reuse activity code, 
-     * optionally assigning it to specific students.
-     * @param {number} activityId - Activity ID to activate
-     * @param {Array<number>} studentIds - Array of student IDs to assign the activity to
-     * @returns {Promise} Activation response with activity code
-     */
-    async activateActivity(activityId, studentIds = []) {
+    async activateActivity(activityId, studentIds = [], timeLimitMinutes = null) {
         try {
             const response = await api.post(`api/instructor/activity/${activityId}/activate/`, {
-                student_ids: studentIds
+                student_ids: studentIds,
+                time_limit_minutes: timeLimitMinutes
             });
             return response.data;
         } catch (error) {

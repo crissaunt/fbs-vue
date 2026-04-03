@@ -1,6 +1,7 @@
 <template>
-  <aside class="sticky top-10 h-fit space-y-4">
-    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm transition-all duration-300">
+  <aside class="w-full md:sticky md:top-24 h-fit space-y-4">
+    <!-- Desktop Sidebar (md and up) -->
+    <div class="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm transition-all duration-300">
       <!-- Header -->
       <div class="p-6 border-b border-slate-200 bg-slate-50/50">
         <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-1">Travelers</h2>
@@ -25,14 +26,14 @@
           :key="n"
           class="flex items-center px-6 py-4 cursor-pointer transition-all relative group"
           :class="[
-            activeIndex === n ? 'bg-rose-50/40' : 'hover:bg-slate-50/50',
+            activeIndex === n ? 'bg-pink-50/40' : 'hover:bg-slate-50/50',
           ]"
           @click="$emit('select', n)"
         >
           <!-- Active Indicator Bar -->
           <div 
             v-if="activeIndex === n"
-            class="absolute left-0 top-0 bottom-0 w-1 bg-rose-500 rounded-r-full"
+            class="absolute left-0 top-0 bottom-0 w-1 bg-pink-500 rounded-r-full"
           ></div>
 
           <!-- Status Icon / Number -->
@@ -42,7 +43,7 @@
               isPassengerComplete(n) 
                 ? 'bg-emerald-100 text-emerald-600' 
                 : activeIndex === n 
-                  ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' 
+                  ? 'bg-pink-500 text-white shadow-lg shadow-pink-200' 
                   : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'
             ]"
           >
@@ -56,7 +57,7 @@
             <div 
               class="text-sm font-bold transition-colors truncate"
               :class="[
-                activeIndex === n ? 'text-rose-600' : 'text-slate-700',
+                activeIndex === n ? 'text-pink-600' : 'text-slate-700',
                 getPassengerType(n) === 'Infant' ? 'text-amber-600' : ''
               ]"
             >
@@ -68,8 +69,8 @@
                 <span class="text-[9px] font-black text-emerald-500 uppercase tracking-tighter">Verified</span>
               </template>
               <template v-else-if="hasPassengerError(n)">
-                <span class="text-[9px] font-black text-rose-500 uppercase tracking-tighter flex items-center gap-1">
-                  <span class="w-1 h-1 rounded-full bg-rose-500 animate-pulse"></span> Requires Attention
+                <span class="text-[9px] font-black text-pink-500 uppercase tracking-tighter flex items-center gap-1">
+                  <span class="w-1 h-1 rounded-full bg-pink-500 animate-pulse"></span> Requires Attention
                 </span>
               </template>
               <template v-else>
@@ -87,7 +88,7 @@
           
           <div 
             class="ml-3 text-slate-300 group-hover:text-slate-400 transition-transform duration-300"
-            :class="{ 'translate-x-1 text-rose-400': activeIndex === n }"
+            :class="{ 'translate-x-1 text-pink-400': activeIndex === n }"
           >
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
           </div>
@@ -103,14 +104,42 @@
           <div class="min-w-0">
             <h4 class="text-[10px] font-black text-amber-800 uppercase tracking-widest leading-none mb-1">Infant Setup</h4>
             <p v-if="allInfantsAssigned" class="text-[10px] text-amber-600 font-medium">All assigned to adults</p>
-            <p v-else class="text-[10px] text-rose-600 font-bold">{{ unassignedInfantsCount }} need lap assignment</p>
+            <p v-else class="text-[10px] text-pink-600 font-bold">{{ unassignedInfantsCount }} need lap assignment</p>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Mobile Horizontal Nav (visible on small screens) -->
+    <div class="md:hidden bg-white border-b border-slate-200 sticky top-[72px] z-20 -mx-5 px-5 py-3 overflow-x-auto no-scrollbar flex gap-3 shadow-sm shadow-slate-100/50">
+      <div 
+        v-for="n in totalTravelers" 
+        :key="'mob-'+n"
+        class="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl transition-all border"
+        :class="[
+          activeIndex === n ? 'bg-pink-500 border-pink-500 text-white shadow-md shadow-pink-200' : 'bg-slate-50 border-slate-200 text-slate-600'
+        ]"
+        @click="$emit('select', n)"
+      >
+        <div 
+          class="w-5 h-5 flex items-center justify-center rounded-md text-[9px] font-black transition-colors"
+          :class="[
+            isPassengerComplete(n) 
+              ? 'bg-emerald-400 text-white' 
+              : activeIndex === n ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'
+          ]"
+        >
+          <svg v-if="isPassengerComplete(n)" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" />
+          </svg>
+          <span v-else>{{ n }}</span>
+        </div>
+        <span class="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{{ getPassengerType(n) }}</span>
+      </div>
+    </div>
     
-    <!-- Help Card -->
-    <div class="p-5 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 text-white shadow-lg overflow-hidden relative">
+    <!-- Help Card (Desktop only) -->
+    <div class="hidden md:block p-5 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 text-white shadow-lg overflow-hidden relative">
       <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
       <h3 class="text-xs font-black uppercase tracking-[0.2em] mb-3 text-slate-400">Need Help?</h3>
       <p class="text-[11px] text-slate-300 leading-relaxed mb-4">Make sure names match your official documents or passport exactly.</p>

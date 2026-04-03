@@ -1,32 +1,34 @@
 <template>
-  <div class="p-8 bg-gray-200 min-h-screen poppins">
+  <div class="p-4 sm:p-6 lg:p-8 bg-gray-200 min-h-screen poppins">
     <!-- Header -->
-    <div class="mb-8 flex justify-between items-center bg-white p-6 rounded-[2px] border border-gray-200 shadow-sm relative overflow-hidden group">
+    <div class="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-[2px] border border-gray-200 shadow-sm relative overflow-hidden group">
       <div class="absolute inset-y-0 left-0 w-1.5 bg-[#fe3787]"></div>
       <div>
         <h1 class="text-3xl font-black text-[#002D1E] tracking-tight italic uppercase">Check-in Registry</h1>
         <p class="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em] mt-1">DCS Portal • Core Manifest Logging</p>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-2">
         <button 
           @click="fetchCheckIns" 
-          class="bg-[#002D1E] text-white px-5 py-2.5 rounded-[2px] text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2 shadow-lg shadow-gray-200"
+          class="bg-[#002D1E] text-white px-4 sm:px-5 py-2.5 rounded-[2px] text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2 shadow-lg shadow-gray-200"
           :disabled="loading"
         >
           <i class="ph ph-arrows-clockwise" :class="{'animate-spin': loading}"></i>
-          Update Manifest
+          <span class="hidden sm:inline">Update Manifest</span>
+          <span class="sm:hidden">Sync</span>
         </button>
         <button 
           @click="$router.push('/dcs/dashboard')" 
-          class="bg-white border border-gray-200 text-gray-600 px-5 py-2.5 rounded-[2px] text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all shadow-sm"
+          class="bg-white border border-gray-200 text-gray-600 px-4 sm:px-5 py-2.5 rounded-[2px] text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all shadow-sm"
         >
-          DCS Terminal
+          <span class="hidden sm:inline">DCS Terminal</span>
+          <span class="sm:hidden">DCS</span>
         </button>
       </div>
     </div>
 
     <!-- Stats Section -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
       <div 
         v-for="(count, label) in statsItems" 
         :key="label" 
@@ -45,17 +47,17 @@
     </div>
 
     <!-- Table Section -->
-    <div class="bg-white border border-gray-200 rounded-[2px] shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+    <div class="bg-white border border-gray-200 rounded-[2px] shadow-sm overflow-hidden flex flex-col min-h-[400px] sm:min-h-[500px]">
       <div class="overflow-x-auto">
-        <table class="w-full text-left">
+        <table class="w-full text-left min-w-[640px]">
           <thead class="bg-gray-50 text-gray-500 text-[10px] uppercase font-black tracking-[0.15em] border-b border-gray-200">
             <tr>
-              <th class="px-8 py-5">Node Name</th>
-              <th class="px-8 py-5">Flight Flow</th>
-              <th class="px-8 py-5 text-center">Equipment / Load</th>
-              <th class="px-8 py-5">Boarding Signature</th>
-              <th class="px-8 py-5 text-center">Protocol Status</th>
-              <th class="px-8 py-5 text-right">Last Verified</th>
+              <th class="px-4 sm:px-8 py-4 sm:py-5">Node Name</th>
+              <th class="px-4 sm:px-8 py-4 sm:py-5">Flight Flow</th>
+              <th class="px-4 sm:px-8 py-4 sm:py-5 text-center">Equipment / Load</th>
+              <th class="px-4 sm:px-8 py-4 sm:py-5">Boarding Signature</th>
+              <th class="px-4 sm:px-8 py-4 sm:py-5 text-center">Protocol Status</th>
+              <th class="px-4 sm:px-8 py-4 sm:py-5 text-right">Last Verified</th>
             </tr>
           </thead>
 
@@ -65,47 +67,47 @@
               :key="checkIn.id"
               class="hover:bg-gray-50/50 transition-all text-sm group/row"
             >
-              <td class="px-8 py-5">
-                <div class="flex items-center gap-4">
-                  <div class="w-10 h-10 rounded-[2px] bg-sky-50 text-sky-600 flex items-center justify-center font-black border border-sky-100 group-hover:bg-sky-500 group-hover:text-white transition-all">
+              <td class="px-4 sm:px-8 py-3 sm:py-5">
+                <div class="flex items-center gap-2 sm:gap-4">
+                  <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-[2px] bg-sky-50 text-sky-600 flex items-center justify-center font-black border border-sky-100 group-hover:bg-sky-500 group-hover:text-white transition-all shrink-0">
                     {{ checkIn.seat_number?.charAt(0) || '?' }}
                   </div>
                   <div>
-                    <span class="font-black text-slate-800 block uppercase text-xs tracking-tight">{{ checkIn.passenger_name }}</span>
-                    <span class="text-[9px] text-[#fe3787] font-black uppercase tracking-widest">Seat {{ checkIn.seat_number || 'TBD' }}</span>
+                    <span class="font-black text-slate-800 block uppercase text-xs tracking-tight truncate max-w-[80px] sm:max-w-none">{{ checkIn.passenger_name }}</span>
+                    <span class="text-[9px] text-[#fe3787] font-black uppercase tracking-widest whitespace-nowrap">Seat {{ checkIn.seat_number || 'TBD' }}</span>
                   </div>
                 </div>
               </td>
 
-              <td class="px-8 py-5">
-                <span class="font-black text-slate-900 block uppercase text-xs tracking-tighter">{{ checkIn.flight_number }}</span>
-                <div class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">{{ checkIn.route?.replace('→', ' to ') }}</div>
+              <td class="px-4 sm:px-8 py-3 sm:py-5">
+                <span class="font-black text-slate-900 block uppercase text-xs tracking-tighter whitespace-nowrap">{{ checkIn.flight_number }}</span>
+                <div class="text-[9px] text-gray-400 font-bold uppercase tracking-widest whitespace-nowrap">{{ checkIn.route?.replace('→', ' to ') }}</div>
               </td>
 
-              <td class="px-8 py-5 text-center">
+              <td class="px-4 sm:px-8 py-3 sm:py-5 text-center">
                 <div class="flex flex-col items-center gap-1.5">
-                  <div class="flex items-center gap-2 text-[9px] font-black text-slate-500 uppercase bg-slate-50 px-3 py-1.5 rounded-[2px] border border-slate-100">
+                  <div class="flex items-center gap-2 text-[9px] font-black text-slate-500 uppercase bg-slate-50 px-2 sm:px-3 py-1.5 rounded-[2px] border border-slate-100 whitespace-nowrap">
                     <i class="ph ph-suitcase-simple"></i> {{ checkIn.baggage_count || 0 }} Bags • {{ checkIn.baggage_weight || 0 }}kg
                   </div>
                   <div v-if="checkIn.check_in_counter" class="text-[8px] text-gray-400 font-bold uppercase tracking-[0.2em]">Gate Node {{ checkIn.check_in_counter }}</div>
                 </div>
               </td>
 
-              <td class="px-8 py-5">
-                <div v-if="checkIn.boarding_pass" class="flex items-center gap-3">
+              <td class="px-4 sm:px-8 py-3 sm:py-5">
+                <div v-if="checkIn.boarding_pass" class="flex items-center gap-2 sm:gap-3">
                   <i class="ph ph-fingerprint text-[#fe3787] text-xl animate-pulse"></i>
                   <span class="font-black text-slate-900 font-mono tracking-[0.15em] text-xs">{{ checkIn.boarding_pass }}</span>
                 </div>
                 <div v-else class="text-rose-500 font-black text-[9px] uppercase tracking-widest animate-pulse">Unauthorized Flow</div>
               </td>
 
-              <td class="px-8 py-5 text-center">
-                <span :class="statusClass(checkIn.status)" class="px-4 py-1.5 rounded-[2px] text-[9px] font-black uppercase tracking-widest border">
+              <td class="px-4 sm:px-8 py-3 sm:py-5 text-center">
+                <span :class="statusClass(checkIn.status)" class="px-3 sm:px-4 py-1.5 rounded-[2px] text-[9px] font-black uppercase tracking-widest border whitespace-nowrap">
                   {{ checkIn.status }}
                 </span>
               </td>
 
-              <td class="px-8 py-5 text-right font-black text-[10px] text-gray-400 uppercase tracking-tight">
+              <td class="px-4 sm:px-8 py-3 sm:py-5 text-right font-black text-[10px] text-gray-400 uppercase tracking-tight whitespace-nowrap">
                 {{ formatDateTime(checkIn.check_in_time) }}
               </td>
             </tr>
@@ -122,17 +124,17 @@
         </table>
       </div>
 
-      <!-- Pagination -->
-      <div v-if="checkIns.length > itemsPerPage" class="mt-auto px-8 py-6 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between">
+      <div v-if="checkIns.length > itemsPerPage" class="mt-auto px-4 sm:px-8 py-4 sm:py-6 border-t border-gray-100 bg-gray-50/30 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-          Manifest Range {{ startIndex + 1 }} to {{ endIndex }} of {{ checkIns.length }}
+          <span class="hidden sm:inline">Manifest Range {{ startIndex + 1 }} to {{ endIndex }} of {{ checkIns.length }}</span>
+          <span class="sm:hidden">{{ startIndex + 1 }}–{{ endIndex }} / {{ checkIns.length }}</span>
         </div>
-        <div class="flex gap-1.5">
-          <button @click="prevPage" :disabled="currentPage === 1" class="px-6 py-2.5 bg-white border border-gray-200 rounded-[2px] text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white disabled:opacity-30 disabled:hover:bg-white transition-all shadow-sm">Back</button>
+        <div class="flex gap-1.5 flex-wrap justify-center">
+          <button @click="prevPage" :disabled="currentPage === 1" class="px-4 sm:px-6 py-2.5 bg-white border border-gray-200 rounded-[2px] text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white disabled:opacity-30 disabled:hover:bg-white transition-all shadow-sm">Prev</button>
           <div class="flex gap-1">
-            <button v-for="page in visiblePages" :key="page" @click="goToPage(page)" :disabled="page === '...'" :class="['w-10 h-10 flex items-center justify-center border rounded-[2px] text-[10px] font-black uppercase transition-all shadow-sm', page === '...' ? 'bg-white border-gray-200 text-gray-400' : currentPage === page ? 'bg-[#fe3787] text-white border-[#fe3787] shadow-lg shadow-pink-100' : 'bg-white border-gray-200 text-slate-900 hover:bg-gray-50']">{{ page }}</button>
+            <button v-for="page in visiblePages" :key="page" @click="goToPage(page)" :disabled="page === '...'" :class="['w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center border rounded-[2px] text-[10px] font-black uppercase transition-all shadow-sm', page === '...' ? 'bg-white border-gray-200 text-gray-400' : currentPage === page ? 'bg-[#fe3787] text-white border-[#fe3787] shadow-lg shadow-pink-100' : 'bg-white border-gray-200 text-slate-900 hover:bg-gray-50']">{{ page }}</button>
           </div>
-          <button @click="nextPage" :disabled="currentPage === totalPages" class="px-6 py-2.5 bg-white border border-gray-200 rounded-[2px] text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white disabled:opacity-30 disabled:hover:bg-white transition-all shadow-sm">Next</button>
+          <button @click="nextPage" :disabled="currentPage === totalPages" class="px-4 sm:px-6 py-2.5 bg-white border border-gray-200 rounded-[2px] text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white disabled:opacity-30 disabled:hover:bg-white transition-all shadow-sm">Next</button>
         </div>
       </div>
     </div>

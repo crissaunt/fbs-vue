@@ -48,5 +48,14 @@ export const studentActivityDetailsService = {
      */
     saveDraft(activityId, draftData) {
         return api.post(`api/student/activities/${activityId}/draft/`, draftData);
+    },
+
+    /**
+     * Start the activity timer
+     * @param {number} activityId - The ID of the activity
+     * @returns {Promise} Start response with expiry data
+     */
+    startActivity(activityId) {
+        return api.post(`api/student/activity/start/${activityId}/`);
     }
 };

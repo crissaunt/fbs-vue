@@ -1,96 +1,152 @@
 <template>
   <div
-    class="min-h-screen bg-cover bg-center bg-no-repeat"
+    class="min-h-screen bg-cover bg-center bg-no-repeat flex flex-col font-sans"
     :style="backgroundStyle"
   >
-    <div class="min-h-screen bg-black/20">
-      <header class="px-6 py-4 flex items-center justify-between" style="background-color:whitesmoke ;">
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background-color: #FF579A;">
-            <span class="font-bold text-xl" style="color: #F9FAFB ;">CS</span>
+    <!-- Dark overlay for better contrast & backdrop blur -->
+    <div class="min-h-screen bg-black/40 flex flex-col backdrop-blur-[2px]">
+      
+      <!-- Responsive Header -->
+      <header class="w-full px-4 md:px-8 py-2 md:py-2 flex flex-col sm:flex-row items-center justify-between gap-4 md:gap-0 transition-all duration-300" 
+              style="background-color: rgba(245, 245, 245, 0.95); backdrop-filter: blur(8px); box-shadow: 0 2px 15px rgba(0,0,0,0.1);">
+        
+        <div class="flex items-center gap-3 sm:gap-4 group">
+          <div class="w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center bg-white shadow-sm overflow-hidden transition-transform duration-300">
+            <img :src="CTHM" alt="CTHM Logo" class="w-full h-full object-contain p-0.5">
           </div>
-          <div style="color: #0E8028;">
-            <div class="font-bold text-lg">CARAGA STATE UNIVERSITY</div>
-            <div class="text-xs">CABADBARAN CITY</div>
+          <div class="text-center sm:text-left">
+            <h1 class="font-bold text-xs md:text-sm lg:text-base text-gray-800 leading-tight">
+              College of Tourism and Hospitality Management
+            </h1>
+            <p class="text-[10px] md:text-xs text-gray-600 font-medium tracking-wide uppercase">
+              CARAGA STATE UNIVERSITY - CABADBARAN CITY
+            </p>
           </div>
         </div>
-        <div class="flex gap-3">
-        <router-link to="/register">
-          <button class="font-semibold px-6 py-2 rounded" style="background-color: #FF579A; color: #F9FAFB;">
-            Register
-          </button>
-        </router-link>
 
-        <button class="border-2 font-semibold px-6 py-2 rounded" style="border-color: #FF579A; background-color: transparent; color: #0E8028 ;">
-          Contact Us
-        </button>
-      </div>
+        <div class="flex items-center gap-3 w-full sm:w-auto justify-center sm:justify-end">
+          <router-link to="/register" class="w-full sm:w-auto">
+            <button class="w-full sm:w-auto font-bold text-white bg-pink-500 px-4 md:px-8 py-2 md:py-2.5 rounded-sm text-xs md:text-sm cursor-pointer hover:bg-pink-500/80" 
+                    >
+              Register
+            </button>
+          </router-link>
+
+          <button class="hidden sm:block border-2 font-bold bg-white text-pink-500 hover:bg-pink-600/80 hover:text-white cursor-pointer px-4 md:px-8 py-2 md:py-2.5 rounded-sm text-xs md:text-sm transition-all duration-300 active:scale-95" 
+                 >
+            Contact Us
+          </button>
+        </div>
       </header>
 
-      <div class="container mx-auto px-6 py-12">
-        <div class="grid lg:grid-cols-3 gap-8 items-start">
-          <div class="lg:col-span-2 space-y-8">
-            <div style="color: #F9FAFB;">
-              <h1 class="text-4xl lg:text-5xl font-bold mb-4 leading-tight">
-                TourEd Academy: Flight Booking and Tourism Training Platform
-              </h1>
-              <p class="leading-relaxed">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-              </p>
+      <!-- Main Responsive Content -->
+      <main class="flex-grow flex items-center justify-center p-2 md:p-4">
+        <div class="container mx-auto max-w-7xl">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16  ">
+            
+            <!-- Left Info Content -->
+            <div class="lg:col-span-7 space-y-4 md:space-y-8 text-center mt-5 lg:text-left animate-fade-in-up">
+              <div style="color: #F9FAFB;">
+                <h2 class="text-xl md:text-2xl lg:text-3xl font-extrabold mb-2 md:mb-4 leading-[1.1] drop-shadow-lg tracking-tight">
+                  <span class="block text-rose-300 text-4xl">TourSim :</span>
+                  Flight Booking and Tourism Training Platform
+                </h2>
+                <div class="h-1.5 w-24 bg-rose-400 rounded-full mb-6 mx-auto lg:mx-0 shadow-sm"></div>
+                <p class="leading-relaxed text-sm md:text-base font-medium opacity-90 max-w-2xl mx-auto lg:mx-0 drop-shadow-sm">
+                  Experience flight booking simulation and comprehensive tourism training. Standardizing tourism education through digital innovation and hands-on simulation tools.
+                </p>
+              </div>
+              
+              <!-- Features/Indicators -->
+              <div class="hidden sm:flex flex-wrap justify-center lg:justify-start gap-4 md:gap-8 pt-4">
+                 <div class="flex items-center gap-2 text-white/90">
+                    <div class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]"></div>
+                    <span class="text-sm font-semibold tracking-wide uppercase opacity-80">Live Simulation</span>
+                 </div>
+               
+              </div>
             </div>
-          </div>
 
-          <div class="lg:col-span-1">
-            <div class="rounded-lg shadow-2xl p-8" style="background-color: #F9FAFB;">
-              <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center">Login Here!</h2>
-              <p class="text-gray-500 text-sm text-center mb-8">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-              </p>
-
-              <div class="space-y-6">
-                <div>
-                  <label class="block text-gray-700 font-semibold mb-2">Username</label>
-                  <input
-                    v-model="username"
-                    type="text"
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none"
-                    placeholder="Enter username"
-                  />
+            <!-- Login Card -->
+            <div class="lg:col-span-5 w-full max-w-md mx-auto animate-fade-in-right">
+              <div class="rounded-sm shadow-2xl p-4 md:p-6 transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] bg-white/95 backdrop-blur-md">
+                <div class="text-center mb-8">
+                  <h3 class="text-2xl md:text-xl font-black text-gray-900 mb-2">Welcome Back</h3>
+                  <p class="text-gray-500 text-xs font-medium">
+                    Sign in to your training workspace
+                  </p>
                 </div>
 
-                <div>
-                  <label class="block text-gray-700 font-semibold mb-2">Password</label>
-                  <input
-                    v-model="password"
-                    type="password"
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none"
-                    placeholder="Enter password"
-                    @keyup.enter="handleLogin"
-                  />
-                </div>
+                <div class="space-y-5">
+                  <div class="space-y-1.5">
+                    <label class="block text-gray-800 font-bold text-xs uppercase tracking-widest ml-1">Username</label>
+                    <div class="relative group">
+                       <input
+                        v-model="username"
+                        type="text"
+                        class="w-full px-5 py-1.5 md:py-2 bg-gray-50 border border-gray-300 rounded-md focus:outline-none focus:border-rose-400 focus:bg-white transition-all duration-300 font-medium"
+                        placeholder="Enter your username"
+                      />
+                    </div>
+                  </div>
 
-                <button
-                  @click="handleLogin"
-                  :disabled="loading"
-                  class="w-full font-bold py-3 rounded-lg transition-opacity"
-                  :class="loading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'"
-                  style="background-color: #FF579A; color: #F9FAFB;"
-                >
-                  <span v-if="loading">Logging in...</span>
-                  <span v-else>Login</span>
-                </button>
+                  <div class="space-y-1.5">
+                    <label class="block text-gray-800 font-bold text-xs uppercase tracking-widest ml-1">Password</label>
+                    <div class="relative group">
+                      <input
+                        v-model="password"
+                        type="password"
+                        class="w-full px-5 py-1.5 md:py-2 bg-gray-50 border border-gray-300 rounded-md focus:outline-none focus:border-rose-400 focus:bg-white transition-all duration-300 font-medium"
+                        placeholder="••••••••"
+                        @keyup.enter="handleLogin"
+                      />
+                    </div>
+                  </div>
 
-                <div class="text-center">
-                  <a href="#" class="text-sm" style="color: #FF579A;">
-                    forgot password?
-                  </a>
+                  <div class="flex items-center justify-between px-1">
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                      <input type="checkbox" class="accent-rose-500 w-4 h-4 rounded">
+                      <span class="text-xs text-gray-600 font-medium group-hover:text-gray-900 transition-colors">Remember me</span>
+                    </label>
+                    <a href="#" class="text-xs font-bold text-rose-500 hover:text-rose-600 transition-colors">
+                      Forgot password?
+                    </a>
+                  </div>
+
+                  <button
+                    @click="handleLogin"
+                    :disabled="loading"
+                    class="w-full font-bold py-1.5 md:py-2.5 rounded-md text-white  bg-pink-500 hover:bg-pink-500/80 cursor-pointer transition-all duration-300 active:scale-[0.98] disabled:opacity-70 disabled:scale-100 disabled:cursor-not-allowed group relative overflow-hidden"
+                  >
+                    <div class="flex items-center justify-center gap-2">
+                       <span v-if="loading" class="animate-pulse">Authenticating...</span>
+                       <span v-else class="flex items-center gap-2">
+                         LOGIN 
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                         </svg>
+                       </span>
+                    </div>
+                  </button>
+
+                  <div class="text-center pt-2 sm:hidden">
+                    <p class="text-sm text-gray-500">
+                      Need help? <a href="#" class="text-rose-500 font-bold">Contact Support</a>
+                    </p>
+                  </div>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
-      </div>
+      </main>
+
+      <!-- Footer / Version -->
+      <footer class="p-6 text-center">
+         <p class="text-white/60 text-[10px] font-bold tracking-[0.2em] uppercase">
+            © 2025 CSUCC College of Tourism and Hospitality Management • v1.2.0
+         </p>
+      </footer>
     </div>
   </div>
 </template>
@@ -102,6 +158,7 @@ import { authService } from '@/services/auth/authService'
 import { useUserStore } from '@/stores/user'
 import { useNotificationStore } from '@/stores/notification'
 import { useRouter } from 'vue-router'
+import CTHM from '@/assets/image/cthm-logos.png'
 
 export default {
   name: 'LoginView',
@@ -109,7 +166,7 @@ export default {
     const userStore = useUserStore()
     const notificationStore = useNotificationStore()
     const router = useRouter() // Get router instance
-    return { userStore, notificationStore, router } // Expose router
+    return { userStore, notificationStore, router, CTHM } // Expose router + logo
   },
   data() {
     return {
@@ -185,3 +242,55 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+
+.animate-fade-in-right {
+  animation: fadeInRight 0.8s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Custom transitions for inputs */
+input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+  opacity: 0.6;
+}
+
+/* Mobile adjustments for header text */
+@media (max-width: 640px) {
+  header {
+    background-color: white !important;
+  }
+}
+
+/* Smooth glassmorphism enhancements */
+.backdrop-blur-md {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+</style>

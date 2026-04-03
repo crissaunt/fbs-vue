@@ -1,65 +1,28 @@
 <template>
   <div class="p-6 poppins">
-    <!-- Header Section -->
-    <div class="flex justify-between items-center mb-6">
-      <button 
-        @click="openModal()" 
-        class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[14px] rounded-[1px] shadow-sm transition-all"
-      >
-        <i class="ph ph-plus"></i> New Add-On
-      </button>
-    </div>
+    <!-- Header & Tools Section -->
+    <AdminTableTool 
+      v-model="searchQuery" 
+      placeholder="Search service name..."
+    >
+      <template #actions>
+        <button 
+          @click="openModal()" 
+          class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[12px] rounded-[1px] shadow-sm transition-all"
+        >
+          <i class="ph ph-plus text-[14px]"></i> Add
+        </button>
+      </template>
+    </AdminTableTool>
 
     <!-- Grid Section -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div 
-        v-for="item in paginatedAddOns" 
-        :key="item.id" 
-        :id="`addon-row-${item.id}`"
-        :class="{'highlight-active': highlightedId === item.id}"
-        class="bg-white border border-gray-200 p-5 rounded-[1px] shadow-sm flex flex-col justify-between hover:shadow-md transition-all relative overflow-hidden"
-      >
-        <div 
-          v-if="highlightedId === item.id" 
-          class="absolute top-0 right-0 bg-[#fe3787] text-white px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest rounded-bl-[1px] animate-pulse"
-        >
-          Selected Item
-        </div>
-        <div>
-          <div class="flex justify-between items-start mb-4">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center">
-                <i class="ph ph-package text-[#fe3787] text-lg"></i>
-              </div>
-              <div>
-                <h3 class="font-bold text-[#002D1E] text-md poppins">{{ item.name }}</h3>
-                <div class="flex items-center gap-1 mt-1">
-                  <span class="text-[9px] text-gray-400 font-bold uppercase poppins">Service ID: {{ item.id }}</span>
-                  <div class="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse"></div>
-                </div>
-              </div>
-            </div>
-            <div class="flex gap-2">
-              <button @click="openModal(item)" class="text-green-600 hover:text-green-400 p-1 transition-colors">
-                <i class="ph ph-pencil-simple text-lg"></i>
-              </button>
-              <button @click="deleteAddOn(item.id)" class="text-red-600 hover:text-red-400 p-1 transition-colors">
-                <i class="ph ph-trash text-lg"></i>
-              </button>
-            </div>
-          </div>
-          <p class="text-gray-500 text-[12px] font-medium leading-relaxed poppins line-clamp-3">
-            {{ item.description || 'No description provided.' }}
-          </p>
-        </div>
-      </div>
-      
       <!-- Empty State -->
-      <div v-if="addOns.length === 0" class="col-span-full py-20 text-center bg-white border border-gray-200 border-dashed rounded-[1px]">
+      <div v-if="filteredAddOns.length === 0" class="col-span-full py-20 text-center bg-white border border-gray-200 border-dashed rounded-[1px]">
         <div class="w-16 h-16 mx-auto mb-4 bg-gray-50 rounded-full flex items-center justify-center">
           <i class="ph ph-package text-3xl text-gray-300"></i>
         </div>
-        <p class="text-gray-400 poppins text-sm italic">No add-ons created yet. Click "New Add-On" to get started.</p>
+        <p class="text-gray-400 poppins text-sm italic">No add-ons found matching your criteria.</p>
       </div>
     </div>
 
@@ -138,6 +101,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '@/services/admin/api';
 import { useModalStore } from '@/stores/modal';
+import AdminTableTool from '@/components/admin/AdminTableTool.vue';
 
 const modalStore = useModalStore();
 
@@ -147,6 +111,7 @@ const isEditing = ref(false);
 const currentId = ref(null);
 const highlightedId = ref(null);
 const route = useRoute();
+const searchQuery = ref('');
 
 // Pagination State
 const currentPage = ref(1);
@@ -154,14 +119,21 @@ const itemsPerPage = 10;
 
 const form = ref({ name: '', description: '' });
 
+// Search Logic
+const filteredAddOns = computed(() => {
+  if (!searchQuery.value) return addOns.value;
+  const q = searchQuery.value.toLowerCase();
+  return addOns.value.filter(a => a.name.toLowerCase().includes(q));
+});
+
 // Pagination Logic
-const totalPages = computed(() => Math.ceil(addOns.value.length / itemsPerPage));
+const totalPages = computed(() => Math.ceil(filteredAddOns.value.length / itemsPerPage));
 const paginatedAddOns = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
-  return addOns.value.slice(start, start + itemsPerPage);
+  return filteredAddOns.value.slice(start, start + itemsPerPage);
 });
 const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage);
-const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, addOns.value.length));
+const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, filteredAddOns.value.length));
 
 const visiblePages = computed(() => {
   const pages = [];

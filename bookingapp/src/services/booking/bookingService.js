@@ -125,8 +125,15 @@ export const bookingService = {
     // Extract baggage addons for depart flight
     if (bookingStore.addons?.baggage?.depart) {
       Object.entries(bookingStore.addons.baggage.depart).forEach(([key, baggage]) => {
-        if (baggage && baggage.id) {
-          formattedAddons.baggage[key] = baggage.id;
+        if (baggage) {
+          const id = typeof baggage === 'object' ? baggage.id : baggage;
+          if (id) {
+            formattedAddons.baggage[key] = { 
+              id: id, 
+              is_included: typeof baggage === 'object' ? (baggage.is_included || false) : false, 
+              price: typeof baggage === 'object' ? (baggage.price || 0) : 0 
+            };
+          }
         }
       });
     }
@@ -135,7 +142,14 @@ export const bookingService = {
     if (bookingStore.addons?.meals?.depart) {
       Object.entries(bookingStore.addons.meals.depart).forEach(([key, meals]) => {
         if (Array.isArray(meals) && meals.length > 0) {
-          formattedAddons.meals[key] = meals.map(m => m.id);
+          formattedAddons.meals[key] = meals.map(m => {
+            const id = typeof m === 'object' ? m.id : m;
+            return { 
+              id: id, 
+              is_included: typeof m === 'object' ? (m.is_included || false) : false, 
+              price: typeof m === 'object' ? (m.price || 0) : 0 
+            };
+          }).filter(m => m.id);
         }
       });
     }
@@ -152,8 +166,15 @@ export const bookingService = {
     // Extract seats (segmented) for depart
     if (bookingStore.addons?.seats?.depart) {
       Object.entries(bookingStore.addons.seats.depart).forEach(([key, seat]) => {
-        if (seat && seat.id) {
-          formattedAddons.seats[key] = seat.id;
+        if (seat) {
+          const id = typeof seat === 'object' ? seat.id : seat;
+          if (id) {
+            formattedAddons.seats[key] = { 
+              id: id, 
+              is_included: typeof seat === 'object' ? (seat.is_included || false) : false, 
+              price: typeof seat === 'object' ? (seat.price || 0) : 0 
+            };
+          }
         }
       });
     }
@@ -163,14 +184,28 @@ export const bookingService = {
       // Return baggage
       if (bookingStore.addons?.baggage?.return) {
         Object.entries(bookingStore.addons.baggage.return).forEach(([key, baggage]) => {
-          if (baggage && baggage.id) returnAddons.baggage[key] = baggage.id;
+          if (baggage) {
+            const id = typeof baggage === 'object' ? baggage.id : baggage;
+            if (id) returnAddons.baggage[key] = { 
+              id: id, 
+              is_included: typeof baggage === 'object' ? (baggage.is_included || false) : false, 
+              price: typeof baggage === 'object' ? (baggage.price || 0) : 0 
+            };
+          }
         });
       }
       // Return meals - UPDATED for multiple meals
       if (bookingStore.addons?.meals?.return) {
         Object.entries(bookingStore.addons.meals.return).forEach(([key, meals]) => {
           if (Array.isArray(meals) && meals.length > 0) {
-            returnAddons.meals[key] = meals.map(m => m.id);
+            returnAddons.meals[key] = meals.map(m => {
+              const id = typeof m === 'object' ? m.id : m;
+              return { 
+                id: id, 
+                is_included: typeof m === 'object' ? (m.is_included || false) : false, 
+                price: typeof m === 'object' ? (m.price || 0) : 0 
+              };
+            }).filter(m => m.id);
           }
         });
       }
@@ -183,7 +218,14 @@ export const bookingService = {
       // Return seats
       if (bookingStore.addons?.seats?.return) {
         Object.entries(bookingStore.addons.seats.return).forEach(([key, seat]) => {
-          if (seat && seat.id) returnAddons.seats[key] = seat.id;
+          if (seat) {
+            const id = typeof seat === 'object' ? seat.id : seat;
+            if (id) returnAddons.seats[key] = { 
+              id: id, 
+              is_included: typeof seat === 'object' ? (seat.is_included || false) : false, 
+              price: typeof seat === 'object' ? (seat.price || 0) : 0 
+            };
+          }
         });
       }
     }
@@ -223,13 +265,13 @@ export const bookingService = {
         // Extract addons for this segment
         if (bookingStore.addons?.baggage?.[segKey]) {
           Object.entries(bookingStore.addons.baggage[segKey]).forEach(([paxKey, baggage]) => {
-            if (baggage && baggage.id) segAddons.baggage[paxKey] = baggage.id;
+            if (baggage && baggage.id) segAddons.baggage[paxKey] = { id: baggage.id, is_included: baggage.is_included || false, price: baggage.price || 0 };
           });
         }
         if (bookingStore.addons?.meals?.[segKey]) {
           Object.entries(bookingStore.addons.meals[segKey]).forEach(([paxKey, meals]) => {
             if (Array.isArray(meals) && meals.length > 0) {
-              segAddons.meals[paxKey] = meals.map(m => m.id);
+              segAddons.meals[paxKey] = meals.map(m => ({ id: m.id, is_included: m.is_included || false, price: m.price || 0 }));
             }
           });
         }
@@ -240,7 +282,7 @@ export const bookingService = {
         }
         if (bookingStore.addons?.seats?.[segKey]) {
           Object.entries(bookingStore.addons.seats[segKey]).forEach(([paxKey, seat]) => {
-            if (seat && seat.id) segAddons.seats[paxKey] = seat.id;
+            if (seat && seat.id) segAddons.seats[paxKey] = { id: seat.id, is_included: seat.is_included || false, price: seat.price || 0 };
           });
         }
 

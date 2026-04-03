@@ -236,6 +236,12 @@ const adminRoutes = [
         name: 'AdminPricingConfig',
         component: () => import('@/views/admin/pricing_config.vue'),
         meta: { title: 'Pricing Configuration', role: ['superadmin', 'flight_admin'] }
+      },
+      {
+        path: 'bulk-import',
+        name: 'AdminBulkImport',
+        component: () => import('@/views/admin/bulk_import.vue'),
+        meta: { title: 'Bulk Data Import', role: ['superadmin', 'flight_admin', 'lms_admin'] }
       }
     ]
   }

@@ -39,9 +39,9 @@ class AircraftViewSet(viewsets.ModelViewSet):
         if not seat_classes:
             return Response({'error': 'layout_config.seat_classes is required'}, status=status.HTTP_400_BAD_REQUEST)
         
-        total_seats = sum(c.get('rows', 0) * c.get('columns', 0) for c in seat_classes)
+        total_seats = sum(c.get('class_capacity', c.get('rows', 0) * c.get('columns', 0)) for c in seat_classes)
         if total_seats > aircraft.capacity:
-            return Response({'error': f'Layout has {total_seats} seats but capacity is {aircraft.capacity}'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': f'Layout has {total_seats} units but capacity is {aircraft.capacity}'}, status=status.HTTP_400_BAD_REQUEST)
         
         aircraft.save_layout({'seat_classes': seat_classes, 'total_seats': total_seats})
         return Response({'success': True, 'message': f'Layout saved to {aircraft.model}'})

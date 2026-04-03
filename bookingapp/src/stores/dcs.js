@@ -8,6 +8,7 @@ export const useDcsStore = defineStore('dcs', {
         manifest: [],
         isLoading: false,
         error: null,
+        activeAirline: null, // Track which airline the DCS agent is currently operating under
     }),
 
     getters: {
@@ -22,7 +23,8 @@ export const useDcsStore = defineStore('dcs', {
             this.error = null;
             try {
                 const response = await dcsService.getFlights();
-                this.flights = response.data;
+                // Bug fix: defensively handle both array response and {flights:[]} shaped response
+                this.flights = Array.isArray(response.data) ? response.data : (response.data?.flights || []);
             } catch (err) {
                 this.error = 'Failed to fetch departing flights';
                 console.error(err);
@@ -57,6 +59,7 @@ export const useDcsStore = defineStore('dcs', {
                     const passenger = this.manifest.find(p => p.booking_detail_id === pData.booking_detail_id);
                     if (passenger) {
                         passenger.status = 'checkin';
+                        if (pData.seat_number) passenger.seat = pData.seat_number;
                     }
                 });
 
@@ -64,7 +67,8 @@ export const useDcsStore = defineStore('dcs', {
             } catch (err) {
                 this.error = 'Failed to process check-in';
                 console.error(err);
-                return false;
+                // Bug fix: re-throw so calling code's catch block is reached
+                throw err;
             } finally {
                 this.isLoading = false;
             }
@@ -73,6 +77,10 @@ export const useDcsStore = defineStore('dcs', {
         clearSelection() {
             this.selectedSchedule = null;
             this.manifest = [];
+        },
+
+        setActiveAirline(airline) {
+            this.activeAirline = airline;
         }
     }
 });

@@ -1,14 +1,43 @@
 <template>
   <div class="p-6 poppins">
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
-      <button 
-        @click="openAddModal" 
-        class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[14px] rounded-[1px]"
-      >
-        <i class="ph ph-plus"></i> Add Tax Type
-      </button>
-    </div>
+    <!-- Header & Tools Section -->
+    <AdminTableTool 
+      v-model="searchQuery" 
+      placeholder="Search tax name, code or description..."
+      @update:modelValue="debounceSearch"
+    >
+      <template #filters>
+        <div class="flex items-center gap-2">
+          <select 
+            v-model="selectedCategory" 
+            class="text-[11px] font-bold border border-gray-200 px-3 py-2 bg-white rounded-[1px] outline-none focus:border-[#fe3787] poppins cursor-pointer min-w-[150px]"
+          >
+            <option value="">All Categories</option>
+            <option value="government">Government Tax</option>
+            <option value="airport">Airport Fee</option>
+            <option value="airline">Airline Surcharge</option>
+          </select>
+
+          <select 
+            v-model="selectedStatus" 
+            class="text-[11px] font-bold border border-gray-200 px-3 py-2 bg-white rounded-[1px] outline-none focus:border-[#fe3787] poppins cursor-pointer min-w-[150px]"
+          >
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+      </template>
+
+      <template #actions>
+        <button 
+          @click="openAddModal" 
+          class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[12px] rounded-[1px] shadow-sm transition-all"
+        >
+          <i class="ph ph-plus text-[14px]"></i> Add
+        </button>
+      </template>
+    </AdminTableTool>
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -58,49 +87,7 @@
       </div>
     </div>
 
-    <!-- Filters -->
-    <div class="bg-white border border-gray-200 rounded-[1px] shadow-sm p-4 mb-6 text-[14px]">
-      <div class="flex flex-col md:flex-row md:items-center gap-4">
-        <div class="relative flex-1">
-          <i class="ph ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-          <input 
-            v-model="searchQuery" 
-            type="text" 
-            placeholder="Search by name, code..." 
-            class="pl-10 pr-4 py-2 border border-gray-300 rounded-[1px] w-full focus:outline-none focus:ring-1 focus:ring-[#fe3787] focus:border-[#fe3787] poppins"
-            @input="debounceSearch"
-          />
-        </div>
-        
-        <select 
-          v-model="selectedCategory" 
-          class="border border-gray-300 px-3 py-2 rounded-[1px] focus:outline-none focus:ring-1 focus:ring-[#fe3787] focus:border-[#fe3787] poppins text-[14px] min-w-[150px]"
-          @change="filterTaxes"
-        >
-          <option value="">All Categories</option>
-          <option value="government">Government Tax</option>
-          <option value="airport">Airport Fee</option>
-          <option value="airline">Airline Surcharge</option>
-        </select>
 
-        <select 
-          v-model="selectedStatus" 
-          class="border border-gray-300 px-3 py-2 rounded-[1px] focus:outline-none focus:ring-1 focus:ring-[#fe3787] focus:border-[#fe3787] poppins text-[14px] min-w-[150px]"
-          @change="filterTaxes"
-        >
-          <option value="">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
-
-        <button 
-          @click="clearFilters" 
-          class="text-white px-4 py-2 border bg-[#fe3787] rounded-[1px] hover:bg-[#fb1873] font-medium poppins text-[14px]"
-        >
-          Clear
-        </button>
-      </div>
-    </div>
 
     <!-- Tax Types Table -->
     <div class="bg-white border border-gray-200 rounded-[1px] shadow-sm overflow-hidden">
@@ -493,6 +480,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/services/admin/api'
 import { useModalStore } from '@/stores/modal'
+import AdminTableTool from '@/components/admin/AdminTableTool.vue';
 
 const modalStore = useModalStore()
 const route = useRoute()

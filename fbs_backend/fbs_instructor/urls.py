@@ -30,6 +30,8 @@ from .views import (
     get_available_addons,
     get_instructor_logs,
     log_report_print,
+    get_student_notifications,
+    mark_notifications_read,
 )
 
 urlpatterns = [
@@ -94,6 +96,13 @@ urlpatterns = [
 
     # ? NEW: Practice Bookings History
     path('student/practice-bookings/', views.get_student_practice_bookings, name='student_practice_bookings'),
+    
+    # Existing student URLs...
+    path('student/activity/start/<int:activity_id>/', views.start_activity, name='start_activity'),
+    
+    # Notifications
+    path('student/notifications/', get_student_notifications, name='get_student_notifications'),
+    path('student/notifications/mark-read/', mark_notifications_read, name='mark_notifications_read'),
 
     # Admin LMS Overview
     path('admin/lms-overview/', admin_lms_overview, name='admin_lms_overview'),

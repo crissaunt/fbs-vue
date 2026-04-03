@@ -55,58 +55,57 @@ const routes = [
     meta: { guestOnly: true }
   },
   {
-    path: '/instructor/dashboard',
-    name: 'instructor_dashboard',
-    component: InstructorDashboard,
-    meta: { requiresAuth: true, role: 'instructor' }
-  },
-  {
-    path: '/instructor/section/:id',
-    name: 'SectionDetails',
-    component: () => import('@/views/Instructor/Section_details.vue'),
-    meta: { requiresAuth: true, role: 'instructor' }
-  },
-  {
-    path: '/instructor/section/:id/student',
-    name: 'SectionStudent',
-    component: () => import('@/views/Instructor/Section_student_list.vue'),
-    meta: { requiresAuth: true, role: 'instructor' }
-  },
-  {
-    path: '/instructor/section/:id/settings',
-    name: 'CourseSettings',
-    component: () => import('@/views/Instructor/Course_settings.vue'),
-    meta: { requiresAuth: true, role: 'instructor' }
-  },
-  {
-    path: '/instructor/activity/:activityId',
-    name: 'ActivityDetails',
-    component: Activity_details,
-    meta: { requiresAuth: true, role: 'instructor' }
-  },
-  {
-    path: '/instructor/activity/:activityId/student/:studentId/score',
-    name: 'InstructorStudentScore',
-    component: InstructorStudentScore,
-    meta: { requiresAuth: true, role: 'instructor' }
-  },
-  {
-    path: '/instructor/activity/:activityId/toplist',
-    name: 'ActivityToplist',
-    component: () => import('@/views/Instructor/Activity/Activity_toplist.vue'),
-    meta: { requiresAuth: true, role: 'instructor' }
-  },
-  {
-    path: '/instructor/logs',
-    name: 'InstructorLogs',
-    component: () => import('@/views/Instructor/Activity/instructor_logs.vue'),
-    meta: { requiresAuth: true, role: 'instructor' }
+    path: '/instructor',
+    component: () => import('@/views/Instructor/InstructorLayout.vue'),
+    meta: { requiresAuth: true, role: 'instructor' },
+    children: [
+      {
+        path: 'dashboard',
+        name: 'instructor_dashboard',
+        component: InstructorDashboard
+      },
+      {
+        path: 'section/:id',
+        name: 'SectionDetails',
+        component: () => import('@/views/Instructor/Section_details.vue')
+      },
+      {
+        path: 'section/:id/student',
+        name: 'SectionStudent',
+        component: () => import('@/views/Instructor/Section_student_list.vue')
+      },
+      {
+        path: 'section/:id/settings',
+        name: 'CourseSettings',
+        component: () => import('@/views/Instructor/Course_settings.vue')
+      },
+      {
+        path: 'activity/:activityId',
+        name: 'ActivityDetails',
+        component: Activity_details
+      },
+      {
+        path: 'activity/:activityId/student/:studentId/score',
+        name: 'InstructorStudentScore',
+        component: InstructorStudentScore
+      },
+      {
+        path: 'activity/:activityId/toplist',
+        name: 'ActivityToplist',
+        component: () => import('@/views/Instructor/Activity/Activity_toplist.vue')
+      },
+      {
+        path: 'logs',
+        name: 'InstructorLogs',
+        component: () => import('@/views/Instructor/Activity/instructor_logs.vue')
+      }
+    ]
   },
   {
     path: '/profile',
     name: 'Profile',
     component: ProfileView,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, layout: 'StudentLayout' }
   },
   {
     path: '/student',
@@ -127,11 +126,6 @@ const routes = [
         path: 'calendar',
         name: 'StudentCalendar',
         component: () => import('@/views/Student/Calendar.vue')
-      },
-      {
-        path: 'tasks',
-        name: 'StudentTasks',
-        component: () => import('@/views/Student/Tasks.vue')
       },
       {
         path: 'activity/:id',
@@ -155,6 +149,12 @@ const routes = [
         name: 'StudentCheckinRegistry',
         component: () => import('@/views/Student/Operations/CheckinRegistry.vue'),
         meta: { title: 'DCS | Check-in Registry' }
+      },
+      {
+        path: 'leaderboard',
+        name: 'StudentLeaderboard',
+        component: () => import('@/views/Student/StudentLeaderboard.vue'),
+        meta: { title: 'Section Leaderboard' }
       },
     ]
   },

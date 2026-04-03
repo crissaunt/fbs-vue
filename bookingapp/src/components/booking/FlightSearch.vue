@@ -145,6 +145,31 @@ const selectAirport = (airport, target, segmentIndex = null) => {
   }
 };
 
+const clearAirport = (target, segmentIndex = null) => {
+  if (segmentIndex !== null) {
+    const seg = multiSegments.value[segmentIndex];
+    if (target === 'from') {
+      seg.selectedFrom = null;
+      seg.fromSearch = '';
+      seg.fromResults = [];
+    } else {
+      seg.selectedTo = null;
+      seg.toSearch = '';
+      seg.toResults = [];
+    }
+  } else {
+    if (target === 'from') {
+      selectedFrom.value = null;
+      fromSearch.value = '';
+      fromResults.value = [];
+    } else {
+      selectedTo.value = null;
+      toSearch.value = '';
+      toResults.value = [];
+    }
+  }
+};
+
 const handleEnterKey = (query, target, segmentIndex = null) => {
   if (!query || query.includes(' - ')) return;
   
@@ -323,12 +348,21 @@ const handleActivityCodeContinue = () => {
           v-for="t in ['one-way', 'round-trip', 'multi-city']"
           :key="t"
           @click="tripType = t"
-          class="cursor-pointer border-b-4 px-4 py-2 text-xs font-bold uppercase tracking-wide text-gray-500 transition"
+          class="group relative cursor-pointer border-b-4 px-4 py-2 text-xs font-black uppercase tracking-widest transition-all duration-300"
           :class="tripType === t
-            ? 'border-[#D4AC0D] text-[#FF579A]'
-            : 'border-transparent hover:text-[#FF579A]'"
+            ? 'border-pink-500 text-pink-600'
+            : 'border-transparent text-gray-400 hover:text-pink-400'"
         >
-          {{ t.replace('-', ' ') }}
+          <span class="flex items-center gap-2">
+            {{ t.replace('-', ' ') }}
+            <!-- Multi-city Badge Indicator -->
+            <span v-if="t === 'multi-city'" 
+              class="flex h-2 w-2 rounded-full animate-pulse transition-colors"
+              :class="tripType === 'multi-city' ? 'bg-pink-600' : 'bg-gray-300 group-hover:bg-pink-300'"></span>
+          </span>
+          
+          <!-- Animated Underline for active state -->
+          <div v-if="tripType === t" class="absolute -bottom-1 left-0 right-0 h-1 bg-gradient-to-r from-pink-500 to-orange-400 rounded-full"></div>
         </button>
       </div>
 
@@ -362,10 +396,16 @@ const handleActivityCodeContinue = () => {
             @keydown.enter.prevent="handleEnterKey(fromSearch, 'from')"
             @focus="fromSearch = ''; fromResults = []"
             placeholder="e.g. MNL"
-            class="w-full rounded-[2px] border border-gray-300 bg-white px-2 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF579A]"
+            class="w-full rounded-[2px] border border-gray-300 bg-white pl-2 pr-8 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF579A]"
           />
-
-          <!-- Results Dropdown Removed as requested -->
+          <button 
+            v-if="selectedFrom || fromSearch"
+            @click="clearAirport('from')"
+            class="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-red-500 transition-colors text-xl font-medium"
+            type="button"
+          >
+            &times;
+          </button>
         </div>
       </div>
 
@@ -381,10 +421,16 @@ const handleActivityCodeContinue = () => {
             @keydown.enter.prevent="handleEnterKey(toSearch, 'to')"
             @focus="toSearch = ''; toResults = []"
             placeholder="Destination City/Code"
-            class="w-full rounded-[2px] border border-gray-300 bg-white px-2 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF579A]"
+            class="w-full rounded-[2px] border border-gray-300 bg-white pl-2 pr-8 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF579A]"
           />
-
-          <!-- Results Dropdown Removed as requested -->
+          <button 
+            v-if="selectedTo || toSearch"
+            @click="clearAirport('to')"
+            class="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-red-500 transition-colors text-xl font-medium"
+            type="button"
+          >
+            &times;
+          </button>
         </div>
       </div>
 
@@ -477,7 +523,7 @@ const handleActivityCodeContinue = () => {
       <div class="flex flex-col justify-end">
         <button
           @click="handleSearch"
-          class="h-12 w-full rounded-[2px] bg-[#FF579A] text-lg font-bold text-white transition hover:bg-[#ff7bb0] shadow-md active:scale-[0.98]"
+          class="h-12 w-full rounded-[2px] bg-[#FF579A] cursor-pointer text-lg font-bold text-white transition hover:bg-[#ff7bb0] shadow-md active:scale-[0.98]"
         >
           SEARCH FLIGHTS
         </button>
@@ -487,6 +533,15 @@ const handleActivityCodeContinue = () => {
 
     <!-- Multi-City Segment Repeater -->
     <div v-else class="space-y-6">
+      <!-- Multi-City Mode Status Indicator -->
+      <div class="mb-8 flex items-center gap-3">
+        <div class="h-[1px] flex-1 bg-gradient-to-r from-transparent via-pink-100 to-pink-500"></div>
+        <div class="flex items-center gap-2 px-5 py-2 bg-pink-50/50 rounded-full border border-pink-100/50 backdrop-blur-sm">
+          <div class="w-2 h-2 rounded-full bg-[#FF579A] animate-pulse"></div>
+          <span class="text-[10px] font-black text-[#FF579A] uppercase tracking-[0.2em] leading-none">Multi-City Planner</span>
+        </div>
+        <div class="h-[1px] flex-1 bg-gradient-to-l from-transparent via-pink-100 to-pink-500"></div>
+      </div>
       <div 
         v-for="(segment, index) in multiSegments" 
         :key="index"
@@ -510,9 +565,16 @@ const handleActivityCodeContinue = () => {
               @keydown.enter.prevent="handleEnterKey(segment.fromSearch, 'from', index)"
               @focus="segment.fromSearch = ''; segment.fromResults = []"
               placeholder="Origin"
-              class="w-full rounded-[2px] border border-gray-300 bg-white px-2 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF579A]"
+              class="w-full rounded-[2px] border border-gray-300 bg-white pl-2 pr-8 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF579A]"
             />
-            <!-- Results Dropdown Removed as requested -->
+            <button 
+              v-if="segment.selectedFrom || segment.fromSearch"
+              @click="clearAirport('from', index)"
+              class="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-red-500 transition-colors text-xl font-medium"
+              type="button"
+            >
+              &times;
+            </button>
           </div>
         </div>
 
@@ -525,9 +587,16 @@ const handleActivityCodeContinue = () => {
               @keydown.enter.prevent="handleEnterKey(segment.toSearch, 'to', index)"
               @focus="segment.toSearch = ''; segment.toResults = []"
               placeholder="Destination"
-              class="w-full rounded-[2px] border border-gray-300 bg-white px-2 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF579A]"
+              class="w-full rounded-[2px] border border-gray-300 bg-white pl-2 pr-8 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF579A]"
             />
-            <!-- Results Dropdown Removed as requested -->
+            <button 
+              v-if="segment.selectedTo || segment.toSearch"
+              @click="clearAirport('to', index)"
+              class="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-red-500 transition-colors text-xl font-medium"
+              type="button"
+            >
+              &times;
+            </button>
           </div>
         </div>
 

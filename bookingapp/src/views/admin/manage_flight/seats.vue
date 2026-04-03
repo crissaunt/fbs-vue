@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col lg:flex-row items-start justify-center bg-gray-50 min-h-screen py-10 px-4 lg:px-10 gap-8 poppins">
+  <div class="flex flex-col lg:flex-row items-start justify-center bg-gray-50 min-h-screen py-4 px-4 lg:px-8 gap-6 poppins overflow-x-hidden">
 
     <!-- Debug Panel -->
     <div v-if="debugMode" class="fixed top-0 left-0 bg-black text-green-400 p-4 text-xs font-mono z-50 max-w-md overflow-auto max-h-screen">
@@ -21,8 +21,8 @@
       <p>rawApiData.flight: {{ rawApiData?.flight }}</p>
     </div>
 
-    <!-- Left Panel -->
-    <div class="w-full lg:w-80 order-2 lg:order-1">
+    <!-- Left Panel: Control Center (New Slim Design) -->
+    <div class="w-full lg:w-64 shrink-0 order-2 lg:order-1">
       <div class="bg-white rounded-[1px] shadow-sm p-6 border border-gray-200 sticky top-10 space-y-6">
         
         <!-- Header -->
@@ -36,39 +36,61 @@
           </button>
         </div>
 
-        <!-- Schedule Selection -->
+        <!-- Airline Selection -->
         <div class="bg-gray-50 rounded-[1px] p-4 border border-gray-200">
-          <label for="schedule-select" class="flex items-center gap-2 text-[11px] font-bold uppercase text-gray-500 mb-2 poppins">
-            <i class="ph ph-calendar-blank"></i>
-            Select Schedule
+          <label for="airline-select" class="flex items-center gap-2 text-[11px] font-bold uppercase text-gray-500 mb-2 poppins">
+            <i class="ph ph-buildings"></i>
+            Select Airline
           </label>
           <div class="relative">
             <select 
-              id="schedule-select"
-              name="schedule"
-              v-model="selectedScheduleId" 
-              @change="handleScheduleChange" 
+              id="airline-select"
+              v-model="selectedAirlineId" 
+              @change="handleAirlineChange" 
               class="w-full bg-white border border-gray-300 p-3 pr-10 text-sm rounded-[1px] outline-none focus:border-[#fe3787] poppins"
             >
-              <option value="">Choose a flight schedule...</option>
-              <option v-for="s in schedules" :key="s.id" :value="s.id">
-                {{ s.flight_number }} — {{ s.aircraft_name }}
+              <option value="">Choose an airline...</option>
+              <option v-for="a in airlines" :key="a.id" :value="a.id">
+                {{ a.name }} ({{ a.code }})
               </option>
             </select>
-            <i class=" absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
           </div>
+        </div>
+
+        <!-- Aircraft Selection -->
+        <div v-if="selectedAirlineId" class="bg-gray-50 rounded-[1px] p-4 border border-gray-200 animate-in slide-in-from-top-2">
+          <label for="aircraft-select" class="flex items-center gap-2 text-[11px] font-bold uppercase text-gray-500 mb-2 poppins">
+            <i class="ph ph-airplane text-[#fe3787]"></i>
+            Select Aircraft
+          </label>
+          <div class="relative">
+            <select 
+              id="aircraft-select"
+              v-model="selectedAircraftId" 
+              @change="handleAircraftChange" 
+              class="w-full bg-white border border-gray-300 p-3 pr-10 text-sm rounded-[1px] outline-none focus:border-[#fe3787] poppins"
+            >
+              <option value="">Choose an aircraft...</option>
+              <option v-for="a in filteredAircrafts" :key="a.id" :value="a.id">
+                {{ a.model }} (Capacity: {{ a.capacity }})
+              </option>
+            </select>
+          </div>
+          <p v-if="filteredAircrafts.length === 0" class="text-[10px] text-amber-600 mt-2 poppins italic">
+            No aircraft registered for this airline.
+          </p>
         </div>
 
         <!-- Empty State -->
-        <div v-if="!selectedScheduleId" class="py-8 text-center">
-          <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-            <i class="ph ph-seat text-gray-400 text-2xl"></i>
+        <div v-if="!selectedAircraftId" class="py-12 text-center bg-gray-50/50 rounded-[1px] border border-dashed border-gray-200">
+          <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+            <i class="ph ph-seat text-gray-300 text-3xl"></i>
           </div>
-          <p class="text-sm text-gray-500 font-medium mb-1">No Schedule Selected</p>
-          <p class="text-[11px] text-gray-400">Select a schedule to view the aircraft seat layout.</p>
+          <p class="text-sm font-bold text-gray-700 poppins">No Aircraft Selected</p>
+          <p class="text-[11px] text-gray-400 max-w-[180px] mx-auto poppins">Please select an airline and aircraft model to manage the seating template.</p>
         </div>
 
-        <!-- Content when schedule selected -->
+        <!-- Content when aircraft selected -->
         <template v-else>
           
           <!-- Aircraft Info -->
@@ -104,7 +126,7 @@
                 <p class="text-sm font-bold text-red-800 mb-1 poppins">Error Loading Data</p>
                 <p class="text-[11px] text-red-700 mb-3 poppins">{{ errorMessage }}</p>
                 <button 
-                  @click="handleScheduleChange" 
+                  @click="handleAircraftChange" 
                   class="w-full py-2 bg-[#fe3787] text-white rounded-[1px] text-[11px] font-bold uppercase hover:bg-[#fb1873] transition-colors poppins"
                 >
                   Retry
@@ -113,87 +135,9 @@
             </div>
           </div>
 
-          <!-- CRITICAL ERROR: Invalid Airline -->
-          <div v-else-if="aircraftInfo.airline_id && !isValidAirline(aircraftInfo.airline_id)" class="bg-red-50 border-2 border-red-300 rounded-lg p-4">
-            <div class="flex items-start gap-3">
-              <i class="ph ph-warning-circle text-red-600 text-xl mt-0.5"></i>
-              <div class="w-full">
-                <p class="text-sm font-bold text-red-800 mb-1">⚠️ Broken Airline Reference</p>
-                <p class="text-[11px] text-red-700 mb-2">
-                  This schedule's aircraft references <strong>Airline ID {{ aircraftInfo.airline_id }}</strong> which doesn't exist.
-                </p>
-                <p class="text-[10px] text-red-600 mb-3">
-                  This usually happens when an airline was deleted but aircraft/flight data still references it.
-                </p>
-                
-                <!-- Auto-fix option -->
-                <div v-if="airlines.length > 0" class="space-y-2">
-                  <p class="text-[10px] font-bold text-gray-600 uppercase">Quick Fix Options:</p>
-                  <button 
-                    @click="fixAirlineReference(airlines[0].id)" 
-                    class="w-full py-2 bg-[#fe3787] text-white rounded-lg text-[11px] font-bold uppercase hover:bg-[#e62e7a] transition-colors flex items-center justify-center gap-2"
-                  >
-                    <i class="ph ph-wrench"></i>
-                    Assign to {{ airlines[0].name }} (ID: {{ airlines[0].id }})
-                  </button>
-                  <select 
-                    v-if="airlines.length > 1"
-                    v-model="selectedFixAirlineId"
-                    class="w-full border border-gray-300 p-2 text-xs rounded-lg"
-                  >
-                    <option v-for="al in airlines" :key="al.id" :value="al.id">
-                      {{ al.name }} (ID: {{ al.id }})
-                    </option>
-                  </select>
-                  <button 
-                    v-if="airlines.length > 1 && selectedFixAirlineId"
-                    @click="fixAirlineReference(selectedFixAirlineId)" 
-                    class="w-full py-2 bg-[#002D1E] text-white rounded-lg text-[11px] font-bold uppercase hover:bg-[#004d2e] transition-colors"
-                  >
-                    Assign to Selected Airline
-                  </button>
-                </div>
 
-                <!-- Create new airline -->
-                <div class="mt-3 pt-3 border-t border-red-200">
-                  <p class="text-[10px] font-bold text-gray-600 uppercase mb-2">Or Create New Airline:</p>
-                  <button 
-                    @click="showCreateAirlineModal = true" 
-                    class="w-full py-2 bg-emerald-500 text-white rounded-lg text-[11px] font-bold uppercase hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <i class="ph ph-plus-circle"></i>
-                    Create New Airline
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <!-- NO AIRLINE ID FOUND -->
-          <div v-else-if="!aircraftInfo.airline_id" class="bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <div class="flex items-start gap-3">
-              <i class="ph ph-warning-circle text-amber-500 text-lg mt-0.5"></i>
-              <div>
-                <p class="text-sm font-bold text-amber-800 mb-1">No Airline Detected</p>
-                <p class="text-[11px] text-amber-700 mb-3">Could not determine airline from schedule data.</p>
-                <div class="space-y-2">
-                  <button 
-                    v-if="airlines.length > 0"
-                    @click="useFirstAirline" 
-                    class="w-full py-2 bg-[#fe3787] text-white rounded-lg text-[11px] font-bold uppercase hover:bg-[#e62e7a] transition-colors"
-                  >
-                    Use First Available Airline
-                  </button>
-                  <button 
-                    @click="showCreateAirlineModal = true" 
-                    class="w-full py-2 bg-[#002D1E] text-white rounded-lg text-[11px] font-bold uppercase hover:bg-[#004d2e] transition-colors"
-                  >
-                    Create New Airline
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+
 
           <!-- Seat Classes List -->
           <div v-else-if="seatClassesForAirline.length === 0" class="bg-amber-50 border border-amber-200 rounded-[1px] p-4">
@@ -413,79 +357,71 @@
                 Attributes
               </h3>
               <div class="grid grid-cols-2 gap-2">
-                <div class="bg-white border border-gray-100 rounded-[1px] p-2 text-center shadow-sm">
+                <div class="bg-white border border-gray-100 rounded-[1px] p-2 text-center shadow-sm" title="Exit Row Seats">
                   <p class="text-sm font-bold text-red-600 poppins">{{ exitRowSeatsCount }}</p>
                   <p class="text-[9px] text-gray-400 uppercase font-bold poppins">Exit Row</p>
                 </div>
-                <div class="bg-white border border-gray-100 rounded-[1px] p-2 text-center shadow-sm">
+                <div class="bg-white border border-gray-100 rounded-[1px] p-2 text-center shadow-sm" title="Accessible Seats">
                   <p class="text-sm font-bold text-blue-600 poppins">{{ wheelchairSeatsCount }}</p>
                   <p class="text-[9px] text-gray-400 uppercase font-bold poppins">Accessible</p>
                 </div>
-                <div class="bg-white border border-gray-100 rounded-[1px] p-2 text-center shadow-sm">
+                <div class="bg-white border border-gray-100 rounded-[1px] p-2 text-center shadow-sm" title="Infant Bassinet Positions">
                   <p class="text-sm font-bold text-purple-600 poppins">{{ bassinetSeatsCount }}</p>
                   <p class="text-[9px] text-gray-400 uppercase font-bold poppins">Bassinet</p>
                 </div>
-                <div class="bg-white border border-gray-100 rounded-[1px] p-2 text-center shadow-sm">
+                <div class="bg-white border border-gray-100 rounded-[1px] p-2 text-center shadow-sm" title="Unaccompanied Minor Positions">
                   <p class="text-sm font-bold text-emerald-600 poppins">{{ unaccompaniedMinorSeatsCount }}</p>
                   <p class="text-[9px] text-gray-400 uppercase font-bold poppins">U.M.</p>
+                </div>
+                <!-- New 2026 Categories -->
+                <div class="bg-white border border-gray-100 rounded-[1px] p-2 text-center shadow-sm" title="Medical Oxygen Supply">
+                  <p class="text-sm font-bold text-blue-400 poppins">{{ medicalOxygenCount }}</p>
+                  <p class="text-[9px] text-gray-400 uppercase font-bold poppins">Oxygen</p>
+                </div>
+                <div class="bg-white border border-gray-100 rounded-[1px] p-2 text-center shadow-sm" title="Pet in Cabin Accommodations">
+                  <p class="text-sm font-bold text-amber-600 poppins">{{ petInCabinCount }}</p>
+                  <p class="text-[9px] text-gray-400 uppercase font-bold poppins">Pets</p>
+                </div>
+                <div class="bg-white border border-gray-100 rounded-[1px] p-2 text-center shadow-sm" title="Large Persona Accommodations">
+                  <p class="text-sm font-bold text-orange-600 poppins">{{ largePersonaCount }}</p>
+                  <p class="text-[9px] text-gray-400 uppercase font-bold poppins">Large</p>
+                </div>
+                <div class="bg-white border border-gray-100 rounded-[1px] p-2 text-center shadow-sm" title="Stretcher Installations">
+                  <p class="text-sm font-bold text-red-400 poppins">{{ stretcherCount }}</p>
+                  <p class="text-[9px] text-gray-400 uppercase font-bold poppins">Stretcher</p>
+                </div>
+                <div class="bg-white border border-gray-100 rounded-[1px] p-2 text-center shadow-sm" title="Sports Equipment Storage">
+                  <p class="text-sm font-bold text-emerald-400 poppins">{{ sportsEquipmentCount }}</p>
+                  <p class="text-[9px] text-gray-400 uppercase font-bold poppins">Sports</p>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Save Options -->
-          <div v-if="totalConfiguredSeats > 0" class="pt-4 border-t border-gray-200 space-y-3">
-            
-            <!-- Mode Selection -->
-            <div class="flex gap-2 mb-4">
-              <button 
-                @click="saveMode = 'schedule'"
-                :class="['flex-1 py-2 text-[10px] font-bold uppercase rounded-[1px] poppins transition-all', 
-                  saveMode === 'schedule' ? 'bg-[#002D1E] text-white shadow-md' : 'bg-gray-100 text-gray-400 hover:bg-gray-200']"
-              >
-                Flight Only
-              </button>
-              <button 
-                @click="saveMode = 'aircraft'"
-                :class="['flex-1 py-2 text-[10px] font-bold uppercase rounded-[1px] poppins transition-all',
-                  saveMode === 'aircraft' ? 'bg-[#fe3787] text-white shadow-md' : 'bg-gray-100 text-gray-400 hover:bg-gray-200']"
-              >
-                Global Template
-              </button>
-            </div>
-            
-            <!-- Description -->
-            <p v-if="saveMode === 'schedule'" class="text-[10px] text-gray-500">
-              Creates seats for THIS flight only. Other flights using this aircraft won't be affected.
-            </p>
-            <p v-else class="text-[10px] text-gray-500">
-              Saves this layout as the default for {{ aircraftInfo.name }}. Future schedules can auto-apply it.
-            </p>
-            
-            <!-- Replace the save button section with this -->
-            <div v-if="totalConfiguredSeats > 0 && aircraftInfo.aircraft" class="pt-4 border-t border-gray-200 space-y-3">
-              
-              <div class="bg-blue-50 border border-blue-100 rounded-[1px] p-3 shadow-sm">
-                <p class="text-[11px] text-blue-800 poppins italic">
-                  <i class="ph ph-info mr-1"></i>
-                  Saves to <strong>{{ aircraftInfo.name }}</strong> master layout.
+          <div v-if="totalConfiguredSeats > 0 && aircraftInfo.id" class="pt-6 border-t border-gray-200 space-y-4">
+            <div class="bg-blue-50 border border-blue-100 rounded-[1px] p-4 shadow-sm">
+              <div class="flex items-start gap-3">
+                <i class="ph ph-info text-blue-600 text-lg mt-0.5"></i>
+                <p class="text-[11px] text-blue-800 poppins leading-relaxed">
+                  Clicking commit will save this as the <strong>Standard Master Layout</strong> for all {{ aircraftInfo.name }} units. 
                 </p>
               </div>
-              
-              <button 
-                @click="saveLayout" 
-                :disabled="isSaving"
-                class="w-full py-4 bg-[#002D1E] text-white font-bold text-[13px] uppercase tracking-[2px] rounded-[1px] hover:bg-[#004d2e] transition-all disabled:opacity-50 flex items-center justify-center gap-2 poppins shadow-lg hover:shadow-xl active:scale-95"
-              >
-                <i v-if="!isSaving" class="ph ph-floppy-disk text-lg"></i>
-                <i v-else class="ph ph-spinner animate-spin text-lg"></i>
-                {{ isSaving ? 'Synchronizing...' : 'Commit Layout' }}
-              </button>
-              
-              <p class="text-[10px] text-center text-gray-400 poppins font-medium">
-                {{ totalConfiguredSeats }} of {{ aircraftInfo.capacity }} utilization
-              </p>
             </div>
+            
+            <button 
+              @click="saveLayout" 
+              :disabled="isSaving"
+              class="w-full py-4 bg-[#002D1E] text-white font-bold text-[13px] uppercase tracking-[2px] rounded-[1px] hover:bg-[#004d2e] transition-all disabled:opacity-50 flex items-center justify-center gap-2 poppins shadow-lg hover:shadow-xl active:scale-95"
+            >
+              <i v-if="!isSaving" class="ph ph-floppy-disk text-lg"></i>
+              <i v-else class="ph ph-spinner animate-spin text-lg"></i>
+              {{ isSaving ? 'Synchronizing...' : 'Commit Master Layout' }}
+            </button>
+            
+            <p class="text-[10px] text-center text-gray-400 poppins font-medium">
+              {{ totalConfiguredSeats }} of {{ aircraftInfo.capacity }} utilization
+            </p>
           </div>
         </template>
       </div>
@@ -494,18 +430,18 @@
     <!-- Center Panel - Seat Map -->
     <div class="max-w-lg lg:flex-1 order-1 lg:order-2 w-full">
       <!-- Empty State -->
-      <div v-if="!selectedScheduleId" class="bg-white rounded-[1px] shadow-sm p-12 text-center min-h-[500px] flex flex-col items-center justify-center border border-gray-200 poppins">
+      <div v-if="!selectedAircraftId" class="bg-white rounded-[1px] shadow-sm p-12 text-center min-h-[500px] flex flex-col items-center justify-center border border-gray-200 poppins">
         <div class="w-24 h-24 bg-gray-50 rounded-[1px] flex items-center justify-center mb-4">
-          <i class="ph ph-airplane-tilt text-gray-200 text-4xl"></i>
+          <i class="ph ph-airplane text-gray-200 text-4xl"></i>
         </div>
-        <h3 class="text-xl font-bold text-[#002D1E] mb-2 poppins">Select a Schedule</h3>
-        <p class="text-gray-400 max-w-xs mx-auto poppins">Choose a flight schedule to view the aircraft seat layout.</p>
+        <h3 class="text-xl font-bold text-[#002D1E] mb-2 poppins">Template Designer</h3>
+        <p class="text-gray-400 max-w-xs mx-auto poppins">Select an airline and their aircraft model to create or modify its global seat configuration template.</p>
       </div>
 
       <!-- Loading -->
-      <div v-else-if="isLoading" class="bg-white rounded-2xl shadow-lg p-12 text-center min-h-[500px] flex flex-col items-center justify-center border border-gray-200">
+      <div v-else-if="isLoading" class="bg-white rounded-[1px] shadow-sm p-12 text-center min-h-[500px] flex flex-col items-center justify-center border border-gray-200 poppins">
         <i class="ph ph-spinner animate-spin text-4xl text-[#fe3787] mb-4"></i>
-        <p class="text-gray-500">Loading seat configuration...</p>
+        <p class="text-gray-500 poppins">Syncing aircraft template...</p>
       </div>
 
       <!-- Error State -->
@@ -516,7 +452,7 @@
         <h3 class="text-xl font-bold text-red-800 mb-2 poppins">Critical Error</h3>
         <p class="text-gray-400 max-w-xs mx-auto mb-4 poppins">{{ errorMessage }}</p>
         <button 
-          @click="handleScheduleChange" 
+          @click="handleAircraftChange" 
           class="px-8 py-3 bg-[#fe3787] text-white rounded-[1px] font-bold hover:bg-[#fb1873] transition-all poppins shadow-lg"
         >
           Retry Connection
@@ -641,7 +577,7 @@
             </div>
 
             <!-- Rows -->
-            <div v-if="layoutConfig[classId] && layoutConfig[classId].rows" v-for="rowNum in layoutConfig[classId].rows" :key="`${classId}-${rowNum}`" class="mb-4">
+            <div v-if="layoutConfig[classId] && layoutConfig[classId].rows" v-for="rowNum in layoutConfig[classId].rows" :key="`${classId}-${rowNum}`" class="mb-2.5">
               <div class="flex justify-center items-center gap-3">
                 <!-- Left Side Seats -->
                 <div class="flex gap-2">
@@ -652,36 +588,46 @@
                     @contextmenu.prevent="showSeatContextMenu($event, classId, rowNum, colIdx)"
                     :class="getSeatStyle(classId, rowNum, colIdx)"
                     :style="getSeatColorStyle(classId, rowNum, colIdx)"
-                    class="w-10 h-10 rounded-[1px] border flex items-center justify-center text-[11px] font-bold transition-all hover:scale-105 relative group shadow-sm poppins"
+                    class="w-10 h-10 rounded-[1px] border flex items-center justify-center text-[11px] font-bold transition-all hover:scale-105 hover:z-[100] relative group shadow-sm poppins"
                   >
                     <!-- Seat number -->
                     <span>{{ getColumnLabel(colIdx) }}</span>
                     
                     <!-- Special Indicators -->
-                    <div v-if="hasSpecialSeat(classId, rowNum, colIdx)" class="absolute -top-1 -right-1 flex flex-col gap-0.5">
+                    <div v-if="hasSpecialSeat(classId, rowNum, colIdx)" class="absolute -top-1 -right-1 flex flex-col gap-0.5 z-10 pointer-events-none">
                       <!-- Exit Row Indicator -->
-                      <div v-if="isExitRow(classId, rowNum)" class="w-3 h-3 bg-red-500 rounded-[1px] flex items-center justify-center shadow-sm">
-                        <i class="ph ph-door-open text-white text-[6px]"></i>
+                      <div v-if="isExitRow(classId, rowNum)" class="w-3.5 h-3.5 bg-red-600 rounded-[1px] flex items-center justify-center shadow-sm">
+                        <i class="ph ph-door-open text-white text-[7px] font-bold"></i>
                       </div>
                       
                       <!-- Wheelchair Indicator -->
-                      <div v-if="isWheelchairSeat(classId, rowNum, colIdx)" class="w-3 h-3 bg-blue-500 rounded-[1px] flex items-center justify-center shadow-sm">
-                        <i class="ph ph-wheelchair text-white text-[6px]"></i>
+                      <div v-if="isWheelchairSeat(classId, rowNum, colIdx)" class="w-3.5 h-3.5 bg-blue-600 rounded-[1px] flex items-center justify-center shadow-sm">
+                        <i class="ph ph-wheelchair text-white text-[7px] font-bold"></i>
                       </div>
                       
                       <!-- Bassinet Indicator -->
-                      <div v-if="isBassinetSeat(classId, rowNum, colIdx)" class="w-3 h-3 bg-purple-500 rounded-[1px] flex items-center justify-center shadow-sm">
-                        <i class="ph ph-baby text-white text-[6px]"></i>
+                      <div v-if="isBassinetSeat(classId, rowNum, colIdx)" class="w-3.5 h-3.5 bg-purple-600 rounded-[1px] flex items-center justify-center shadow-sm">
+                        <i class="ph ph-baby text-white text-[7px] font-bold"></i>
                       </div>
                       
-                      <!-- Nut Allergy Indicator -->
-                      <div v-if="hasNutAllergy(classId, rowNum, colIdx)" class="w-3 h-3 bg-amber-500 rounded-[1px] flex items-center justify-center shadow-sm">
-                        <i class="ph ph-nut text-white text-[6px]"></i>
+                      <!-- Medical/Oxygen Indicator -->
+                      <div v-if="hasMedicalOxygen(classId, rowNum, colIdx)" class="w-3.5 h-3.5 bg-emerald-600 rounded-[1px] flex items-center justify-center shadow-sm">
+                        <i class="ph ph-heartbeat text-white text-[7px] font-bold"></i>
                       </div>
-                      
-                      <!-- Unaccompanied Minor Indicator -->
-                      <div v-if="isUnaccompaniedMinor(classId, rowNum, colIdx)" class="w-3 h-3 bg-green-500 rounded-[1px] flex items-center justify-center shadow-sm">
-                        <i class="ph ph-user-focus text-white text-[6px]"></i>
+
+                      <!-- Stretcher Indicator -->
+                      <div v-if="hasStretcher(classId, rowNum, colIdx)" class="w-3.5 h-3.5 bg-orange-600 rounded-[1px] flex items-center justify-center shadow-sm">
+                        <i class="ph ph-bed text-white text-[7px] font-bold"></i>
+                      </div>
+
+                      <!-- Pet Indicator -->
+                      <div v-if="hasPetInCabin(classId, rowNum, colIdx)" class="w-3.5 h-3.5 bg-amber-600 rounded-[1px] flex items-center justify-center shadow-sm">
+                        <i class="ph ph-paw-print text-white text-[7px] font-bold"></i>
+                      </div>
+
+                      <!-- UMNR Indicator -->
+                      <div v-if="isUnaccompaniedMinor(classId, rowNum, colIdx)" class="w-3.5 h-3.5 bg-green-600 rounded-[1px] flex items-center justify-center shadow-sm">
+                        <i class="ph ph-user-focus text-white text-[7px] font-bold"></i>
                       </div>
                     </div>
                     
@@ -692,27 +638,47 @@
                         <p>{{ getSeatClassName(classId) }}</p>
                         
                         <div v-if="hasSpecialSeat(classId, rowNum, colIdx)" class="pt-1 border-t border-gray-700">
-                          <p class="font-semibold text-amber-300">Special Requirements:</p>
-                          <ul class="pl-2 space-y-0.5">
-                            <li v-if="isExitRow(classId, rowNum)" class="flex items-center gap-1">
+                          <p class="font-semibold text-amber-300">Detailed Configuration:</p>
+                          <ul class="pl-2 space-y-1 mt-1">
+                            <li v-if="isExitRow(classId, rowNum)" class="flex items-center gap-2">
                               <i class="ph ph-door-open text-red-400"></i>
-                              <span>Exit Row</span>
+                              <span>Exit Row - Emergency Duties</span>
                             </li>
-                            <li v-if="isWheelchairSeat(classId, rowNum, colIdx)" class="flex items-center gap-1">
+                            <li v-if="isWheelchairSeat(classId, rowNum, colIdx)" class="flex items-center gap-2">
                               <i class="ph ph-wheelchair text-blue-400"></i>
-                              <span>Wheelchair Accessible</span>
+                              <span>Wheelchair Assistance Ready</span>
                             </li>
-                            <li v-if="isBassinetSeat(classId, rowNum, colIdx)" class="flex items-center gap-1">
+                            <li v-if="isBassinetSeat(classId, rowNum, colIdx)" class="flex items-center gap-2">
                               <i class="ph ph-baby text-purple-400"></i>
-                              <span>Bassinet Position</span>
+                              <span>Infant Bassinet Facility</span>
                             </li>
-                            <li v-if="hasNutAllergy(classId, rowNum, colIdx)" class="flex items-center gap-1">
-                              <i class="ph ph-nut text-amber-400"></i>
-                              <span>Nut Allergy - No Nuts Zone</span>
+                            <li v-if="hasMedicalOxygen(classId, rowNum, colIdx)" class="flex items-center gap-2">
+                              <i class="ph ph-heartbeat text-emerald-400"></i>
+                              <span>Medical Oxygen Equipped</span>
                             </li>
-                            <li v-if="isUnaccompaniedMinor(classId, rowNum, colIdx)" class="flex items-center gap-1">
+                            <li v-if="hasPetInCabin(classId, rowNum, colIdx)" class="flex items-center gap-2">
+                              <i class="ph ph-paw-print text-amber-400"></i>
+                              <span>Pet in Cabin Allowed</span>
+                            </li>
+                            <li v-if="isDeafBlind(classId, rowNum, colIdx)" class="flex items-center gap-2">
+                              <i class="ph ph-eye-slash text-blue-300"></i>
+                              <span>Deaf/Blind Asst Required</span>
+                            </li>
+                            <li v-if="isUnaccompaniedMinor(classId, rowNum, colIdx)" class="flex items-center gap-2">
                               <i class="ph ph-user-focus text-green-400"></i>
-                              <span>Unaccompanied Minor</span>
+                              <span>UMNR Service - Supervision</span>
+                            </li>
+                            <li v-if="isLargePersona(classId, rowNum, colIdx)" class="flex items-center gap-2">
+                              <i class="ph ph-user-square text-orange-400"></i>
+                              <span>Large Persona Spacing</span>
+                            </li>
+                            <li v-if="hasStretcher(classId, rowNum, colIdx)" class="flex items-center gap-2">
+                              <i class="ph ph-bed text-red-500"></i>
+                              <span>Stretcher Installation</span>
+                            </li>
+                            <li v-if="hasSportsEquipment(classId, rowNum, colIdx)" class="flex items-center gap-2">
+                              <i class="ph ph-bicycle text-emerald-300"></i>
+                              <span>Sports Equipment Storage</span>
                             </li>
                           </ul>
                         </div>
@@ -726,7 +692,7 @@
                 </div>
 
                 <!-- Row Number with special indicators -->
-                <div class="w-10 h-10 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-[1px] relative group shadow-inner poppins">
+                <div class="w-6 h-10 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-[1px] relative group hover:z-[100] shadow-inner poppins">
                   <span class="text-[11px] font-black text-gray-300">{{ getGlobalRowNumber(classId, rowNum) }}</span>
                   
                   <!-- Row-level indicators -->
@@ -772,26 +738,90 @@
                     @contextmenu.prevent="showSeatContextMenu($event, classId, rowNum, colIdx)"
                     :class="getSeatStyle(classId, rowNum, colIdx)"
                     :style="getSeatColorStyle(classId, rowNum, colIdx)"
-                    class="w-10 h-10 rounded-[1px] border flex items-center justify-center text-[11px] font-bold transition-all hover:scale-105 relative group shadow-sm poppins"
+                    class="w-10 h-10 rounded-[1px] border flex items-center justify-center text-[11px] font-bold transition-all hover:scale-105 hover:z-[100] relative group shadow-sm poppins"
                   >
                     <span>{{ getColumnLabel(colIdx) }}</span>
                     
                     <!-- Special Indicators (same as left side) -->
-                    <div v-if="hasSpecialSeat(classId, rowNum, colIdx)" class="absolute -top-1 -right-1 flex flex-col gap-0.5">
-                      <div v-if="isExitRow(classId, rowNum)" class="w-3 h-3 bg-red-500 rounded-[1px] flex items-center justify-center shadow-sm">
-                        <i class="ph ph-door-open text-white text-[6px]"></i>
+                    <div v-if="hasSpecialSeat(classId, rowNum, colIdx)" class="absolute -top-1 -right-1 flex flex-col gap-0.5 z-10 pointer-events-none">
+                      <div v-if="isExitRow(classId, rowNum)" class="w-3.5 h-3.5 bg-red-600 rounded-[1px] flex items-center justify-center shadow-sm">
+                        <i class="ph ph-door-open text-white text-[7px] font-bold"></i>
                       </div>
-                      <div v-if="isWheelchairSeat(classId, rowNum, colIdx)" class="w-3 h-3 bg-blue-500 rounded-[1px] flex items-center justify-center shadow-sm">
-                        <i class="ph ph-wheelchair text-white text-[6px]"></i>
+                      <div v-if="isWheelchairSeat(classId, rowNum, colIdx)" class="w-3.5 h-3.5 bg-blue-600 rounded-[1px] flex items-center justify-center shadow-sm">
+                        <i class="ph ph-wheelchair text-white text-[7px] font-bold"></i>
                       </div>
-                      <div v-if="isBassinetSeat(classId, rowNum, colIdx)" class="w-3 h-3 bg-purple-500 rounded-[1px] flex items-center justify-center shadow-sm">
-                        <i class="ph ph-baby text-white text-[6px]"></i>
+                      <div v-if="isBassinetSeat(classId, rowNum, colIdx)" class="w-3.5 h-3.5 bg-purple-600 rounded-[1px] flex items-center justify-center shadow-sm">
+                        <i class="ph ph-baby text-white text-[7px] font-bold"></i>
                       </div>
-                      <div v-if="hasNutAllergy(classId, rowNum, colIdx)" class="w-3 h-3 bg-amber-500 rounded-[1px] flex items-center justify-center shadow-sm">
-                        <i class="ph ph-nut text-white text-[6px]"></i>
+                      <div v-if="hasMedicalOxygen(classId, rowNum, colIdx)" class="w-3.5 h-3.5 bg-emerald-600 rounded-[1px] flex items-center justify-center shadow-sm">
+                        <i class="ph ph-heartbeat text-white text-[7px] font-bold"></i>
                       </div>
-                      <div v-if="isUnaccompaniedMinor(classId, rowNum, colIdx)" class="w-3 h-3 bg-green-500 rounded-[1px] flex items-center justify-center shadow-sm">
-                        <i class="ph ph-user-focus text-white text-[6px]"></i>
+                      <div v-if="hasStretcher(classId, rowNum, colIdx)" class="w-3.5 h-3.5 bg-orange-600 rounded-[1px] flex items-center justify-center shadow-sm">
+                        <i class="ph ph-bed text-white text-[7px] font-bold"></i>
+                      </div>
+                      <div v-if="hasPetInCabin(classId, rowNum, colIdx)" class="w-3.5 h-3.5 bg-amber-600 rounded-[1px] flex items-center justify-center shadow-sm">
+                        <i class="ph ph-paw-print text-white text-[7px] font-bold"></i>
+                      </div>
+                      <div v-if="isUnaccompaniedMinor(classId, rowNum, colIdx)" class="w-3.5 h-3.5 bg-green-600 rounded-[1px] flex items-center justify-center shadow-sm">
+                        <i class="ph ph-user-focus text-white text-[7px] font-bold"></i>
+                      </div>
+                    </div>
+                    
+                    <!-- Seat Tooltip -->
+                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-48 bg-gray-900 text-white text-[10px] rounded-lg p-2 z-50">
+                      <div class="space-y-1 text-left">
+                        <p class="font-bold">{{ getSeatNumber(classId, rowNum, colIdx) }}</p>
+                        <p>{{ getSeatClassName(classId) }}</p>
+                        
+                        <div v-if="hasSpecialSeat(classId, rowNum, colIdx)" class="pt-1 border-t border-gray-700">
+                          <p class="font-semibold text-amber-300">Detailed Configuration:</p>
+                          <ul class="pl-2 space-y-1 mt-1">
+                            <li v-if="isExitRow(classId, rowNum)" class="flex items-center gap-2">
+                              <i class="ph ph-door-open text-red-400"></i>
+                              <span>Exit Row - Emergency Duties</span>
+                            </li>
+                            <li v-if="isWheelchairSeat(classId, rowNum, colIdx)" class="flex items-center gap-2">
+                              <i class="ph ph-wheelchair text-blue-400"></i>
+                              <span>Wheelchair Assistance Ready</span>
+                            </li>
+                            <li v-if="isBassinetSeat(classId, rowNum, colIdx)" class="flex items-center gap-2">
+                              <i class="ph ph-baby text-purple-400"></i>
+                              <span>Infant Bassinet Facility</span>
+                            </li>
+                            <li v-if="hasMedicalOxygen(classId, rowNum, colIdx)" class="flex items-center gap-2">
+                              <i class="ph ph-heartbeat text-emerald-400"></i>
+                              <span>Medical Oxygen Equipped</span>
+                            </li>
+                            <li v-if="hasPetInCabin(classId, rowNum, colIdx)" class="flex items-center gap-2">
+                              <i class="ph ph-paw-print text-amber-400"></i>
+                              <span>Pet in Cabin Allowed</span>
+                            </li>
+                            <li v-if="isDeafBlind(classId, rowNum, colIdx)" class="flex items-center gap-2">
+                              <i class="ph ph-eye-slash text-blue-300"></i>
+                              <span>Deaf/Blind Asst Required</span>
+                            </li>
+                            <li v-if="isUnaccompaniedMinor(classId, rowNum, colIdx)" class="flex items-center gap-2">
+                              <i class="ph ph-user-focus text-green-400"></i>
+                              <span>UMNR Service - Supervision</span>
+                            </li>
+                            <li v-if="isLargePersona(classId, rowNum, colIdx)" class="flex items-center gap-2">
+                              <i class="ph ph-user-square text-orange-400"></i>
+                              <span>Large Persona Spacing</span>
+                            </li>
+                            <li v-if="hasStretcher(classId, rowNum, colIdx)" class="flex items-center gap-2">
+                              <i class="ph ph-bed text-red-500"></i>
+                              <span>Stretcher Installation</span>
+                            </li>
+                            <li v-if="hasSportsEquipment(classId, rowNum, colIdx)" class="flex items-center gap-2">
+                              <i class="ph ph-bicycle text-emerald-300"></i>
+                              <span>Sports Equipment Storage</span>
+                            </li>
+                          </ul>
+                        </div>
+                        
+                        <div v-if="!hasSpecialSeat(classId, rowNum, colIdx)" class="text-gray-400 italic">
+                          Standard seat
+                        </div>
                       </div>
                     </div>
                   </button>
@@ -832,7 +862,7 @@
     </div>
 
     <!-- Right Panel - Enhanced Seat Details -->
-    <div class="w-full lg:w-80 order-3">
+    <div class="w-full lg:w-80 shrink-0 order-3">
       <div class="bg-white rounded-[1px] shadow-sm border border-gray-200 sticky top-10 overflow-hidden poppins">
         <div class="bg-[#002D1E] p-4 text-white">
           <h3 class="text-[10px] font-black uppercase tracking-[3px] flex items-center gap-2 poppins">
@@ -873,62 +903,52 @@
               <p class="text-[11px] font-bold uppercase tracking-widest poppins" :style="{ color: activeSeat.color }">{{ activeSeat.seat_class_name }}</p>
             </div>
 
-            <!-- Special Requirements Section -->
-            <div v-if="hasSpecialSeatForActiveSeat" class="mb-6">
-              <h4 class="text-xs font-bold text-gray-700 mb-3 flex items-center gap-2">
-                <i class="ph ph-warning-circle text-amber-500"></i>
-                Special Requirements
+            <!-- Integrated Special Requirements Section (New Direct Access) -->
+            <div class="mb-6 border-t border-gray-100 pt-6">
+              <h4 class="text-[10px] font-black text-[#002D1E] uppercase tracking-[3px] mb-4 flex items-center gap-2">
+                <i class="ph ph-sliders text-[#fe3787]"></i>
+                Unit Configuration
               </h4>
-              <div class="space-y-2">
-                <div v-if="activeSeat.is_exit_row" class="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
-                  <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                    <i class="ph ph-door-open text-red-600"></i>
+              
+              <!-- Scrollable Matrix Registry -->
+              <div class="max-h-[320px] overflow-y-auto pr-3 space-y-2.5 custom-scrollbar">
+                <div v-for="req in seatRequirements" 
+                     :key="req.id" 
+                     class="flex items-center justify-between p-3 rounded-lg transition-all border group"
+                     :class="hasRequirement(activeSeat, req.code) ? 'bg-indigo-50/50 border-indigo-100' : 'bg-gray-50 border-transparent hover:border-gray-200'"
+                >
+                  <div class="flex items-center gap-3">
+                    <div :class="['w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-110', 
+                                 hasRequirement(activeSeat, req.code) ? 'bg-[#002D1E] text-[#fe3787]' : 'bg-white text-gray-400']">
+                      <i :class="[req.icon || 'ph ph-star', 'text-sm']"></i>
+                    </div>
+                    <div class="min-w-0">
+                      <p class="text-[11px] font-bold text-gray-800 truncate">{{ req.name }}</p>
+                      <div class="flex items-center gap-2">
+                        <p class="text-[9px] text-[#fe3787] font-black" v-if="req.price > 0">+₱{{ req.price }}</p>
+                        <p class="text-[9px] text-gray-400 truncate opacity-0 group-hover:opacity-100 transition-opacity">Simulation Active</p>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p class="text-sm font-bold text-red-800">Exit Row</p>
-                    <p class="text-[11px] text-red-600">Passenger must be capable of assisting in emergency</p>
-                  </div>
+                  
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" 
+                           :value="req.id" 
+                           v-model="activeSeat.requirements" 
+                           @change="updateSeatSpecialFeatures" 
+                           class="sr-only peer">
+                    <div class="w-8 h-4.5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-[#fe3787]"></div>
+                  </label>
                 </div>
-                
-                <div v-if="activeSeat.is_wheelchair_accessible" class="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <i class="ph ph-wheelchair text-blue-600"></i>
-                  </div>
-                  <div>
-                    <p class="text-sm font-bold text-blue-800">Wheelchair Accessible</p>
-                    <p class="text-[11px] text-blue-600">Priority for passengers with reduced mobility</p>
-                  </div>
-                </div>
-                
-                <div v-if="activeSeat.has_bassinet" class="flex items-center gap-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                  <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <i class="ph ph-baby text-purple-600"></i>
-                  </div>
-                  <div>
-                    <p class="text-sm font-bold text-purple-800">Bassinet Position</p>
-                    <p class="text-[11px] text-purple-600">For passengers with infants (bulkhead rows)</p>
-                  </div>
-                </div>
-                
-                <div v-if="activeSeat.has_nut_allergy" class="flex items-center gap-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                  <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
-                    <i class="ph ph-nut text-amber-600"></i>
-                  </div>
-                  <div>
-                    <p class="text-sm font-bold text-amber-800">Nut Allergy Zone</p>
-                    <p class="text-[11px] text-amber-600">No nuts to be served in this area</p>
-                  </div>
-                </div>
-                
-                <div v-if="activeSeat.is_unaccompanied_minor" class="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                  <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                    <i class="ph ph-user-focus text-green-600"></i>
-                  </div>
-                  <div>
-                    <p class="text-sm font-bold text-green-800">Unaccompanied Minor</p>
-                    <p class="text-[11px] text-green-600">Special supervision required</p>
-                  </div>
-                </div>
+              </div>
+
+              <!-- Save Status Indicator -->
+              <div class="mt-4 flex items-center justify-between px-2 text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                <span>Auto-Sync Active</span>
+                <span class="flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                  Registry Live
+                </span>
               </div>
             </div>
 
@@ -970,9 +990,7 @@
               </div>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="space-y-3">
-              <button 
+                <button 
                 @click="toggleAvailability" 
                 :class="[
                   'w-full py-4 rounded-[1px] font-black text-[11px] uppercase tracking-[2px] transition-all flex items-center justify-center gap-2 poppins shadow-sm',
@@ -984,15 +1002,6 @@
                 <i :class="activeSeat.is_available ? 'ph ph-prohibit' : 'ph ph-check-circle'"></i>
                 {{ activeSeat.is_available ? 'Block Unit' : (activeSeat.is_booked ? 'Reserved' : 'Release Unit') }}
               </button>
-              
-              <button 
-                @click="showSpecialRequirementsModal = true"
-                class="w-full py-4 bg-white border border-gray-200 hover:border-[#fe3787] text-gray-700 font-black text-[11px] uppercase tracking-[2px] rounded-[1px] flex items-center justify-center gap-2 poppins transition-all"
-              >
-                <i class="ph ph-sliders"></i>
-                Special Config
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -1135,55 +1144,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Special Requirements Modal -->
-    <div v-if="showSpecialRequirementsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div class="bg-white w-full max-w-md rounded-[1px] shadow-2xl overflow-hidden poppins">
-        <div class="bg-[#002D1E] p-4 text-white flex items-center justify-between">
-          <h2 class="text-sm font-bold uppercase tracking-widest poppins">Unit Configuration</h2>
-          <button @click="showSpecialRequirementsModal = false" class="text-white/70 hover:text-white">
-            <i class="ph ph-x text-xl"></i>
-          </button>
-        </div>
-        
-        <div class="p-6">
-          <div class="mb-6">
-            <h3 class="text-sm font-bold text-gray-700 mb-2">Seat {{ activeSeat?.seat_number }}</h3>
-            <p class="text-[11px] text-gray-500">{{ activeSeat?.seat_class_name }}</p>
-          </div>
-          
-          <div class="space-y-4">
-            <!-- Dynamic Requirements -->
-            <div v-for="req in seatRequirements" :key="req.id" class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div :class="['w-10 h-10 rounded-lg flex items-center justify-center', hasRequirement(activeSeat, req.code) ? 'bg-blue-100' : 'bg-gray-100']">
-                  <i :class="[req.icon || 'ph ph-star', hasRequirement(activeSeat, req.code) ? 'text-blue-600' : 'text-gray-400']"></i>
-                </div>
-                <div>
-                  <p class="text-sm font-medium text-gray-800">{{ req.name }}</p>
-                  <p class="text-[10px] text-blue-600 font-bold" v-if="req.price > 0">+ ₱{{ req.price }}</p>
-                  <p class="text-[10px] text-gray-500">{{ req.description }}</p>
-                </div>
-              </div>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" 
-                       :value="req.id" 
-                       v-model="activeSeat.requirements" 
-                       @change="updateSeatSpecialFeatures" 
-                       class="sr-only peer">
-                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
-              </label>
-            </div>
-
-          </div>
-          
-          <div class="mt-8 flex justify-end gap-3">
-            <button @click="showSpecialRequirementsModal = false" class="px-6 py-2.5 text-gray-500 font-bold text-[11px] uppercase tracking-widest hover:bg-gray-50 rounded-[1px] poppins transition-all">Close</button>
-            <button @click="saveSpecialRequirements" class="px-6 py-2.5 bg-[#fe3787] text-white font-black text-[11px] uppercase tracking-widest rounded-[1px] poppins hover:bg-[#fb1873] shadow-lg transition-all">Save Matrix</button>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -1199,13 +1159,13 @@ const debugMode = ref(false);
 const isLoading = ref(false);
 const hasError = ref(false);
 const errorMessage = ref('');
-const schedules = ref([]);
 const seats = ref([]);
 const seatClasses = ref([]);
 const airlines = ref([]);
 const aircraftInfo = ref({ name: '', capacity: 0, airline_id: null });
-const rawApiData = ref(null);
-const selectedScheduleId = ref('');
+const selectedAirlineId = ref('');
+const selectedAircraftId = ref('');
+const aircrafts = ref([]);
 const activeSeat = ref(null);
 const isClassModalOpen = ref(false);
 const isEditingClass = ref(false);
@@ -1217,7 +1177,6 @@ const showCreateAirlineModal = ref(false);
 const isCreatingAirline = ref(false);
 const airlineForm = ref({ name: '', code: '' });
 const selectedFixAirlineId = ref(null);
-const saveMode = ref('schedule'); // 'schedule' or 'aircraft'
 const seatRequirements = ref([]); 
 
 // Special seat features state
@@ -1229,11 +1188,20 @@ const showSpecialRequirementsModal = ref(false);
 
 const layoutConfig = ref({});
 const classOrder = ref([]);
+const seatTemplateOverrides = ref({}); // Persistent seat configuration map
 
 const columnLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
 const defaultColors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
 // ----- Computed -----
+const filteredAircrafts = computed(() => {
+  if (!selectedAirlineId.value) return [];
+  return aircrafts.value.filter(a => {
+    const aid = typeof a.airline === 'object' ? a.airline.id : a.airline;
+    return parseInt(aid) === parseInt(selectedAirlineId.value);
+  });
+});
+
 const currentAirlineName = computed(() => {
   if (!aircraftInfo.value.airline_id) return 'Unknown';
   const airline = airlines.value.find(a => a.id === aircraftInfo.value.airline_id);
@@ -1281,19 +1249,7 @@ const orderedClassIds = computed(() => {
   });
 });
 
-const totalConfiguredSeats = computed(() => {
-  return Object.values(layoutConfig.value).reduce((sum, config) => {
-    return sum + ((config?.rows || 0) * (config?.columns || 0));
-  }, 0);
-});
 
-const hasValidLayout = computed(() => {
-  return orderedClassIds.value.length > 0 && 
-         orderedClassIds.value.every(id => {
-           const config = layoutConfig.value[id];
-           return config && typeof config.rows === 'number' && config.rows > 0;
-         });
-});
 
 const hasSpecialSeatForActiveSeat = computed(() => {
   if (!activeSeat.value) return false;
@@ -1301,41 +1257,16 @@ const hasSpecialSeatForActiveSeat = computed(() => {
          activeSeat.value.is_wheelchair_accessible || 
          activeSeat.value.has_bassinet || 
          activeSeat.value.has_nut_allergy || 
-         activeSeat.value.is_unaccompanied_minor;
+         activeSeat.value.is_unaccompanied_minor ||
+         activeSeat.value.has_medical_oxygen ||
+         activeSeat.value.has_pet_in_cabin ||
+         activeSeat.value.is_deaf_blind ||
+         activeSeat.value.is_large_persona ||
+         activeSeat.value.has_stretcher ||
+         activeSeat.value.has_sports_equipment;
 });
 
-const exitRowSeatsCount = computed(() => {
-  return Array.from(seatMapData.value.values()).filter(s => s.is_exit_row).length;
-});
 
-const wheelchairSeatsCount = computed(() => {
-  return Array.from(seatMapData.value.values()).filter(s => s.is_wheelchair_accessible).length;
-});
-
-const bassinetSeatsCount = computed(() => {
-  return Array.from(seatMapData.value.values()).filter(s => s.has_bassinet).length;
-});
-
-const nutAllergySeatsCount = computed(() => {
-  return Array.from(seatMapData.value.values()).filter(s => s.has_nut_allergy).length;
-});
-
-const unaccompaniedMinorSeatsCount = computed(() => {
-  return Array.from(seatMapData.value.values()).filter(s => s.is_unaccompanied_minor).length;
-});
-
-const specialSeatsCount = computed(() => {
-  return exitRowSeatsCount.value + wheelchairSeatsCount.value + bassinetSeatsCount.value + 
-         nutAllergySeatsCount.value + unaccompaniedMinorSeatsCount.value;
-});
-
-const occupiedCount = computed(() => 
-  Array.from(seatMapData.value.values()).filter(s => !s.is_available).length
-);
-
-const availableCount = computed(() => 
-  Array.from(seatMapData.value.values()).filter(s => s.is_available).length
-);
 
 const capacityMismatch = computed(() => {
   if (!aircraftInfo.value.capacity) return false;
@@ -1350,21 +1281,13 @@ const capacityStatus = computed(() => {
 });
 
 // ----- Methods -----
-const isValidAirline = (airlineId) => {
-  if (!airlineId) return false;
-  
-  const found = airlines.value.some(a => a.id === parseInt(airlineId));
-  if (found) return true;
-  
-  if (aircraftInfo.value.airline && aircraftInfo.value.airline.id === parseInt(airlineId)) {
-    return true;
-  }
-  
-  return false;
+const handleAirlineChange = () => {
+  selectedAircraftId.value = '';
+  resetState();
 };
 
-const handleScheduleChange = async () => {
-  if (!selectedScheduleId.value) {
+const handleAircraftChange = async () => {
+  if (!selectedAircraftId.value) {
     resetState();
     return;
   }
@@ -1374,97 +1297,36 @@ const handleScheduleChange = async () => {
   errorMessage.value = '';
   
   try {
-    if (airlines.value.length === 0) {
-      await fetchAirlines();
+    const aircraftId = parseInt(selectedAircraftId.value);
+    const aircraftRes = await api.get(`/aircraft/${aircraftId}/`);
+    const aircraftData = aircraftRes.data;
+    
+    // Determine airline ID
+    let airlineId = aircraftData.airline;
+    if (typeof airlineId === 'object' && airlineId !== null) {
+      airlineId = airlineId.id;
     }
 
-    const schedRes = await api.get(`/schedules/${selectedScheduleId.value}/?depth=2`);
-    rawApiData.value = schedRes.data;
-
-    const data = schedRes.data;
-    
-    let aircraftData = null;
-    let airlineData = null;
-    
-    if (data.flight_detail) {
-      aircraftData = data.flight_detail.aircraft;
-      airlineData = data.flight_detail.airline;
-    } else if (data.flight) {
-      if (typeof data.flight === 'object') {
-        aircraftData = data.flight.aircraft;
-        airlineData = data.flight.airline;
-      }
-    }
-    
-    if (!aircraftData && data.flight) {
-      const flightId = typeof data.flight === 'object' ? data.flight.id : data.flight;
-      try {
-        const flightRes = await api.get(`/flights/${flightId}/`);
-        aircraftData = flightRes.data.aircraft;
-        if (typeof aircraftData === 'number') {
-          const aircraftRes = await api.get(`/aircraft/${aircraftData}/`);
-          aircraftData = aircraftRes.data;
-        }
-      } catch (e) {
-        console.error('Failed to fetch flight details:', e);
-      }
-    }
-    
-    if (aircraftData && typeof aircraftData === 'number') {
-      try {
-        const aircraftRes = await api.get(`/aircraft/${aircraftData}/`);
-        aircraftData = aircraftRes.data;
-      } catch (e) {
-        console.error('Failed to fetch aircraft:', e);
-      }
-    }
-    
-    let airlineId = null;
-    if (airlineData) {
-      airlineId = typeof airlineData === 'object' ? airlineData.id : airlineData;
-    } else if (aircraftData?.airline) {
-      airlineId = typeof aircraftData.airline === 'object' ? aircraftData.airline.id : aircraftData.airline;
-    }
-    
     aircraftInfo.value = {
-      name: data.aircraft_name || aircraftData?.model || 'Unknown Aircraft',
-      capacity: data.aircraft_capacity || aircraftData?.capacity || 150,
+      id: aircraftData.id,
+      name: aircraftData.model,
+      capacity: aircraftData.capacity,
       airline_id: airlineId,
       aircraft: aircraftData,
-      airline: airlineData,
-      aircraft_id: aircraftData?.id,
-      flight_id: typeof data.flight === 'object' ? data.flight.id : data.flight
+      aircraft_id: aircraftData.id
     };
-    
-    if (!aircraftInfo.value.aircraft) {
-      aircraftInfo.value.aircraft = {
-        id: aircraftData?.id || data.flight?.aircraft,
-        model: aircraftInfo.value.name,
-        capacity: aircraftInfo.value.capacity,
-        airline: airlineId
-      };
-    }
 
-    const seatRes = await api.get(`/seats/?schedule=${selectedScheduleId.value}`);
-    seats.value = seatRes.data.results || seatRes.data || [];
+    // Reset local seat state as we are working on template
+    seats.value = [];
+    hasExistingLayout.value = false;
 
-    if (seats.value.length > 0) {
-      hasExistingLayout.value = true;
-      loadLayoutFromSeats(seats.value);
-    } else {
-      hasExistingLayout.value = false;
-      layoutConfig.value = {};
-      classOrder.value = [];
-      
-      if (aircraftInfo.value.aircraft?.id) {
-        await applyAircraftTemplate(aircraftInfo.value.aircraft.id);
-      }
-    }
+    // Load template layout
+    await applyAircraftTemplate(aircraftId);
 
   } catch (err) {
-    console.error('Error in handleScheduleChange:', err);
+    console.error('Error in handleAircraftChange:', err);
     hasError.value = true;
-    errorMessage.value = err.message || 'Failed to load schedule data';
+    errorMessage.value = err.message || 'Failed to load aircraft data';
   } finally {
     isLoading.value = false;
   }
@@ -1572,7 +1434,6 @@ const resetState = () => {
   classOrder.value = [];
   aircraftInfo.value = { name: '', capacity: 0, airline_id: null };
   hasExistingLayout.value = false;
-  rawApiData.value = null;
   selectedFixAirlineId.value = null;
   hasError.value = false;
   errorMessage.value = '';
@@ -1587,32 +1448,30 @@ const autoPopulateLayout = () => {
   }
 
   const sortedClasses = [...classes].sort((a, b) => b.price_multiplier - a.price_multiplier);
-  
   const newLayoutConfig = {};
   const newClassOrder = [];
-
   const capacity = aircraftInfo.value.capacity || 150;
   const totalClasses = sortedClasses.length;
   
-  const baseSeatsPerClass = Math.floor(capacity / totalClasses);
-  const remainderSeats = capacity % totalClasses;
-  
+  let remainingCapacity = capacity;
   let currentRow = 1;
 
   sortedClasses.forEach((sc, index) => {
-    const classCapacity = baseSeatsPerClass + (index < remainderSeats ? 1 : 0);
+    // Determine columns pattern
+    let columns = (index === 0 && totalClasses > 1) ? 4 : 6;
     
-    let columns;
-    if (index === 0 && totalClasses > 1) {
-      columns = 4;
-    } else if (index === 1 && totalClasses > 2) {
-      columns = 6;
-    } else {
-      columns = 6;
+    // Target seats for this class (balanced distribution)
+    let targetForClass = Math.floor(remainingCapacity / (totalClasses - index));
+    
+    // Calculate rows, ensuring we don't go significantly over early
+    let rows = Math.round(targetForClass / columns);
+    if (rows < 1) rows = 1;
+
+    // Special case: Last class takes whatever is left to reach capacity
+    if (index === totalClasses - 1) {
+       rows = Math.ceil(remainingCapacity / columns);
     }
-    
-    const rows = Math.ceil(classCapacity / columns);
-    
+
     newLayoutConfig[sc.id] = {
       rows: rows,
       columns: columns,
@@ -1621,6 +1480,7 @@ const autoPopulateLayout = () => {
     };
     
     newClassOrder.push(sc.id);
+    remainingCapacity -= (rows * columns);
     currentRow += rows;
   });
   
@@ -1968,7 +1828,7 @@ const seatMapData = computed(() => {
         const globalRow = getGlobalRowNumber(classId, row);
         const key = `${classId}-${globalRow}-${colLetter}`;
         
-        if (!map.has(key)) {
+        if (!map.has(key) && map.size < (aircraftInfo.value.capacity || 999)) {
           const sc = seatClasses.value.find(c => c.id === parseInt(classId));
           
           const seat = {
@@ -1983,8 +1843,7 @@ const seatMapData = computed(() => {
             color: sc?.color || '#3B82F6',
             is_available: true,
             is_booked: false,
-            isExisting: false,
-            schedule: selectedScheduleId.value
+            isExisting: false
           };
           
           initializeSeatFeatures(seat);
@@ -1997,6 +1856,46 @@ const seatMapData = computed(() => {
   return map;
 });
 
+const totalConfiguredSeats = computed(() => {
+  if (!seatMapData.value) return 0;
+  return seatMapData.value.size;
+});
+
+const hasValidLayout = computed(() => {
+  return orderedClassIds.value.length > 0 && 
+         orderedClassIds.value.every(id => {
+           const config = layoutConfig.value[id];
+           return config && typeof config.rows === 'number' && config.rows > 0;
+         });
+});
+
+const exitRowSeatsCount = computed(() => Array.from((seatMapData.value || new Map()).values()).filter(s => s.is_exit_row).length);
+const wheelchairSeatsCount = computed(() => Array.from((seatMapData.value || new Map()).values()).filter(s => s.is_wheelchair_accessible).length);
+const bassinetSeatsCount = computed(() => Array.from((seatMapData.value || new Map()).values()).filter(s => s.has_bassinet).length);
+const nutAllergySeatsCount = computed(() => Array.from((seatMapData.value || new Map()).values()).filter(s => s.has_nut_allergy).length);
+const unaccompaniedMinorSeatsCount = computed(() => Array.from((seatMapData.value || new Map()).values()).filter(s => s.is_unaccompanied_minor).length);
+const medicalOxygenCount = computed(() => Array.from((seatMapData.value || new Map()).values()).filter(s => s.has_medical_oxygen).length);
+const petInCabinCount = computed(() => Array.from((seatMapData.value || new Map()).values()).filter(s => s.has_pet_in_cabin).length);
+const deafBlindCount = computed(() => Array.from((seatMapData.value || new Map()).values()).filter(s => s.is_deaf_blind).length);
+const largePersonaCount = computed(() => Array.from((seatMapData.value || new Map()).values()).filter(s => s.is_large_persona).length);
+const stretcherCount = computed(() => Array.from((seatMapData.value || new Map()).values()).filter(s => s.has_stretcher).length);
+const sportsEquipmentCount = computed(() => Array.from((seatMapData.value || new Map()).values()).filter(s => s.has_sports_equipment).length);
+
+const specialSeatsCount = computed(() => {
+  return exitRowSeatsCount.value + wheelchairSeatsCount.value + bassinetSeatsCount.value + 
+         nutAllergySeatsCount.value + unaccompaniedMinorSeatsCount.value +
+         medicalOxygenCount.value + petInCabinCount.value + deafBlindCount.value +
+         largePersonaCount.value + stretcherCount.value + sportsEquipmentCount.value;
+});
+
+const occupiedCount = computed(() => 
+  Array.from((seatMapData.value || new Map()).values()).filter(s => !s.is_available).length
+);
+
+const availableCount = computed(() => 
+  Array.from((seatMapData.value || new Map()).values()).filter(s => s.is_available).length
+);
+
 // ----- Special Seat Features -----
 const hasSpecialSeat = (classId, row, col) => {
   const seat = getSeat(classId, row, col);
@@ -2006,7 +1905,13 @@ const hasSpecialSeat = (classId, row, col) => {
          seat.is_wheelchair_accessible || 
          seat.has_bassinet || 
          seat.has_nut_allergy || 
-         seat.is_unaccompanied_minor;
+         seat.is_unaccompanied_minor ||
+         seat.has_medical_oxygen ||
+         seat.has_pet_in_cabin ||
+         seat.is_deaf_blind ||
+         seat.is_large_persona ||
+         seat.has_stretcher ||
+         seat.has_sports_equipment;
 };
 
 const isExitRow = (classId, row) => {
@@ -2054,22 +1959,52 @@ const hasExtraLegroom = (classId, row) => {
 
 const isWheelchairSeat = (classId, row, col) => {
   const seat = getSeat(classId, row, col);
-  return seat?.is_wheelchair_accessible || false;
+  return hasRequirement(seat, 'is_wheelchair_accessible') || hasRequirement(seat, 'wheelchair');
 };
 
 const isBassinetSeat = (classId, row, col) => {
   const seat = getSeat(classId, row, col);
-  return seat?.has_bassinet || false;
+  return hasRequirement(seat, 'has_bassinet') || hasRequirement(seat, 'bassinet');
 };
 
 const hasNutAllergy = (classId, row, col) => {
   const seat = getSeat(classId, row, col);
-  return seat?.has_nut_allergy || false;
+  return hasRequirement(seat, 'has_nut_allergy');
 };
 
 const isUnaccompaniedMinor = (classId, row, col) => {
   const seat = getSeat(classId, row, col);
-  return seat?.is_unaccompanied_minor || false;
+  return hasRequirement(seat, 'is_unaccompanied_minor') || hasRequirement(seat, 'umnr');
+};
+
+const hasMedicalOxygen = (classId, row, col) => {
+  const seat = getSeat(classId, row, col);
+  return hasRequirement(seat, 'has_medical_oxygen') || hasRequirement(seat, 'oxygen');
+};
+
+const hasPetInCabin = (classId, row, col) => {
+  const seat = getSeat(classId, row, col);
+  return hasRequirement(seat, 'has_pet_in_cabin') || hasRequirement(seat, 'pet');
+};
+
+const isDeafBlind = (classId, row, col) => {
+  const seat = getSeat(classId, row, col);
+  return hasRequirement(seat, 'is_deaf_blind') || hasRequirement(seat, 'sensory');
+};
+
+const isLargePersona = (classId, row, col) => {
+  const seat = getSeat(classId, row, col);
+  return hasRequirement(seat, 'is_large_persona') || hasRequirement(seat, 'large');
+};
+
+const hasStretcher = (classId, row, col) => {
+  const seat = getSeat(classId, row, col);
+  return hasRequirement(seat, 'has_stretcher') || hasRequirement(seat, 'stretcher');
+};
+
+const hasSportsEquipment = (classId, row, col) => {
+  const seat = getSeat(classId, row, col);
+  return hasRequirement(seat, 'has_sports_equipment') || hasRequirement(seat, 'sports');
 };
 
 const getSeatNumber = (classId, row, col) => {
@@ -2127,33 +2062,81 @@ const hasWheelchairSeatsInRow = (classId, row) => {
 
 // Initialize seat with default special features
 const initializeSeatFeatures = (seat) => {
-  const globalRow = seat.row;
+  const globalRow = parseInt(seat.row);
+  const col = seat.column;
+  const config = layoutConfig.value[seat.seat_class_id] || { columns: 6 };
   
-  // Set default features based on position
-  // REMOVED HARDCODED DEFAULTS - Logic is now data-driven.
-  // User must explicitly set these properties.
+  // Logical/Physical Seat positioning
+  seat.is_window = col === 'A' || col === getColumnLabel(config.columns);
+  seat.is_aisle = col === 'C' || col === 'D' || (config.columns >= 6 && col === 'F');
   
-  // Preserve existing values if they exist (e.g. from backend)
-  seat.is_exit_row = seat.is_exit_row || false;
-  seat.has_extra_legroom = seat.has_extra_legroom || false;
-  seat.is_bulkhead = seat.is_bulkhead || false;
+  // --- AUTOMATIC UNIT CONFIGURATION (Template System) ---
   
-  seat.is_window = seat.column === 'A' || seat.column === getColumnLabel(layoutConfig.value[seat.seat_class]?.columns || 6);
-  seat.is_aisle = seat.column === 'C' || seat.column === 'D' || seat.column === 'F';
+  // 1. First, check if there are saved template overrides for this seat
+  const savedReqs = seatTemplateOverrides.value[seat.seat_number];
+  if (savedReqs) {
+    seat.requirements = [...savedReqs];
+    // Sync boolean flags based on saved requirements to keep old UI logic working
+    if (seatRequirements.value) {
+      seatRequirements.value.forEach(r => {
+        if (seat.requirements.includes(r.id) && r.code) {
+          seat[r.code] = true;
+        }
+      });
+    }
+  } else {
+    // 2. Otherwise use 'Recommended' scattering logic for new aircraft
+    seat.requirements = [];
+    
+    // Helper to find ID and activate
+    const activate = (code) => {
+      seat[code] = true;
+      if (seatRequirements.value) {
+        // Search by code OR by name as fallback
+        const req = seatRequirements.value.find(r => r.code === code || r.code === code.replace('has_', '').replace('is_', ''));
+        if (req && !seat.requirements.includes(req.id)) {
+          seat.requirements.push(req.id);
+        }
+      }
+    };
   
-  // Set defaults for new fields
-  seat.is_wheelchair_accessible = seat.is_wheelchair_accessible || false;
-  seat.has_bassinet = seat.has_bassinet || false;
-  seat.has_nut_allergy = seat.has_nut_allergy || false;
-  seat.is_unaccompanied_minor = seat.is_unaccompanied_minor || false;
+    // Recommended scattering rules
+    const isBulkhead = globalRow === 1 || globalRow === 4;
+    const isMidCabin = globalRow >= 12 && globalRow <= 14;
+    const isRearCabin = globalRow >= 25;
   
-  // Build features list
+    if (isBulkhead || isMidCabin) activate('has_extra_legroom');
+    if (isBulkhead) seat.is_bulkhead = true;
+    if (isMidCabin) seat.is_exit_row = true;
+  
+    if ((globalRow === 2 || globalRow === 3) && seat.is_aisle) activate('is_wheelchair_accessible');
+    if (globalRow === 5 && col === 'E') activate('has_medical_oxygen');
+    if (isBulkhead && seat.is_window) activate('has_bassinet');
+    if (globalRow === 8 && col === 'B') activate('has_pet_in_cabin');
+    if (globalRow === 10 && col === 'C') activate('is_deaf_blind');
+    if (globalRow === 15 && col === 'A') activate('is_unaccompanied_minor');
+    if (globalRow === 18 && col === 'F') activate('is_large_persona');
+    if (globalRow === 22 && col === 'B') activate('has_sports_equipment');
+    if (globalRow === 28 && col === 'C' && isRearCabin) {
+      activate('has_stretcher');
+      activate('has_medical_oxygen');
+    }
+  }
+
+  // Build combined features list for display
   seat.features = [];
   if (seat.is_exit_row) seat.features.push("Exit Row");
-  if (seat.is_wheelchair_accessible) seat.features.push("Wheelchair");
-  if (seat.has_bassinet) seat.features.push("Bassinet");
-  if (seat.has_extra_legroom) seat.features.push("Extra Legroom");
+  if (hasRequirement(seat, 'is_wheelchair_accessible') || hasRequirement(seat, 'wheelchair')) seat.features.push("Wheelchair Assistance");
+  if (hasRequirement(seat, 'has_bassinet') || hasRequirement(seat, 'bassinet')) seat.features.push("Infant Bassinet");
+  if (hasRequirement(seat, 'has_extra_legroom') || hasRequirement(seat, 'extra_legroom')) seat.features.push("Extra Legroom");
   if (seat.is_bulkhead) seat.features.push("Bulkhead");
+  if (hasRequirement(seat, 'has_medical_oxygen') || hasRequirement(seat, 'oxygen')) seat.features.push("Medical Oxygen");
+  if (hasRequirement(seat, 'has_pet_in_cabin') || hasRequirement(seat, 'pet')) seat.features.push("Pet in Cabin");
+  if (hasRequirement(seat, 'is_deaf_blind') || hasRequirement(seat, 'sensory')) seat.features.push("Deaf/Blind Asst");
+  if (hasRequirement(seat, 'is_unaccompanied_minor') || hasRequirement(seat, 'umnr')) seat.features.push("UMNR Service");
+  if (hasRequirement(seat, 'is_large_persona') || hasRequirement(seat, 'large')) seat.features.push("Large Persona");
+  if (hasRequirement(seat, 'has_stretcher') || hasRequirement(seat, 'stretcher')) seat.features.push("Stretchers");
+  if (hasRequirement(seat, 'has_sports_equipment') || hasRequirement(seat, 'sports')) seat.features.push("Sports Equipment");
   if (seat.is_window) seat.features.push("Window");
   if (seat.is_aisle) seat.features.push("Aisle");
   
@@ -2279,13 +2262,27 @@ const toggleRequirement = async (requirement) => {
 const hasRequirement = (seat, code) => {
   if (!seat) return false;
   
-  // Check Many-to-Many requirements
-  if (seat.requirements_detail) {
-    return seat.requirements_detail.some(r => r.code === code);
+  // 1. Check requirements_detail (Detailed objects from API with code)
+  if (seat.requirements_detail && Array.isArray(seat.requirements_detail)) {
+    if (seat.requirements_detail.some(r => r.code === code)) return true;
   }
   
-  // Fallback to booleans
-  return seat[code] || false;
+  // 2. Check requirements ID array (The primary source for current session)
+  // If seat.requirements exists, we check if ANY of those IDs match the code.
+  if (seat.requirements && Array.isArray(seat.requirements) && seatRequirements.value) {
+    return seat.requirements.some(id => {
+      const match = seatRequirements.value.find(r => r.id === id);
+      return match && (match.code === code || match.code === code.replace('has_', '').replace('is_', ''));
+    });
+  }
+  
+  // 3. Fallback to boolean flags ONLY IF requirements array is undefined or hasn't been modified
+  // Once the user starts toggling (requirements becomes an array), logic 2 handles the "Off" state correctly.
+  if (!seat.requirements) {
+    return seat[code] || false;
+  }
+  
+  return false;
 };
 
 // Keep old toggle functions for safety but map them to toggleRequirement
@@ -2322,74 +2319,67 @@ const clearSpecialRequirements = async () => {
   contextMenuSeat.value.has_bassinet = false;
   contextMenuSeat.value.has_nut_allergy = false;
   contextMenuSeat.value.is_unaccompanied_minor = false;
+  contextMenuSeat.value.has_medical_oxygen = false;
+  contextMenuSeat.value.has_pet_in_cabin = false;
+  contextMenuSeat.value.is_deaf_blind = false;
+  contextMenuSeat.value.is_large_persona = false;
+  contextMenuSeat.value.has_stretcher = false;
+  contextMenuSeat.value.has_sports_equipment = false;
   await updateSeatSpecialRequirements(contextMenuSeat.value);
   closeContextMenu();
 };
 
-// FIXED: Update seat special requirements - only include fields that exist
+// FIXED: Update seat special requirements locally for the Master Layout template
 const updateSeatSpecialRequirements = async (seat) => {
   try {
-    // Only include fields that exist in the database
-    const payload = {
-      is_exit_row: seat.is_exit_row || false,
-      has_extra_legroom: seat.has_extra_legroom || false,
-      is_bulkhead: seat.is_bulkhead || false,
-      is_window: seat.is_window || false,
-      is_aisle: seat.is_aisle || false,
-      requirements: seat.requirements || []
-    };
+    // Note: In the Master Layout editor, individual Seat rows do not exist in the DB yet.
+    // Changes to special requirements are maintained in memory and should be 
+    // auto-activated via the template's 'Recommended' pattern in initializeSeatFeatures.
     
-    // Add new fields only if they exist in the API response
-    if (typeof seat.is_wheelchair_accessible !== 'undefined') {
-      payload.is_wheelchair_accessible = seat.is_wheelchair_accessible || false;
-    }
-    if (typeof seat.has_bassinet !== 'undefined') {
-      payload.has_bassinet = seat.has_bassinet || false;
-    }
-    if (typeof seat.has_nut_allergy !== 'undefined') {
-      payload.has_nut_allergy = seat.has_nut_allergy || false;
-    }
-    if (typeof seat.is_unaccompanied_minor !== 'undefined') {
-      payload.is_unaccompanied_minor = seat.is_unaccompanied_minor || false;
-    }
+    // We only perform API calls if we are in a 'live' session (with a schedule)
+    // Since selectedScheduleId is not defined in this template view, we skip persistence here
+    // to prevent ReferenceErrors and orphan seat records.
     
-    if (seat.isExisting && !String(seat.id).startsWith('virtual-')) {
-      await api.patch(`/seats/${seat.id}/`, payload);
-    } else {
-      const response = await api.post('/seats/', {
-        schedule: parseInt(selectedScheduleId.value),
-        seat_class: seat.seat_class_id,
-        seat_number: seat.seat_number,
-        row: seat.row,
-        column: seat.column,
-        is_available: true,
-        ...payload
-      });
-      
-      seat.id = response.data.id;
-      seat.isExisting = true;
-      seats.value.push(response.data);
-    }
-    
-    // Update seat features list
+    // Update local seat features list for visual display and Right Panel sync
     seat.features = [];
     if (seat.is_exit_row) seat.features.push("Exit Row");
-    if (seat.is_wheelchair_accessible) seat.features.push("Wheelchair");
-    if (seat.has_bassinet) seat.features.push("Bassinet");
+    if (hasRequirement(seat, 'is_wheelchair_accessible')) seat.features.push("Wheelchair");
+    if (hasRequirement(seat, 'has_bassinet')) seat.features.push("Bassinet");
     if (seat.has_extra_legroom) seat.features.push("Extra Legroom");
     if (seat.is_bulkhead) seat.features.push("Bulkhead");
     if (seat.is_window) seat.features.push("Window");
     if (seat.is_aisle) seat.features.push("Aisle");
+    if (hasRequirement(seat, 'has_medical_oxygen')) seat.features.push("Oxygen");
+    if (hasRequirement(seat, 'has_pet_in_cabin')) seat.features.push("Pet");
+    if (hasRequirement(seat, 'is_deaf_blind')) seat.features.push("Sensory");
+    if (hasRequirement(seat, 'is_large_persona')) seat.features.push("Large");
+    if (hasRequirement(seat, 'has_stretcher')) seat.features.push("Stretcher");
+    if (hasRequirement(seat, 'has_sports_equipment')) seat.features.push("Sports");
+    
+    console.log(`[Master Layout] Configuration updated for seat ${seat.seat_number}`);
     
   } catch (err) {
-    console.error('Error updating seat requirements:', err);
-    console.error('Error details:', err.response?.data);
-    alert('Failed to update seat requirements. Check if all fields exist in database.');
+    console.error('Error updating local seat configuration:', err);
   }
 };
 
 const updateSeatSpecialFeatures = async () => {
   if (!activeSeat.value) return;
+  
+  // IMMEDIATELY sync changes to the Template Overrides map 
+  // This ensures that manual toggles persist even if the seat map re-computes (e.g. during layout changes)
+  seatTemplateOverrides.value[activeSeat.value.seat_number] = [...activeSeat.value.requirements];
+  
+  // Sync boolean flags with the requirements array to ensure indicators stay in sync
+  if (seatRequirements.value) {
+    seatRequirements.value.forEach(req => {
+      if (req.code) {
+        activeSeat.value[req.code] = activeSeat.value.requirements.includes(req.id);
+      }
+    });
+  }
+  
+  // Note: updateSeatSpecialRequirements no longer makes API calls in template mode
   await updateSeatSpecialRequirements(activeSeat.value);
 };
 
@@ -2426,80 +2416,38 @@ const saveLayout = async () => {
       };
     });
 
+    // COLLECT ALL CUSTOM SEAT CONFIGURATIONS
+    // This allows us to persist 'Recommended' or 'Manual' toggles in the template
+    const seatRequirementsMap = {};
+    seatMapData.value.forEach(seat => {
+      if (seat.requirements && seat.requirements.length > 0) {
+        seatRequirementsMap[seat.seat_number] = seat.requirements;
+      }
+    });
+
     const totalSeats = seatClassesConfig.reduce((sum, c) => sum + (c.rows * c.columns), 0);
     const layoutPayload = {
       layout_config: {
         seat_classes: seatClassesConfig,
+        seat_requirements: seatRequirementsMap, // PER-SEAT PERSISTENCE
         total_seats: totalSeats
       }
     };
 
-    if (saveMode.value === 'schedule') {
-      // Save to currently selected schedule
-      if (!selectedScheduleId.value) {
-        alert('No schedule selected!');
-        return;
-      }
-      
-      const response = await api.post(`/schedules/${selectedScheduleId.value}/generate-seats/`, layoutPayload);
-      
-      alert(`✅ Seats generated for this flight!\n${response.data.message}`);
-      
-      // Refresh seats
-      await handleScheduleChange();
-      
-    } else {
-      // Existing logic: Save to Aircraft Template
-      let aircraftId = aircraftInfo.value.aircraft?.id 
-        || aircraftInfo.value.aircraft_id 
-        || rawApiData.value?.flight?.aircraft;
-      
-      if (!aircraftId) {
-        if (rawApiData.value?.flight) {
-          const flightId = typeof rawApiData.value.flight === 'object' 
-            ? rawApiData.value.flight.id 
-            : rawApiData.value.flight;
-          
-          try {
-            const flightRes = await api.get(`/flights/${flightId}/`);
-            aircraftId = flightRes.data.aircraft;
-          } catch (e) {
-            console.error('Failed to get aircraft from flight:', e);
-          }
-        }
-      }
-      
-      if (!aircraftId) {
-        alert('No aircraft information available. Cannot save layout.');
-        return;
-      }
-
-      // 1. Save to Aircraft Template
-      await api.post(`/aircraft/${aircraftId}/save-layout/`, layoutPayload);
-      
-      let message = `✅ Layout saved to Aircraft Template!\nAircraft ID: ${aircraftId}`;
-
-      // 2. ALSO generate seats for current schedule (if selected)
-      if (selectedScheduleId.value) {
-        try {
-          const seatRes = await api.post(`/schedules/${selectedScheduleId.value}/generate-seats/`, layoutPayload);
-          message += `\n\n✅ AND generated seats for this flight!\n${seatRes.data.message}`;
-        } catch (seatErr) {
-          console.error('Error generating seats after template save:', seatErr);
-          message += `\n\n⚠️ Template saved, but failed to generate seats for flight: ${seatErr.message}`;
-        }
-      }
-      
-      alert(message);
-      
-      // Refresh seats
-      if (selectedScheduleId.value) {
-        await handleScheduleChange();
-      }
+    const aircraftId = aircraftInfo.value.id || aircraftInfo.value.aircraft_id;
+    
+    if (!aircraftId) {
+      alert('No aircraft information available. Cannot save layout.');
+      return;
     }
+
+    // Save to Aircraft Template
+    await api.post(`/aircraft/${aircraftId}/save-layout/`, layoutPayload);
+    
+    alert(`✅ Master Layout saved successfully!\nAircraft: ${aircraftInfo.value.name}\nUnit configurations persisted.`);
     
   } catch (err) {
-    console.error('Error:', err);
+    console.error('Error saving layout:', err);
     alert('Failed: ' + (err.response?.data?.error || err.message));
   } finally {
     isSaving.value = false;
@@ -2515,6 +2463,7 @@ const applyAircraftTemplate = async (aircraftId) => {
       const newConfig = {};
       const newOrder = [];
       
+      // Load Class config
       for (const sc of layout.seat_classes) {
         newConfig[sc.class_id] = {
           rows: sc.rows,
@@ -2527,6 +2476,13 @@ const applyAircraftTemplate = async (aircraftId) => {
       layoutConfig.value = newConfig;
       classOrder.value = newOrder;
       hasExistingLayout.value = true;
+
+      // Load Seat Requirements overrides
+      if (layout.seat_requirements) {
+        seatTemplateOverrides.value = layout.seat_requirements;
+      } else {
+        seatTemplateOverrides.value = {};
+      }
     }
   } catch (err) {
     console.log('No template found for this aircraft, starting fresh');
@@ -2536,19 +2492,19 @@ const applyAircraftTemplate = async (aircraftId) => {
 // ----- Fetch Initial Data -----
 const fetchData = async () => {
   try {
-    const [schedRes, scRes, aRes, reqRes] = await Promise.all([
-      api.get('/schedules/'),
+    const [scRes, aRes, aircraftRes, reqRes] = await Promise.all([
       api.get('/seat-classes/'),
       api.get('/airlines/'),
+      api.get('/aircraft/'),
       api.get('/seat-requirements/')
     ]);
     
-    schedules.value = schedRes.data.results || schedRes.data || [];
     seatClasses.value = (scRes.data.results || scRes.data || []).map((sc, index) => ({
       ...sc,
       color: sc.color || defaultColors[index % defaultColors.length]
     }));
     airlines.value = aRes.data.results || aRes.data || [];
+    aircrafts.value = aircraftRes.data.results || aircraftRes.data || [];
     seatRequirements.value = reqRes.data.results || reqRes.data || [];
     
   } catch (err) {
@@ -2597,16 +2553,19 @@ button {
 }
 
 /* Scrollbar styling */
-.max-h-\[400px\]::-webkit-scrollbar {
-  width: 6px;
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
 }
-.max-h-\[400px\]::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 10px;
 }
-.max-h-\[400px\]::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
 }
 
 /* Special seat glow effect */

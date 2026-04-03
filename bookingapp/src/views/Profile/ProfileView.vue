@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+  <div class="min-h-screen  py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-3xl mx-auto space-y-8">
       
       <!-- Header -->
@@ -22,7 +22,7 @@
                 activeTab === tab.name
                   ? 'border-pink-500 text-pink-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
-                'w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm transition-colors'
+                'flex-1 py-4 px-1 text-center border-b-2 font-medium text-sm transition-colors'
               ]"
             >
               {{ tab.label }}
@@ -185,28 +185,130 @@
             </div>
         </div>
 
+        <!-- Enrollment Tab -->
+        <div v-if="activeTab === 'enrollment'" class="p-6 space-y-6">
+
+          <!-- Status badge -->
+          <div class="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+            <h3 class="text-lg font-medium text-gray-900">Section Enrollment</h3>
+            <span class="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Active
+            </span>
+          </div>
+
+          <!-- Fields grid -->
+          <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+
+            <div class="sm:col-span-3">
+              <label class="block text-sm font-medium text-gray-700">Section Name</label>
+              <input :value="section.section_name" type="text" readonly
+                class="mt-1 block w-full bg-gray-50 border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-600 sm:text-sm cursor-default"
+              />
+            </div>
+
+            <div class="sm:col-span-3">
+              <label class="block text-sm font-medium text-gray-700">Section Code</label>
+              <input :value="section.section_code" type="text" readonly
+                class="mt-1 block w-full bg-gray-50 border border-gray-300 rounded-md shadow-sm py-2 px-3 text-pink-700 font-bold sm:text-sm cursor-default tracking-widest"
+              />
+            </div>
+
+            <div v-if="section.semester" class="sm:col-span-3">
+              <label class="block text-sm font-medium text-gray-700">Semester</label>
+              <input :value="section.semester" type="text" readonly
+                class="mt-1 block w-full bg-gray-50 border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-600 sm:text-sm cursor-default"
+              />
+            </div>
+
+            <div v-if="section.academic_year" class="sm:col-span-3">
+              <label class="block text-sm font-medium text-gray-700">Academic Year</label>
+              <input :value="section.academic_year" type="text" readonly
+                class="mt-1 block w-full bg-gray-50 border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-600 sm:text-sm cursor-default"
+              />
+            </div>
+
+            <div v-if="section.enrolled_at" class="sm:col-span-3">
+              <label class="block text-sm font-medium text-gray-700">Date Enrolled</label>
+              <input :value="formatDate(section.enrolled_at)" type="text" readonly
+                class="mt-1 block w-full bg-gray-50 border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-600 sm:text-sm cursor-default"
+              />
+            </div>
+
+            <div class="sm:col-span-3">
+              <label class="block text-sm font-medium text-gray-700">Total Activities</label>
+              <input :value="(section.activities_count ?? 0) + ' activities assigned'" type="text" readonly
+                class="mt-1 block w-full bg-gray-50 border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-600 sm:text-sm cursor-default"
+              />
+            </div>
+
+          </div>
+
+          <!-- Schedule -->
+          <div v-if="parsedSchedules.length > 0">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Class Schedule</label>
+            <div class="flex flex-wrap gap-2">
+              <div
+                v-for="(s, i) in parsedSchedules"
+                :key="i"
+                class="flex items-center gap-2 bg-gray-50 border border-gray-300 rounded-md px-3 py-2"
+              >
+                <span class="text-xs font-bold text-pink-600 uppercase">{{ s.day?.substring(0, 3) }}</span>
+                <span class="text-sm text-gray-600">{{ formatTime(s.start_time) }} – {{ formatTime(s.end_time) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div v-if="section.description">
+            <label class="block text-sm font-medium text-gray-700">Description</label>
+            <textarea :value="section.description" rows="3" readonly
+              class="mt-1 block w-full bg-gray-50 border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-600 sm:text-sm cursor-default resize-none"
+            />
+          </div>
+
+        </div>
+
       </div>
     </div>
+
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useNotificationStore } from '@/stores/notification'
-import api from '@/services/api/axios' // Assuming you have an axios instance configuration
-import axios from 'axios'
+import { useUserStore } from '@/stores/user'
+import api from '@/services/api/axios'
+
+const props = defineProps({
+  section: {
+    type: Object,
+    default: null
+  }
+})
 
 const notificationStore = useNotificationStore()
+const userStore = useUserStore()
 
 const activeTab = ref('details')
 const loading = ref(false)
 const previewAvatar = ref(null)
 const selectedFile = ref(null)
 
-const currentTabs = [
-  { name: 'details', label: 'Personal Details' },
-  { name: 'security', label: 'Security' },
-]
+const currentTabs = computed(() => {
+  const tabs = [
+    { name: 'details', label: 'Personal Details' },
+    { name: 'security', label: 'Security' },
+  ]
+  if (props.section) {
+    tabs.push({ name: 'enrollment', label: 'My Enrollment' })
+  }
+  return tabs
+})
 
 const form = ref({
   username: '',
@@ -226,6 +328,30 @@ const initials = computed(() => {
     const l = form.value.last_name?.charAt(0) || '';
     return (f + l).toUpperCase();
 })
+
+const parsedSchedules = computed(() => {
+    if (!props.section?.schedule) return []
+    try {
+        const s = typeof props.section.schedule === 'string'
+            ? JSON.parse(props.section.schedule)
+            : props.section.schedule
+        return Array.isArray(s) ? s : []
+    } catch { return [] }
+})
+
+const formatTime = (t) => {
+    if (!t) return ''
+    const [h, m] = t.split(':')
+    const hour = parseInt(h)
+    const ampm = hour >= 12 ? 'PM' : 'AM'
+    const h12 = hour % 12 || 12
+    return `${h12}:${m} ${ampm}`
+}
+
+const formatDate = (dateStr) => {
+    if (!dateStr) return ''
+    return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+}
 
 const fetchProfile = async () => {
     loading.value = true

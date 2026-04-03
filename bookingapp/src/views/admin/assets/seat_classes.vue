@@ -1,14 +1,33 @@
 <template>
   <div class="p-6 poppins">
-    <!-- Header Section -->
-    <div class="flex justify-between items-center mb-6">
-      <button 
-        @click="openModal()" 
-        class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[14px] rounded-[1px] shadow-sm transition-all"
-      >
-        <i class="ph ph-plus"></i> Add Class
-      </button>
-    </div>
+    <!-- Header & Tools Section -->
+    <AdminTableTool 
+      v-model="searchQuery" 
+      placeholder="Search class name..."
+    >
+      <template #filters>
+        <div class="flex items-center gap-2">
+          <select 
+            v-model="filterAirline"
+            class="text-[11px] font-bold border border-gray-200 px-3 py-2 bg-white rounded-[1px] outline-none focus:border-[#fe3787] poppins cursor-pointer min-w-[150px]"
+          >
+            <option value="all">Any Airline</option>
+            <option v-for="a in airlines" :key="a.id" :value="a.id">
+              {{ a.name }}
+            </option>
+          </select>
+        </div>
+      </template>
+
+      <template #actions>
+        <button 
+          @click="openModal()" 
+          class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[12px] rounded-[1px] shadow-sm transition-all"
+        >
+          <i class="ph ph-plus text-[14px]"></i> Add
+        </button>
+      </template>
+    </AdminTableTool>
 
     <!-- Table Section -->
     <div class="bg-white border border-gray-200 rounded-[1px] overflow-hidden shadow-sm">
@@ -70,17 +89,17 @@
               </div>
             </td>
           </tr>
-          <tr v-if="seatClasses.length === 0">
+          <tr v-if="filteredSeatClasses.length === 0">
             <td colspan="4" class="px-6 py-10 text-center text-gray-400 italic poppins">No seat classes found.</td>
           </tr>
         </tbody>
       </table>
 
       <!-- Pagination Section -->
-      <div v-if="seatClasses.length > itemsPerPage" class="px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+      <div v-if="filteredSeatClasses.length > itemsPerPage" class="px-6 py-4 border-t border-gray-100 bg-gray-50/50">
         <div class="flex items-center justify-between">
           <div class="text-[11px] font-bold text-gray-400 uppercase tracking-widest poppins">
-            Showing {{ startIndex + 1 }} - {{ endIndex }} of {{ seatClasses.length }}
+            Showing {{ startIndex + 1 }} - {{ endIndex }} of {{ filteredSeatClasses.length }}
           </div>
           <div class="flex gap-1">
             <button 
@@ -159,6 +178,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '@/services/admin/api';
 import { useModalStore } from '@/stores/modal';
+import AdminTableTool from '@/components/admin/AdminTableTool.vue';
 
 const modalStore = useModalStore();
 
@@ -166,9 +186,10 @@ const seatClasses = ref([]);
 const airlines = ref([]);
 const isModalOpen = ref(false);
 const isEditing = ref(false);
-const currentId = ref(null);
 const highlightedId = ref(null);
 const route = useRoute();
+const searchQuery = ref('');
+const filterAirline = ref('all');
 
 // Pagination State
 const currentPage = ref(1);
@@ -176,14 +197,30 @@ const itemsPerPage = 10;
 
 const form = ref({ airline: '', name: '', price_multiplier: 1.00 });
 
+// Search & Filter Logic
+const filteredSeatClasses = computed(() => {
+  let result = seatClasses.value;
+  
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase();
+    result = result.filter(sc => sc.name.toLowerCase().includes(q));
+  }
+
+  if (filterAirline.value !== 'all') {
+    result = result.filter(sc => sc.airline === filterAirline.value);
+  }
+  
+  return result;
+});
+
 // Pagination Logic
-const totalPages = computed(() => Math.ceil(seatClasses.value.length / itemsPerPage));
+const totalPages = computed(() => Math.ceil(filteredSeatClasses.value.length / itemsPerPage));
 const paginatedSeatClasses = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
-  return seatClasses.value.slice(start, start + itemsPerPage);
+  return filteredSeatClasses.value.slice(start, start + itemsPerPage);
 });
 const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage);
-const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, seatClasses.value.length));
+const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, filteredSeatClasses.value.length));
 
 const visiblePages = computed(() => {
   const pages = [];

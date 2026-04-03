@@ -8,7 +8,7 @@ export const seatService = {
    * @param {String} sessionId 
    * @param {Number} duration - Duration in minutes
    */
-  async lockSeat(seatId, sessionId, duration = 10) {
+  async lockSeat(seatId, sessionId, duration = 15) {
     try {
       const response = await api.post(`flightapp/api/seats/${seatId}/lock/`, {
         session_id: sessionId,

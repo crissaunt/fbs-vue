@@ -1424,8 +1424,10 @@ def create_booking(request):
         print(f"[SEARCH] DEBUG: Raw request data: {request.data}")
         
         # Validate request data using serializer
-        serializer = CreateBookingSerializer(data=request.data)
+        serializer = CreateBookingSerializer(data=request.data, context={'request': request})
         if not serializer.is_valid():
+            with open('backend_debug.log', 'w') as f:
+                f.write(f"SER ERROR: {serializer.errors}\n")
             print(f"DEBUG: [Create Booking] Serializer errors: {serializer.errors}")
             logger.error(f"Booking Creation Error: {serializer.errors}. Payload: {request.data}")
             return Response({
@@ -1627,6 +1629,10 @@ def create_booking(request):
             
     except Exception as e:
         import traceback
+        with open('backend_debug.log', 'w') as f:
+            f.write(f"EXC ERROR: {str(e)}\n")
+            f.write(traceback.format_exc())
+            
         print("=== ERROR TRACEBACK ===")
         traceback.print_exc()
         print("======================")
@@ -2175,11 +2181,18 @@ def _create_booking_detail(booking, passenger, segment, passenger_data=None, seg
             # Check for the correct property name from models.py
             adjustment = seat.total_price_adjustment if hasattr(seat, 'total_price_adjustment') else Decimal('0.00')
             if adjustment > 0:
-                fare_family = selected_flight.get('fare_family', 'basic')
-                if fare_family != 'premium':
-                    base_price += adjustment
+                # Check for explicit is_included flag (same logic as other addons)
+                is_included = False
+                if isinstance(seat_data, dict):
+                    is_included = seat_data.get('is_included', fare_family == 'premium')
                 else:
-                    print(f"    Skipping seat adjustment for Premium fare")
+                    is_included = (fare_family == 'premium')
+
+                if not is_included:
+                    base_price += adjustment
+                    print(f"    Added seat adjustment to base price: PHP {adjustment}")
+                else:
+                    print(f"    Skipping seat adjustment because it is marked as INCLUDED")
         
         # Create booking detail
         booking_detail = BookingDetail.objects.create(
@@ -2189,6 +2202,7 @@ def _create_booking_detail(booking, passenger, segment, passenger_data=None, seg
             seat=seat, 
             seat_class=seat_class,
             price=base_price,
+            fare_family_name=selected_flight.get('class_type') or selected_flight.get('seat_class'),
             passenger_type=passenger.passenger_type,
             status='pending'
         )
@@ -2225,15 +2239,24 @@ def _add_addons_to_booking_detail(booking_detail, segment_addons, passenger_data
             try:
                 baggage_option = BaggageOption.objects.get(id=baggage_data['id'])
                 
-                # Is this baggage included in the fare family?
+                # Check for explicit is_included flag from frontend, fallback to premium rule
                 is_premium = fare_family == 'premium'
-                addon_price = Decimal('0.00') if is_premium else baggage_option.price
+                is_included = baggage_data.get('is_included', is_premium)
+                
+                # Check for explicit price from frontend, fallback to 0.00 or DB price
+                if 'price' in baggage_data and baggage_data['price'] is not None:
+                    try:
+                        addon_price = Decimal(str(baggage_data['price']))
+                    except Exception:
+                        addon_price = Decimal('0.00')
+                else:
+                    addon_price = Decimal('0.00') if is_included else baggage_option.price
                 
                 # COLLISION FIX: Include price and included in lookup
                 addon, created = AddOn.objects.get_or_create(
                     baggage_option=baggage_option,
                     price=addon_price,
-                    included=is_premium,
+                    included=is_included,
                     defaults={
                         'name': f"Extra Baggage {baggage_option.formatted_weight}",
                         'airline': airline,
@@ -2283,10 +2306,26 @@ def _add_addons_to_booking_detail(booking_detail, segment_addons, passenger_data
             if meal_id:
                 try:
                     meal_option = MealOption.objects.get(id=meal_id)
+                    
+                    is_premium = fare_family == 'premium'
+                    if isinstance(meal_item, dict):
+                        is_included = meal_item.get('is_included', is_premium)
+                        if 'price' in meal_item and meal_item['price'] is not None:
+                            try:
+                                addon_price = Decimal(str(meal_item['price']))
+                            except Exception:
+                                addon_price = Decimal('0.00')
+                        else:
+                            addon_price = Decimal('0.00') if is_included else meal_option.price
+                    else:
+                        is_included = is_premium
+                        addon_price = Decimal('0.00') if is_included else meal_option.price
+
                     # COLLISION FIX: Include price in lookup
                     addon, created = AddOn.objects.get_or_create(
                         meal_option=meal_option,
-                        price=meal_option.price,
+                        price=addon_price,
+                        included=is_included,
                         defaults={
                             'name': f"Meal: {meal_option.name}",
                             'airline': airline,
@@ -2309,11 +2348,25 @@ def _add_addons_to_booking_detail(booking_detail, segment_addons, passenger_data
         if service_id:
             try:
                 assistance_service = AssistanceService.objects.get(id=service_id)
+                
+                if isinstance(assistance_data, dict):
+                    is_included = assistance_data.get('is_included', assistance_service.is_included)
+                    if 'price' in assistance_data and assistance_data['price'] is not None:
+                        try:
+                            addon_price = Decimal(str(assistance_data['price']))
+                        except Exception:
+                            addon_price = Decimal('0.00')
+                    else:
+                        addon_price = Decimal('0.00') if is_included else assistance_service.price
+                else:
+                    is_included = assistance_service.is_included
+                    addon_price = Decimal('0.00') if is_included else assistance_service.price
+
                 # COLLISION FIX: Include price and included in lookup
                 addon, created = AddOn.objects.get_or_create(
                     assistance_service=assistance_service,
-                    price=assistance_service.price,
-                    included=assistance_service.is_included,
+                    price=addon_price,
+                    included=is_included,
                     defaults={
                         'name': f"Assistance: {assistance_service.name}",
                         'airline': airline,
@@ -4345,10 +4398,22 @@ def calculate_booking_price(request):
                     elif isinstance(item_val, dict):
                         # Some addons are objects with an 'id'
                         if item_val.get('id'):
-                            ids.append({'type': category, 'id': item_val['id'], 'passenger_key': pax_key})
+                            ids.append({
+                                'type': category, 
+                                'id': item_val['id'], 
+                                'passenger_key': pax_key,
+                                'is_included': item_val.get('is_included', False),
+                                'price': item_val.get('price')
+                            })
                         # Or maybe it's the seat object which has 'seat_id' or just 'id'
                         elif item_val.get('seat_id'):
-                            ids.append({'type': category, 'id': item_val['seat_id'], 'passenger_key': pax_key})
+                            ids.append({
+                                'type': category, 
+                                'id': item_val['seat_id'], 
+                                'passenger_key': pax_key,
+                                'is_included': item_val.get('is_included', False),
+                                'price': item_val.get('price')
+                            })
                 
                 if not isinstance(target_data, dict):
                     print(f"[WARN] target_data for {category} is not a dict: {type(target_data)}")
@@ -4459,23 +4524,29 @@ def calculate_booking_price(request):
                 for item in all_segment_addons:
                     try:
                         price = Decimal('0.00')
-                        if item['type'] == 'baggage':
-                            obj = BaggageOption.objects.get(id=item['id'])
-                            price = obj.price
-                        elif item['type'] == 'meals':
-                            obj = MealOption.objects.get(id=item['id'])
-                            price = obj.price
-                        elif item['type'] == 'seats':
-                            if isinstance(item['id'], (int, str)) and str(item['id']).isdigit():
-                                obj = Seat.objects.get(id=item['id'])
-                                price = obj.total_price_adjustment or Decimal('0.00')
-                            else:
-                                price = Decimal(str(item.get('price', 0)))
+                        is_included = item.get('is_included', fare_family == 'premium')
                         
-                        # Mark as included if premium
-                        is_premium = fare_family == 'premium'
-                        if is_premium and item['type'] in ['baggage', 'seats']:
-                            price = Decimal('0.00')
+                        if item.get('price') is not None:
+                            price = Decimal(str(item.get('price')))
+                        else:
+                            if item['type'] == 'baggage':
+                                obj = BaggageOption.objects.get(id=item['id'])
+                                price = obj.price
+                            elif item['type'] == 'meals':
+                                obj = MealOption.objects.get(id=item['id'])
+                                price = obj.price
+                            elif item['type'] == 'seats':
+                                if isinstance(item['id'], (int, str)) and str(item['id']).isdigit():
+                                    obj = Seat.objects.get(id=item['id'])
+                                    price = obj.total_price_adjustment or Decimal('0.00')
+                                else:
+                                    price = Decimal(str(item.get('price', 0)))
+                                    
+                            if is_included:
+                                price = Decimal('0.00')
+                            
+                            # DEBUG: Track addon prices for discrepancy audit
+                            print(f"DEBUG: Addon estimate for segment {segment_key}: {item['type']} ID {item['id']} - price={price}, is_included={is_included}")
                         
                         if price > 0:
                             addon_vat = (price * Decimal('0.12')).quantize(Decimal('0.01'))
@@ -4597,28 +4668,31 @@ def calculate_booking_price(request):
             for item in all_segment_addons:
                 try:
                     price = Decimal('0.00')
-                    if item['type'] == 'baggage':
-                        obj = BaggageOption.objects.get(id=item['id'])
-                        price = obj.price
-                    elif item['type'] == 'meals':
-                        obj = MealOption.objects.get(id=item['id'])
-                        price = obj.price
-                    elif item['type'] == 'seats':
-                        try:
-                            if isinstance(item['id'], (int, str)) and str(item['id']).isdigit():
-                                obj = Seat.objects.get(id=item['id'])
-                                price = obj.total_price_adjustment if hasattr(obj, 'total_price_adjustment') else Decimal('0.00')
-                            else:
-                                price = Decimal(str(item.get('price', 0)))
-                        except Seat.DoesNotExist:
-                            print(f"[WARN] Seat ID {item['id']} not found, using provided price if available")
-                            price = Decimal(str(item.get('price', 0)))
+                    is_included = item.get('is_included', fare_family == 'premium')
                     
-                    # Zero out for premium
-                    fare_family = selected_flight.get('fare_family', 'basic')
-                    if fare_family == 'premium' and item['type'] in ['baggage', 'seats']:
-                        price = Decimal('0.00')
+                    if item.get('price') is not None:
+                        price = Decimal(str(item.get('price')))
+                    else:
+                        if item['type'] == 'baggage':
+                            obj = BaggageOption.objects.get(id=item['id'])
+                            price = obj.price
+                        elif item['type'] == 'meals':
+                            obj = MealOption.objects.get(id=item['id'])
+                            price = obj.price
+                        elif item['type'] == 'seats':
+                            try:
+                                if isinstance(item['id'], (int, str)) and str(item['id']).isdigit():
+                                    obj = Seat.objects.get(id=item['id'])
+                                    price = obj.total_price_adjustment if hasattr(obj, 'total_price_adjustment') else Decimal('0.00')
+                                else:
+                                    price = Decimal(str(item.get('price', 0)))
+                            except Seat.DoesNotExist:
+                                print(f"[WARN] Seat ID {item['id']} not found, using provided price if available")
+                                price = Decimal(str(item.get('price', 0)))
                         
+                        if is_included:
+                            price = Decimal('0.00')
+                            
                     breakdown['addons'] += price
                 except Exception as e:
                     print(f"[WARN] Price calculation error for addon {item}: {e}")

@@ -1,7 +1,24 @@
 <template>
   <div class="p-6 poppins">
-    <div class="mb-6 flex justify-between items-center">
-    </div>
+    <!-- Header & Tools Section -->
+    <AdminTableTool 
+      v-model="searchQuery" 
+      placeholder="Search booking ID or user name..."
+    >
+      <template #filters>
+        <div class="flex items-center gap-2">
+          <select 
+            v-model="filterStatus"
+            class="text-[11px] font-bold border border-gray-200 px-3 py-2 bg-white rounded-[1px] outline-none focus:border-[#fe3787] poppins cursor-pointer"
+          >
+            <option value="all">Any Status</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="pending">Pending</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+      </template>
+    </AdminTableTool>
 
     <!-- Stats Section -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -140,10 +157,13 @@
 import { ref, onMounted, computed } from "vue"
 import { useRoute } from "vue-router"
 import api from "@/services/admin/api"
+import AdminTableTool from '@/components/admin/AdminTableTool.vue';
 
 const bookings = ref([])
 const highlightedId = ref(null);
 const route = useRoute();
+const searchQuery = ref('');
+const filterStatus = ref('all');
 
 // Pagination State
 const currentPage = ref(1);
@@ -158,14 +178,33 @@ const statsItems = computed(() => {
   };
 });
 
+// Search & Filter Logic
+const filteredBookings = computed(() => {
+  let result = bookings.value;
+  
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase();
+    result = result.filter(b => 
+      String(b.id).includes(q) || 
+      (b.user_name && b.user_name.toLowerCase().includes(q))
+    );
+  }
+
+  if (filterStatus.value !== 'all') {
+    result = result.filter(b => b.status?.toLowerCase() === filterStatus.value.toLowerCase());
+  }
+  
+  return result;
+});
+
 // Pagination Logic
-const totalPages = computed(() => Math.ceil(bookings.value.length / itemsPerPage));
+const totalPages = computed(() => Math.ceil(filteredBookings.value.length / itemsPerPage));
 const paginatedBookings = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
-  return bookings.value.slice(start, start + itemsPerPage);
+  return filteredBookings.value.slice(start, start + itemsPerPage);
 });
 const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage);
-const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, bookings.value.length));
+const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, filteredBookings.value.length));
 
 const visiblePages = computed(() => {
   const pages = [];

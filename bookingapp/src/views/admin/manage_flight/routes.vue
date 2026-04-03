@@ -1,15 +1,33 @@
 <template>
   <div class="p-6 poppins">
-    <!-- Header Section -->
-    <div class="flex justify-between items-center mb-6">
-      <button 
-        @click="openModal()" 
-        class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#e02d74] transition-all shadow-sm rounded-[1px] font-semibold text-[14px]"
-      >
-        <i class="ph ph-plus"></i>
-        Add New Route
-      </button>
-    </div>
+    <!-- Header & Tools Section -->
+    <AdminTableTool 
+      v-model="searchQuery" 
+      placeholder="Search by origin or destination..."
+    >
+      <template #filters>
+        <div class="flex items-center gap-2 text-[14px]">
+          <select 
+            v-model="selectedAirportFilter" 
+            class="text-[11px] font-bold border border-gray-200 px-3 py-2 bg-white rounded-[1px] outline-none focus:border-[#fe3787] poppins cursor-pointer min-w-[150px]"
+          >
+            <option value="">All Airports</option>
+            <option v-for="airport in airports" :key="airport.id" :value="airport.id">
+              {{ airport.code }} - {{ airport.name }}
+            </option>
+          </select>
+        </div>
+      </template>
+
+      <template #actions>
+        <button 
+          @click="openModal()" 
+          class="bg-[#fe3787] text-white px-4 py-2 flex items-center gap-2 hover:bg-[#fb1873] font-semibold poppins text-[12px] rounded-[1px] shadow-sm transition-all"
+        >
+          <i class="ph ph-plus text-[14px]"></i> Add
+        </button>
+      </template>
+    </AdminTableTool>
 
     <!-- Stats Section -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -48,37 +66,7 @@
       </div>
     </div>
 
-    <!-- Filters Section -->
-    <div class="bg-white border border-gray-200 rounded-[1px] shadow-sm p-4 mb-6 text-[14px]">
-      <div class="flex flex-col md:flex-row md:items-center gap-4">
-        <div class="relative flex-1">
-          <i class="ph ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-          <input 
-            v-model="searchQuery" 
-            type="text" 
-            placeholder="Search by origin or destination..." 
-            class="pl-10 pr-4 py-2 border border-gray-300 rounded-[1px] w-full focus:outline-none focus:ring-1 focus:ring-[#fe3787] focus:border-[#fe3787] poppins"
-          />
-        </div>
-        
-        <select 
-          v-model="selectedAirportFilter" 
-          class="border border-gray-300 px-3 py-2 rounded-[1px] focus:outline-none focus:ring-1 focus:ring-[#fe3787] focus:border-[#fe3787] poppins text-[14px] min-w-[150px]"
-        >
-          <option value="">All Airports</option>
-          <option v-for="airport in airports" :key="airport.id" :value="airport.id">
-            {{ airport.code }} - {{ airport.name }}
-          </option>
-        </select>
 
-        <button 
-          @click="clearFilters" 
-          class="text-white px-4 py-2 border bg-[#fe3787] rounded-[1px] hover:bg-[#fb1873] font-medium poppins text-[14px]"
-        >
-          Clear
-        </button>
-      </div>
-    </div>
 
     <!-- Table Section -->
     <div class="bg-white border border-gray-200 shadow-sm overflow-hidden rounded-[1px]">
@@ -214,22 +202,22 @@
         <form @submit.prevent="saveRoute" class="space-y-4">
           <div>
             <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Origin Airport</label>
-            <select v-model="form.origin_airport" class="w-full border p-2 text-sm bg-white focus:border-[#fe3787] outline-none transition-all rounded-[1px]" required>
-              <option value="" disabled>Choose origin...</option>
-              <option v-for="airport in airports" :key="airport.id" :value="airport.id">
-                {{ airport.name }} ({{ airport.code }})
-              </option>
-            </select>
+            <SearchableSelect
+              v-model="form.origin_airport"
+              :options="airportOptions"
+              placeholder="Search by airport name or IATA code..."
+              label="Origin Airport"
+            />
           </div>
 
           <div>
             <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Destination Airport</label>
-            <select v-model="form.destination_airport" class="w-full border p-2 text-sm bg-white focus:border-[#fe3787] outline-none transition-all rounded-[1px]" required>
-              <option value="" disabled>Choose destination...</option>
-              <option v-for="airport in airports" :key="airport.id" :value="airport.id">
-                {{ airport.name }} ({{ airport.code }})
-              </option>
-            </select>
+            <SearchableSelect
+              v-model="form.destination_airport"
+              :options="airportOptions"
+              placeholder="Search by airport name or IATA code..."
+              label="Destination Airport"
+            />
           </div>
 
           <div>
@@ -257,12 +245,18 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '@/services/admin/api';
 import { useModalStore } from '@/stores/modal';
+import SearchableSelect from '@/components/admin/SearchableSelect.vue';
+import AdminTableTool from '@/components/admin/AdminTableTool.vue';
 
 const modalStore = useModalStore();
 
 // --- State ---
 const routes = ref([]);
-const airports = ref([]); 
+const airports = ref([]);
+
+const airportOptions = computed(() =>
+  airports.value.map(a => ({ value: a.id, label: a.name, sublabel: `${a.code} · ${a.city || ''}`.replace(/·\s*$/, '').trim() }))
+);
 const isModalOpen = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);

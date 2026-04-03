@@ -271,10 +271,11 @@ const highlightedPnr = ref(null)
 onMounted(() => {
   dcsStore.fetchManifest(props.schedule_id)
   
-  // If we just came back from a successful check-in
+  // If we just came back from a successful check-in, highlight that passenger
   if (route.query.checkedin) {
     const pId = route.query.checkedin
-    // Optional: could highlight the passenger or show success toast
+    highlightedPnr.value = pId // highlight the returned PNR in the table
+    setTimeout(() => { highlightedPnr.value = null }, 4000) // clear after 4s
   }
 })
 
@@ -317,7 +318,8 @@ const handleScanResult = (passenger) => {
 }
 
 const reprintBoardingPass = (p) => {
-  window.open(`http://localhost:8000/flightapp/download-boarding-pass/${p.booking_detail_id}/`, '_blank')
+  // Bug fix: Use relative URL instead of hardcoded localhost
+  window.open(`/flightapp/download-boarding-pass/${p.booking_detail_id}/`, '_blank')
 }
 </script>
 

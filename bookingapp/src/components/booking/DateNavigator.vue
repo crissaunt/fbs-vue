@@ -1,70 +1,72 @@
 <template>
-  <div class="bg-white rounded-[5px] shadow-sm border border-gray-200 py-2 px-4 mb-4">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-      <h2 class="text-lg font-bold text-gray-900">Select Date</h2>
-      <div class="flex items-center space-x-3">
-        <div class="flex items-center space-x-3">
-          <button @click="$emit('prev-week')" 
-            class="p-1 border border-gray-300 rounded-[2px] hover:bg-gray-50 transition-colors">
-            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </button>
-          <div class="text-xs font-medium text-gray-700">{{ weekRange }}</div>
-          <button @click="$emit('next-week')" 
-            class="p-1 border border-gray-300 rounded-[2px] hover:bg-gray-50 transition-colors">
-            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
+  <div class="bg-white rounded-[5px] shadow-sm border border-gray-200 py-3 px-3 sm:px-4 mb-4 overflow-hidden">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+      <div class="flex items-center justify-between sm:justify-start gap-4">
+        <h2 class="text-sm font-black text-gray-900 uppercase tracking-tighter">Select Date</h2>
         <button @click="$emit('go-to-current')" 
-          :class="['px-2 py-1 rounded-[2px] text-xs font-medium transition-colors',
-                   currentWeekContainsSelectedDate ? 'bg-pink-500 hover:bg-pink-300 cursor-pointer text-white' : 'border border-pink-300 text-pink-500 hover:bg-pink-50']">
+          :class="['px-3 py-1 rounded-[4px] text-[10px] font-black uppercase tracking-widest transition-all duration-200',
+                   currentWeekContainsSelectedDate ? 'bg-pink-500 text-white shadow-sm' : 'border border-pink-200 text-pink-500 hover:bg-pink-50']">
           This Week
+        </button>
+      </div>
+      
+      <div class="flex items-center justify-between sm:justify-end gap-3 bg-gray-50/80 p-1 rounded-lg sm:bg-transparent sm:p-0">
+        <button @click="$emit('prev-week')" 
+          class="p-2 sm:p-1.5 border border-gray-200 rounded-md bg-white hover:bg-gray-50 transition-colors shadow-sm">
+          <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <div class="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-[0.1em]">{{ weekRange }}</div>
+        <button @click="$emit('next-week')" 
+          class="p-2 sm:p-1.5 border border-gray-200 rounded-md bg-white hover:bg-gray-50 transition-colors shadow-sm">
+          <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+          </svg>
         </button>
       </div>
     </div>
     
-    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+    <!-- Horizontal Scrollable Container on Mobile, Grid on Tablet/Desktop -->
+    <div class="flex sm:grid sm:grid-cols-4 lg:grid-cols-7 gap-2 overflow-x-auto sm:overflow-x-visible pb-2 sm:pb-0 scrollbar-hide -mx-1 px-1">
       <div v-for="day in weekDays" :key="day.dateString" 
         @click="day.isAvailable && $emit('select-day', day)"
-        :class="['py-2 px-4 rounded-[2px] border-2 cursor-pointer transition-all duration-150 transform active:scale-95',
-                 day.isAvailable ? 'hover:border-pink-300 hover:shadow-md hover:-translate-y-0.5 active:bg-pink-50' : 'cursor-not-allowed opacity-50',
-                 day.isSelected ? 'border-pink-500 bg-pink-500 shadow-lg scale-105 z-10 active:bg-pink-600' : 'border-gray-200 bg-white',
-                 day.isToday && !day.isSelected ? 'border-pink-300' : '',
-                 day.isSearchDate && !day.isToday && !day.isSelected ? 'border-pink-200' : '']">
-        <div class="flex justify-between items-start ">
-          <div class="text-[9px] font-bold uppercase tracking-wider" :class="day.isSelected ? 'text-white' : 'text-gray-500'">
-            {{ day.dayName }}
-          </div>
-          <div v-if="day.isSelected" class="text-white">
-            <svg class="w-2 h-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-            </svg>
-          </div>
-          <div v-else-if="day.isToday" class="px-2 py-0.5 bg-pink-500 text-white text-[10px] uppercase font-bold rounded-[2px]">
-            Today
-          </div>
-          <div v-else-if="day.isSearchDate && !day.isToday" class="px-2 py-0.5 bg-pink-100 text-pink-700 text-[10px] uppercase font-bold rounded-full">
-            Search
-          </div>
+        :class="['flex-shrink-0 w-[100px] sm:w-auto py-2.5 px-3 rounded-[4px] border-2 cursor-pointer transition-all duration-200 relative',
+                 day.isAvailable ? 'hover:border-pink-200 active:bg-pink-50' : 'cursor-not-allowed opacity-40',
+                 day.isSelected 
+                  ? 'border-pink-500 bg-white ring-1 ring-pink-500/10' 
+                  : (day.isToday ? 'border-pink-200 bg-white' : 'border-gray-100 bg-white')]">
+        
+        <!-- Selection Marker -->
+        <div v-if="day.isSelected" class="absolute top-0 right-0 p-1">
+          <div class="w-2 h-2 rounded-full bg-pink-500 ring-2 ring-white"></div>
         </div>
-        <div class="text-center ">
-          <div class="text-2xl font-black leading-none mb-0.5" :class="day.isSelected ? 'text-white' : 'text-gray-900'">
+
+        <div class="flex justify-between items-start mb-1 text-[8px] font-black uppercase tracking-widest">
+          <span :class="day.isSelected ? 'text-pink-600' : (day.isToday ? 'text-pink-400' : 'text-gray-400')">
+            {{ day.dayName }}
+          </span>
+          <span v-if="day.isToday" class="text-pink-500">Today</span>
+        </div>
+
+        <div class="text-center py-1">
+          <div class="text-xl sm:text-2xl font-black leading-none" :class="day.isSelected ? 'text-pink-600' : 'text-slate-800'">
             {{ day.dayNumber }}
           </div>
-          <div class="text-[9px] font-medium uppercase tracking-widest" :class="day.isSelected ? 'text-white/80' : 'text-gray-400'">
+          <div class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
             {{ day.monthName }}
           </div>
         </div>
-        <div class="text-center mt-1 pt-1 border-t" :class="day.isSelected ? 'border-white/20' : 'border-gray-100'">
-          <div v-if="day.isAvailable" class="text-[10px] font-bold uppercase" :class="day.isSelected ? 'text-white' : 'text-green-600'">
-            {{ getFlightCount(day.dateString) }} flights
-          </div>
-          <div v-else class="text-[9px] text-gray-400 italic">
-            No flights
-          </div>
+
+        <div class="text-center mt-2 pt-1.5 border-t border-gray-50 flex flex-col items-center">
+          <template v-if="day.isAvailable">
+            <span class="text-[9px] font-black" :class="day.isSelected ? 'text-pink-600' : 'text-green-600'">
+              {{ getFlightCount(day.dateString) }} FLIGHTS
+            </span>
+            <!-- Simple availability dot -->
+            <div class="w-1 h-1 rounded-full bg-green-500 mt-0.5 animate-pulse"></div>
+          </template>
+          <span v-else class="text-[8px] font-medium text-gray-300 uppercase tracking-tight">Closed</span>
         </div>
       </div>
     </div>

@@ -241,6 +241,7 @@ class Aircraft(models.Model):
                 'name': sc.name,
                 'rows': rows,
                 'columns': columns,
+                'class_capacity': class_capacity, # Save exact capacity
                 'start_row': current_row,
                 'color': sc.color or '#3B82F6',
                 'price_multiplier': float(sc.price_multiplier)
@@ -249,7 +250,7 @@ class Aircraft(models.Model):
         
         return {
             'seat_classes': seat_classes_config,
-            'total_seats': sum(c['rows'] * c['columns'] for c in seat_classes_config)
+            'total_seats': sum(c.get('class_capacity', c['rows'] * c['columns']) for c in seat_classes_config)
         }
 
 
@@ -555,17 +556,25 @@ class Schedule(models.Model):
                     class_id = sc_config.get('class_id')
                     rows = sc_config.get('rows', 0)
                     columns = sc_config.get('columns', 0)
+                    class_capacity = sc_config.get('class_capacity', rows * columns) # Default to full grid if not specified
                     start_row = sc_config.get('start_row', 1)
                     
                     try:
                         seat_class = SeatClass.objects.get(id=class_id)
                     except SeatClass.DoesNotExist:
                         continue
-                        
+                    
+                    class_seat_counter = 0
                     for r in range(rows):
+                        if class_seat_counter >= class_capacity:
+                            break
+                            
                         row_num = start_row + r
                         
                         for c in range(columns):
+                            if class_seat_counter >= class_capacity:
+                                break
+                                
                             col_num = c + 1
                             col_label = chr(64 + col_num) # 1=A, 2=B, etc.
                             
@@ -598,6 +607,8 @@ class Schedule(models.Model):
                             else:
                                 seat = Seat.objects.create(**seat_data)
                                 processed_seat_ids.append(seat.id)
+                            
+                            class_seat_counter += 1
                 
                 # Delete obsolete seats
                 Seat.objects.filter(schedule=self).exclude(id__in=processed_seat_ids).delete()
@@ -639,11 +650,19 @@ class Seat(models.Model):
     is_window = models.BooleanField(default=False)
     is_aisle = models.BooleanField(default=False)
     
-    # Special requirements (Keep booleans for now)
+    # Special requirements (Keep booleans for fast lookup and counting)
     is_wheelchair_accessible = models.BooleanField(default=False)
     has_bassinet = models.BooleanField(default=False)
     has_nut_allergy = models.BooleanField(default=False)
     is_unaccompanied_minor = models.BooleanField(default=False)
+    
+    # NEW: 2026 Simulation Specialized Requirements
+    has_medical_oxygen = models.BooleanField(default=False)
+    has_pet_in_cabin = models.BooleanField(default=False)
+    is_deaf_blind = models.BooleanField(default=False)
+    is_large_persona = models.BooleanField(default=False)
+    has_stretcher = models.BooleanField(default=False)
+    has_sports_equipment = models.BooleanField(default=False)
     
     # Many-to-Many link for dynamic requirements
     requirements = models.ManyToManyField(SeatRequirement, blank=True)
@@ -700,17 +719,23 @@ class Seat(models.Model):
     # LEGACY FALLBACK ADJUSTMENTS
     @classmethod
     def get_price_adjustments(cls):
-        """Return dictionary of fallback price adjustments"""
+        """Return dictionary of fallback price adjustments based on user specifications"""
         return {
             'is_exit_row': 150.00,
             'is_wheelchair_accessible': 0.00,
-            'has_bassinet': 200.00,
+            'has_bassinet': 500.00,
             'has_nut_allergy': 0.00,
-            'is_unaccompanied_minor': 300.00,
-            'has_extra_legroom': 500.00,
+            'is_unaccompanied_minor': 2000.00,
+            'has_extra_legroom': 1200.00,
             'is_bulkhead': 400.00,
             'is_window': 100.00,
             'is_aisle': 120.00,
+            'has_medical_oxygen': 2500.00,
+            'has_pet_in_cabin': 1500.00,
+            'is_deaf_blind': 0.00,
+            'is_large_persona': 3500.00,
+            'has_stretcher': 8000.00,
+            'has_sports_equipment': 1000.00,
         }
 
     def calculate_auto_adjustment(self):
@@ -737,6 +762,12 @@ class Seat(models.Model):
             ('is_bulkhead', self.is_bulkhead),
             ('is_window', self.is_window),
             ('is_aisle', self.is_aisle),
+            ('has_medical_oxygen', self.has_medical_oxygen),
+            ('has_pet_in_cabin', self.has_pet_in_cabin),
+            ('is_deaf_blind', self.is_deaf_blind),
+            ('is_large_persona', self.is_large_persona),
+            ('has_stretcher', self.has_stretcher),
+            ('has_sports_equipment', self.has_sports_equipment),
         ]
         
         for field, value in boolean_fields:
@@ -1749,6 +1780,7 @@ class BookingDetail(models.Model):
     booking_date = models.DateTimeField(default=timezone.now)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    fare_family_name = models.CharField(max_length=100, blank=True, null=True, help_text="The specific branded fare family name (e.g. Economy Flex)")
     addons = models.ManyToManyField(AddOn, blank=True, related_name='booking_details')
     
     # Add status field at BookingDetail level
