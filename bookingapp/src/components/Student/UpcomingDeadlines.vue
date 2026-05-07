@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white border border-slate-200 rounded-sm p-6 shadow-sm flex flex-col h-fit">
+  <div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm flex flex-col h-fit">
     <div class="flex items-center justify-between mb-6">
       <h3 class="text-xs font-black text-slate-900 uppercase tracking-widest leading-none">Upcoming Schedule</h3>
       <div class="w-1.5 h-1.5 rounded-full bg-[#FF579A] animate-pulse"></div>
@@ -9,7 +9,7 @@
       <div
         v-for="activity in deadlines"
         :key="activity.id"
-        class="flex justify-between items-center p-4 bg-pink-50/20 border border-pink-100/50 rounded-sm cursor-pointer hover:bg-pink-50 transition-all group"
+        class="flex justify-between items-center p-4 bg-pink-50/20 border border-pink-100/50 rounded-lg cursor-pointer hover:bg-pink-50 transition-all group"
         @click="$emit('view', activity.id)"
       >
         <div class="flex-1">
@@ -27,9 +27,9 @@
       <!-- Placeholder if no activities -->
       <div 
         v-if="deadlines.length === 0"
-        class="bg-slate-50 rounded-sm p-2 text-center border border-dashed border-slate-200"
+        class="bg-slate-50 rounded-lg p-2 text-center border border-dashed border-slate-200"
       >
-        <div class="w-6 h-6 bg-white rounded-sm flex items-center justify-center mx-auto mb-3 border border-slate-100 text-slate-300">
+        <div class="w-6 h-6 bg-white rounded-lg flex items-center justify-center mx-auto mb-3 border border-slate-100 text-slate-300">
            <i class="ph ph-calendar-x"></i>
         </div>
         <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Clear Schedule</p>

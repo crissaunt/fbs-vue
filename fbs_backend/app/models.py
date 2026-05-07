@@ -10,12 +10,25 @@ from django.db import transaction
 from django.utils import timezone
 import random
 import string
+from django.contrib.auth.models import User
+from datetime import timedelta
+
+class PasswordResetOTP(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    otp_code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    def is_valid(self):
+        # Valid for 10 minutes
+        from django.utils import timezone
+        expiry_time = self.created_at + timedelta(minutes=10)
+        return not self.is_used and timezone.now() <= expiry_time
+
+    class Meta:
+        ordering = ['-created_at']
 
 #User Profile with Roles
-from django.contrib.auth.models import User
-from django.db import models
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 
 class UserProfile(models.Model):
     ROLE_CHOICES = [
@@ -68,7 +81,7 @@ class Students(models.Model):
     # Existing student fields (keep them for backward compatibility)
     student_number = models.CharField(max_length=50, unique=True)
     first_name = models.CharField(max_length=100, blank=True)
-    mi = models.CharField(max_length=1, blank=True, null=True)
+    mi = models.CharField(max_length=5, blank=True, null=True)
     last_name = models.CharField(max_length=100, blank=True)
     email = models.EmailField(unique=True, blank=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
@@ -80,6 +93,10 @@ class Students(models.Model):
         ('mrs', 'Mrs.'),
     ]
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True, null=True)
+    
+    # Academic Info
+    course = models.CharField(max_length=100, blank=True, null=True, default='BSHM')
+    year_level = models.CharField(max_length=10, blank=True, null=True, default='1')
     
     # Metadata
     date_enrolled = models.DateTimeField(auto_now_add=True)
@@ -1856,9 +1873,16 @@ class BookingDetail(models.Model):
     get_insurance_policy_number.short_description = "Policy Number"
     
     def get_total_amount(self):
-        """Method to calculate total amount for admin display"""
-        return self.price + self.get_insurance_cost() + self.tax_amount
+        """Method to calculate total amount for admin display, including add-ons"""
+        return self.price + self.get_insurance_cost() + self.tax_amount + self.addons_total
     get_total_amount.short_description = "Total Amount"
+
+    @property
+    def addons_total(self):
+        """Sum of all add-on prices for this specific segment/passenger"""
+        from django.db.models import Sum
+        result = self.addons.aggregate(total=Sum('price'))['total']
+        return result if result else Decimal('0.00')
     
     # Keep properties for other uses
     @property

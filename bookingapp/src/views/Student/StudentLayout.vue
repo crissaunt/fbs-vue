@@ -18,7 +18,7 @@
 
       <!-- RIGHT CONTENT AREA -->
       <main class="flex-1 flex flex-col bg-gray-200 overflow-y-auto">
-        <router-view v-if="!loading" :section="section" :activities="activities" />
+        <router-view v-if="!loading" :section="section" :activities="activities" :classmates="classmates" :instructor="instructor" />
         
         <!-- Loading State -->
         <div v-else class="flex-1 flex items-center justify-center">
@@ -49,6 +49,8 @@ export default {
     const sidebarOpen = ref(window.innerWidth >= 1024)
     const section = ref(null)
     const activities = ref([])
+    const classmates = ref([])
+    const instructor = ref(null)
     const loading = ref(true)
 
     const toggleSidebar = () => {
@@ -77,6 +79,8 @@ export default {
         
         section.value = response.data.section || null
         activities.value = response.data.activities || []
+        classmates.value = response.data.classmates || []
+        instructor.value = response.data.instructor || null
       } catch (error) {
         console.error("Error loading layout data:", error)
         if (error.response?.data?.not_enrolled) {
@@ -99,6 +103,8 @@ export default {
       sidebarOpen,
       section,
       activities,
+      classmates,
+      instructor,
       loading,
       toggleSidebar,
       handleLogout

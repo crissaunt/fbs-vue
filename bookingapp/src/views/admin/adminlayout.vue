@@ -2,7 +2,7 @@
   <div class="h-screen bg-gray-100 flex ">
     <nav
       :class="[
-        'sidebar text-white bg-[#fe3787] flex flex-col items-start transition-all duration-300 fixed h-screen z-50 ',
+        'sidebar text-white bg-[#fe3787] flex flex-col items-start transition-all duration-300 fixed h-screen z-50 no-print',
         collapsed ? 'w-16' : 'w-48'
       ]"
     >
@@ -36,7 +36,7 @@
           active-class="bg-white/10 border-l-4 border-white"
         >
           <i class="ph ph-squares-four text-lg"></i>
-          <span v-if="!collapsed" class="ml-3 text-[12px] font-medium">Dashboard</span>
+          <span v-if="!collapsed" class="ml-3 text-[12px] font-medium">Flight & LMS Dashboard</span>
         </router-link>
 
         <router-link 
@@ -48,7 +48,16 @@
           <span v-if="!collapsed" class="ml-3 text-[12px] font-medium">Bulk Import</span>
         </router-link>
 
-        <!-- LMS ADMIN PRIVILEGES: Users & LMS Info (Flat List) -->
+        <router-link 
+          to="/admin/manage-flight/live-monitor" 
+          class="flex items-center px-4 py-1.5 text-white hover:bg-white/10 transition-colors group"
+          active-class="bg-white/10 border-l-4 border-white"
+        >
+          <i class="ph ph-broadcast text-lg"></i>
+          <span v-if="!collapsed" class="ml-3 text-[12px] font-medium">Live Monitoring</span>
+        </router-link>
+
+        <!-- LMS ADMIN PRIVILEGES: Users (Flat List) -->
         <template v-if="userRole === 'lms_admin'">
           <div class="px-4 py-2 mt-4" v-if="!collapsed">
             <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">User Management</p>
@@ -68,15 +77,10 @@
             <i class="ph ph-clipboard-text text-lg"></i>
             <span v-if="!collapsed" class="ml-3 text-[12px] font-medium">Audit Logs</span>
           </router-link>
-
-          <router-link to="/admin/student-info/lms-overview" class="flex items-center px-4 py-1.5 text-white hover:bg-white/10 transition-colors group" active-class="bg-white/10 border-l-4 border-white">
-            <i class="ph ph-chart-line-up text-lg"></i>
-            <span v-if="!collapsed" class="ml-3 text-[12px] font-medium">LMS Overview</span>
-          </router-link>
         </template>
 
-        <!-- SUPERADMIN PRIVILEGES (Grouped) -->
-        <template v-if="userRole === 'superadmin'">
+        <!-- SUPERADMIN, FLIGHT_ADMIN, & ADMIN PRIVILEGES (Core Ops) -->
+        <template v-if="['superadmin', 'flight_admin', 'admin'].includes(userRole)">
           <div class="px-4 py-2 mt-4" v-if="!collapsed">
             <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Users</p>
           </div>
@@ -84,12 +88,8 @@
             <SidebarSubLink label="Instructors" to="/admin/instructor-info/list" />
             <SidebarSubLink label="Students" to="/admin/student-info/list" />
             <SidebarSubLink label="Audit Logs" to="/admin/student-info/track-log" />
-            <SidebarSubLink label="LMS Overview" to="/admin/student-info/lms-overview" />
           </SidebarGroup>
-        </template>
 
-        <!-- FLIGHT ADMIN PRIVILEGES: Operations & Booking -->
-        <template v-if="userRole === 'superadmin' || userRole === 'flight_admin'">
           <div class="px-4 py-2 mt-4" v-if="!collapsed">
             <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Flights</p>
           </div>
@@ -98,7 +98,6 @@
             <SidebarSubLink label="Profiles" to="/admin/manage-flight/flights" /> 
             <SidebarSubLink label="Routes" to="/admin/manage-flight/routes" />
             <SidebarSubLink label="Seat Maps" to="/admin/manage-flight/seats" />
-            <SidebarSubLink label="Live Monitor" to="/admin/manage-flight/live-monitor" />
           </SidebarGroup>
 
           <div class="px-4 py-2 mt-4" v-if="!collapsed">
@@ -122,42 +121,32 @@
             <SidebarSubLink label="Airlines" to="/admin/assets/airlines" />
             <SidebarSubLink label="Seat Classes" to="/admin/assets/seat-classes" />
             <SidebarSubLink label="Seat Requirements" to="/admin/assets/seat-requirements" />
-            <SidebarSubLink label="Add-ons" to="/admin/assets/add-ons" />
+            <SidebarSubLink label="Add-on Types" to="/admin/assets/add-ons" />
           </SidebarGroup>
 
           <div class="px-4 py-2 mt-4" v-if="!collapsed">
-            <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Add-on Details</p>
+            <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Meal & Baggage</p>
           </div>
-          <SidebarGroup title="Add-ons" icon="ph-package">
+          <SidebarGroup title="Extra Services" icon="ph-package">
             <SidebarSubLink label="Meal Options" to="/admin/addons/meal-options" />
             <SidebarSubLink label="Assistance" to="/admin/addons/assistance" />
             <SidebarSubLink label="Baggage" to="/admin/addons/baggage" />
           </SidebarGroup>
 
           <div class="px-4 py-2 mt-4" v-if="!collapsed">
-            <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Insurance</p>
+            <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Insurance & Tax</p>
           </div>
           <SidebarGroup title="Insurance" icon="ph-shield-check">
             <SidebarSubLink label="Providers" to="/admin/insurance/providers" />
             <SidebarSubLink label="Plans" to="/admin/insurance/plans" />
           </SidebarGroup>
 
-          <div class="px-4 py-2 mt-4" v-if="!collapsed">
-            <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">Taxation</p>
-          </div>
-          <SidebarGroup title="Taxes" icon="ph-bank">
+          <SidebarGroup title="Taxation" icon="ph-bank">
             <SidebarSubLink label="Airport Fees" to="/admin/manage-tax/airport-fee" />
             <SidebarSubLink label="Tax Types" to="/admin/manage-tax/tax-type" />
             <SidebarSubLink label="Airline Taxes" to="/admin/manage-tax/airline-tax" />
             <SidebarSubLink label="Travel Taxes" to="/admin/manage-tax/travel-tax" />
             <SidebarSubLink label="Booking Taxes" to="/admin/manage-tax/booking-tax" />
-          </SidebarGroup>
-
-          <div class="px-4 py-2 mt-4" v-if="!collapsed">
-            <p class="text-[10px] uppercase font-black tracking-[0.2em] text-white/40 poppins">System</p>
-          </div>
-          <SidebarGroup title="Configuration" icon="ph-sliders">
-            <SidebarSubLink label="Pricing Config" to="/admin/pricing-config" />
           </SidebarGroup>
         </template>
       </div>
@@ -166,9 +155,10 @@
 
     <main 
       :class="['flex-1 flex flex-col min-h-screen transition-all duration-300', collapsed ? 'ml-16' : 'ml-48']"
+      class="print:ml-0"
     >
       <header class="h-12 flex items-center justify-between px-4 sticky top-0 z-40 
-               bg-white/30 backdrop-blur-md border-b border-transparent">
+               bg-white/30 backdrop-blur-md border-b border-transparent no-print">
         <div>
           <h1 class="text-lg font-bold text-[#002D1E] poppins leading-none">
           {{ pageTitle }}
@@ -213,7 +203,7 @@
         </div>
       </header>
 
-      <div class="p-3 bg-gray-100 flex-1">
+      <div class="p-1 bg-gray-100 flex-1">
         <router-view />
       </div>
     </main>
@@ -311,6 +301,50 @@ onUnmounted(() => {
 provide('isSidebarCollapsed', collapsed);
 </script>
 
+
+<style>
+@media print {
+  /* Aggressive global hiding */
+  .no-print, 
+  .sidebar, 
+  nav, 
+  header,
+  .sticky,
+  aside,
+  button,
+  .sidebar-content,
+  #sidebar-content {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    position: absolute !important;
+    left: -9999px !important;
+  }
+  
+  /* FORCE ZERO SPACING - FIXES THE GAP */
+  body, html, #app, .h-screen, main, .flex-1 {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 100% !important;
+    position: static !important;
+    display: block !important;
+    left: 0 !important;
+    background: white !important;
+  }
+
+  .ml-16, .ml-48, .ml-64 {
+    margin-left: 0 !important;
+  }
+  
+  body {
+    overflow: visible !important;
+    height: auto !important;
+  }
+}
+</style>
 
 <style scoped>
 .poppins {

@@ -14,13 +14,7 @@ const adminRoutes = [
       {
         path: 'dashboard',
         name: 'AdminDashboard',
-        component: () => {
-          const role = sessionStorage.getItem('role') || localStorage.getItem('role');
-          if (role === 'lms_admin') {
-            return import('@/views/admin/student_info/lms_overview.vue');
-          }
-          return import('@/views/admin/admindashboard.vue');
-        },
+        component: () => import('@/views/admin/admindashboard.vue'),
         meta: { title: 'Dashboard' }
       },
 
@@ -29,31 +23,31 @@ const adminRoutes = [
         path: 'manage-flight/routes',
         name: 'ManageRoutes',
         component: () => import('@/views/admin/manage_flight/routes.vue'),
-        meta: { title: 'Flight Routes', role: ['superadmin', 'flight_admin'] }
+        meta: { title: 'Flight Routes', role: ['superadmin', 'flight_admin', 'admin'] }
       },
       {
         path: 'manage-flight/flights',
         name: 'ManageFlights',
         component: () => import('@/views/admin/manage_flight/flights.vue'),
-        meta: { title: 'Flight Profiles', role: ['superadmin', 'flight_admin'] }
+        meta: { title: 'Flight Profiles', role: ['superadmin', 'flight_admin', 'admin'] }
       },
       {
         path: 'manage-flight/schedules',
         name: 'ManageSchedules',
         component: () => import('@/views/admin/manage_flight/schedules.vue'),
-        meta: { title: 'Flight Schedules', role: ['superadmin', 'flight_admin'] }
+        meta: { title: 'Flight Schedules', role: ['superadmin', 'flight_admin', 'admin'] }
       },
       {
         path: 'manage-flight/seats',
         name: 'ManageSeats',
         component: () => import('@/views/admin/manage_flight/seats.vue'),
-        meta: { title: 'Seat Maps', role: ['superadmin', 'flight_admin'] }
+        meta: { title: 'Seat Maps', role: ['superadmin', 'flight_admin', 'admin'] }
       },
       {
         path: 'manage-flight/live-monitor',
         name: 'LiveMonitor',
         component: () => import('@/views/admin/manage_flight/live_monitor.vue'),
-        meta: { title: 'Live Operations', role: ['superadmin', 'flight_admin'] }
+        meta: { title: 'Live Operations', role: ['superadmin', 'flight_admin', 'admin'] }
       },
 
       // --- Assets ---
@@ -61,19 +55,19 @@ const adminRoutes = [
         path: 'assets/airports',
         name: 'AdminAirports',
         component: () => import('@/views/admin/assets/airports.vue'),
-        meta: { title: 'Airports', role: ['superadmin', 'flight_admin'] }
+        meta: { title: 'Airports', role: ['superadmin', 'flight_admin', 'admin'] }
       },
       {
         path: 'assets/add-ons',
         name: 'AdminAddOns',
         component: () => import('@/views/admin/assets/addons.vue'),
-        meta: { title: 'Add-ons', role: ['superadmin', 'flight_admin'] }
+        meta: { title: 'Add-ons', role: ['superadmin', 'flight_admin', 'admin'] }
       },
       {
         path: 'assets/seat-classes',
         name: 'AdminSeatClasses',
         component: () => import('@/views/admin/assets/seat_classes.vue'),
-        meta: { title: 'Seat Classes', role: ['superadmin', 'flight_admin'] }
+        meta: { title: 'Seat Classes', role: ['superadmin', 'flight_admin', 'admin'] }
       },
       {
         path: 'assets/airlines',
@@ -111,7 +105,7 @@ const adminRoutes = [
         path: 'booking/payments',
         name: 'AdminPayments',
         component: () => import('@/views/admin/booking/payments.vue'),
-        meta: { title: 'Payments', role: ['superadmin', 'flight_admin'] }
+        meta: { title: 'Payments', role: ['superadmin', 'flight_admin', 'admin'] }
       },
 
       // --- Passenger ---
@@ -145,7 +139,7 @@ const adminRoutes = [
         path: 'student-info/lms-overview',
         name: 'AdminLmsOverview',
         component: () => import('@/views/admin/student_info/lms_overview.vue'),
-        meta: { title: 'LMS Overview', role: ['superadmin', 'lms_admin'] }
+        meta: { title: 'LMS Overview', role: ['superadmin', 'lms_admin', 'admin'] }
       },
 
       // --- Instructor Info ---
@@ -153,7 +147,7 @@ const adminRoutes = [
         path: 'instructor-info/list',
         name: 'AdminInstructorList',
         component: () => import('@/views/admin/instructor_info/list.vue'),
-        meta: { title: 'Instructors', role: ['superadmin', 'lms_admin'] }
+        meta: { title: 'Instructors', role: ['superadmin', 'lms_admin', 'admin'] }
       },
 
       // --- Manage Tax ---
@@ -179,7 +173,7 @@ const adminRoutes = [
         path: 'manage-tax/travel-tax',
         name: 'AdminTravelTax',
         component: () => import('@/views/admin/manage_tax/travel_tax.vue'),
-        meta: { title: 'Travel Tax', role: ['superadmin', 'flight_admin'] }
+        meta: { title: 'Travel Tax', role: ['superadmin', 'flight_admin', 'admin'] }
       },
       {
         path: 'manage-tax/booking-tax',
@@ -235,13 +229,13 @@ const adminRoutes = [
         path: 'pricing-config',
         name: 'AdminPricingConfig',
         component: () => import('@/views/admin/pricing_config.vue'),
-        meta: { title: 'Pricing Configuration', role: ['superadmin', 'flight_admin'] }
+        meta: { title: 'Pricing Configuration', role: ['superadmin', 'flight_admin', 'admin'] }
       },
       {
         path: 'bulk-import',
         name: 'AdminBulkImport',
         component: () => import('@/views/admin/bulk_import.vue'),
-        meta: { title: 'Bulk Data Import', role: ['superadmin', 'flight_admin', 'lms_admin'] }
+        meta: { title: 'Bulk Data Import', role: ['superadmin', 'flight_admin', 'lms_admin', 'admin'] }
       }
     ]
   }

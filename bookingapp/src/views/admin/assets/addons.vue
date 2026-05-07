@@ -17,6 +17,49 @@
 
     <!-- Grid Section -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div 
+        v-for="addon in paginatedAddOns" 
+        :key="addon.id"
+        :id="`addon-row-${addon.id}`"
+        :class="['bg-white border transition-all p-5 flex flex-col justify-between group relative overflow-hidden', 
+                 highlightedId === addon.id ? 'highlight-active' : 'border-gray-200 hover:border-[#fe3787]/30 hover:shadow-md']"
+      >
+        <div class="relative z-10">
+          <div class="flex justify-between items-start mb-3">
+            <div class="w-10 h-10 bg-gray-50 group-hover:bg-[#fe3787]/5 rounded-sm flex items-center justify-center transition-colors">
+              <i class="ph ph-package text-xl text-gray-400 group-hover:text-[#fe3787]"></i>
+            </div>
+            <div class="flex gap-1 opacity-10 group-hover:opacity-100 transition-opacity">
+              <button @click="openModal(addon)" class="p-1.5 hover:bg-blue-50 text-blue-600 rounded-sm transition-colors">
+                <i class="ph ph-pencil-simple text-sm font-bold"></i>
+              </button>
+              <button @click="deleteAddOn(addon.id)" class="p-1.5 hover:bg-red-50 text-red-600 rounded-sm transition-colors">
+                <i class="ph ph-trash text-sm font-bold"></i>
+              </button>
+            </div>
+          </div>
+          
+          <h3 class="font-bold text-[#002D1E] poppins text-sm mb-1 group-hover:text-[#fe3787] transition-colors">
+            {{ addon.name }}
+          </h3>
+          <p class="text-[11px] text-gray-500 line-clamp-2 leading-relaxed mb-4">
+            {{ addon.description || 'No description provided for this service.' }}
+          </p>
+        </div>
+
+        <div class="pt-4 border-t border-gray-50 flex items-center justify-between mt-auto">
+          <span class="text-[9px] font-black uppercase tracking-tighter text-gray-400 group-hover:text-[#fe3787] transition-colors">
+            Service ID: #{{ addon.id }}
+          </span>
+          <div class="flex items-center gap-1.5 text-[#fe3787]">
+            <span class="text-[10px] font-bold uppercase tracking-wider">Manage</span>
+            <i class="ph ph-arrow-right text-[10px]"></i>
+          </div>
+        </div>
+
+        <div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-[#fe3787]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+      </div>
+
       <!-- Empty State -->
       <div v-if="filteredAddOns.length === 0" class="col-span-full py-20 text-center bg-white border border-gray-200 border-dashed rounded-[1px]">
         <div class="w-16 h-16 mx-auto mb-4 bg-gray-50 rounded-full flex items-center justify-center">

@@ -17,6 +17,17 @@
             <option value="On Flight">On Flight</option>
             <option value="Arrived">Arrived</option>
           </select>
+
+          <select 
+            v-model="filterStops"
+            class="text-[11px] font-bold border border-gray-200 px-3 py-2 bg-white rounded-[1px] outline-none focus:border-[#fe3787] poppins cursor-pointer"
+          >
+            <option value="all">Any Stops</option>
+            <option value="0">Non-stop</option>
+            <option value="1">1 Stop</option>
+            <option value="2">2 Stops</option>
+            <option value="3">3+ Stops</option>
+          </select>
         </div>
       </template>
       <template #actions>
@@ -91,6 +102,20 @@
                       {{ s.flight_detail.total_stops === 0 ? 'Non-stop' : `${s.flight_detail.total_stops} Stop` }}
                     </span>
                     <div class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse ml-1" title="System Connected"></div>
+                  </div>
+
+                  <!-- Route Path for Stops -->
+                  <div v-if="s.flight_detail && s.flight_detail.layovers_data && s.flight_detail.layovers_data.length > 0" class="mt-2 flex items-center gap-1.5">
+                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Path:</span>
+                    <div class="flex items-center gap-1">
+                      <span class="text-[10px] font-black text-slate-500 uppercase">{{ s.flight_detail.route_display.split(' ? ')[0] }}</span>
+                      <template v-for="(stop, idx) in s.flight_detail.layovers_data" :key="idx">
+                        <i class="ph ph-arrow-right text-[8px] text-gray-300"></i>
+                        <span class="text-[10px] font-black text-[#fe3787] uppercase" :title="stop.city">{{ stop.airport }}</span>
+                      </template>
+                      <i class="ph ph-arrow-right text-[8px] text-gray-300"></i>
+                      <span class="text-[10px] font-black text-slate-500 uppercase">{{ s.flight_detail.route_display.split(' ? ')[1] }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -239,6 +264,7 @@ const route = useRoute();
 
 const schedules = ref([]);
 const flightList = ref([]);
+const apiStats = ref({ total: 0, open: 0, active: 0, arrived: 0 });
 
 const flightOptions = computed(() =>
   flightList.value.map(f => ({ value: f.id, label: f.flight_number }))
@@ -249,6 +275,7 @@ const errorMessage = ref(null);
 const highlightedId = ref(null);
 const searchQuery = ref('');
 const filterStatus = ref('all');
+const filterStops = ref('all');
 
 const form = ref({
   flight: null,
@@ -263,10 +290,10 @@ const itemsPerPage = 10;
 // Computed Stats
 const statsItems = computed(() => {
   return {
-    'Total Flights': schedules.value.length,
-    'Open for Booking': schedules.value.filter(s => s.status === 'Open').length,
-    'Currently In-Air': schedules.value.filter(s => s.status === 'On Flight').length,
-    'Completed': schedules.value.filter(s => s.status === 'Arrived').length,
+    'Total Flights': apiStats.value.total,
+    'Open for Booking': apiStats.value.open,
+    'Planes In-Air': apiStats.value.active,
+    'Completed': apiStats.value.arrived,
   };
 });
 
@@ -284,6 +311,15 @@ const filteredSchedules = computed(() => {
 
   if (filterStatus.value !== 'all') {
     result = result.filter(s => s.status === filterStatus.value);
+  }
+
+  if (filterStops.value !== 'all') {
+    const stopsTarget = parseInt(filterStops.value);
+    result = result.filter(s => {
+      const actualStops = s.flight_detail?.total_stops || 0;
+      if (stopsTarget === 3) return actualStops >= 3;
+      return actualStops === stopsTarget;
+    });
   }
   
   return result;
@@ -321,25 +357,27 @@ const visiblePages = computed(() => {
 const statIcon = (label) => {
   if (label === 'Total Flights') return 'ph ph-airplane';
   if (label === 'Open for Booking') return 'ph ph-ticket';
-  if (label === 'Currently In-Air') return 'ph ph-airplane-in-flight';
+  if (label === 'Planes In-Air') return 'ph ph-airplane-in-flight';
   return 'ph ph-checks';
 };
 
 const statIconClass = (label) => {
   if (label === 'Total Flights') return 'bg-blue-100 text-blue-600';
   if (label === 'Open for Booking') return 'bg-green-100 text-green-600';
-  if (label === 'Currently In-Air') return 'bg-purple-100 text-purple-600';
+  if (label === 'Planes In-Air') return 'bg-purple-100 text-purple-600';
   return 'bg-pink-100 text-pink-600';
 };
 
 const fetchData = async () => {
   try {
-    const [resS, resF] = await Promise.all([
+    const [resS, resF, resStats] = await Promise.all([
       api.get('/schedules/'),
-      api.get('/flights/')
+      api.get('/flights/'),
+      api.get('/schedules/stats/')
     ]);
     schedules.value = resS.data.results || resS.data;
     flightList.value = resF.data.results || resF.data;
+    apiStats.value = resStats.data;
 
     if (route.query.page) {
         currentPage.value = parseInt(route.query.page);

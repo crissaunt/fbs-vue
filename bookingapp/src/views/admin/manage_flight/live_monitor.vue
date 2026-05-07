@@ -24,9 +24,18 @@
 
         <div class="flex items-center gap-2">
           <div class="bg-gray-50 border border-gray-200 rounded-[1px] px-4 py-2 flex items-center gap-3">
-            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Active Flights:</span>
+            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Planes In-Air:</span>
             <span class="text-sm font-black text-[#fe3787]">{{ activeFlights.length }}</span>
           </div>
+
+          <button 
+            @click="syncRadar" 
+            :disabled="syncing"
+            class="h-full px-4 py-2 bg-slate-900 text-white rounded-[1px] text-[10px] font-bold uppercase tracking-widest hover:bg-slate-800 disabled:opacity-50 transition-all flex items-center gap-2"
+          >
+            <i class="ph ph-arrows-counter-clockwise" :class="{ 'animate-spin': syncing }"></i>
+            {{ syncing ? 'Synchronizing...' : 'Sync Radar' }}
+          </button>
           
           <button 
             @click="fetchActiveFlights" 
@@ -79,6 +88,33 @@
             </div>
             <div class="mt-4 w-full h-1 bg-gray-100 rounded-full overflow-hidden">
                <div class="h-full bg-[#fe3787] transition-all duration-1000" :style="{ width: Math.round(getFlightProgress(flight) * 100) + '%' }"></div>
+            </div>
+
+            <!-- Detailed Stopover Timeline -->
+            <div v-if="flight.layovers && flight.layovers.length > 0" class="mt-5 pt-4 border-t border-gray-100">
+              <p class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-3">Operational Timeline</p>
+              <div class="ml-1 border-l border-dashed border-gray-200 pl-3 space-y-4">
+                <!-- Origin -->
+                <div class="relative">
+                  <div class="absolute -left-[16.5px] top-1 w-2 h-2 rounded-full bg-slate-200 border border-white"></div>
+                  <p class="text-[9px] font-black text-gray-500 uppercase leading-none">{{ flight.origin.code }}</p>
+                  <p class="text-[7px] text-gray-400 font-bold uppercase mt-1">Origin Hub</p>
+                </div>
+
+                <!-- Layovers -->
+                <div v-for="(stop, idx) in flight.layovers" :key="idx" class="relative">
+                  <div class="absolute -left-[16.5px] top-1 w-2 h-2 rounded-full bg-[#fe3787] shadow-[0_0_8px_rgba(254,55,135,0.4)] border border-white"></div>
+                  <p class="text-[9px] font-black text-[#fe3787] uppercase leading-none">{{ stop.airport }}</p>
+                  <p class="text-[7px] text-gray-400 font-bold uppercase mt-1">Stopover | STAY: {{ stop.duration }}</p>
+                </div>
+
+                <!-- Final -->
+                <div class="relative">
+                  <div class="absolute -left-[16.5px] top-1 w-2 h-2 rounded-full bg-slate-200 border border-white"></div>
+                  <p class="text-[9px] font-black text-gray-500 uppercase leading-none">{{ flight.destination.code }}</p>
+                  <p class="text-[7px] text-gray-400 font-bold uppercase mt-1">Final Destination</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -135,6 +171,20 @@ const mapCardRef = ref(null)
 const mapLoading = ref(false)
 const showSidebar = ref(true)
 const activeFlights = ref([])
+const syncing = ref(false)
+
+const syncRadar = async () => {
+  if (syncing.value) return
+  syncing.value = true
+  try {
+    await api.post('/dashboard/sync_active_flights/')
+    await fetchActiveFlights() // Refresh the map
+  } catch (err) {
+    console.error('Failed to sync radar:', err)
+  } finally {
+    syncing.value = false
+  }
+}
 const isMapFullScreen = ref(false)
 
 // Map instances
@@ -149,15 +199,8 @@ const fetchActiveFlights = async () => {
   mapLoading.value = true
   try {
     const res = await api.get('/dashboard/active_flights_map/')
-    const rawData = res.data || []
-    // Filter to only show flights that are 'On Flight' (In-Air) according to the master schedule
-    activeFlights.value = rawData.filter(flight => {
-      const progress = getFlightProgress(flight)
-      const inTimeWindow = progress > 0 && progress < 1
-      // If the API provides status, we use it as the source of truth
-      // Otherwise we fall back to the live progress window
-      return flight.status === 'On Flight' || (inTimeWindow && (!flight.status || flight.status === 'Open'))
-    })
+    activeFlights.value = res.data || []
+    
     if (mapInstance) {
       updateMapMarkers()
     } else {
@@ -211,11 +254,17 @@ const updateMapMarkers = () => {
   flightPolylines = []
 
   activeFlights.value.forEach(flight => {
-    const origin = [flight.origin.lat, flight.origin.lng]
-    const dest = [flight.destination.lat, flight.destination.lng]
+    // Construct full path points
+    const points = [[flight.origin.lat, flight.origin.lng]]
+    if (flight.layovers && flight.layovers.length > 0) {
+      flight.layovers.forEach(l => {
+        if (l.lat && l.lng) points.push([l.lat, l.lng])
+      })
+    }
+    points.push([flight.destination.lat, flight.destination.lng])
 
-    // Draw Route Line
-    const polyline = L.polyline([origin, dest], {
+    // Draw Complete Route Polyline
+    const polyline = L.polyline(points, {
       color: '#fe3787',
       weight: 2,
       dashArray: '5, 8',
@@ -223,14 +272,47 @@ const updateMapMarkers = () => {
     }).addTo(mapInstance)
     flightPolylines.push(polyline)
 
-    // Calculate actual position based on flight progress
+    // Draw Stopover Hub Markers
+    if (flight.layovers && flight.layovers.length > 0) {
+      flight.layovers.forEach(stop => {
+        if (stop.lat && stop.lng) {
+          const hubMarker = L.circleMarker([stop.lat, stop.lng], {
+            radius: 4,
+            fillColor: '#fe3787',
+            color: '#ffffff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 1
+          }).addTo(mapInstance)
+            .bindTooltip(`<span class="poppins text-[9px] font-black uppercase text-[#002D1E]">${stop.airport} HUB</span>`, {
+              permanent: false,
+              direction: 'top',
+              className: 'hub-tooltip'
+            });
+          flightMarkers.push(hubMarker) // Also clear these on refresh
+        }
+      })
+    }
+
+    // Calculate actual position along the multi-stop path
     const t = getFlightProgress(flight)
+    const numSegments = points.length - 1
+    let segmentIndex = Math.floor(t * numSegments)
+    if (segmentIndex >= numSegments) segmentIndex = numSegments - 1
+    if (segmentIndex < 0) segmentIndex = 0
+
+    const p1 = points[segmentIndex]
+    const p2 = points[segmentIndex + 1]
+
+    // Local progress within current segment
+    const segmentT = (t * numSegments) - segmentIndex
+
     const aircraftPos = [
-      origin[0] + (dest[0] - origin[0]) * t,
-      origin[1] + (dest[1] - origin[1]) * t
+      p1[0] + (p2[0] - p1[0]) * segmentT,
+      p1[1] + (p2[1] - p1[1]) * segmentT
     ]
 
-    const bearing = calculateBearing(flight.origin.lat, flight.origin.lng, flight.destination.lat, flight.destination.lng)
+    const bearing = calculateBearing(p1[0], p1[1], p2[0], p2[1])
     const progressPct = Math.round(t * 100)
     
     // Custom Aircraft Icon
@@ -255,7 +337,10 @@ const updateMapMarkers = () => {
             <span class="font-black text-[#002D1E] text-sm">${flight.flight_number}</span>
             <span class="text-[8px] font-black text-[#fe3787] uppercase">${progressPct}% COMPLETE</span>
           </div>
-          <p class="text-[9px] text-gray-400 uppercase font-black leading-none mb-3">${flight.airline}</p>
+          <p class="text-[9px] text-gray-400 uppercase font-black leading-none mb-3">
+            ${flight.airline} 
+            ${flight.layovers && flight.layovers.length > 0 ? `<span class="text-[#fe3787]"> (VIA ${flight.layovers.map(l => l.airport).join(', ')})</span>` : ''}
+          </p>
           
           <div class="grid grid-cols-2 gap-4 border-t border-gray-100 pt-3">
              <div>
@@ -383,6 +468,18 @@ onUnmounted(() => {
 
 .custom-radar-popup .leaflet-popup-tip {
   background: white !important;
+}
+
+.hub-tooltip {
+  background: white !important;
+  border: 1px solid #fe3787 !important;
+  border-radius: 1px !important;
+  padding: 2px 6px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+.hub-tooltip:before {
+  border-top-color: #fe3787 !important;
 }
 
 /* Hide leaflet branding */

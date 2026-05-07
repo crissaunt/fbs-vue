@@ -17,11 +17,45 @@ class RouteViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
     pagination_class = None
 
+    @action(detail=False, methods=['get'])
+    def export(self, request):
+        import csv
+        from django.http import HttpResponse
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="routes_export.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['origin_code', 'destination_code', 'base_price'])
+        for r in self.get_queryset():
+            writer.writerow([
+                r.origin_airport.code if r.origin_airport else '',
+                r.destination_airport.code if r.destination_airport else '',
+                r.base_price
+            ])
+        return response
+
 class FlightViewSet(viewsets.ModelViewSet):
     queryset = Flight.objects.all()
     serializer_class = FlightSerializer
     permission_classes = [AllowAny]
     pagination_class = None
+
+    @action(detail=False, methods=['get'])
+    def export(self, request):
+        import csv
+        from django.http import HttpResponse
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="flights_export.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['flight_number', 'airline_code', 'aircraft_id', 'route_id', 'total_stops'])
+        for f in self.get_queryset():
+            writer.writerow([
+                f.flight_number,
+                f.airline.code if f.airline else '',
+                f.aircraft.id if f.aircraft else '',
+                f.route.id if f.route else '',
+                f.total_stops
+            ])
+        return response
 
 class SeatRequirementViewSet(viewsets.ModelViewSet):
     queryset = SeatRequirement.objects.all()
@@ -40,12 +74,36 @@ class ScheduleViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     @action(detail=False, methods=['get'])
+    def export(self, request):
+        import csv
+        from django.http import HttpResponse
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="schedules_export.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['flight_number', 'departure_time', 'arrival_time', 'price', 'status'])
+        for s in self.get_queryset():
+            writer.writerow([
+                s.flight.flight_number if s.flight else '',
+                s.departure_time.strftime('%Y-%m-%d %H:%M') if s.departure_time else '',
+                s.arrival_time.strftime('%Y-%m-%d %H:%M') if s.arrival_time else '',
+                s.price,
+                s.status
+            ])
+        return response
+
+    @action(detail=False, methods=['get'])
     def stats(self, request):
-        now = timezone.now()
-        today = now.date()
-        active = Schedule.objects.filter(departure_time__lte=now, arrival_time__gte=now).count()
-        scheduled_today = Schedule.objects.filter(departure_time__date=today).count()
-        return Response({'active': active, 'scheduled': scheduled_today})
+        active = Schedule.objects.filter(status__iexact='On Flight').count()
+        open_count = Schedule.objects.filter(status__iexact='Open').count()
+        arrived = Schedule.objects.filter(status__iexact='Arrived').count()
+        total = Schedule.objects.count()
+        
+        return Response({
+            'total': total,
+            'open': open_count,
+            'active': active,
+            'arrived': arrived
+        })
 
     @action(detail=True, methods=['post'], url_path='generate-seats')
     def generate_seats(self, request, pk=None):

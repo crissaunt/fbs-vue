@@ -21,8 +21,8 @@
           </div>
         </div>
         
-        <h1 class="text-3xl md:text-5xl lg:text-6xl font-black text-slate-800 tracking-tight uppercase bg-clip-text leading-tight mb-2 md:mb-3">
-          Payment<br class="hidden md:block" /> Confirmed!
+        <h1 class="text-3xl md:text-5xl lg:text-6xl text-slate-800 tracking-tight leading-tight mb-2 md:mb-3">
+          <span class="font-light">Payment</span><br class="hidden md:block" /> <span class="font-black">Confirmed!</span>
         </h1>
         <p class="text-slate-500 font-medium text-[13px] md:text-[15px] mb-6 md:mb-8 max-w-xs">
           Your e-ticket has been sent to your email. Safe travels!
@@ -136,7 +136,6 @@
                   </div>
                   <div class="pt-0.5">
                     <div class="text-[11px] font-black text-slate-800 uppercase tracking-wide leading-none">Airport Check-In</div>
-                    <div class="text-[10px] text-slate-500 mt-1 leading-snug font-medium">Present PNR at counter.<br><span class="text-pink-500 font-bold inline-flex items-center gap-1 mt-1 bg-pink-50 px-1.5 py-0.5 rounded-md"><svg class="w-2 h-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg> E-Ticket not valid for boarding</span></div>
                   </div>
                 </div>
 

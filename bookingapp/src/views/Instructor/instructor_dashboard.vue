@@ -104,75 +104,79 @@
         v-for="section in filteredSections" 
         :key="section.id" 
         @click="goToSection(section.id)" 
-        class="group bg-white rounded-xl shadow-sm hover:shadow-xl border border-slate-100 overflow-hidden transition-all duration-300 cursor-pointer flex flex-col h-full"
+        class="group bg-white rounded-2xl shadow-sm hover:shadow-md border border-slate-200 hover:border-pink-200 overflow-hidden transition-all duration-300 cursor-pointer flex flex-col h-full relative"
       >
-        <div class="p-1">
-          <div class="bg-gradient-to-br from-pink-600 to-pink-500 text-white p-4 rounded-lg relative overflow-hidden">
-            <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
-            
-            <div class="flex justify-between items-start relative z-10">
-              <div>
-                <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-pink-400 mb-1 block">Course Code</span>
-                <h3 class="text-lg font-bold">{{ section.section_code }}</h3>
-              </div>
-              <div class="flex items-center gap-1">
-                <span v-if="!section.is_active" class="bg-red-500/20 text-red-200 text-[10px] px-2 py-0.5 rounded border border-red-500/30 font-bold uppercase">Inactive</span>
-                <button @click.stop="editSection(section)" class="p-1.5 hover:bg-white/10 rounded-md transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            
-            <div class="mt-4 flex items-center gap-3 relative z-10">
-              <div class="w-10 h-10 rounded-full bg-slate-100/10 flex items-center justify-center font-bold text-sm text-pink-400">
+        <!-- Top accent line -->
+        <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-pink-500 to-pink-400 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+        <div class="p-5 sm:p-6 flex-1 flex flex-col">
+          <div class="flex justify-between items-start mb-5">
+            <div class="flex items-center gap-4">
+              <div class="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center font-bold text-lg text-pink-600 border border-pink-100 flex-shrink-0">
                 {{ section.section_name.charAt(0) }}
               </div>
               <div>
-                <p class="text-sm font-medium text-slate-100 leading-none mb-1">{{ section.section_name }}</p>
-                <div v-if="section.schedule" class="flex flex-wrap gap-1 mt-1">
-                  <template v-if="Array.isArray(parsedSectionSchedule(section.schedule))">
-                     <span v-for="(s, i) in parsedSectionSchedule(section.schedule).slice(0, 2)" :key="i" class="text-[9px] bg-white/10 text-white/90 px-1.5 py-0.5 rounded border border-white/10 backdrop-blur-sm font-bold">
-                       {{ s.day.substring(0, 2) }} {{ formatTimeOnly(s.start_time) }}
-                     </span>
-                     <span v-if="parsedSectionSchedule(section.schedule).length > 2" class="text-[9px] text-white/40 self-center font-bold ml-1">+{{ parsedSectionSchedule(section.schedule).length - 2 }} more</span>
-                  </template>
-                  <p v-else class="text-[11px] text-slate-200 font-medium">{{ formatSchedule(section.schedule) }}</p>
-                </div>
-                <p v-else class="text-[11px] text-white/70 font-medium">No schedule set</p>
+                <span class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">{{ section.section_code }}</span>
+                <h3 class="text-base font-bold text-slate-800 leading-tight group-hover:text-pink-600 transition-colors">{{ section.section_name }}</h3>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div class="p-5 flex-1 flex flex-col justify-between">
-          <div>
-            <p class="text-sm text-slate-500 leading-relaxed line-clamp-2 italic mb-4">
-              {{ section.description || 'Provide a detailed overview of this section to help organize your curriculum.' }}
-            </p>
-          </div>
-
-          <div class="pt-4 border-t border-slate-50 flex items-center justify-end">
-            <div class="text-right">
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{{ section.semester }}</p>
-              <p class="text-[10px] font-black text-slate-600">{{ section.activity_count || 0 }} Activities</p>
+            
+            <div class="flex items-center gap-1.5">
+              <span v-if="!section.is_active" class="bg-red-50 text-red-500 text-[9px] px-2 py-0.5 rounded-md border border-red-100 font-bold uppercase tracking-wider">Inactive</span>
+              <button @click.stop="editSection(section)" class="p-1.5 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
             </div>
           </div>
+
+          <div class="mb-5">
+             <p class="text-[13px] text-slate-500 leading-relaxed line-clamp-2 pr-2">
+               {{ section.description || 'Provide a detailed overview of this section to help organize your curriculum.' }}
+             </p>
+          </div>
+          
+          <div v-if="section.schedule" class="flex flex-wrap gap-2 mt-auto pt-2">
+            <template v-if="Array.isArray(parsedSectionSchedule(section.schedule))">
+               <span v-for="(s, i) in parsedSectionSchedule(section.schedule).slice(0, 3)" :key="i" class="text-[9px] bg-slate-50 text-slate-500 px-2 py-1 rounded-md border border-slate-100 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                 </svg>
+                 {{ s.day.substring(0, 3) }} {{ formatTimeOnly(s.start_time) }}
+               </span>
+               <span v-if="parsedSectionSchedule(section.schedule).length > 3" class="text-[9px] text-slate-400 self-center font-bold ml-1">+{{ parsedSectionSchedule(section.schedule).length - 3 }}</span>
+            </template>
+            <span v-else class="text-[9px] bg-slate-50 text-slate-500 px-2 py-1 rounded-md border border-slate-100 font-bold uppercase tracking-widest flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {{ formatSchedule(section.schedule) }}
+            </span>
+          </div>
+          <div v-else class="mt-auto pt-2">
+            <span class="text-[9px] bg-slate-50 text-slate-400 px-2.5 py-1.5 rounded-md border border-slate-100 font-black uppercase tracking-widest">No schedule set</span>
+          </div>
         </div>
-        
-        <div class="bg-slate-50/50 px-5 py-3 flex items-center justify-between group-hover:bg-pink-50 transition-colors">
-          <span class="text-[10px] font-bold text-slate-500 group-hover:text-pink-600 transition-colors flex items-center gap-1.5 uppercase">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+
+        <div class="bg-slate-50/50 border-t border-slate-100 px-5 sm:px-6 py-4 flex items-center justify-between group-hover:bg-pink-50/30 transition-colors">
+          <div class="flex items-center gap-5">
+            <div class="flex flex-col">
+              <span class="text-[8px] font-black uppercase tracking-[0.15em] text-slate-400 mb-0.5">Semester</span>
+              <span class="text-xs font-bold text-slate-700">{{ section.semester || 'N/A' }}</span>
+            </div>
+            <div class="h-7 w-px bg-slate-200"></div>
+            <div class="flex flex-col">
+              <span class="text-[8px] font-black uppercase tracking-[0.15em] text-slate-400 mb-0.5">Activities</span>
+              <span class="text-xs font-bold text-slate-700">{{ section.activity_count || 0 }}</span>
+            </div>
+          </div>
+          <div class="flex items-center justify-center text-slate-300 group-hover:text-pink-500 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>
-            Manage Console
-          </span>
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-300 group-hover:text-pink-500 transition-all transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-          </svg>
+          </div>
         </div>
       </div>
     </div>
@@ -194,6 +198,113 @@
       >
         Clear search results
       </button>
+    </div>
+
+    <!-- Widgets Area -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-12 mb-8">
+      <!-- Recent Activity Widget -->
+      <div class="lg:col-span-2 flex flex-col bg-white rounded-2xl shadow-sm border border-slate-100 p-6 min-h-[400px]">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 border-b border-slate-100 pb-4 gap-3">
+          <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Recent Activity</h3>
+          <div class="flex items-center gap-1 bg-slate-50 p-1.5 rounded-xl border border-slate-100 overflow-x-auto hide-scrollbar">
+            <button @click="setActivityFilter('All')" :class="['px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap', activityFilter === 'All' ? 'bg-white text-slate-800 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100']">All</button>
+            <button @click="setActivityFilter('Submissions')" :class="['px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap', activityFilter === 'Submissions' ? 'bg-white text-slate-800 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100']">Submissions</button>
+            <button @click="setActivityFilter('Activities')" :class="['px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap', activityFilter === 'Activities' ? 'bg-white text-slate-800 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100']">Activities</button>
+            <button @click="setActivityFilter('Students')" :class="['px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap', activityFilter === 'Students' ? 'bg-white text-slate-800 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100']">Students</button>
+          </div>
+        </div>
+
+        <div class="flex-1 space-y-4">
+          <div v-if="filteredLogs.length === 0" class="py-6 text-slate-400 text-sm italic">
+            No recent activity found.
+          </div>
+          
+          <div v-for="log in filteredLogs" :key="log.id" class="flex gap-4 items-start group pb-4 border-b border-slate-50 last:border-0">
+            <div class="w-8 h-8 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <svg v-html="getLogIcon(log)" class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"></svg>
+            </div>
+            <div class="flex-1">
+              <p class="text-[13px] font-medium text-slate-700 leading-snug">{{ log.details || (log.action_type + ' action recorded') }}</p>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">{{ log.section_name || 'System' }} {{ log.activity_name ? '- ' + log.activity_name : '' }}</span>
+                <span class="text-[10px] text-slate-300">&bull;</span>
+                <span class="text-[10px] text-slate-400">{{ formatTimeAgo(log.timestamp) }}</span>
+              </div>
+            </div>
+            <div class="text-[9px] uppercase font-bold text-slate-300 tracking-widest mt-1">
+              {{ getLogShortAction(log) }}
+            </div>
+          </div>
+        </div>
+        
+        <div v-if="filteredLogsBase.length > 5" class="flex items-center justify-between mt-6 pt-3 border-t border-slate-200">
+          <button 
+            @click="logsCurrentPage--" 
+            :disabled="logsCurrentPage === 1"
+            class="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-800 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors flex items-center gap-1.5"
+          >
+            &larr; Prev
+          </button>
+          
+          <div class="flex gap-2">
+            <button 
+              v-for="page in totalLogPages" 
+              :key="page"
+              @click="logsCurrentPage = page"
+              :class="['w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold transition-all', logsCurrentPage === page ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-200']"
+            >
+              {{ page }}
+            </button>
+          </div>
+          
+          <button 
+            @click="logsCurrentPage++" 
+            :disabled="logsCurrentPage === totalLogPages"
+            class="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-800 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors flex items-center gap-1.5"
+          >
+            Next &rarr;
+          </button>
+        </div>
+      </div>
+
+      <!-- Class Schedule Widget -->
+      <div class="flex flex-col bg-white rounded-2xl shadow-sm border border-slate-100 p-6 min-h-[400px]">
+        <div class="flex justify-between items-end mb-6 border-b border-slate-100 pb-4">
+          <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Schedule</h3>
+          <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Weekly</span>
+        </div>
+
+        <div class="flex justify-between mb-6">
+          <button 
+            v-for="day in daysOfWeek" 
+            :key="day"
+            @click="selectedScheduleDay = day"
+            :class="['text-[10px] font-black uppercase tracking-widest pb-2 border-b-2 transition-all relative', selectedScheduleDay === day ? 'border-slate-800 text-slate-800' : 'border-transparent text-slate-400 hover:text-slate-600 border-b-2']"
+          >
+            {{ day.substring(0,2) }}
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          <div v-if="scheduleForSelectedDay.length === 0" class="py-4 text-slate-400 text-sm italic">
+            No classes scheduled.
+          </div>
+          
+          <div v-for="(sched, index) in scheduleForSelectedDay" :key="index" class="p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors group relative overflow-hidden">
+            <div v-if="sched.isToday" class="absolute top-0 right-0 px-2 py-1 bg-pink-100 text-pink-600 text-[8px] font-black uppercase tracking-widest rounded-bl-lg">Today</div>
+            
+            <h4 class="font-bold text-slate-800 text-xs mb-0.5">{{ sched.section_code }}</h4>
+            <p class="text-[11px] text-slate-500 font-medium mb-3">{{ sched.section_name }}</p>
+            
+            <div class="flex items-center gap-1.5 text-slate-600 font-bold text-[10px] bg-white rounded-md px-2 py-1 border border-slate-100 w-fit">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {{ sched.start_time }} - {{ sched.end_time }}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Create Section Modal -->
@@ -284,7 +395,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { instructorDashboardService } from '@/services/instructor/instructorDashboardService'
 import { useNotificationStore } from '@/stores/notification'
@@ -310,6 +421,34 @@ const form = ref({
   academic_year: '',
   schedules: [{ day: '', start_time: '', end_time: '' }],
   description: ''
+})
+
+// State for widgets
+const activityLogs = ref([])
+const activityFilter = ref('All')
+const logsCurrentPage = ref(1)
+const logsPageSize = 5
+const selectedScheduleDay = ref('Mon')
+const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const dayFullNames = { 'Mon': 'Monday', 'Tue': 'Tuesday', 'Wed': 'Wednesday', 'Thu': 'Thursday', 'Fri': 'Friday', 'Sat': 'Saturday', 'Sun': 'Sunday' }
+
+onMounted(async () => {
+  // Set current day
+  const currentDayIndex = new Date().getDay() // 0=Sun, 1=Mon...
+  if (currentDayIndex === 0) {
+    selectedScheduleDay.value = 'Sun'
+  } else {
+    selectedScheduleDay.value = daysOfWeek[currentDayIndex - 1]
+  }
+
+  // Fetch recent activity logs
+  try {
+    const logsData = await instructorDashboardService.getLogs()
+    const logsArray = Array.isArray(logsData) ? logsData : (logsData.logs || [])
+    activityLogs.value = logsArray.sort((a,b) => b.id - a.id).slice(0, 50)
+  } catch(e) {
+    console.error('Failed to load logs', e)
+  }
 })
 
 const addSchedule = () => {
@@ -398,4 +537,107 @@ const submitSection = async () => {
     notificationStore.error("Backend Error: " + serverMessage);
   }
 };
+
+// Activity log filters and formatting
+const setActivityFilter = (type) => {
+  activityFilter.value = type
+  logsCurrentPage.value = 1 // reset limit when switching tabs
+}
+
+const filteredLogsBase = computed(() => {
+  let logs = activityLogs.value
+  if (activityFilter.value !== 'All') {
+    logs = logs.filter(log => {
+      const type = (log.action_type || '').toUpperCase()
+      if (activityFilter.value === 'Students') return type.includes('STUDENT') || type.includes('ENROLL')
+      if (activityFilter.value === 'Activities') return type.includes('ACTIVITY') || type.includes('CREATE') || type.includes('UPDATE')
+      if (activityFilter.value === 'Submissions') return type.includes('SUBMISSION') || type.includes('GRADE')
+      return true
+    })
+  }
+  return logs
+})
+
+const totalLogPages = computed(() => {
+  return Math.max(1, Math.ceil(filteredLogsBase.value.length / logsPageSize))
+})
+
+const filteredLogs = computed(() => {
+  const start = (logsCurrentPage.value - 1) * logsPageSize
+  return filteredLogsBase.value.slice(start, start + logsPageSize)
+})
+
+const getLogIcon = (log) => {
+  const t = (log.action_type || '').toUpperCase()
+  if (t.includes('SUBMIT') || t.includes('GRADE')) return `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />` // green check
+  if (t.includes('ENROLL') || t.includes('STUDENT')) return `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />` // user add
+  return `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />` // edit/create pencil
+}
+
+const getLogIconStyle = (log) => {
+  const t = (log.action_type || '').toUpperCase()
+  if (t.includes('SUBMIT') || t.includes('GRADE')) return 'bg-emerald-50 text-emerald-500'
+  if (t.includes('ENROLL') || t.includes('STUDENT')) return 'bg-purple-50 text-purple-500'
+  return 'bg-amber-50 text-amber-500'
+}
+
+const getLogBadgeStyle = (log) => {
+  const t = (log.action_type || '').toUpperCase()
+  if (t.includes('SUBMIT') || t.includes('GRADE')) return 'bg-emerald-100 text-emerald-600'
+  if (t.includes('ENROLL') || t.includes('STUDENT')) return 'bg-purple-100 text-purple-600'
+  return 'bg-amber-100 text-amber-600'
+}
+
+const getLogShortAction = (log) => {
+  const t = (log.action_type || '').toUpperCase()
+  if (t.includes('SUBMIT')) return 'Submitted'
+  if (t.includes('GRADE')) return 'Graded'
+  if (t.includes('ENROLL')) return 'Enrolled'
+  if (t.includes('DELETE')) return 'Deleted'
+  if (t.includes('ACTIV')) return 'Posted'
+  return 'Updated'
+}
+
+const formatTimeAgo = (dateStr) => {
+  if (!dateStr) return 'Just now'
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const val = Math.floor(diff / 60000)
+  if (val < 1) return 'Just now'
+  if (val < 60) return `${val} min ago`
+  const hrs = Math.floor(val / 60)
+  if (hrs < 24) return `${hrs} hr ago`
+  return `${Math.floor(hrs / 24)} days ago`
+}
+
+// Map schedule items
+const scheduleForSelectedDay = computed(() => {
+  const targetDay = dayFullNames[selectedScheduleDay.value]
+  let scheds = []
+  
+  const currentDayIndex = new Date().getDay()
+  const todayFullName = currentDayIndex === 0 ? dayFullNames['Sun'] : dayFullNames[daysOfWeek[currentDayIndex - 1]] || ''
+  const isToday = targetDay === todayFullName
+
+  ;(props.sections || []).forEach(sec => {
+    if (!sec.schedule) return
+    try {
+      const parsed = typeof sec.schedule === 'string' ? JSON.parse(sec.schedule) : sec.schedule
+      if (Array.isArray(parsed)) {
+        parsed.forEach(s => {
+          if (s.day === targetDay) {
+            scheds.push({
+              section_name: sec.section_name,
+              section_code: sec.section_code,
+              start_time: formatTimeOnly(s.start_time),
+              end_time: formatTimeOnly(s.end_time),
+              original_start: s.start_time,
+              isToday: isToday
+            })
+          }
+        })
+      }
+    } catch(e) {}
+  })
+  return scheds.sort((a,b) => a.original_start.localeCompare(b.original_start))
+})
 </script>

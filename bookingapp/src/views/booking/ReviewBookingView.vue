@@ -3,22 +3,23 @@
     <BookingStatusHeader />
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="loading-state">
-      <div class="loading-spinner"></div>
-      <p>Loading your booking details...</p>
-    </div>
+    <LoadingOverlay 
+      :show="isLoading" 
+      title="Checking Reservation"
+      subtitle="Just a moment while we bundle your selections."
+    />
 
     <!-- No Data State -->
-    <div v-else-if="!hasFlightData" class="no-data-message">
+    <div v-if="!isLoading && !hasFlightData" class="no-data-message">
       <h3>No flight data found</h3>
       <p>Please go back and select a flight first.</p>
-      <button @click="$router.push({ name: 'SearchFlights' })" class="btn-back">
+      <button @click="$router.push({ name: 'Home' })" class="btn-back">
         Back to Flight Search
       </button>
     </div>
 
     <!-- Main Content -->
-    <div v-else class="container review-layout">
+    <div v-else-if="!isLoading" class="container review-layout">
       <main class="main-content">
         <h2 class="page-title">Review Your Booking</h2>
 
@@ -461,8 +462,8 @@
                 </div>
                 <div class="text-right">
                   <div class="flex items-center justify-end">
-                    <span class="text-pink-500 font-black text-xl mr-1">₱</span>
-                    <span class="text-4xl font-black text-gray-900 tracking-tighter leading-none">
+                    <span class="text-pink-500 font-black  mr-1">₱</span>
+                    <span class="text-2xl font-black text-gray-900 tracking-tighter leading-none">
                       <span v-if="isCalculatingPrice" class="text-sm text-gray-400 animate-pulse">Wait...</span>
                       <AnimatedNumber v-else :value="grandTotal" />
                     </span>
@@ -638,20 +639,9 @@ const fetchBackendPrice = async () => {
   }
 };
 
-const adultTotalLine = computed(() => {
-  if (backendBreakdown.value?.adult_base) return backendBreakdown.value.adult_base;
-  return bookingStore.grandTotalForAdults;
-});
-
-const childTotalLine = computed(() => {
-  if (backendBreakdown.value?.child_base) return backendBreakdown.value.child_base;
-  return bookingStore.grandTotalForChildren;
-});
-
-const infantTotalLine = computed(() => {
-  if (backendBreakdown.value?.infant_base) return backendBreakdown.value.infant_base;
-  return bookingStore.grandTotalForInfants;
-});
+const adultTotalLine = computed(() => bookingStore.authoritativeAdultBase);
+const childTotalLine = computed(() => bookingStore.authoritativeChildBase);
+const infantTotalLine = computed(() => bookingStore.authoritativeInfantBase);
 
 const selectedInsurancePlan = computed(() => {
   const planId = bookingStore.addons?.insurance?.selectedPlanId;
@@ -1023,20 +1013,18 @@ const hasFlightData = computed(() => {
 const payingPassengerCount = computed(() => bookingStore.payingPassengerCount);
 const departBaseFare = computed(() => bookingStore.departBaseFare);
 const returnBaseFare = computed(() => bookingStore.returnBaseFare);
-const totalSeatsPrice = computed(() => bookingStore.totalSeatsPrice);
-const totalBaggagePrice = computed(() => bookingStore.totalBaggagePrice);
-const totalMealsPrice = computed(() => bookingStore.totalMealsPrice);
-const totalAssistancePrice = computed(() => bookingStore.totalAssistancePrice);
-const insurancePrice = computed(() => bookingStore.insurancePrice);
-const combinedBasePriceTotal = computed(() => bookingStore.combinedBasePriceTotal);
+const totalSeatsPrice = computed(() => bookingStore.authoritativeSeats);
+const totalBaggagePrice = computed(() => bookingStore.authoritativeBaggage);
+const totalMealsPrice = computed(() => bookingStore.authoritativeMeals);
+const totalAssistancePrice = computed(() => bookingStore.authoritativeAssistance);
+const insurancePrice = computed(() => bookingStore.authoritativeInsurance);
+const combinedBasePriceTotal = computed(() => bookingStore.authoritativeBaseFare);
 
 const taxesPrice = computed(() => bookingStore.authoritativeTaxes);
 
-const isBackendTotalLoaded = computed(() => backendTotal.value !== null && !isNaN(backendTotal.value));
-
 const grandTotal = computed(() => bookingStore.authoritativeTotal);
 
-const isUsingFrontendEstimate = computed(() => !isBackendTotalLoaded.value);
+const isUsingFrontendEstimate = computed(() => backendTotal.value === null || isNaN(backendTotal.value));
 
 // Validation function
 const validateBooking = () => {
@@ -1194,7 +1182,7 @@ const confirmBooking = async () => {
         status: response.status
       }));
       
-      const confirmedAmount = bookingStore.booking_total || bookingStore.grandTotal;
+      const confirmedAmount = bookingStore.booking_total || bookingStore.authoritativeTotal;
       router.push({ 
         name: 'Payment', 
         query: { 

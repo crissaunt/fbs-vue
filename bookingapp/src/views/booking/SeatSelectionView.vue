@@ -154,7 +154,7 @@
             </div>
 
             <div class="pt-6 border-t border-gray-50">
-              <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Amenities & Amenities</p>
+              <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Amenities & Features</p>
               <div class="grid grid-cols-2 gap-3">
                 <div v-for="feat in amenityIcons" :key="feat.label" class="flex items-center gap-2">
                   <span class="text-xs">{{ feat.icon }}</span>
@@ -190,8 +190,11 @@
                 <div class="h-6 w-px bg-blue-200"></div>
                 <div class="flex flex-col items-end">
                    <span class="text-xs font-black text-pink-600">{{ getSeatPriceLabel(hoveredSeat) }}</span>
-                   <div class="flex gap-1 mt-0.5">
-                     <span v-for="feat in getSeatAmenities(hoveredSeat)" :key="feat.label" :title="feat.label">{{ feat.icon }}</span>
+                   <div class="flex flex-wrap justify-end gap-1 mt-1.5 max-w-[160px]">
+                     <span v-for="feat in getSeatAmenities(hoveredSeat)" :key="feat.label" 
+                       class="bg-white/50 px-1.5 py-0.5 rounded text-[8px] font-black text-blue-700 uppercase flex items-center gap-1 border border-blue-100/50">
+                       <span>{{ feat.icon }}</span> {{ feat.label }}
+                     </span>
                    </div>
                 </div>
               </div>
@@ -277,8 +280,13 @@
                           <div class="seat-base">
                             <span class="label">{{ seat.column }}</span>
                             <div class="seat-icons">
-                               <div v-if="seat.has_bassinet" class="icon" title="Bassinet Available">👶</div>
+                               <div v-if="seat.has_bassinet" class="icon purple" title="Bassinet Position">👶</div>
                                <div v-if="hasExtraLegroom(seat)" class="icon gold" title="Extra Legroom">↕️</div>
+                               <div v-if="seat.is_exit_row" class="icon red" title="Emergency Exit">🚪</div>
+                               <div v-if="seat.has_medical_oxygen" class="icon blue" title="Medical Oxygen">💨</div>
+                               <div v-if="seat.has_pet_in_cabin" class="icon orange" title="Pet in Cabin">🐾</div>
+                               <div v-if="seat.is_wheelchair_accessible" class="icon blue" title="Wheelchair Accessible">♿</div>
+                               <div v-if="seat.is_bulkhead" class="icon gray" title="Bulkhead Seat">🧱</div>
                             </div>
                             <!-- Price Tag mini -->
                             <div v-if="getSeatStatus(seat) === 'available' && seat.seat_price > 0" class="price-dot"></div>
@@ -311,8 +319,13 @@
                           <div class="seat-base">
                             <span class="label">{{ seat.column }}</span>
                             <div class="seat-icons">
-                               <div v-if="seat.has_bassinet" class="icon" title="Bassinet Available">👶</div>
+                               <div v-if="seat.has_bassinet" class="icon purple" title="Bassinet Position">👶</div>
                                <div v-if="hasExtraLegroom(seat)" class="icon gold" title="Extra Legroom">↕️</div>
+                               <div v-if="seat.is_exit_row" class="icon red" title="Emergency Exit">🚪</div>
+                               <div v-if="seat.has_medical_oxygen" class="icon blue" title="Medical Oxygen">💨</div>
+                               <div v-if="seat.has_pet_in_cabin" class="icon orange" title="Pet in Cabin">🐾</div>
+                               <div v-if="seat.is_wheelchair_accessible" class="icon blue" title="Wheelchair Accessible">♿</div>
+                               <div v-if="seat.is_bulkhead" class="icon gray" title="Bulkhead Seat">🧱</div>
                             </div>
                             <div v-if="getSeatStatus(seat) === 'available' && seat.seat_price > 0" class="price-dot"></div>
                           </div>
@@ -362,6 +375,12 @@
                            <p class="text-sm font-bold text-gray-900 truncate">{{ p.firstName }}</p>
                            <p v-if="assignedSeats[p.key]" class="text-[10px] font-medium text-gray-400 mt-0.5">
                              {{ assignedSeats[p.key].seat_code }} • {{ assignedSeats[p.key].seat_class?.name }}
+                             <div v-if="assignedSeats[p.key].features?.length > 0" class="mt-1 flex flex-wrap gap-1.5">
+                               <span v-for="f in assignedSeats[p.key].features" :key="f.label" 
+                                 class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[#FF579A]/10 text-[#FF579A] text-[9px] font-black uppercase rounded-md border border-[#FF579A]/20">
+                                 <span>{{ f.icon }}</span> {{ f.label }}
+                               </span>
+                             </div>
                            </p>
                            <p v-else class="text-[10px] font-black text-amber-500 uppercase mt-0.5">Seat pending</p>
                          </div>
@@ -450,8 +469,11 @@ const amenityIcons = [
   { label: 'WiFi', icon: '📶' },
   { label: 'Power', icon: '🔌' },
   { label: 'Video', icon: '📺' },
-  { label: 'Audio', icon: '🎧' },
-  { label: 'USB', icon: '🔋' }
+  { label: 'Bassinet', icon: '👶' },
+  { label: 'Legroom', icon: '↕️' },
+  { label: 'Exit Row', icon: '🚪' },
+  { label: 'Oxygen', icon: '💨' },
+  { label: 'Pet', icon: '🐾' }
 ];
 
 // Computed properties
@@ -553,14 +575,14 @@ const getSeatStatus = (seat) => {
   }
 
   if (seat.is_booked || seat.is_locked || !seat.is_available) return 'occupied';
-  if (isClassDimmed(seat.seat_class?.name)) return 'occupied';
+  if (isClassDimmed(seat.seat_class?.name) || !isSeatInBookedClass(seat)) return 'occupied';
   
   return 'available';
 };
 
 const isSeatInteractiveDisabled = (seat) => {
   const status = getSeatStatus(seat);
-  return status === 'occupied' || status === 'taken-by-other' || status === 'blocked' || isClassDimmed(seat.seat_class?.name);
+  return status === 'occupied' || status === 'taken-by-other' || status === 'blocked';
 };
 
 const getSeatPosition = (seat) => {
@@ -573,9 +595,35 @@ const getSeatPosition = (seat) => {
 };
 
 const getSeatPriceLabel = (seat) => {
+  if (!isSeatInBookedClass(seat)) return 'Unavailable (Wrong Class)';
   if (isSeatIncluded(seat)) return 'Included';
   const price = parseFloat(seat.seat_price) || 0;
   return price > 0 ? `₱${price.toLocaleString()}` : 'Standard';
+};
+
+const isSeatInBookedClass = (seat) => {
+  if (!seat || !currentFlight.value) return true;
+  
+  const booked = (currentFlight.value?.travel_class || 
+                  currentFlight.value?.class_type || 
+                  currentFlight.value?.selected_seat_class || '').toLowerCase();
+  
+  const target = (seat.seat_class?.name || '').toLowerCase();
+  
+  // Strict DCS enforcement
+  if (booked.includes('premium economy')) {
+     return target.includes('premium economy');
+  }
+
+  if (booked.includes('economy')) {
+     // Economy passengers CANNOT select Premium Economy
+     return target.includes('economy') && !target.includes('premium');
+  }
+
+  if (booked.includes('business')) return target.includes('business');
+  if (booked.includes('first')) return target.includes('first');
+  
+  return true;
 };
 
 const hasExtraLegroom = (seat) => seat.has_extra_legroom || seat.seat_class?.name?.toLowerCase().includes('legroom');
@@ -585,24 +633,45 @@ const getSeatAmenities = (seat) => {
   if (!seat) return [];
   const list = [];
   
-  // 1. Check direct properties
+  // 1. Position-based Features
+  const isWindow = seat.is_window || seat.column === 'A' || seat.column === 'F';
+  const isAisle = seat.is_aisle || seat.column === 'C' || seat.column === 'D';
+  if (isWindow) list.push({ label: 'Window', icon: '🪟' });
+  if (isAisle) list.push({ label: 'Aisle', icon: '🚶' });
+  
+  // 2. Direct Requirements / Booleans
   if (seat.has_wifi) list.push({ label: 'WiFi', icon: '📶' });
   if (seat.has_power || seat.has_usb) list.push({ label: 'Power', icon: '🔌' });
   if (seat.has_entertainment) list.push({ label: 'Video', icon: '📺' });
+  if (seat.has_bassinet) list.push({ label: 'Bassinet', icon: '👶' });
+  if (seat.has_extra_legroom) list.push({ label: 'Legroom', icon: '↕️' });
+  if (seat.is_exit_row) list.push({ label: 'Exit Row', icon: '🚪' });
+  if (seat.has_medical_oxygen) list.push({ label: 'Oxygen', icon: '💨' });
+  if (seat.has_pet_in_cabin) list.push({ label: 'Pet', icon: '🐾' });
+  if (seat.is_wheelchair_accessible) list.push({ label: 'Wheelchair', icon: '♿' });
+  if (seat.is_bulkhead) list.push({ label: 'Bulkhead', icon: '🧱' });
   
-  // 2. Check features array from backend
-  if (Array.isArray(seat.features)) {
-     seat.features.forEach(f => {
+  // 3. Dynamic features/requirements from backend
+  const features = seat.seat_features || seat.special_requirements || seat.features || [];
+  if (Array.isArray(features)) {
+     features.forEach(f => {
         const name = (typeof f === 'string' ? f : f.name || '').toLowerCase();
+        
         if (name.includes('wifi') && !list.some(i => i.label === 'WiFi')) list.push({ label: 'WiFi', icon: '📶' });
         if ((name.includes('power') || name.includes('usb')) && !list.some(i => i.label === 'Power')) list.push({ label: 'Power', icon: '🔌' });
-        if ((name.includes('entertainment') || name.includes('tv')) && !list.some(i => i.label === 'Video')) list.push({ label: 'Video', icon: '📺' });
+        if (name.includes('bassinet') && !list.some(i => i.label === 'Bassinet')) list.push({ label: 'Bassinet', icon: '👶' });
+        if (name.includes('medical') || name.includes('oxygen')) {
+          if (!list.some(i => i.label === 'Oxygen')) list.push({ label: 'Oxygen', icon: '💨' });
+        }
+        if (name.includes('pet')) {
+          if (!list.some(i => i.label === 'Pet')) list.push({ label: 'Pet', icon: '🐾' });
+        }
      });
   }
 
-  // 3. Fallback to class-based defaults if list is empty
-  if (list.length === 0) {
-    const n = seat.seat_class?.name?.toLowerCase() || '';
+  // 4. Default for classes if still empty of generic amenities
+  const n = seat.seat_class?.name?.toLowerCase() || '';
+  if (!list.some(i => i.label === 'WiFi' || i.label === 'Power' || i.label === 'Video')) {
     if (n.includes('business')) {
        list.push({ label: 'Power', icon: '🔌' }, { label: 'Video', icon: '📺' }, { label: 'WiFi', icon: '📶' });
     } else if (n.includes('premium')) {
@@ -666,10 +735,7 @@ const seatClasses = computed(() => {
   const unique = [];
   rawSeats.value.forEach(s => {
     if (s.seat_class && !unique.find(c => c.id === s.seat_class.id)) {
-       // ONLY include the class if it's NOT dimmed (i.e., it's the chosen class)
-       if (!isClassDimmed(s.seat_class.name)) {
-          unique.push(s.seat_class);
-       }
+       unique.push(s.seat_class);
     }
   });
   return unique;
@@ -685,28 +751,7 @@ const getClassColor = (name) => {
 };
 
 const isClassDimmed = (className) => {
-  if (!className) return false;
-  const currentF = currentFlight.value;
-  if (!currentF) return false;
-  
-  // The travel class the user actually paid for/selected during search
-  const bookedCabin = (currentF.travel_class || currentF.selected_seat_class || 'Economy').toLowerCase();
-  const seatCabin = className.toLowerCase();
-
-  // Helper to categorize variations (e.g., 'Economy Flex' -> 'economy')
-  const getCategory = (name) => {
-    if (name.includes('premium')) return 'premium'; // Handle premium economy specifically
-    if (name.includes('economy')) return 'economy';
-    if (name.includes('business')) return 'business';
-    if (name.includes('first')) return 'first';
-    return name;
-  };
-
-  const bookedCategory = getCategory(bookedCabin);
-  const seatCategory = getCategory(seatCabin);
-
-  // If they don't match, the class is dimmed/locked
-  return bookedCategory !== seatCategory;
+  return false; // All seats are now selectable
 };
 
 const isSeatIncluded = (seat) => {
@@ -747,7 +792,8 @@ const assignSeat = (seat) => {
     id: seat.id,
     seat_code: seat.seat_code,
     seat_price: price,
-    seat_class: { name: seat.seat_class?.name }
+    seat_class: { name: seat.seat_class?.name },
+    features: getSeatAmenities(seat)
   };
   
   bookingStore.assignSeat(currentP.key, seatData, activeFlightSegment.value);
@@ -907,18 +953,35 @@ onUnmounted(() => {
 
 .seat-icons {
   display: flex;
-  gap: 2px;
+  flex-direction: row-reverse;
+  gap: 1px;
   position: absolute;
-  top: 2px;
-  right: 2px;
+  top: -4px;
+  right: -4px;
+  z-index: 10;
 }
 
 .icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 8px;
-  line-height: 1;
+  color: white;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  border: 1px solid white;
+  background: #cbd5e1;
 }
 
-.icon.gold { color: #f59e0b; }
+.icon.gold { background: #f59e0b; }
+.icon.red { background: #ef4444; }
+.icon.blue { background: #3b82f6; }
+.icon.orange { background: #f97316; }
+.icon.purple { background: #a855f7; }
+.icon.green { background: #10b981; }
+.icon.gray { background: #64748b; }
 
 .price-dot {
   position: absolute;

@@ -23,7 +23,7 @@
                     <!-- Header -->
                     <tr>
                         <td
-                            style="background-color: #ec4899; padding: 48px 40px; text-align: center; border-bottom: 4px solid #db2777;">
+                            style="background-color: #FF579A; padding: 48px 40px; text-align: center; border-bottom: 4px solid #db2777;">
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                                 <tr>
                                     <td
@@ -89,8 +89,7 @@
                                                             <td
                                                                 style="font-size: 13px; color: #15803d; padding: 4px 0;">
                                                                 <span
-                                                                    style="color: #22c55e; margin-right: 8px;">📄</span>boarding_pass_{{
-                                                                passenger_name|slugify }}.pdf
+                                                                    style="color: #22c55e; margin-right: 8px;">📄</span>boarding_pass_{{ passenger_name|slugify }}.pdf
                                                             </td>
                                                         </tr>
                                                     </table>
@@ -115,15 +114,14 @@
                                                         {% if is_group %}Travel Party{% else %}Passenger{% endif %}
                                                     </div>
                                                     <div style="font-size: 16px; font-weight: 700; color: #0f172a;">
-                                                        {% if is_group %}{{ passengers|length }} Members{% else %}{{
-                                                        passenger_name }}{% endif %}</div>
+                                                        {% if is_group %}{{ passengers|length }} Members{% else %}{{ passenger_name }}{% endif %}</div>
                                                 </td>
                                                 <td width="50%" align="right">
                                                     <div
                                                         style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">
                                                         PNR / Reference</div>
                                                     <div
-                                                        style="font-family: 'Courier New', monospace; font-size: 18px; font-weight: 700; color: #ec4899;">
+                                                        style="font-family: 'Courier New', monospace; font-size: 18px; font-weight: 700; color: #FF579A;">
                                                         {{ booking_reference }}</div>
                                                 </td>
                                             </tr>
@@ -141,7 +139,7 @@
                                                     style="padding: 8px 0; font-size: 14px; color: #0f172a; font-weight: 600;">
                                                     {{ p.name }}</td>
                                                 <td align="right"
-                                                    style="padding: 8px 0; font-family: 'Courier New', monospace; font-size: 14px; font-weight: 900; color: #ec4899;">
+                                                    style="padding: 8px 0; font-family: 'Courier New', monospace; font-size: 14px; font-weight: 900; color: #FF579A;">
                                                     SEAT {{ p.seat }}</td>
                                             </tr>
                                             {% endfor %}
@@ -155,22 +153,19 @@
                                                     <div
                                                         style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">
                                                         Flight</div>
-                                                    <div style="font-size: 15px; font-weight: 700; color: #0f172a;">{{
-                                                        flight_number }}</div>
+                                                    <div style="font-size: 15px; font-weight: 700; color: #0f172a;">{{ flight_number }}</div>
                                                 </td>
                                                 <td width="33%" align="center">
                                                     <div
                                                         style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">
                                                         Seat</div>
-                                                    <div style="font-size: 24px; font-weight: 900; color: #0f172a;">{{
-                                                        seat_number }}</div>
+                                                    <div style="font-size: 24px; font-weight: 900; color: #0f172a;">{{ seat_number }}</div>
                                                 </td>
                                                 <td width="33%" align="right">
                                                     <div
                                                         style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">
                                                         Route</div>
-                                                    <div style="font-size: 15px; font-weight: 700; color: #0f172a;">{{
-                                                        origin }} -> {{ destination }}</div>
+                                                    <div style="font-size: 15px; font-weight: 700; color: #0f172a;">{{ origin }} -> {{ destination }}</div>
                                                 </td>
                                             </tr>
                                         </table>

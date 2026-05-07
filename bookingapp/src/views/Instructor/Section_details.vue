@@ -1,147 +1,256 @@
 <template>
-  <div class="p-8 max-w-7xl mx-auto">
-    <!-- Header/Breadcrumbs -->
-    <div class="mb-6">
-      <div class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-        <router-link to="/instructor/dashboard" class="hover:text-pink-500 transition-colors">Dashboard</router-link>
-        <span>/</span>
-        <span class="text-slate-600">{{ section?.section_code }}</span>
+  <div class="p-8 max-w-7xl mx-auto font-sans bg-[#F9FAFB] min-h-screen">
+    <!-- Header/Breadcrumbs and Top Actions -->
+    <div class="mb-6 flex justify-between items-start">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-medium text-gray-400 mb-2">
+          <router-link to="/instructor/dashboard" class="hover:text-pink-600 transition-colors">My Courses</router-link>
+          <span class="text-gray-300">›</span>
+          <span class="hover:text-pink-600 cursor-pointer transition-colors">CTHM</span>
+          <span class="text-gray-300">›</span>
+          <span class="text-pink-600 font-bold">Section {{ section?.section_code || 'QU1' }}</span>
+        </div>
+        <div class="flex items-center flex-wrap gap-3 mt-1">
+          <h2 class="text-[22px] font-bold text-gray-800 tracking-tight">
+            Course Section: {{ section?.section_name || 'EUQIO' }} - {{ section?.section_code || 'QU1' }}
+          </h2>
+        </div>
       </div>
-      <div class="flex items-center flex-wrap gap-3">
-        <h2 class="text-2xl font-bold text-slate-800 tracking-tight">
-          {{ section?.section_code }} - {{ section?.section_name }}
-        </h2>
-        <div class="flex gap-2">
-          <span v-if="section?.is_active === false" class="bg-red-50 text-red-600 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border border-red-100 shadow-sm animate-pulse">Disabled</span>
-          <span v-if="section?.is_locked" class="bg-amber-50 text-amber-600 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border border-amber-100 shadow-sm flex items-center gap-1">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            Locked
-          </span>
+      <div class="flex gap-3 bg-white">
+        <button @click="openEnrollModal" class="flex items-center gap-2 border border-gray-200 text-gray-600 bg-white px-4 py-2 rounded-lg font-bold text-xs shadow-sm hover:bg-gray-50 transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+          </svg>
+          Enroll Student
+        </button>
+        <button @click="openActivityModal" class="flex items-center gap-2 bg-[#E91E63] hover:bg-[#D81B60] text-white px-4 py-2 rounded-lg font-bold text-xs shadow-sm transition-all shadow-[#E91E63]/20">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" />
+          </svg>
+          Create Activity
+        </button>
+      </div>
+    </div>
+
+    <!-- Course Information Card -->
+    <div class="bg-white border border-gray-100 rounded-xl p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] mb-6 flex flex-wrap justify-between items-center gap-4">
+      <div class="flex flex-wrap gap-12 sm:gap-16">
+        <div>
+          <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1.5">Academic Year</p>
+          <p class="text-[15px] font-bold text-gray-800">{{ section?.academic_year || 'N/A' }}</p>
+        </div>
+        <div>
+          <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1.5">Semester</p>
+          <p class="text-[15px] font-bold text-gray-800">{{ section?.semester || 'N/A' }}</p>
+        </div>
+        <div>
+          <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1.5">Section</p>
+          <p class="text-[15px] font-bold text-gray-800">{{ section?.section_code || 'N/A' }}</p>
+        </div>
+        <div>
+          <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1.5">Instructor</p>
+          <p class="text-[15px] font-bold text-gray-800">{{ userFullName || 'Instructor' }}</p>
+        </div>
+      </div>
+      <div>
+        <span v-if="section?.is_active !== false" class="bg-[#E91E63] text-white px-5 py-1.5 rounded-lg text-xs font-bold shadow-sm inline-block tracking-wide">Active</span>
+        <span v-else class="bg-red-500 text-white px-5 py-1.5 rounded-lg text-xs font-bold shadow-sm inline-block tracking-wide">Disabled</span>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white p-5 rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 flex items-center gap-4">
+        <div class="w-11 h-11 rounded-xl bg-pink-50 text-pink-400 flex items-center justify-center flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        </div>
+        <div>
+          <p class="text-xl font-bold text-gray-800 leading-none mb-1">{{ section?.student_count || 0 }}</p>
+          <p class="text-[11px] text-gray-400 font-medium">Students Enrolled</p>
+        </div>
+      </div>
+      <div class="bg-white p-5 rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 flex items-center gap-4">
+        <div class="w-11 h-11 rounded-xl bg-pink-50 text-pink-400 flex items-center justify-center flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <div>
+          <p class="text-xl font-bold text-gray-800 leading-none mb-1">{{ activities.length }}</p>
+          <p class="text-[11px] text-gray-400 font-medium">Total Activities</p>
+        </div>
+      </div>
+      <div class="bg-white p-5 rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 flex items-center gap-4">
+        <div class="w-11 h-11 rounded-xl bg-pink-50 text-pink-400 flex items-center justify-center flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>
+          <p class="text-xl font-bold text-gray-800 leading-none mb-1">{{ avgCompletionRate }}%</p>
+          <p class="text-[11px] text-gray-400 font-medium">Avg. Completion</p>
+        </div>
+      </div>
+      <div class="bg-white p-5 rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 flex items-center gap-4">
+        <div class="w-11 h-11 rounded-xl bg-pink-50 text-pink-400 flex items-center justify-center flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-xl font-bold text-gray-800 leading-none mb-1">{{ submissionRate }}%</p>
+          <p class="text-[11px] text-gray-400 font-medium">Submission Rate</p>
         </div>
       </div>
     </div>
-          <div class="flex items-center gap-8 border-b border-gray-300 mb-8 px-2 relative">
-            <button class="pb-3 text-sm font-bold uppercase border-b-4 border-[#0E8028] text-gray-900 tracking-wider">Assessments</button>
-            <button 
-              @click="$router.push(`/instructor/section/${route.params.id}/student`)"
-              :class="[
-                'pb-3 text-sm font-bold uppercase transition-colors tracking-wider',
-                route.name === 'SectionStudent' ? 'border-b-4 border-[#0E8028] text-gray-900' : 'text-gray-400 hover:text-gray-600'
-              ]"
-            >
-                Student
-            </button>
-            <button 
-              @click="$router.push(`/instructor/section/${route.params.id}/settings`)"
-              class="pb-3 text-sm font-bold uppercase text-gray-400 hover:text-gray-600 tracking-wider"
-            >
-              Course Settings
-            </button>
-            
-            <div class="ml-auto flex gap-3 mb-2">
-              <button @click="openEnrollModal" class="bg-[#F4D03F] text-[#0A3D16] px-6 py-2.5 rounded-lg font-bold text-xs uppercase tracking-widest shadow-md hover:translate-y-[-1px] active:scale-95 transition-all">Enroll Student</button>
-              <button 
-                  @click="openActivityModal" 
-                  class="bg-[#0E8028] text-white px-6 py-2.5 rounded-lg font-bold text-xs uppercase tracking-widest shadow-md hover:translate-y-[-1px] active:scale-95 transition-all">
-                  Create Activity
-              </button>
-            </div>
-          </div>
 
-          <!-- Description Section -->
-          <div class="grid grid-cols-1 gap-6 mb-6">
-            <div class="bg-white rounded-lg border border-gray-200 p-8 shadow-sm">
-                <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Description</h3>
-                <p class="text-gray-600 leading-relaxed italic">
-                  {{ section?.description || 'No description provided for this class.' }}
-                </p>
-              </div>
-            </div>
-
-          <!-- Activities List Section -->
-          <div class="space-y-4 px-35">
-            <!-- Activity Card -->
-            <div 
-              v-for="activity in activities" 
-              :key="activity.id"
-              class="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-            >
-              <div class="p-6">
-                <div class="flex items-start gap-4 h-auto">
-                  <!-- Activity Icon -->
-                  <div class="w-12 h-12 rounded-full bg-teal-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                    {{ getActivityIcon(activity.title) }}
-                  </div>
-                  
-                  <!-- Activity Content -->
-                  <div class="flex-1 min-w-0 cursor-pointer" @click="goToActivity(activity.id)">
-                    <div class="flex items-start justify-between mb-2">
-                      <div class="truncate"> <h3 class="text-lg font-bold text-gray-800 truncate">
-                          {{ activity.activity_type }}: {{ activity.title }}
-                        </h3>
-                        <p class="text-sm text-gray-500">
-                          {{ formatDate(activity.due_date) }}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <p class="text-gray-600 text-sm leading-relaxed line-clamp-3 break-words">
-                      {{ activity.description || 'No description provided for this activity.' }}
-                    </p>
-                  </div>
-
-                  <!-- Three Dots Menu -->
-                  <div class="relative">
-                    <button 
-                      @click.stop="toggleActivityDropdown(activity.id)"
-                      class="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="currentColor">
-                        <circle cx="12" cy="5" r="2"/>
-                        <circle cx="12" cy="12" r="2"/>
-                        <circle cx="12" cy="19" r="2"/>
-                      </svg>
-                    </button>
-                    
-                    <!-- Dropdown Menu -->
-                    <div 
-                      v-if="activityDropdowns[activity.id]"
-                      class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200"
-                    >
-                      <button 
-                        @click="openDeleteModal(activity)"
-                        class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                        Delete Activity
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Empty State -->
-            <div v-if="activities.length === 0" class="bg-white rounded-lg border border-gray-200 p-12 text-center">
-              <div class="text-gray-400 mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <h3 class="text-lg font-semibold text-gray-700 mb-2">No Activities Yet</h3>
-              <p class="text-gray-500 mb-4">Get started by creating your first activity for this section.</p>
-              <button 
-                @click="openActivityModal"
-                class="bg-[#0E8028] text-white px-6 py-2 rounded font-bold text-sm uppercase shadow-md hover:scale-105 transition-transform"
-              >
-                Create Activity
-              </button>
-            </div>
-          </div>
+    <!-- Tabs and Filters -->
+    <div class="flex flex-col sm:flex-row justify-between sm:items-end border-b border-gray-200 mb-6 pb-0 gap-4">
+      <div class="flex gap-8 px-2 overflow-x-auto">
+        <button class="pb-3 px-1 text-[13px] font-bold border-b-[3px] border-[#E91E63] text-gray-900 tracking-wide whitespace-nowrap">Assessments</button>
+        <button 
+          @click="$router.push(`/instructor/section/${route.params.id}/student`)"
+          class="pb-3 px-1 text-[13px] font-medium text-gray-400 hover:text-gray-600 tracking-wide transition-colors whitespace-nowrap"
+        >
+          Students
+        </button>
+        <button 
+          @click="$router.push(`/instructor/section/${route.params.id}/settings`)"
+          class="pb-3 px-1 text-[13px] font-medium text-gray-400 hover:text-gray-600 tracking-wide transition-colors whitespace-nowrap"
+        >
+          Settings
+        </button>
+      </div>
+      <div class="flex gap-1 mb-2 bg-gray-50/80 p-1.5 rounded-xl border border-gray-100 flex-shrink-0">
+        <button @click="activeFilter = 'All'" :class="activeFilter === 'All' ? 'bg-[#E91E63] text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50 transition-colors'" class="px-5 py-1.5 text-xs font-bold rounded-lg">All</button>
+        <button @click="activeFilter = 'Active'" :class="activeFilter === 'Active' ? 'bg-[#E91E63] text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50 transition-colors'" class="px-5 py-1.5 text-xs font-semibold rounded-lg">Active</button>
+        <button @click="activeFilter = 'Draft'" :class="activeFilter === 'Draft' ? 'bg-[#E91E63] text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50 transition-colors'" class="px-5 py-1.5 text-xs font-semibold rounded-lg">Draft</button>
+      </div>
     </div>
+
+    <p class="text-xs text-gray-400 font-medium mb-6 px-1">Showing <strong>{{ filteredActivities.length }}</strong> activities</p>
+
+    <!-- Activities Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
+      <!-- Activity Card -->
+      <div 
+        v-for="(activity, index) in filteredActivities" 
+        :key="activity.id"
+        @click="goToActivity(activity.id)"
+        class="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)] hover:shadow-lg transition-all flex flex-col pt-5 px-6 pb-6 cursor-pointer hover:border-pink-200 group"
+      >
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-5">
+          <div class="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            {{ activity.activity_type || 'ACTIVITY' }}
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="flex items-center gap-1.5 text-[11px] font-bold tracking-wide" :class="activity.is_code_active ? 'text-emerald-500' : 'text-amber-500'">
+              <span class="w-1.5 h-1.5 rounded-full" :class="activity.is_code_active ? 'bg-emerald-500' : 'bg-amber-500'"></span> 
+              {{ activity.is_code_active ? 'Active' : 'Draft' }} 
+            </span>
+            <div class="relative">
+              <button @click.stop="toggleActivityDropdown(activity.id)" class="text-gray-400 hover:text-gray-800 transition-colors mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 8a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 5.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 5.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" />
+                </svg>
+              </button>
+              <!-- Dropdown Menu -->
+              <div 
+                v-if="activityDropdowns[activity.id]"
+                class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-100"
+              >
+                <button 
+                  v-if="!activity.is_code_active"
+                  @click.stop="openEditActivity(activity)"
+                  class="block w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 font-medium"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                  Edit Activity
+                </button>
+                <button 
+                  @click.stop="openDeleteModal(activity)"
+                  class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  Delete Activity
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Title & Due Date -->
+        <h3 
+          @click="goToActivity(activity.id)"
+          class="text-[17px] font-bold text-gray-800 mb-2 leading-snug cursor-pointer hover:text-[#E91E63] transition-colors"
+        >
+          {{ activity.title }}
+        </h3>
+        <p class="text-xs text-gray-400/80 mb-4 flex items-center gap-1.5 font-medium">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          Due: {{ formatDate(activity.due_date) }}
+        </p>
+
+        <!-- Description -->
+        <p class="text-gray-500 text-[13px] leading-relaxed line-clamp-2 mb-6 flex-grow">
+          {{ activity.description || 'No description provided for this activity.' }}
+        </p>
+
+        <!-- Progress Bar -->
+        <div class="mb-5">
+          <div class="flex justify-between items-end text-[11px] font-bold mb-2">
+            <span class="text-gray-400 tracking-wide">Submissions: <span class="text-gray-700 ml-1">{{ activity.total_submissions || 0 }} / {{ section?.student_count || 0 }}</span></span>
+            <span class="text-[#E91E63] text-xs">{{ getActivityCompletionRate(activity) }}%</span>
+          </div>
+          <div class="h-1 bg-gray-100 rounded-full w-full overflow-hidden">
+            <div class="h-full bg-[#E91E63] rounded-full transition-all duration-500" :style="{ width: getActivityCompletionRate(activity) + '%' }"></div>
+          </div>
+        </div>
+
+        <!-- Bottom Actions -->
+        <div class="flex justify-between items-center pt-4 border-t border-gray-100/60 mt-auto">
+          <div class="flex items-center gap-2 text-[11px] text-gray-400 font-semibold tracking-wide">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            {{ section?.student_count || 0 }} students
+          </div>
+          <button 
+            @click.stop="goToActivity(activity.id)"
+            class="bg-[#E91E63] text-white px-6 py-1.5 rounded-lg text-xs font-bold shadow-sm shadow-[#E91E63]/20 hover:bg-[#D81B60] transition-colors"
+          >
+            Open
+          </button>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div v-if="activities.length === 0" class="col-span-1 lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-12 text-center shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)]">
+        <div class="text-pink-100 mb-4 flex justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-gray-800 mb-2">No Activities Yet</h3>
+        <p class="text-sm text-gray-500 mb-6">Get started by creating your first activity for this section.</p>
+        <button 
+          @click="openActivityModal"
+          class="bg-[#E91E63] text-white px-6 py-2.5 rounded-lg font-bold text-sm shadow-sm hover:bg-[#D81B60] transition-colors inline-flex items-center gap-2"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" /></svg>
+          Create Activity
+        </button>
+      </div>
+    </div>
+  </div>
 
     <!-- Delete Confirmation Modal -->
     <Transition name="modal-fade">
@@ -253,8 +362,8 @@
     <!-- Add Activity Modal -->
     <div v-if="activityModalOpen" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-[1px]">
       <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
-        <div class="bg-[#FF579A] px-6 py-4 flex justify-between items-center sticky top-0">
-          <h2 class="text-xl font-semibold text-white">Create New Activity</h2>
+        <div class="bg-[#FF579A] px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+          <h2 class="text-xl font-semibold text-white">{{ isEditing ? 'Edit Activity' : 'Create New Activity' }}</h2>
           <button @click="closeActivityModal" class="text-black hover:text-yellow-300 text-2xl">
             &times;
           </button>
@@ -328,6 +437,18 @@
                         <option value="business">Business</option>
                         <option value="first">First Class</option>
                       </template>
+                    </select>
+                  </div>
+
+                  <div v-if="activityForm.required_travel_class">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Ticket Bundle / Fare Type *
+                    </label>
+                    <select v-model="activityForm.required_seat_class" required 
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#093704]"
+                      :disabled="availableBundles.length === 0">
+                      <option value="">{{ availableBundles.length === 0 ? 'Select Travel Class first' : 'Select Fare Type' }}</option>
+                      <option v-for="bundle in availableBundles" :key="bundle" :value="bundle">{{ bundle }}</option>
                     </select>
                   </div>
 
@@ -416,15 +537,6 @@
                       </div>
                     </div>
                     <p v-if="activityForm.segments.length === 0" class="text-sm text-red-500">At least one segment is required for multi-city trips.</p>
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Max Price ($)</label>
-                    <input type="number" v-model="activityForm.required_max_price" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#093704]">
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Time Limit (minutes)</label>
-                    <input type="number" v-model="activityForm.time_limit_minutes" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#093704]" placeholder="Optional time limit">
                   </div>
                 </div>
               </div>
@@ -809,7 +921,7 @@
               <button type="submit" :disabled="loading"
                 class="bg-[#FF579A] hover:bg-[#FF577A]/80 text-white px-6 py-2 rounded-md transition-colors disabled:opacity-50">
                 <span v-if="loading">Processing...</span>
-                <span v-else>Create Activity</span>
+                <span v-else>{{ isEditing ? 'Save Changes' : 'Create Activity' }}</span>
               </button>
             </div>
 
@@ -843,6 +955,15 @@ const isFetching = ref(false)
 
 // Activities list
 const activities = ref([])
+const activeFilter = ref('All')
+
+const filteredActivities = computed(() => {
+  if (activeFilter.value === 'All') return activities.value
+  if (activeFilter.value === 'Active') return activities.value.filter(a => a.is_code_active && (!a.due_date || new Date(a.due_date) >= new Date()))
+  if (activeFilter.value === 'Draft') return activities.value.filter(a => !a.is_code_active)
+  return activities.value
+})
+
 const activityDropdowns = ref({}) // Track which dropdown is open
 
 // Enroll Student Modal Logic
@@ -854,6 +975,8 @@ const loading = ref(false)
 const activityModalOpen = ref(false)
 const showReturnDate = ref(false)
 const passengerForms = ref([])
+const isEditing = ref(false)
+const editingActivityId = ref(null)
 // ✅ Passenger pool: stores ALL passenger data ever created/randomized
 // so that reducing count and then increasing it again restores previously entered data.
 const passengerPool = ref({})
@@ -890,8 +1013,6 @@ const activityForm = reactive({
   required_destination: '',
   required_departure_date: '',
   required_return_date: '',
-  required_max_price: 50000,
-  time_limit_minutes: 60,
   required_passengers: 1,
   required_children: 0,
   required_infants: 0,
@@ -903,14 +1024,58 @@ const activityForm = reactive({
   description: ''
 })
 
+const availableBundles = computed(() => {
+  const tc = (activityForm.required_travel_class || '').toLowerCase();
+  if (tc.includes('economy') && !tc.includes('premium')) {
+    return ['Super Saver', 'Saver', 'Value', 'Flex'];
+  } else if (tc.includes('premium')) {
+    return ['Premium Saver', 'Premium Value', 'Premium Flex'];
+  } else if (tc.includes('business')) {
+    return ['Business Value', 'Business Flex'];
+  }
+  return [];
+})
+
 const addonRequirements = reactive({})
+
+const resetActivityForm = () => {
+  Object.assign(activityForm, {
+    title: '',
+    activity_type: 'Flight Booking',
+    instructions: '',
+    due_date: '',
+    total_points: 100,
+    required_trip_type: 'one_way',
+    required_travel_class: 'economy',
+    required_seat_class: '',
+    required_origin: '',
+    required_destination: '',
+    required_departure_date: '',
+    required_return_date: '',
+    required_passengers: 1,
+    required_children: 0,
+    required_infants: 0,
+    require_passport: true,
+    require_passenger_details: true,
+    require_addons: false,
+    selected_addons: [],
+    segments: [],
+    description: ''
+  })
+  
+  Object.keys(addonRequirements).forEach(key => delete addonRequirements[key])
+  passengerForms.value = []
+  passengerPool.value = {}
+  showReturnDate.value = false
+}
 
 // --- Randomizer Data Pools ---
 const sampleTitles = ['Flight Booking Assessment', 'Advanced Reservation Task', 'Round Trip Coordination', 'Emergency Rebooking', 'Group Booking', 'Multi-city Itinerary', 'Flight Activity', 'Travel Planning', 'Luxury Flight Arrangement', 'International Travel Simulation' , 'Budget Travel Challenge', 'Family Vacation Planning', 'Business Trip Coordination', 'Last-minute Booking', 'Holiday Travel Arrangement', 'Student Travel Task', 'Airport Transfer Booking', 'Frequent Flyer Challenge', 'Airline Comparison Activity', 'Travel Class Upgrade Simulation', 'Flight Change Scenario'];
 const firstNames = ['James', 'Mary', 'Robert', 'Patricia', 'John', 'Jennifer', 'Michael', 'Linda', 'William', 'Elizabeth', 'David', 'Maria', 'Richard', 'Susan', 'Joseph', 'Rose' , 'Pathrick', 'Kyle', 'Samantha', 'Brian', 'Jessica', 'Kevin', 'Sarah', 'Thomas', 'Karen' , 'Charles', 'Nancy', 'Christopher', 'Lisa', 'Daniel', 'Betty' , 'Matthew', 'Margaret', 'Anthony', 'Sandra', 'Mark', 'Ashley', 'Donald', 'Kimberly', 'Steven', 'Emily', 'Paul', 'Donna', 'Andrew', 'Michelle' , 'Joshua', 'Dorothy', 'Kenneth', 'Carol', 'Kevin', 'Amanda'];
 const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson', 'Walker', 'Young', 'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores', 'Green', 'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera', 'Campbell', 'Mitchell', 'Carter', 'Roberts' ];
 const middleNames = ['Lee', 'Garcia', 'Quinto', 'Santos', 'Reyes', 'Cruz', 'Bautista', 'Ocampo', 'Mae', 'Ann', 'Marie', 'Louise' , 'James', 'John', 'Ray', 'Lynn', 'Grace', 'Rose', 'Mae', 'Jean', 'Paul', 'Mark', 'Jane', 'Louise', 'Michael', 'Elizabeth', 'Ann', 'Lee', 'Marie', 'Ray', 'Lynn', 'Grace', 'Rose', 'Jean', 'Paul', 'Mark', 'Jane', 'Louise'];
-const nationalities = ['Philippines', 'United States', 'Canada', 'Japan', 'South Korea', 'Singapore', 'Australia', 'United Kingdom'];
+// Must match exactly the options available in PassengerForm.vue (booking side)
+const nationalities = ['Philippines', 'United States', 'Japan', 'South Korea', 'Singapore', 'Australia'];
 
 let successTimeout = null;
 const showSuccess = (message) => {
@@ -935,6 +1100,32 @@ const showSuccess = (message) => {
     showSuccessModal.value = false;
   }, 3000);
 }
+
+const avgCompletionRate = computed(() => {
+  if (activities.value.length === 0) return 0;
+  const totalStudents = section.value?.student_count || 1; // avoid division by zero
+  let totalSubmissions = 0;
+  let expectedSubmissions = activities.value.length * totalStudents;
+  
+  activities.value.forEach(act => {
+    totalSubmissions += act.total_submissions || 0;
+  });
+  
+  return Math.min(100, Math.floor((totalSubmissions / expectedSubmissions) * 100));
+});
+
+const submissionRate = computed(() => {
+  // Can be the same as avgCompletionRate, or could be distinct depending on logic.
+  // Assuming they are conceptually the same here for high-level visualization.
+  return avgCompletionRate.value;
+});
+
+const getActivityCompletionRate = (activity) => {
+  const totalStudents = section.value?.student_count || 0;
+  if (!totalStudents) return 0; // If no students, 0%
+  const submissions = activity.total_submissions || 0;
+  return Math.min(100, Math.floor((submissions / totalStudents) * 100));
+};
 
 const openEnrollModal = () => {
   studentNumberInput.value = ''
@@ -966,12 +1157,15 @@ const submitEnrollment = async () => {
 }
 
 const openActivityModal = async () => {
+  resetActivityForm()
+  isEditing.value = false
+  editingActivityId.value = null
   activityModalOpen.value = true
   isLoadingData.value = true
   
   airports.value = []
   addons.value = []
-  students.value = [] // ✅ NEW: Reset students
+  students.value = []
   
   await fetchAirportsAndAddons()
   
@@ -979,13 +1173,145 @@ const openActivityModal = async () => {
   updatePassengerForms()
 }
 
+const openEditActivity = async (activity) => {
+  resetActivityForm()
+  isEditing.value = true
+  editingActivityId.value = activity.id
+  activityModalOpen.value = true
+  isLoadingData.value = true
+  activityDropdowns.value[activity.id] = false
+  
+  await fetchAirportsAndAddons()
+  
+  try {
+    const res = await api.get(`api/instructor/activities/${activity.id}/`)
+    const act = res.data
+    
+    activityForm.title = act.title
+    activityForm.activity_type = "Flight Booking"
+    let formattedDue = ""
+    if (act.due_date) {
+        const d = new Date(act.due_date)
+        if (!isNaN(d)) formattedDue = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+    }
+    activityForm.due_date = formattedDue
+    activityForm.total_points = act.total_points || 100
+    activityForm.instructions = act.instructions || ''
+    
+    let tripType = act.required_trip_type || 'one_way'
+    if(tripType.toLowerCase() === 'round-trip') tripType = 'round_trip'
+    else if(tripType.toLowerCase() === 'multi-city') tripType = 'multi_city'
+    else if(tripType.toLowerCase() === 'one-way') tripType = 'one_way'
+    activityForm.required_trip_type = tripType
+
+    activityForm.required_travel_class = (act.required_travel_class || 'economy').toLowerCase().replace(' ', '_')
+    activityForm.required_seat_class = act.required_seat_class || ''
+    activityForm.required_origin = act.required_origin || ''
+    activityForm.required_destination = act.required_destination || ''
+    activityForm.required_departure_date = act.required_departure_date || ''
+    activityForm.required_return_date = act.required_return_date || ''
+    activityForm.required_passengers = act.required_passengers || 0
+    activityForm.required_children = act.required_children || 0
+    activityForm.required_infants = act.required_infants || 0
+    activityForm.description = act.description || ''
+    activityForm.require_passport = act.require_passport || false
+    activityForm.require_passenger_details = act.require_passenger_details || false
+    activityForm.require_addons = act.require_addons || false
+    activityForm.time_limit_minutes = act.time_limit_minutes || null
+    
+    if (act.segments) {
+      activityForm.segments = act.segments.map(s => ({
+        origin: s.origin,
+        destination: s.destination,
+        departure_date: s.departure_date
+      }))
+    }
+    
+    handleTripTypeChange()
+    await fetchFilteredTravelClasses()
+
+    passengerForms.value = []
+    if (act.passengers && act.passengers.length > 0) {
+       activityForm.require_passenger_details = true
+       
+       act.passengers.forEach((p, idx) => {
+          let type = p.type || 'Adult'
+          if(p.passenger_type) type = p.passenger_type.charAt(0).toUpperCase() + p.passenger_type.slice(1)
+          
+          let pGender = p.gender || 'MR'
+          if(pGender.toLowerCase() === 'male' || pGender.toLowerCase().includes('mr')) pGender = 'MR'
+          else if(pGender.toLowerCase() === 'female' || pGender.toLowerCase().includes('mrs')) pGender = 'MRS'
+          else if(pGender.toLowerCase().includes('ms')) pGender = 'MS'
+          else pGender = pGender.toUpperCase().replace('.', '')
+
+          let pForm = {
+            type: type,
+            globalIndex: idx + 1,
+            poolIndex: idx,
+            firstName: p.first_name,
+            middleName: p.middle_name,
+            lastName: p.last_name,
+            gender: pGender,
+            dob: p.date_of_birth,
+            nationality: p.nationality,
+            passportNumber: p.passport_number,
+            passport_expiry_date: p.passport_expiry_date,
+            passenger_category: p.passenger_category || 'none',
+            pwd_id_number: p.pwd_id_number,
+            senior_id_number: p.senior_id_number,
+            selected_addons: [],
+            addon_requirements: {}
+          }
+          passengerForms.value.push(pForm)
+       })
+    } else {
+       activityForm.require_passenger_details = false
+    }
+    
+    if (act.activity_addons && act.activity_addons.length > 0) {
+      activityForm.require_addons = true
+      let addonIds = new Set()
+      act.activity_addons.forEach(aa => {
+         addonIds.add(aa.addon_id)
+         let p = passengerForms.value.find(pf => (pf.firstName === aa.passenger.first_name && pf.lastName === aa.passenger.last_name))
+         if (p) {
+             if (!p.selected_addons.includes(aa.addon_id)) {
+                 p.selected_addons.push(aa.addon_id)
+                 p.addon_requirements[aa.addon_id] = { required: true, quantity: 1, notes: '' }
+             }
+         }
+      })
+      activityForm.selected_addons = Array.from(addonIds)
+      
+      activityForm.selected_addons.forEach(id => {
+          addonRequirements[id] = { required: true, quantity: 1, notes: '' }
+      })
+    } else {
+      activityForm.require_addons = false
+      activityForm.selected_addons = []
+    }
+    
+  } catch(e) {
+    console.error(e)
+    notificationStore.error("Failed to load activity details")
+  }
+  
+  isLoadingData.value = false
+}
+
 const closeActivityModal = () => {
   activityModalOpen.value = false
+  isEditing.value = false
+  editingActivityId.value = null
 }
 
 const handleTripTypeChange = () => {
   showReturnDate.value = activityForm.required_trip_type === 'round_trip'
   
+  if (activityForm.required_trip_type === 'one_way') {
+    activityForm.required_return_date = ''
+  }
+
   if (activityForm.required_trip_type === 'multi_city' && activityForm.segments.length === 0) {
     // Add two initial segments for multi-city
     addSegment()
@@ -1228,8 +1554,9 @@ const updatePassengerForms = () => {
       // ✅ Restore from pool — preserves all randomized/entered data
       return { ...passengerPool.value[poolKey], globalIndex, poolIndex: indexInType };
     }
-    // 🆕 Create a new blank passenger
-    return {
+    // 🆕 Create a new passenger, but auto-fill with basic valid data to prevent
+    // validation errors when user manually increments passenger counts after randomizing
+    const newPassenger = {
       type,
       globalIndex,
       poolIndex: indexInType,
@@ -1238,9 +1565,13 @@ const updatePassengerForms = () => {
       lastName: '',
       gender: '',
       dob: '',
-      nationality: '',
-      passportNumber: '',
-      passport_expiry_date: '',
+      nationality: nationalities.length > 0 ? nationalities[Math.floor(Math.random() * nationalities.length)] : 'Philippines',
+      passportNumber: 'P' + Math.floor(10000000 + Math.random() * 90000000),
+      passport_expiry_date: (() => {
+        const expiry = new Date();
+        expiry.setFullYear(expiry.getFullYear() + Math.floor(Math.random() * 8) + 2);
+        return expiry.toISOString().split('T')[0];
+      })(),
       passenger_category: 'none',
       pwd_id_number: '',
       senior_id_number: '',
@@ -1248,6 +1579,47 @@ const updatePassengerForms = () => {
       selected_addons: [],
       addon_requirements: {}
     }
+
+    if (students.value && students.value.length > 0) {
+      const randomStudent = students.value[Math.floor(Math.random() * students.value.length)];
+      newPassenger.firstName = randomStudent.first_name || '';
+      newPassenger.middleName = randomStudent.middle_name || '';
+      newPassenger.lastName = randomStudent.last_name || '';
+      
+      const assignGender = (firstName, providedGender) => {
+        const g = (providedGender || '').toLowerCase();
+        if (g === 'male' || g === 'm' || g === 'mr') return 'MR';
+        if (g === 'female' || g === 'f' || g === 'mrs') return 'MRS';
+        if (g === 'ms') return 'MS';
+        const name = (firstName || '').toLowerCase();
+        if (name.includes('june dominic')) return 'MR';
+        if (name.includes('rose')) return ['MRS', 'MS'][Math.floor(Math.random() * 2)];
+        const maleNames = ['james','john','robert','michael','william','david','richard','joseph','thomas','charles','christopher','daniel','matthew','anthony','mark','donald','steven','paul','andrew','joshua','kenneth','kevin','brian','george','edward','ronald','timothy','jason','jeffrey','ryan','jacob','gary','nicholas','eric','jonathan','stephen','larry','justin','scott','brandon','benjamin','samuel','gregory','frank','alexander','raymond','patrick','jack','dennis','jerry','tyler','aaron','jose','adam','henry','nathan','douglas','zachary','peter','kyle','walter','ethan','jeremy','christian','keith','roger','terry','gerald','harold','sean','austin','carl','arthur','lawrence','dylan','jesse','albert','bryan','joe','billy','bruce','willie','jordan','ralph','roy','noah','louis'];
+        const femaleNames = ['rose','mary','patricia','jennifer','linda','elizabeth','barbara','susan','jessica','sarah','karen','nancy','lisa','betty','margaret','sandra','ashley','kimberly','emily','donna','michelle','dorothy','carol','amanda','melissa','deborah','stephanie','rebecca','sharon','laura','cynthia','kathleen','amy','shirley','angela','helen','anna','brenda','pamela','nicole','emma','samantha','katherine','christine','debora','rachel','catherine','carolyn','janet','ruth','maria','heather','diane','virginia','julie','joyce','victoria','olivia','kelly','christina','lauren','joan','evelyn','judith','megan','cheryl','andrea','hannah','martha','jacqueline','frances','gloria','ann','teresa','kathryn','sara','janice','jean','alice','madison','doris','abigail','julia','judy','grace','denise','amber','marilyn','beverly','danielle','theresa','sophia','marie','diana','brittany','natalie','isabella','charlotte','alexis','kayla'];
+        const firstWord = name.split(' ')[0];
+        if (maleNames.includes(firstWord)) return 'MR';
+        if (femaleNames.includes(firstWord)) return ['MRS', 'MS'][Math.floor(Math.random() * 2)];
+        if (/([aeiyou]|ah|ee|ie|ne|elle)$/.test(firstWord)) return ['MRS', 'MS'][Math.floor(Math.random() * 2)];
+        return 'MR';
+      };
+      newPassenger.gender = assignGender(newPassenger.firstName, randomStudent.gender);
+    }
+
+    const birthDate = new Date();
+    const pType = (type || '').toLowerCase();
+    if (pType === 'infant') {
+      const age = Math.floor(Math.random() * 2);
+      birthDate.setFullYear(birthDate.getFullYear() - age);
+    } else if (pType === 'child') {
+      const age = Math.floor(Math.random() * 10) + 2;
+      birthDate.setFullYear(birthDate.getFullYear() - age);
+    } else {
+      const age = Math.floor(Math.random() * 42) + 18;
+      birthDate.setFullYear(birthDate.getFullYear() - age);
+    }
+    newPassenger.dob = birthDate.toISOString().split('T')[0];
+
+    return newPassenger;
   }
 
   for (let i = 0; i < newAdultCount; i++) {
@@ -1381,7 +1753,13 @@ const generateDetailedInstructions = () => {
   detailedInstructions += `TRIP DETAILS:\n`;
   const typeMap = { 'one_way': 'ONE-WAY', 'round_trip': 'ROUND-TRIP', 'multi_city': 'MULTI-CITY' };
   detailedInstructions += `You are required to book a ${typeMap[activityForm.required_trip_type] || 'FLIGHT'} trip `;
-  detailedInstructions += `in ${activityForm.required_travel_class.toUpperCase().replace(/_/g, ' ')} class.\n\n`;
+  detailedInstructions += `in ${activityForm.required_travel_class.toUpperCase().replace(/_/g, ' ')} class`;
+  
+  if (activityForm.required_seat_class && activityForm.required_seat_class.toLowerCase() !== 'any') {
+    detailedInstructions += `, specifically the ${activityForm.required_seat_class.toUpperCase()} fare bundle.\n\n`;
+  } else {
+    detailedInstructions += `.\n\n`;
+  }
   
   const originAirport = airports.value.find(a => a.code === activityForm.required_origin);
   const destinationAirport = airports.value.find(a => a.code === activityForm.required_destination);
@@ -1507,18 +1885,8 @@ const generateDetailedInstructions = () => {
     detailedInstructions += `\n`;
   }
   
-  
-  if (activityForm.required_max_price && activityForm.required_max_price > 0) {
-    detailedInstructions += `BUDGET CONSTRAINT:\n`;
-    const price = parseFloat(activityForm.required_max_price);
-    detailedInstructions += `• Maximum Total Price: ₱${isNaN(price) ? activityForm.required_max_price : price.toLocaleString()}\n`;
-    detailedInstructions += `• Ensure the total cost (including all passengers and add-ons) does not exceed this amount.\n\n`;
-  }
-  
-  if (activityForm.time_limit_minutes && activityForm.time_limit_minutes > 0) {
-    detailedInstructions += `TIME LIMIT:\n`;
-    detailedInstructions += `• You have ${activityForm.time_limit_minutes} minutes to complete this booking.\n\n`;
-  }
+
+
   
   detailedInstructions += `IMPORTANT NOTES:\n`;
   detailedInstructions += `• Double-check all passenger details for accuracy before submitting.\n`;
@@ -1571,8 +1939,6 @@ const randomizeData = async () => {
   activityForm.title = sampleTitles[Math.floor(Math.random() * sampleTitles.length)] + ' ' + Math.floor(Math.random() * 1000);
   activityForm.activity_type = 'Flight Booking';
   activityForm.total_points = Math.floor(Math.random() * 50) + 50;
-  activityForm.required_max_price = Math.floor(Math.random() * 50000) + 10000;
-  activityForm.time_limit_minutes = [30, 45, 60, 90, 120][Math.floor(Math.random() * 5)];
   
   const now = new Date();
   const dueDate = new Date(now.getTime() + (Math.floor(Math.random() * 14) + 7) * 24 * 60 * 60 * 1000);
@@ -1600,6 +1966,7 @@ const randomizeData = async () => {
         activityForm.required_origin = route.origin;
         activityForm.required_destination = route.destination;
         activityForm.required_departure_date = route.date;
+        activityForm.required_return_date = '';
       } 
       else if (activityForm.required_trip_type === 'round_trip') {
         // Find a valid pair in the pool
@@ -1711,6 +2078,18 @@ const randomizeData = async () => {
       const available = await fetchFilteredTravelClasses(params)
       if (available && available.length > 0) {
         activityForm.required_travel_class = available[Math.floor(Math.random() * available.length)];
+        
+        const tc = activityForm.required_travel_class.toLowerCase();
+        let bundles = [];
+        if (tc.includes('economy') && !tc.includes('premium')) {
+          bundles = ['Super Saver', 'Saver', 'Value', 'Flex'];
+        } else if (tc.includes('premium')) {
+          bundles = ['Premium Saver', 'Premium Value', 'Premium Flex'];
+        } else if (tc.includes('business')) {
+          bundles = ['Business Value', 'Business Flex'];
+        }
+        activityForm.required_seat_class = bundles.length > 0 ? bundles[Math.floor(Math.random() * bundles.length)] : '';
+        
         success = true;
       }
     } catch (e) { success = false; }
@@ -1727,7 +2106,7 @@ const randomizeData = async () => {
   activityForm.required_children = Math.floor(Math.random() * 3);
   activityForm.required_infants = Math.min(Math.floor(Math.random() * 2), activityForm.required_passengers);
   activityForm.require_passenger_details = true;
-  activityForm.require_passport = Math.random() > 0.3;
+  activityForm.require_passport = true;
   
   updatePassengerForms();
 
@@ -1737,17 +2116,35 @@ const randomizeData = async () => {
     p.firstName = randomStudent.first_name || '';
     p.middleName = randomStudent.middle_name || '';
     p.lastName = randomStudent.last_name || '';
-    const sGender = (randomStudent.gender || '').toLowerCase();
-    if (sGender === 'male' || sGender === 'mr') p.gender = 'MR';
-    else if (sGender === 'female' || sGender === 'mrs') p.gender = 'MRS';
-    else if (sGender === 'ms') p.gender = 'MS';
-    else p.gender = ['MR', 'MRS'][Math.floor(Math.random() * 2)];
+    
+    // Smart gender assignment based on name
+    const assignGender = (firstName, providedGender) => {
+      const g = (providedGender || '').toLowerCase();
+      if (g === 'male' || g === 'm' || g === 'mr') return 'MR';
+      if (g === 'female' || g === 'f' || g === 'mrs') return 'MRS';
+      if (g === 'ms') return 'MS';
+      
+      const name = (firstName || '').toLowerCase();
+      if (name.includes('june dominic')) return 'MR';
+      if (name.includes('rose')) return ['MRS', 'MS'][Math.floor(Math.random() * 2)];
+      
+      const maleNames = ['james','john','robert','michael','william','david','richard','joseph','thomas','charles','christopher','daniel','matthew','anthony','mark','donald','steven','paul','andrew','joshua','kenneth','kevin','brian','george','edward','ronald','timothy','jason','jeffrey','ryan','jacob','gary','nicholas','eric','jonathan','stephen','larry','justin','scott','brandon','benjamin','samuel','gregory','frank','alexander','raymond','patrick','jack','dennis','jerry','tyler','aaron','jose','adam','henry','nathan','douglas','zachary','peter','kyle','walter','ethan','jeremy','christian','keith','roger','terry','gerald','harold','sean','austin','carl','arthur','lawrence','dylan','jesse','albert','bryan','joe','billy','bruce','willie','jordan','ralph','roy','noah','louis'];
+      const femaleNames = ['rose','mary','patricia','jennifer','linda','elizabeth','barbara','susan','jessica','sarah','karen','nancy','lisa','betty','margaret','sandra','ashley','kimberly','emily','donna','michelle','dorothy','carol','amanda','melissa','deborah','stephanie','rebecca','sharon','laura','cynthia','kathleen','amy','shirley','angela','helen','anna','brenda','pamela','nicole','emma','samantha','katherine','christine','debora','rachel','catherine','carolyn','janet','ruth','maria','heather','diane','virginia','julie','joyce','victoria','olivia','kelly','christina','lauren','joan','evelyn','judith','megan','cheryl','andrea','hannah','martha','jacqueline','frances','gloria','ann','teresa','kathryn','sara','janice','jean','alice','madison','doris','abigail','julia','judy','grace','denise','amber','marilyn','beverly','danielle','theresa','sophia','marie','diana','brittany','natalie','isabella','charlotte','alexis','kayla'];
+      
+      const firstWord = name.split(' ')[0];
+      if (maleNames.includes(firstWord)) return 'MR';
+      if (femaleNames.includes(firstWord)) return ['MRS', 'MS'][Math.floor(Math.random() * 2)];
+      
+      // Fallback heuristic for unlisted names
+      if (/([aeiyou]|ah|ee|ie|ne|elle)$/.test(firstWord)) return ['MRS', 'MS'][Math.floor(Math.random() * 2)];
+      return 'MR';
+    };
+
+    p.gender = assignGender(p.firstName, randomStudent.gender);
     p.nationality = nationalities[Math.floor(Math.random() * nationalities.length)];
     p.passenger_category = pCategories[Math.floor(Math.random() * pCategories.length)];
     
-    if (activityForm.require_passport || Math.random() > 0.5) {
-      p.passportNumber = 'P' + Math.floor(10000000 + Math.random() * 90000000);
-    }
+    p.passportNumber = 'P' + Math.floor(10000000 + Math.random() * 90000000);
 
     const birthDate = new Date();
     const pType = (p.type || '').toLowerCase();
@@ -1779,16 +2176,12 @@ const randomizeData = async () => {
       p.senior_id_number = '';
     }
 
-    // ✅ Generate Passport Expiry Date for non-Philippines passengers
-    if (p.nationality && p.nationality !== 'Philippines') {
-      const expiry = new Date();
-      expiry.setFullYear(expiry.getFullYear() + Math.floor(Math.random() * 8) + 2); // 2–10 years from now
-      expiry.setMonth(Math.floor(Math.random() * 12));
-      expiry.setDate(Math.floor(Math.random() * 28) + 1);
-      p.passport_expiry_date = expiry.toISOString().split('T')[0];
-    } else {
-      p.passport_expiry_date = '';
-    }
+    // ✅ Generate Passport Expiry Date for ALL passengers
+    const expiry = new Date();
+    expiry.setFullYear(expiry.getFullYear() + Math.floor(Math.random() * 8) + 2); // 2–10 years from now
+    expiry.setMonth(Math.floor(Math.random() * 12));
+    expiry.setDate(Math.floor(Math.random() * 28) + 1);
+    p.passport_expiry_date = expiry.toISOString().split('T')[0];
   });
 
   // ✅ Assign infants
@@ -1842,9 +2235,6 @@ const randomizeData = async () => {
       });
     });
   }
-
-  activityForm.required_max_price = Math.floor(Math.random() * 50000) + 10000;
-  activityForm.time_limit_minutes = [30, 45, 60, 90, 120][Math.floor(Math.random() * 5)];
 
   // ✅ Sync passengers to pool
   passengerForms.value.forEach(p => {
@@ -1900,13 +2290,19 @@ const submitActivity = async () => {
   }
 
   loading.value = true
+  
+  const hasAddons = passengerForms.value.some(p => p.selected_addons && p.selected_addons.length > 0);
+  if (hasAddons) {
+    activityForm.require_addons = true;
+  }
+
   try {
     const sectionId = route.params.id
 
     const formattedPassengers = passengerForms.value.map((p, index) => {
       let passengerAddons = [];
       
-      if (activityForm.require_addons && p.selected_addons && p.selected_addons.length > 0) {
+      if (p.selected_addons && p.selected_addons.length > 0) {
         passengerAddons = p.selected_addons.map(addonId => ({
           id: addonId,
           is_required: p.addon_requirements[addonId]?.required || false,
@@ -1942,12 +2338,11 @@ const submitActivity = async () => {
       total_points: activityForm.total_points,
       required_trip_type: activityForm.required_trip_type,
       required_travel_class: activityForm.required_travel_class,
+      required_seat_class: activityForm.required_seat_class,
       required_origin: activityForm.required_origin,
       required_destination: activityForm.required_destination,
       required_departure_date: activityForm.required_departure_date || null,
       required_return_date: activityForm.required_return_date || null,
-      required_max_price: activityForm.required_max_price,
-      time_limit_minutes: activityForm.time_limit_minutes,
       required_passengers: activityForm.required_passengers,
       required_children: activityForm.required_children,
       required_infants: activityForm.required_infants,
@@ -1960,25 +2355,18 @@ const submitActivity = async () => {
     
     console.log('Submitting activity data:', formData);
     
-    const response = await activityService.createActivity(sectionId, formData);
+    const response = isEditing.value 
+      ? await activityService.updateActivity(sectionId, editingActivityId.value, formData)
+      : await activityService.createActivity(sectionId, formData);
     
-    showSuccess(response.data.message || 'Activity created successfully!')
+    // Refresh data immediately so the list is updated
+    fetchAllData()
+    
+    showSuccess(response.data.message || (isEditing.value ? 'Activity updated successfully!' : 'Activity created successfully!'))
     
     setTimeout(() => {
       closeActivityModal()
-      
-      Object.keys(activityForm).forEach(key => {
-        if (typeof activityForm[key] === 'string') activityForm[key] = ''
-        else if (typeof activityForm[key] === 'number') activityForm[key] = key === 'total_points' ? 100 : key === 'required_passengers' ? 1 : 0
-        else if (Array.isArray(activityForm[key])) activityForm[key] = []
-        else if (typeof activityForm[key] === 'boolean') activityForm[key] = key === 'require_passenger_details'
-      })
-      
-      Object.keys(addonRequirements).forEach(key => delete addonRequirements[key])
-      passengerForms.value = []
-      passengerPool.value = {} // ✅ Clear pool so next activity starts fresh
-
-      fetchAllData()
+      resetActivityForm()
     }, 2000)
     
   } catch (error) {
@@ -2043,6 +2431,10 @@ watch(() => activityForm.activity_type, () => {
 });
 
 watch(() => activityForm.required_travel_class, () => {
+  activityForm.instructions = generateDetailedInstructions();
+});
+
+watch(() => activityForm.required_seat_class, () => {
   activityForm.instructions = generateDetailedInstructions();
 });
 
@@ -2118,13 +2510,9 @@ watch(() => addonRequirements, () => {
   activityForm.instructions = generateDetailedInstructions();
 }, { deep: true });
 
-watch(() => activityForm.required_max_price, () => {
-  activityForm.instructions = generateDetailedInstructions();
-});
 
-watch(() => activityForm.time_limit_minutes, () => {
-  activityForm.instructions = generateDetailedInstructions();
-});
+
+
 
 watch(() => activityForm.require_passport, () => {
   activityForm.instructions = generateDetailedInstructions();

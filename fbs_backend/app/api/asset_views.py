@@ -18,11 +18,35 @@ class AirlineViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
     pagination_class = None
 
+    @action(detail=False, methods=['get'])
+    def export(self, request):
+        import csv
+        from django.http import HttpResponse
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="airlines_export.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['code', 'name', 'country', 'is_active'])
+        for a in self.get_queryset():
+            writer.writerow([a.code, a.name, a.country, a.is_active])
+        return response
+
 class AirportViewSet(viewsets.ModelViewSet):
     queryset = Airport.objects.all()
     serializer_class = AirportSerializer
     permission_classes = [AllowAny]
     pagination_class = None
+
+    @action(detail=False, methods=['get'])
+    def export(self, request):
+        import csv
+        from django.http import HttpResponse
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="airports_export.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['code', 'name', 'city', 'country', 'airport_type'])
+        for a in self.get_queryset():
+            writer.writerow([a.code, a.name, a.city, a.country, a.airport_type])
+        return response
 
 class AircraftViewSet(viewsets.ModelViewSet):
     queryset = Aircraft.objects.all()

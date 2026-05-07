@@ -42,9 +42,31 @@
             <p class="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Final Assessment Score:</p>
             <div class="bg-[#D1FAE5] rounded-lg p-10 flex items-center justify-center border border-[#A7F3D0]">
               <span class="text-6xl font-black tracking-tighter text-emerald-900">
-                {{ Math.round((calculatedScore / (activity?.total_points || 100)) * 100) }}%
+                {{ calculatePercentage(calculatedScore, activity?.total_points || 100) }}%
               </span>
             </div>
+          </div>
+
+          <!-- NEW: Digital Proctor Recommendation -->
+          <div class="bg-blue-50 border border-blue-100 rounded-xl p-6 space-y-3">
+             <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white shadow-sm">
+                   <i class="ph ph-brain text-lg"></i>
+                </div>
+                <h4 class="text-[10px] font-black text-blue-600 uppercase tracking-widest">Digital Proctor Recommendation</h4>
+             </div>
+             <p v-if="!booking" class="text-xs text-blue-800 font-bold leading-relaxed">
+                The student failed to complete the booking within the allocated time. We recommend a score of 0% and assigning a remedial activity to practice terminal speed.
+             </p>
+             <p v-else-if="calculatePercentage(calculatedScore, activity?.total_points || 100) >= 90" class="text-xs text-blue-800 font-bold leading-relaxed">
+                Outstanding accuracy. The student has mastered the GDS workflow for this itinerary. No intervention needed.
+             </p>
+             <p v-else-if="calculatePercentage(calculatedScore, activity?.total_points || 100) >= 70" class="text-xs text-blue-800 font-bold leading-relaxed">
+                Technically sound, but review the **Passenger Profile** matches. There were slight mismatches in data entry (Names/Passport info) that affected the accuracy rubric.
+             </p>
+             <p v-else class="text-xs text-blue-800 font-bold leading-relaxed">
+                Critical deviations detected in **Routing** or **Cabin Class**. It appears the student struggled with the core instruction set. Professionalism score is weighted down due to non-compliance.
+             </p>
           </div>
         </div>
 
@@ -153,6 +175,18 @@
                      <td class="px-8 py-3" :class="matches.departure_date ? 'text-emerald-700' : 'text-red-700'">{{ actualDepartureDate }}</td>
                      <td class="px-8 py-3 pr-10 text-right">{{ matches.departure_date ? '✓' : '✕' }}</td>
                    </tr>
+                   <tr :class="matches.travel_class ? 'bg-emerald-50/10' : 'bg-red-50/10'">
+                     <td class="px-8 py-3 text-gray-400">Travel Class</td>
+                     <td class="px-8 py-3 text-gray-800">{{ formatTravelClass(activity.required_travel_class) }}</td>
+                     <td class="px-8 py-3" :class="matches.travel_class ? 'text-emerald-700' : 'text-red-700'">{{ actualClass }}</td>
+                     <td class="px-8 py-3 pr-10 text-right">{{ matches.travel_class ? '✓' : '✕' }}</td>
+                   </tr>
+                   <tr v-if="activity.required_seat_class" :class="matches.fare_type ? 'bg-emerald-50/10' : 'bg-red-50/10'">
+                     <td class="px-8 py-3 text-gray-400">Ticket Bundle</td>
+                     <td class="px-8 py-3 text-gray-800">{{ activity.required_seat_class }}</td>
+                     <td class="px-8 py-3" :class="matches.fare_type ? 'text-emerald-700' : 'text-red-700'">{{ actualFareType }}</td>
+                     <td class="px-8 py-3 pr-10 text-right">{{ matches.fare_type ? '✓' : '✕' }}</td>
+                   </tr>
                  </tbody>
                </table>
             </div>
@@ -193,6 +227,18 @@
                      <td class="px-8 py-3" :class="matches.return_date ? 'text-emerald-700' : 'text-red-700'">{{ actualReturnDate }}</td>
                      <td class="px-8 py-3 pr-10 text-right">{{ matches.return_date ? '✓' : '✕' }}</td>
                    </tr>
+                   <tr :class="matches.travel_class ? 'bg-emerald-50/10' : 'bg-red-50/10'">
+                     <td class="px-8 py-3 text-gray-400">Travel Class</td>
+                     <td class="px-8 py-3 text-gray-800">{{ formatTravelClass(activity.required_travel_class) }}</td>
+                     <td class="px-8 py-3" :class="matches.travel_class ? 'text-emerald-700' : 'text-red-700'">{{ actualClass }}</td>
+                     <td class="px-8 py-3 pr-10 text-right">{{ matches.travel_class ? '✓' : '✕' }}</td>
+                   </tr>
+                   <tr v-if="activity.required_seat_class" :class="matches.fare_type ? 'bg-emerald-50/10' : 'bg-red-50/10'">
+                     <td class="px-8 py-3 text-gray-400">Ticket Bundle</td>
+                     <td class="px-8 py-3 text-gray-800">{{ activity.required_seat_class }}</td>
+                     <td class="px-8 py-3" :class="matches.fare_type ? 'text-emerald-700' : 'text-red-700'">{{ actualFareType }}</td>
+                     <td class="px-8 py-3 pr-10 text-right">{{ matches.fare_type ? '✓' : '✕' }}</td>
+                   </tr>
                  </tbody>
                </table>
             </div>
@@ -231,6 +277,23 @@
                      </td>
                      <td class="px-8 py-3 pr-10 text-right">{{ matches.segments?.[idx]?.departure_date ? '✓' : '✕' }}</td>
                    </tr>
+                   <tr v-for="(seg, idx) in activity.segments" :key="'class-' + idx"
+                     :class="matches.segments?.[idx]?.travel_class ? 'bg-emerald-50/10' : 'bg-red-50/10'"
+                   >
+                     <td class="px-8 py-3 text-gray-400">Leg {{ idx + 1 }} Travel Class</td>
+                     <td class="px-8 py-3 text-gray-800">{{ formatTravelClass(activity.required_travel_class) }}</td>
+                     <td class="px-8 py-3" :class="matches.segments?.[idx]?.travel_class ? 'text-emerald-700' : 'text-red-700'">
+                       <span v-if="matches.segments?.[idx]?.actualData?.seat_class_name">{{ formatTravelClass(matches.segments[idx].actualData.seat_class_name) }}</span>
+                       <span v-else>NOT SPECIFIED</span>
+                     </td>
+                     <td class="px-8 py-3 pr-10 text-right">{{ matches.segments?.[idx]?.travel_class ? '✓' : '✕' }}</td>
+                   </tr>
+                   <tr v-if="activity.required_seat_class" :class="matches.fare_type ? 'bg-emerald-50/10' : 'bg-red-50/10'">
+                     <td class="px-8 py-3 text-gray-400">Ticket Bundle</td>
+                     <td class="px-8 py-3 text-gray-800">{{ activity.required_seat_class }}</td>
+                     <td class="px-8 py-3" :class="matches.fare_type ? 'text-emerald-700' : 'text-red-700'">{{ actualFareType }}</td>
+                     <td class="px-8 py-3 pr-10 text-right">{{ matches.fare_type ? '✓' : '✕' }}</td>
+                   </tr>
                  </tbody>
                </table>
             </div>
@@ -254,7 +317,7 @@
                 >
                   <td class="px-8 py-3 text-gray-400">{{ row.label === 'Infant Seating' ? 'Infant Logic' : row.label }}</td>
                   <td class="px-8 py-3 text-gray-800">{{ row.requirement }}</td>
-                  <td class="px-8 py-3" :class="row.isMet ? 'text-emerald-700' : 'text-red-700'">{{ row.work }}</td>
+                  <td class="px-8 py-3" :class="row.isMet ? 'text-emerald-700' : 'text-red-700'">{{ row.work !== 'N/A' ? row.work : 'NOT SPECIFIED' }}</td>
                   <td class="px-8 py-3 pr-10 text-right">{{ row.isMet ? '✓' : '✕' }}</td>
                 </tr>
               </tbody>
@@ -287,6 +350,13 @@
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-gray-100 font-bold">
+                    <!-- Passenger Type Check -->
+                    <tr :class="p.passengerType?.isMet ? 'bg-emerald-50/10' : 'bg-red-50/10'">
+                      <td class="px-8 py-3 text-gray-400">Passenger Type</td>
+                      <td class="px-8 py-3 text-gray-800">{{ p.passengerType?.expected }}</td>
+                      <td class="px-8 py-3" :class="p.passengerType?.isMet ? 'text-emerald-700' : 'text-red-700'">{{ p.passengerType?.actual }}</td>
+                      <td class="px-8 py-3 pr-10 text-right">{{ p.passengerType?.isMet ? '✓' : '✕' }}</td>
+                    </tr>
                     <!-- Name Check -->
                     <tr :class="p.name?.isMet ? 'bg-emerald-50/10' : 'bg-red-50/10'">
                       <td class="px-8 py-3 text-gray-400">Full Name</td>
@@ -421,8 +491,8 @@
                    </tr>
                     <tr :class="matches.travel_class ? 'bg-emerald-50/10' : 'bg-red-50/10'">
                       <td class="px-8 py-3 text-gray-400">Budget Compliance (Class)</td>
-                      <td class="px-8 py-3 text-gray-800 text-[10px]">{{ activity.required_travel_class && activity.required_travel_class.toLowerCase() !== 'na' ? activity.required_travel_class : 'Standard' }} Policy</td>
-                      <td class="px-8 py-3" :class="matches.travel_class ? 'text-emerald-700' : 'text-red-700'">{{ actualClass }}</td>
+                      <td class="px-8 py-3 text-gray-800 text-[10px]">{{ formatTravelClass(activity.required_travel_class) }} Policy</td>
+                      <td class="px-8 py-3" :class="matches.travel_class ? 'text-emerald-700' : 'text-red-700'">{{ actualClass !== 'NOT SPECIFIED' && actualClass !== 'N/A' ? actualClass : 'NOT SPECIFIED' }}</td>
                       <td class="px-8 py-3 pr-10 text-right">
                          <span :class="matches.travel_class ? 'text-emerald-600' : 'text-red-600'">{{ matches.travel_class ? 'COMPLIANT' : 'VIOLATION' }}</span>
                       </td>
@@ -457,6 +527,7 @@ import { bookingService } from '@/services/booking/bookingService';
 import { useNotificationStore } from '@/stores/notification';
 import { useUserStore } from '@/stores/user';
 import { instructorDashboardService } from '@/services/instructor/instructorDashboardService';
+import { calculateLevel, calculatePercentage } from '@/utils/gradingLogic';
 import CTHM from '@/assets/image/cthm-logos.png';
 
 const route = useRoute();
@@ -508,13 +579,16 @@ const fetchData = async () => {
         backendAnalysis.value = submission.analysis;
         assignedSeats.value = submission.assigned_seats || [];
 
-        if (!submission.booking) throw new Error("No student work data.");
-
-        const bookingRes = await bookingService.getBookingDetails(submission.booking.id);
-        if (bookingRes.success) {
-            booking.value = bookingRes.booking;
+        if (submission.booking) {
+            const bookingRes = await bookingService.getBookingDetails(submission.booking.id);
+            if (bookingRes.success) {
+                booking.value = bookingRes.booking;
+            } else {
+                throw new Error("Failed to load booking details.");
+            }
         } else {
-            throw new Error("Failed to load booking details.");
+            console.log("No booking data available for this student (possibly timed out)");
+            booking.value = null; // Correctly handle timeout cases
         }
         
         // Wait for computed properties to update based on new data
@@ -583,10 +657,58 @@ const calculateMultiCityRoutingScore = (totalPoints, m) => {
 };
 
 const rubricBreakdown = computed(() => {
-    if (!activity.value || !booking.value) return [];
+    if (!activity.value) return [];
+    
+    const isPassport = activity.value.title?.toLowerCase().includes('passport');
+
+    if (!booking.value) {
+        // Correctly formatted fallback for students with no data (timeout cases)
+        return [
+            { 
+                label: isPassport ? 'Accuracy of Process' : 'Accuracy of Booking', 
+                level: 1, 
+                ratio: 0, 
+                status: 'Poor', 
+                description: 'No booking was recorded before the time expired.',
+                criteria: [{ label: 'Booking Recorded', isMet: false }, { label: 'Route Match', isMet: false }]
+            },
+            { 
+                label: 'Technical Skill', 
+                level: 1, 
+                ratio: 0, 
+                status: 'Poor', 
+                description: 'System entries could not be evaluated due to inactivity.',
+                criteria: [{ label: 'GDS Commands', isMet: false }, { label: 'Class Selection', isMet: false }]
+            },
+            { 
+                label: isPassport ? 'Organization' : 'Organization of Steps', 
+                level: 1, 
+                ratio: 0, 
+                status: 'Poor', 
+                description: 'No workflow was observed.',
+                criteria: [{ label: 'Passenger Data', isMet: false }, { label: 'Pnr Sequence', isMet: false }]
+            },
+            { 
+                label: 'Completeness', 
+                level: 1, 
+                ratio: 0, 
+                status: 'Poor', 
+                description: 'Activity was not finished before the deadline.',
+                criteria: [{ label: 'All Pax Booked', isMet: false }, { label: 'Add-ons Added', isMet: false }]
+            },
+            { 
+                label: 'Professionalism', 
+                level: 1, 
+                ratio: 0, 
+                status: 'Poor', 
+                description: 'Activity timed out.',
+                criteria: [{ label: 'Budget Compliance', isMet: false }, { label: 'Professionalism', isMet: false }]
+            }
+        ];
+    }
 
     const m = matches.value;
-    const isPassport = activity.value.title?.toLowerCase().includes('passport');
+    // Removed duplicate isPassport declaration
     
     // 1. Accuracy of Booking/Process
     const accuracyCriteria = [];
@@ -616,11 +738,8 @@ const rubricBreakdown = computed(() => {
     }
     const accuracyMetCount = accuracyCriteria.filter(c => c.isMet).length;
     const accuracyRatio = accuracyMetCount / accuracyCriteria.length;
-    let accuracyLevel = 1;
-    if (accuracyRatio === 1) accuracyLevel = 5;
-    else if (accuracyRatio >= 0.8) accuracyLevel = 4;
-    else if (accuracyRatio >= 0.5) accuracyLevel = 3;
-    else if (accuracyRatio >= 0.2) accuracyLevel = 2;
+    const accuracyInfo = calculateLevel(accuracyRatio, 'accuracy');
+    const accuracyLevel = accuracyInfo.level;
 
     const accuracyLabels = {
         5: { status: 'Excellent', desc: isPassport ? 'Correct and complete steps.' : 'Correctly simulates all steps.' },
@@ -633,15 +752,13 @@ const rubricBreakdown = computed(() => {
     // 2. Technical Skill
     const techCriteria = [
         { label: 'Travel Class', isMet: m.travel_class },
+        { label: 'Fare Type', isMet: m.fare_type },
         { label: 'Category', isMet: (m.passenger_details || []).every(p => p.category?.isMet) },
         { label: 'Passport Info', isMet: (m.passenger_details || []).every(p => p.passport?.isMet) }
     ];
     const techRatio = techCriteria.filter(c => c.isMet).length / techCriteria.length;
-    let techLevel = 1;
-    if (techRatio === 1) techLevel = 5;
-    else if (techRatio >= 0.7) techLevel = 4;
-    else if (techRatio >= 0.4) techLevel = 3;
-    else if (techRatio >= 0.1) techLevel = 2;
+    const techInfo = calculateLevel(techRatio, 'tech');
+    const techLevel = techInfo.level;
 
     const techLabels = {
         5: { status: 'Excellent', desc: isPassport ? 'Mastery of system navigation.' : 'Demonstrates mastery of platform.' },
@@ -654,24 +771,23 @@ const rubricBreakdown = computed(() => {
     // 3. Organization of Steps
     const orgCriteria = (m.passenger_details || []).map(p => ({
         label: `Pax ${p.name?.expected?.split(' ')[0]} Details`,
-        isMet: p.name?.isMet && p.gender?.isMet && p.dob?.isMet && p.nationality?.isMet
+        // Now includes seating check — missing seat = criteria not fully met
+        isMet: p.name?.isMet && p.gender?.isMet && p.dob?.isMet && p.nationality?.isMet && p.seating?.isMet
     }));
     
-    // Calculate granular ratio for score
+    // Calculate granular ratio for score — seating is now a scored field
     const orgFields = [];
     (m.passenger_details || []).forEach(p => {
         orgFields.push({ label: 'Name', isMet: p.name?.isMet });
         orgFields.push({ label: 'Gender', isMet: p.gender?.isMet });
         orgFields.push({ label: 'DOB', isMet: p.dob?.isMet });
         orgFields.push({ label: 'Nationality', isMet: p.nationality?.isMet });
+        // Seat selection is required — missing seat deducts from the Organization score
+        orgFields.push({ label: 'Assigned Seat', isMet: p.seating?.isMet });
     });
     const orgRatio = orgFields.length > 0 ? orgFields.filter(f => f.isMet).length / orgFields.length : 1;
-    
-    let orgLevel = 1;
-    if (orgRatio === 1) orgLevel = 5;
-    else if (orgRatio >= 0.8) orgLevel = 4;
-    else if (orgRatio >= 0.5) orgLevel = 3;
-    else if (orgRatio >= 0.2) orgLevel = 2;
+    const orgInfo = calculateLevel(orgRatio, 'org');
+    const orgLevel = orgInfo.level;
 
     const orgLabels = {
         5: { status: 'Excellent', desc: isPassport ? 'Clear, sequential steps.' : 'Clear and logical sequence.' },
@@ -681,16 +797,28 @@ const rubricBreakdown = computed(() => {
         1: { status: 'Poor', desc: isPassport ? 'Very poor.' : 'No sequence.' }
     };
 
-    // 4. Completeness
+    // 4. Completeness — each required addon is an individual scored criterion
     const compCriteria = [
         { label: 'Passenger Counts', isMet: m.pax_types },
-        { label: 'Add-ons Compliance', isMet: (m.addons || []).length === 0 || (m.addons || []).every(a => a.isMet) }
     ];
+
+    // If the activity has required addons, add each one as an individual criterion
+    // This gives partial credit (e.g., 2/3 addons correct = 67% of addon score)
+    if ((m.addons || []).length > 0) {
+        m.addons.forEach(addon => {
+            compCriteria.push({
+                label: `Add-on: ${addon.requirement} (${addon.passengerName})`,
+                isMet: addon.isMet
+            });
+        });
+    } else {
+        // No addons required — mark as always met so it doesn't penalize
+        compCriteria.push({ label: 'Add-ons Compliance', isMet: true });
+    }
+
     const compRatio = compCriteria.filter(c => c.isMet).length / compCriteria.length;
-    let compLevel = 1;
-    if (compRatio === 1) compLevel = 5;
-    else if (compRatio >= 0.5) compLevel = 3;
-    else if (compRatio > 0) compLevel = 2;
+    const compInfo = calculateLevel(compRatio, 'comp');
+    const compLevel = compInfo.level;
 
     const compLabels = {
         5: { status: 'Excellent', desc: 'Covers all booking requirements.' },
@@ -712,11 +840,8 @@ const rubricBreakdown = computed(() => {
         { label: 'Data Integrity', isMet: (m.passenger_details || []).length > 0 && isPassengerPerfect(m.passenger_details[0]) }
     ];
     const profRatio = profCriteria.filter(c => c.isMet).length / profCriteria.length;
-    let profLevel = 1;
-    if (profRatio === 1) profLevel = 5;
-    else if (profRatio >= 0.7) profLevel = 4;
-    else if (profRatio >= 0.4) profLevel = 3;
-    else if (profRatio >= 0.1) profLevel = 2;
+    const profInfo = calculateLevel(profRatio, 'prof');
+    const profLevel = profInfo.level;
 
     const profLabels = {
         5: { status: 'Excellent', desc: 'Realistic and practical.' },
@@ -795,20 +920,51 @@ const formatClass = (cls) => {
     return typeof cls === 'string' ? cls.trim() : String(cls);
 };
 
+const formatTravelClass = (tc) => {
+    if(!tc) return 'Any';
+    switch(tc.toLowerCase()) {
+        case 'economy': return 'Economy';
+        case 'premium_economy': return 'Premium Economy';
+        case 'business': return 'Business Class';
+        case 'first': return 'First Class';
+        default: return tc;
+    }
+};
+
 const actualClass = computed(() => {
     if (!booking.value?.details || booking.value.details.length === 0) return 'N/A';
     
-    // Dynamically collect unique seat classes from ALL segments
+    // Collect unique seat classes (Travel Class) from ALL booking details.
+    // ONLY read from seat_class_name (the SeatClass FK) — NOT fare_family_name (that's the Ticket Bundle).
     const uniqueClasses = new Set();
     booking.value.details.forEach(d => {
+        // Priority 1: seat_class FK on the detail
+        // Priority 2: seat_class FK on the seat itself
         const raw = d.seat_class_name || d.seat?.seat_class_name || null;
         if (raw && typeof raw === 'string') {
-            uniqueClasses.add(raw.trim());
+            uniqueClasses.add(formatTravelClass(raw.trim()));
         }
     });
 
     if (uniqueClasses.size === 0) return 'NOT SPECIFIED';
     const list = Array.from(uniqueClasses);
+    return list.length === 1 ? list[0] : `Mixed (${list.join(', ')})`;
+});
+
+const actualFareType = computed(() => {
+    if (!booking.value?.details || booking.value.details.length === 0) return 'N/A';
+    
+    // Dynamically collect unique fare family names from ALL segments
+    const uniqueFares = new Set();
+    booking.value.details.forEach(d => {
+        const raw = d.fare_family_name || null;
+        if (raw && typeof raw === 'string') {
+            uniqueFares.add(normalizeFareName(raw));
+        }
+    });
+
+    if (uniqueFares.size === 0) return 'NOT SPECIFIED';
+    const list = Array.from(uniqueFares);
     return list.length === 1 ? list[0] : `Mixed (${list.join(', ')})`;
 });
 
@@ -892,17 +1048,11 @@ const normalizeDate = (d) => {
     return match ? match[1] : ds.split('T')[0].trim();
 };
 
+// Strict exact match (case-insensitive, trimmed). One wrong character = FAIL.
 const compareStrings = (a, b) => {
     const s1 = (a || '').toString().trim().toLowerCase();
     const s2 = (b || '').toString().trim().toLowerCase();
-    if (s1 === s2) return true;
-    if (s1 && s2) {
-        // Permit fuzzy match for codes or descriptions (length >= 2 to be safe but usually 3+)
-        if (s1.length >= 2 && s2.length >= 2) {
-            if (s1.includes(s2) || s2.includes(s1)) return true;
-        }
-    }
-    return false;
+    return s1 === s2;
 };
 
 const formatGender = (g) => {
@@ -930,6 +1080,35 @@ const compareGender = (g1, g2) => {
     return v1 === v2;
 };
 
+/**
+ * Normalizes fare bundle names by stripping redundant travel class prefixes.
+ * e.g., "PREMIUM ECONOMY PREMIUM SAVER" -> "PREMIUM SAVER"
+ *       "ECONOMY SAVER" -> "SAVER"
+ */
+const normalizeFareName = (name) => {
+    if (!name) return '';
+    let val = name.toLowerCase().trim();
+    
+    const classTerms = [
+        'economy class', 'premium economy', 'comfort class', 'business class', 'first class',
+        'economy', 'business', 'first', 'comfort'
+    ];
+    
+    // Sort by length descending to match longest terms first
+    classTerms.sort((a,b) => b.length - a.length).forEach(term => {
+        // Case 1: Prefix at the start (e.g., "Economy Saver")
+        if (val.startsWith(term + ' ')) {
+            val = val.substring(term.length).trim();
+        } 
+        // Case 2: Suffix or middle (e.g., "Flex Economy")
+        else if (val.includes(' ' + term)) {
+            val = val.replace(new RegExp('\\b' + term + '\\b', 'g'), '').trim();
+        }
+    });
+    
+    return val.toUpperCase();
+};
+
 const actualPaxTypes = computed(() => {
     const types = { adult: 0, child: 0, infant: 0 };
     const seenPassengers = new Set();
@@ -946,6 +1125,22 @@ const actualPaxTypes = computed(() => {
     });
     return types;
 });
+
+// Helper: extract the Travel Class (seat class) from a booking detail record.
+// ONLY reads from seat_class.name (the FK relationship).
+// fare_family_name is the Ticket Bundle/Fare Type — completely different — do NOT use it here.
+const extractTravelClass = (detail) => {
+    // 1. seat_class FK serialized directly on the booking detail
+    if (detail?.seat_class_name && typeof detail.seat_class_name === 'string') {
+        return detail.seat_class_name.trim();
+    }
+    // 2. seat_class FK from the associated seat object
+    if (detail?.seat?.seat_class_name && typeof detail.seat.seat_class_name === 'string') {
+        return detail.seat.seat_class_name.trim();
+    }
+    // Cannot determine travel class — return null so the UI shows "NOT SPECIFIED"
+    return null;
+};
 
 // Build actual booking segments (one unique entry per flight leg, sorted by departure_time)
 const actualSegments = computed(() => {
@@ -972,8 +1167,8 @@ const actualSegments = computed(() => {
                 departure_date: d.schedule.departure_time
                     ? String(d.schedule.departure_time).split('T')[0].split(' ')[0]
                     : '-',
-                // Track the seat class name from this specific detail (for travel class check)
-                seat_class_name: d.seat_class_name || (d.seat?.seat_class_name) || null
+                // Use extractTravelClass helper so both seat_class_name and fare_family_name are checked
+                seat_class_name: extractTravelClass(d)
             });
         }
     }
@@ -1000,18 +1195,31 @@ const matches = computed(() => {
         destination: compareStrings(activity.value.required_destination, actualDestination.value),
         return_origin: !isRoundTrip || compareStrings(activity.value.required_destination, actualReturnOrigin.value),
         return_destination: !isRoundTrip || compareStrings(activity.value.required_origin, actualReturnDestination.value),
+        fare_type: (() => {
+            const reqFare = activity.value.required_seat_class;
+            if (!reqFare || reqFare.toLowerCase() === 'any' || reqFare.toLowerCase() === 'na') return true;
+            if (!booking.value?.details?.length) return false;
+            
+            // Normalize and compare both sides to strip class redundancies
+            const normReq = normalizeFareName(reqFare);
+            return booking.value.details.every(d => normalizeFareName(d.fare_family_name) === normReq);
+        })(),
         travel_class: (() => {
-            // Canonical normalization: remove spaces, underscores, dots, hyphens, and the word 'class' for comparison
+            // Strict exact match: normalize by removing spaces/underscores/hyphens/dots and the word 'class'
             const norm = (s) => (s || '').toLowerCase().replace(/[\s_\-\.]/g, '').replace('class', '').trim();
             const reqClass = norm(activity.value.required_travel_class || 'economy');
             if (!reqClass || reqClass === 'na' || reqClass === 'n/a') return true;
 
-            // DYNAMIC CHECK: Every single segment must match the requirement
+            // Every single booking detail segment must exactly match the required class
             if (!booking.value?.details?.length) return false;
             
             return booking.value.details.every(d => {
-                const raw = d.seat_class_name || d.seat?.seat_class_name || 'economy';
-                return norm(raw) === reqClass;
+                // Only read the actual seat class name — NOT fare_family_name (that's Ticket Bundle)
+                const rawName = d.seat_class_name || d.seat?.seat_class_name || '';
+                if (!rawName) return false;
+                const actualNorm = norm(rawName);
+                // Strict exact match only — one wrong class = FAIL
+                return actualNorm === reqClass;
             });
         })(),
         departure_date: !activity.value.required_departure_date || normalizeDate(activity.value.required_departure_date) === normalizeDate(actualDepartureDate.value),
@@ -1044,10 +1252,22 @@ const matches = computed(() => {
             // If we found it, check the date too
             const dateMatched = actualMatched ? (!expected.departure_date || normalizeDate(expected.departure_date) === normalizeDate(actualMatched.departure_date)) : false;
 
+            // Strict per-leg travel class check for multi-city
+            const norm = (s) => (s || '').toLowerCase().replace(/[\s_\-\.]/g, '').replace('class', '').trim();
+            const reqClass = norm(activity.value.required_travel_class || 'economy');
+            const legClass = actualMatched?.seat_class_name || null;
+            // Exact match only — one wrong class code = FAIL for this leg
+            const classMatched = actualMatched
+                ? (reqClass === 'na' || reqClass === 'n/a' || reqClass === ''
+                    ? true
+                    : (legClass ? norm(legClass) === reqClass : false))
+                : false;
+
             m.segments.push({
                 origin: originMatched,
                 destination: destMatched,
                 departure_date: dateMatched,
+                travel_class: classMatched,
                 actualData: actualMatched // Map exactly what the student picked for this leg
             });
         });
@@ -1072,7 +1292,8 @@ const matches = computed(() => {
             let actualIdx = bookedPassengers.findIndex((p, idx) => 
                 !usedIndices.has(idx) && 
                 p.first_name?.toLowerCase().trim() === expected.first_name?.toLowerCase().trim() && 
-                p.last_name?.toLowerCase().trim() === expected.last_name?.toLowerCase().trim()
+                p.last_name?.toLowerCase().trim() === expected.last_name?.toLowerCase().trim() &&
+                (p.middle_name?.toLowerCase().trim() || '') === (expected.middle_name?.toLowerCase().trim() || '')
             );
 
             // Fallback to positional to display actual student work
@@ -1088,9 +1309,26 @@ const matches = computed(() => {
 
             const detailMatch = {
                 name: { 
-                    expected: `${expected.first_name} ${expected.last_name}`, 
-                    actual: actual ? `${actual.first_name} ${actual.last_name}` : 'NONE / MISSING', 
-                    isMet: !!actual 
+                    expected: `${expected.first_name} ${expected.middle_name ? expected.middle_name + ' ' : ''}${expected.last_name}`.toUpperCase().trim(), 
+                    actual: actual ? `${actual.first_name} ${actual.middle_name ? actual.middle_name + ' ' : ''}${actual.last_name}`.toUpperCase().trim() : 'NOT SET', 
+                    // Strict: every part of the name must match exactly — one letter off = FAIL
+                    isMet: actual
+                        ? (actual.first_name?.toLowerCase().trim() === expected.first_name?.toLowerCase().trim() &&
+                           actual.last_name?.toLowerCase().trim() === expected.last_name?.toLowerCase().trim() &&
+                           (actual.middle_name?.toLowerCase().trim() || '') === (expected.middle_name?.toLowerCase().trim() || ''))
+                        : false
+                },
+                passengerType: {
+                    expected: (() => {
+                        const pt = (expected.passenger_type || 'adult').toLowerCase();
+                        return pt.charAt(0).toUpperCase() + pt.slice(1);
+                    })(),
+                    actual: (() => {
+                        if (!actual) return 'NOT BOOKED';
+                        const pt = (actual.passenger_type || actual.type || 'adult').toLowerCase();
+                        return pt.charAt(0).toUpperCase() + pt.slice(1);
+                    })(),
+                    isMet: false
                 },
                 gender: { 
                     expected: formatGender(expected.gender), 
@@ -1103,13 +1341,25 @@ const matches = computed(() => {
                     isMet: false 
                 },
                 nationality: { 
-                    expected: expected.nationality, 
-                    actual: actual?.nationality || '-', 
+                    expected: expected.nationality || '-', 
+                    actual: actual ? (actual.nationality || 'NOT SET') : 'NOT BOOKED', 
                     isMet: false 
                 },
                 category: {
-                    expected: expected.passenger_category === 'senior' ? 'Senior' : (expected.passenger_category === 'pwd' ? 'PWD' : 'Regular'),
-                    actual: actual?.ph_discount_type === 'senior' ? 'Senior' : (actual?.ph_discount_type === 'pwd' ? 'PWD' : 'Regular'),
+                    // Map stored codes to human-readable labels (must match booking form labels)
+                    expected: (() => {
+                        const cat = (expected.passenger_category || 'none').toLowerCase();
+                        if (cat === 'senior' || cat === 'senior citizen') return 'Senior Citizen';
+                        if (cat === 'pwd') return 'PWD';
+                        return 'Regular (None)';
+                    })(),
+                    actual: (() => {
+                        if (!actual) return 'NOT BOOKED';
+                        const disc = (actual.ph_discount_type ?? 'none').toLowerCase();
+                        if (disc === 'senior' || disc === 'senior citizen') return 'Senior Citizen';
+                        if (disc === 'pwd') return 'PWD';
+                        return 'Regular (None)';
+                    })(),
                     isMet: false
                 },
                 passport: { 
@@ -1117,15 +1367,52 @@ const matches = computed(() => {
                     actual: actual?.passport_number || 'NONE', 
                     isMet: !activity.value.require_passport // Always met if not required
                 },
-                    seating: {
-                        expected: (expected.type || expected.passenger_type || '').toLowerCase() === 'infant'
-                            ? (expected.associated_adult_index ? `Adult ${expected.associated_adult_index}` : 'Any')
-                            : (assignedSeats.value[activity.value.passengers.filter(p => (p.passenger_type||p.type||'').toLowerCase() !== 'infant').indexOf(expected)] || 'N/A'),
-                        actual: (expected.type || expected.passenger_type || '').toLowerCase() === 'infant'
-                            ? (actual?.associated_adult ? `Adult ${actual.associated_adult}` : 'N/A')
-                            : (booking.value?.details?.find(d => d.passenger?.id === actual?.id)?.seat_number || 'N/A'),
-                        isMet: false
-                    },
+                    seating: (() => {
+                        const isInfant = (expected.type || expected.passenger_type || '').toLowerCase() === 'infant';
+                        const tripType = normalizeTripTypeToCode(activity.value?.required_trip_type || '');
+
+                        if (isInfant) {
+                            return {
+                                expected: expected.associated_adult_index ? `Adult ${expected.associated_adult_index}` : 'ANY',
+                                actual: actual?.associated_adult ? `Adult ${actual.associated_adult}` : 'N/A',
+                                isMet: false // resolved below in if(actual) block
+                            };
+                        }
+
+                        // Robust seat lookup: match by name (works for all trip types)
+                        // For multi-city, a passenger has one detail per leg — collect ALL seat numbers
+                        const passengerDetails = (booking.value?.details || []).filter(d => {
+                            if (!d.passenger) return false;
+                            const fn = (d.passenger.first_name || '').toLowerCase().trim();
+                            const ln = (d.passenger.last_name || '').toLowerCase().trim();
+                            const efn = (actual?.first_name || '').toLowerCase().trim();
+                            const eln = (actual?.last_name || '').toLowerCase().trim();
+                            // Match by id first, then fall back to name
+                            return (d.passenger.id && actual?.id && d.passenger.id === actual.id)
+                                || (fn === efn && ln === eln && fn !== '' && ln !== '');
+                        });
+
+                        // Collect all assigned seat numbers (filter out null/empty)
+                        const assignedSeats = passengerDetails
+                            .map(d => d.seat_number || d.seat?.seat_number || null)
+                            .filter(s => s && String(s).trim() !== '');
+
+                        const seatDisplay = assignedSeats.length > 0
+                            ? assignedSeats.join(' / ')
+                            : 'N/A';
+
+                        // For multi-city: every leg must have a seat
+                        // For one-way/round-trip: at least one seat must be selected
+                        const isMet = tripType === 'multi_city'
+                            ? (passengerDetails.length > 0 && assignedSeats.length === passengerDetails.length)
+                            : assignedSeats.length > 0;
+
+                        return {
+                            expected: 'ANY AVAILABLE SEAT',
+                            actual: seatDisplay,
+                            isMet
+                        };
+                    })(),
                 addons: {
                     expected: '', // Will be populated below
                     actual: 'N/A',
@@ -1164,49 +1451,135 @@ const matches = computed(() => {
             }
 
             if (actual) {
-                // Normalize gender: strip periods, spaces, lowercase for comparison
-                // Activity stores 'Mr.'/'Mrs.'/'Ms.' — booking stores title like 'MR'/'MRS'/'MS'
-                const normGen = (s) => (s || '').toLowerCase().replace(/[.\s]/g, '').trim();
-                const actualGen = normGen(actual.title || actual.gender || '');
-                const expectedGen = normGen(expected.gender || '');
-                // Mr == mr, Mrs/Ms are treated distinctly. Compare normalized forms.
-                detailMatch.gender.isMet = actualGen === expectedGen;
+                // Strict Gender/Title matching: compare the exact title code (mr, mrs, ms).
+                // MRS ≠ MS — one wrong letter = FAIL. No grouping all females together.
+                const normG = (s) => (s || '').toLowerCase().replace(/[.\s]/g, '').trim();
+                const actualTitle = normG(actual.title || actual.gender || '');
+                const expectedGender = normG(expected.gender || '');
+                // Exact code match — both sides must resolve to the same title code
+                detailMatch.gender.isMet = (actualTitle === expectedGender);
+                
                 detailMatch.dob.isMet = normalizeDate(actual.date_of_birth) === normalizeDate(expected.date_of_birth);
-                detailMatch.nationality.isMet = (actual.nationality || '').toLowerCase().trim() === (expected.nationality || '').toLowerCase().trim();
-                detailMatch.category.isMet = (actual.ph_discount_type || 'none').toLowerCase() === (expected.passenger_category || 'none').toLowerCase();
+                // Nationality: strict case-insensitive match
+                detailMatch.nationality.isMet = !!actual.nationality && 
+                    (actual.nationality || '').toLowerCase().trim() === (expected.nationality || '').toLowerCase().trim();
+                
+                // Improved Lenient Category matching
+                const normC = (s) => (s || '').toLowerCase().replace(/[\s_\-\.]/g, '').replace('(none)', '').replace('citizen', '').trim();
+                const actCat = normC(actual.ph_discount_type || 'none');
+                const expCat = normC(expected.passenger_category || 'none');
+                
+                const isS = (c) => c.includes('senior');
+                const isP = (c) => c.includes('pwd');
+                const isR = (c) => !isS(c) && !isP(c);
+                
+                if (isS(expCat)) detailMatch.category.isMet = isS(actCat);
+                else if (isP(expCat)) detailMatch.category.isMet = isP(actCat);
+                else detailMatch.category.isMet = isR(actCat);
+
+                // Passenger Type Validation
+                const _actualType = (actual.passenger_type || actual.type || 'adult').toLowerCase().trim();
+                const _expectedType = (expected.passenger_type || 'adult').toLowerCase().trim();
+                detailMatch.passengerType.isMet = _actualType === _expectedType;
+
                 
                 if (activity.value.require_passport) {
                     detailMatch.passport.isMet = (actual.passport_number || '').trim() === (expected.passport_number || '').trim();
                 }
 
                 if ((expected.type || expected.passenger_type || '').toLowerCase() === 'infant') {
+                    // Infant must be associated with the correct adult seat
                     detailMatch.seating.isMet = String(actual.associated_adult) === String(expected.associated_adult_index);
-                } else {
-                    detailMatch.seating.isMet = detailMatch.seating.actual === detailMatch.seating.expected;
                 }
+                // NOTE: Non-infant seating isMet is already resolved inline in the seating block above
             }
             m.passenger_details.push(detailMatch);
         });
     }
 
-    // 2. Add-ons Verification
+    // 2. Add-ons Verification — works for ALL trip types (one-way, round-trip, multi-city)
+    //
+    // WHY NORMALIZATION IS NEEDED:
+    //   - Activity required addon name (from ActivityAddon → AddOn.name): "Ceb Wheelchair Service"
+    //   - Booking detail addon name (from AddOn.get_or_create defaults): "Assistance: Ceb Wheelchair Service"
+    // The backend adds a category prefix ("Assistance: ", "Meal: ", "Extra Baggage ") when creating booking AddOns.
+    // We must strip these prefixes before comparing so the names match correctly.
+    const normalizeAddonName = (name) => {
+        return (name || '')
+            .toLowerCase()
+            .replace(/^assistance:\s*/i, '')
+            .replace(/^assistance service:\s*/i, '')
+            .replace(/^meal:\s*/i, '')
+            .replace(/^extra baggage\s*/i, '')  // "Extra Baggage 20kg" → "20kg"
+            .replace(/extra baggage/i, 'baggage') // catch other formats
+            .replace(/\s*(kg|kgs)([\s_-])/gi, 'kg ')
+            .trim();
+    };
+
+    // Check if a required addon matches a student's actual addon (multi-strategy)
+    const addonMatches = (reqName, reqId, actualAddon) => {
+        // 1. Direct AddOn ID match (most reliable, works if IDs happen to be the same)
+        if (reqId && actualAddon.id === reqId) return true;
+
+        const normReq    = normalizeAddonName(reqName);
+        const normActual = normalizeAddonName(actualAddon.name);
+
+        if (!normReq || !normActual) return false;
+
+        // 2. Normalized exact match — same name after stripping prefixes
+        if (normReq === normActual) return true;
+
+        // 3. Substring match as fallback (one contains the other)
+        // e.g., "20kg extra baggage" ↔ "20kg" should still match
+        if (normReq.length >= 3 && normActual.length >= 3) {
+            if (normReq.includes(normActual) || normActual.includes(normReq)) return true;
+        }
+
+        return false;
+    };
+
     if (activity.value.activity_addons?.length) {
         activity.value.activity_addons.forEach(req => {
-            const detail = booking.value.details?.find(d => 
-                d.passenger?.first_name?.toLowerCase() === req.passenger.first_name?.toLowerCase() &&
-                d.passenger?.last_name?.toLowerCase() === req.passenger.last_name?.toLowerCase()
-            );
+            const reqFirstName = (req.passenger?.first_name || '').toLowerCase().trim();
+            const reqLastName  = (req.passenger?.last_name  || '').toLowerCase().trim();
 
-            const isMet = detail?.addons?.some(a => 
-                a.id === req.addon_id || 
-                (a.name && req.addon_name && a.name.toLowerCase().trim() === req.addon_name.toLowerCase().trim())
-            ) || false;
+            // Collect ALL booking detail records for this passenger across every leg
+            // This is critical for multi-city where one passenger has N detail records
+            const allPassengerDetails = (booking.value?.details || []).filter(d => {
+                const fn = (d.passenger?.first_name || '').toLowerCase().trim();
+                const ln = (d.passenger?.last_name  || '').toLowerCase().trim();
+                return fn === reqFirstName && ln === reqLastName && fn !== '';
+            });
+
+            // Gather ALL unique addons this passenger selected (across all legs)
+            const allActualAddons = [];
+            const seenAddonIds = new Set();
+            allPassengerDetails.forEach(d => {
+                (d.addons || []).forEach(a => {
+                    const key = String(a.id || a.name || '');
+                    if (key && !seenAddonIds.has(key)) {
+                        seenAddonIds.add(key);
+                        allActualAddons.push(a);
+                    }
+                });
+            });
+
+            const reqAddonName = req.addon_name || req.addon?.name || '';
+            const reqAddonId   = req.addon_id    || null;
+
+            // Check using multi-strategy match (ID → normalized name → substring)
+            const isMet = allActualAddons.some(a => addonMatches(reqAddonName, reqAddonId, a));
+
+            // Display: show all actual addons selected by the student, or "NONE"
+            const actualDisplay = allActualAddons.length > 0
+                ? allActualAddons.map(a => a.name).join(', ')
+                : 'NONE';
 
             m.addons.push({
-                passengerName: `${req.passenger.first_name} ${req.passenger.last_name}`,
-                requirement: req.addon_name || req.addon?.name || 'Required Add-on',
-                actual: detail?.addons?.map(a => a.name).join(', ') || 'NONE',
-                isMet: isMet
+                passengerName: `${req.passenger?.first_name || ''} ${req.passenger?.last_name || ''}`.trim(),
+                requirement: reqAddonName || 'Required Add-on',
+                actual: actualDisplay,
+                isMet
             });
         });
     }
@@ -1236,20 +1609,38 @@ const findMatchingPassenger = (expected) => {
         }
     });
 
-    // 3. Fallback to index-based match from unique list
     const idx = activity.value.passengers.indexOf(expected);
     return uniquePassengers[idx] || null;
 };
 
 const comparisonRows = computed(() => {
-    if (!activity.value || !booking.value) return [];
-    const m = matches.value;
+    if (!activity.value) return [];
+    
+    // Normalize trip type for comparison
     const rawTripType = (activity.value.required_trip_type || '').toLowerCase();
-    const reqTripType = rawTripType.replace(/\s+/g, '_'); // Normalize
+    const reqTripType = rawTripType.replace(/\s+/g, '_');
     const isMultiCity = reqTripType === 'multi_city';
+    
+    const m = booking.value ? matches.value : {
+        trip_type: false,
+        origin: false,
+        destination: false,
+        return_origin: false,
+        return_destination: false,
+        travel_class: false,
+        departure_date: false,
+        return_date: false,
+        pax_types: false
+    };
 
     const rows = [
-        { label: 'Trip Type', priority: 'High', requirement: formatTripType(activity.value.required_trip_type), work: formatTripType(booking.value.trip_type), isMet: m.trip_type },
+        { 
+            label: 'Trip Type', 
+            priority: 'High', 
+            requirement: formatTripType(activity.value.required_trip_type), 
+            work: booking.value ? formatTripType(booking.value.trip_type) : 'NOT BOOKED', 
+            isMet: m.trip_type 
+        },
         { 
             label: 'Passengers', 
             priority: 'High', 
@@ -1258,14 +1649,14 @@ const comparisonRows = computed(() => {
                 activity.value.required_children ? `${activity.value.required_children} Child(ren)` : '',
                 activity.value.required_infants ? `${activity.value.required_infants} Infant(s)` : ''
             ].filter(Boolean).join(', '),
-            work: [
+            work: booking.value ? [
                 `${actualPaxTypes.value.adult || 0} Adult(s)`,
                 actualPaxTypes.value.child ? `${actualPaxTypes.value.child} Child(ren)` : '',
                 actualPaxTypes.value.infant ? `${actualPaxTypes.value.infant} Infant(s)` : ''
-            ].filter(Boolean).join(', '),
-            isMet: m.pax_types 
+            ].filter(Boolean).join(', ') : 'NOT BOOKED',
+            isMet: m.pax_types
         },
-        { label: 'Travel Class', priority: 'High', requirement: activity.value.required_travel_class || 'Any', work: actualClass.value !== 'N/A' ? actualClass.value : '(not booked)', isMet: m.travel_class },
+        { label: 'Travel Class', priority: 'High', requirement: formatTravelClass(activity.value.required_travel_class), work: actualClass.value !== 'N/A' ? actualClass.value : 'NOT BOOKED', isMet: m.travel_class },
         { 
             label: 'Infant Seating', 
             priority: 'High', 

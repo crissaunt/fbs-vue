@@ -18,23 +18,23 @@
 
                 <!-- Main Container -->
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="680"
-                    style="max-width: 680px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.06);">
+                    style="max-width: 680px; background-color: #ffffff; border-radius: 4px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.06);">
 
                     <!-- Header -->
                     <tr>
                         <td
-                            style="background-color: #0f172a; padding: 48px 40px; text-align: center; border-bottom: 4px solid #3b82f6;">
+                            style="background-color: #FF579A; padding: 48px 40px; text-align: center; border-bottom: 4px solid #db2777;">
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                                 <tr>
                                     <td
-                                        style="font-size: 14px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: #64748b; padding-bottom: 16px;">
+                                        style="font-size: 14px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: #fce7f3; padding-bottom: 16px;">
                                         {{ airline_name }}
                                     </td>
                                 </tr>
                                 <tr>
                                     <td style="padding-bottom: 20px;">
                                         <span
-                                            style="display: inline-block; background-color: rgba(16,185,129,0.1); color: #10b981; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">
+                                            style="display: inline-block; background-color: rgba(255,255,255,0.2); color: #ffffff; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">
                                             ✓ Booking Confirmed
                                         </span>
                                     </td>
@@ -46,7 +46,7 @@
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td style="font-size: 16px; color: #94a3b8;">
+                                    <td style="font-size: 16px; color: #fce7f3;">
                                         Thank you for choosing {{ airline_name }}
                                     </td>
                                 </tr>
@@ -60,50 +60,18 @@
 
                             <!-- Document Alert -->
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
-                                style="background-color: #fefce8; border: 1px solid #fde047; border-radius: 8px; margin-bottom: 32px;">
+                                style="background-color: rgba(255,87,154,0.05); border: 1px solid rgba(255,87,154,0.2); border-radius: 4px; margin-bottom: 32px;">
                                 <tr>
-                                    <td style="padding: 24px;">
-                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0"
-                                            width="100%">
-                                            <tr>
-                                                <td width="48" valign="top" style="padding-right: 16px;">
-                                                    <div
-                                                        style="width: 48px; height: 48px; background-color: #f59e0b; border-radius: 8px; text-align: center; line-height: 48px; color: white; font-size: 24px;">
-                                                        ⚠️
-                                                    </div>
-                                                </td>
-                                                <td valign="top">
-                                                    <h3
-                                                        style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #92400e;">
-                                                        This is your E-Ticket — Not a Boarding Pass</h3>
-                                                    <p style="margin: 0 0 12px 0; font-size: 14px; color: #78350f;">
-                                                        Your E-Ticket/Itinerary is attached below. This confirms your
-                                                        booking, but <strong>you cannot use it to board your
-                                                            flight.</strong> You must complete <strong>check-in</strong>
-                                                        at the airport counter (24–48 hrs before departure) to receive
-                                                        your Boarding Pass.</p>
-
-                                                    <!-- Attachment List -->
-                                                    <table role="presentation" cellspacing="0" cellpadding="0"
-                                                        border="0">
-                                                        <tr>
-                                                            <td
-                                                                style="font-size: 13px; color: #92400e; padding: 4px 0;">
-                                                                <span
-                                                                    style="color: #f59e0b; margin-right: 8px;">📄</span>itinerary_{{ booking_reference }}.pdf — <em>E-Ticket / Itinerary</em>
-                                                            </td>
-                                                        </tr>
-                                                    </table>
-                                                </td>
-                                            </tr>
-                                        </table>
+                                    <td style="padding: 16px; text-align: center;">
+                                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #FF579A;">
+                                            This is your E-Ticket</h3>
                                     </td>
                                 </tr>
                             </table>
 
                             <!-- Booking Reference Box -->
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
-                                style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 32px;">
+                                style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; margin-bottom: 32px;">
                                 <tr>
                                     <td style="padding: 24px;">
                                         <table role="presentation" cellspacing="0" cellpadding="0" border="0"
@@ -178,7 +146,7 @@
                             {% for detail in outbound_details %}
                             <!-- Outbound Flight Card -->
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
-                                style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 24px; overflow: hidden;">
+                                style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; margin-bottom: 24px; overflow: hidden;">
                                 <tr>
                                     <td
                                         style="background-color: #f8fafc; padding: 16px 20px; border-bottom: 1px solid #e2e8f0;">
@@ -186,7 +154,7 @@
                                             width="100%">
                                             <tr>
                                                 <td
-                                                    style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #3b82f6;">
+                                                    style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #FF579A;">
                                                     🛫 Outbound Flight
                                                 </td>
                                                 <td align="right"
@@ -269,7 +237,7 @@
                                         {% if detail.schedule.flight.layovers_data %}
                                         <!-- Layovers -->
                                         <table role="presentation" cellspacing="0" cellpadding="0" border="0"
-                                            width="100%" style="margin-bottom: 20px; padding: 12px; background-color: #f8fafc; border-radius: 8px;">
+                                            width="100%" style="margin-bottom: 20px; padding: 12px; background-color: #f8fafc; border-radius: 4px;">
                                             <tr>
                                                 <td style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; padding-bottom: 8px;">
                                                     Flight Stops / Layovers
@@ -335,7 +303,7 @@
                             {% for detail in return_details %}
                             <!-- Return Flight Card -->
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
-                                style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 24px; overflow: hidden;">
+                                style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; margin-bottom: 24px; overflow: hidden;">
                                 <tr>
                                     <td
                                         style="background-color: #f8fafc; padding: 16px 20px; border-bottom: 1px solid #e2e8f0;">
@@ -343,7 +311,7 @@
                                             width="100%">
                                             <tr>
                                                 <td
-                                                    style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #06b6d4;">
+                                                    style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #E84A88;">
                                                     🛬 Return Flight
                                                 </td>
                                                 <td align="right"
@@ -426,7 +394,7 @@
                                         {% if detail.schedule.flight.layovers_data %}
                                         <!-- Layovers -->
                                         <table role="presentation" cellspacing="0" cellpadding="0" border="0"
-                                            width="100%" style="margin-bottom: 20px; padding: 12px; background-color: #f8fafc; border-radius: 8px;">
+                                            width="100%" style="margin-bottom: 20px; padding: 12px; background-color: #f8fafc; border-radius: 4px;">
                                             <tr>
                                                 <td style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; padding-bottom: 8px;">
                                                     Flight Stops / Layovers
@@ -505,7 +473,7 @@
                                 {% for passenger in passengers %}
                                 <tr>
                                     <td
-                                        style="padding: 16px 20px; background-color: #f8fafc; border-radius: 8px; border-left: 3px solid #3b82f6; margin-bottom: 12px;">
+                                        style="padding: 16px 20px; background-color: #f8fafc; border-radius: 4px; border-left: 3px solid #FF579A; margin-bottom: 12px;">
                                         <table role="presentation" cellspacing="0" cellpadding="0" border="0"
                                             width="100%">
                                             <tr>
@@ -515,7 +483,7 @@
                                                 </td>
                                                 <td align="right">
                                                     <span
-                                                        style="font-size: 12px; font-weight: 600; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.05em;">{{ passenger.passenger_type }}</span>
+                                                        style="font-size: 12px; font-weight: 600; color: #FF579A; text-transform: uppercase; letter-spacing: 0.05em;">{{ passenger.passenger_type }}</span>
                                                 </td>
                                             </tr>
                                         </table>
@@ -541,17 +509,17 @@
                                 {% for addon in addons_summary %}
                                 <tr>
                                     <td
-                                        style="padding: 12px 16px; background-color: #f0f9ff; border-radius: 6px; border-left: 2px solid #0ea5e9; margin-bottom: 8px;">
+                                        style="padding: 12px 16px; background-color: #fff0f5; border-radius: 2px; border-left: 2px solid #FF579A; margin-bottom: 8px;">
                                         <table role="presentation" cellspacing="0" cellpadding="0" border="0"
                                             width="100%">
                                             <tr>
                                                 <td>
-                                                    <div style="font-size: 13px; font-weight: 600; color: #0369a1;">{{ addon.item }}</div>
-                                                    <div style="font-size: 11px; color: #0ea5e9; margin-top: 2px;">Passenger: {{ addon.passenger }}</div>
+                                                    <div style="font-size: 13px; font-weight: 600; color: #E84A88;">{{ addon.item }}</div>
+                                                    <div style="font-size: 11px; color: #FF579A; margin-top: 2px;">Passenger: {{ addon.passenger }}</div>
                                                 </td>
                                                 <td align="right">
                                                     <span
-                                                        style="font-size: 12px; font-weight: 700; color: #0369a1;">
+                                                        style="font-size: 12px; font-weight: 700; color: #E84A88;">
                                                         {% if addon.price > 0 %}₱{{ addon.price|floatformat:2 }}{% else %}Included{% endif %}
                                                     </span>
                                                 </td>
@@ -565,7 +533,7 @@
 
                             <!-- Payment Summary -->
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
-                                style="background-color: #f8fafc; border-radius: 12px; margin-bottom: 32px;">
+                                style="background-color: #f8fafc; border-radius: 4px; margin-bottom: 32px;">
                                 <tr>
                                     <td style="padding: 24px;">
                                         <table role="presentation" cellspacing="0" cellpadding="0" border="0"
@@ -662,7 +630,7 @@
 
                             <!-- Important Info -->
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
-                                style="background-color: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 0 8px 8px 0; margin-bottom: 32px;">
+                                style="background-color: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 0 4px 4px 0; margin-bottom: 32px;">
                                 <tr>
                                     <td style="padding: 20px;">
                                         <h4
@@ -713,9 +681,9 @@
                                             style="display: inline-block; margin-right: 12px;">
                                             <tr>
                                                 <td
-                                                    style="background-color: #0f172a; border-radius: 8px; text-align: center;">
+                                                    style="background-color: #FF579A; border-radius: 4px; text-align: center;">
                                                     <a href="{{ website_url }}/manage-booking?ref={{ booking_reference }}"
-                                                        style="display: inline-block; padding: 14px 28px; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px;">Manage
+                                                        style="display: inline-block; padding: 14px 28px; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 4px;">Manage
                                                         Booking</a>
                                                 </td>
                                             </tr>
@@ -724,9 +692,9 @@
                                             style="display: inline-block;">
                                             <tr>
                                                 <td
-                                                    style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; text-align: center;">
+                                                    style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; text-align: center;">
                                                     <a href="{{ website_url }}/check-in?ref={{ booking_reference }}"
-                                                        style="display: inline-block; padding: 14px 28px; font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: none; border-radius: 8px;">Online
+                                                        style="display: inline-block; padding: 14px 28px; font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: none; border-radius: 4px;">Online
                                                         Check-in</a>
                                                 </td>
                                             </tr>

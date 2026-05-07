@@ -23,3 +23,29 @@ class InstructorsViewSet(viewsets.ModelViewSet):
                 Q(email__icontains=search)
             )
         return queryset
+
+    from django.http import HttpResponse
+    from rest_framework.decorators import action
+    import csv
+
+    @action(detail=False, methods=['get'])
+    def export(self, request):
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="instructors_export.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow(['username', 'instructor_id', 'first_name', 'mi', 'last_name', 'email', 'phone'])
+        
+        instructors = self.get_queryset()
+        for i in instructors:
+            writer.writerow([
+                i.user.username if i.user else '',
+                i.instructor_id,
+                i.first_name,
+                i.middle_initial,
+                i.last_name,
+                i.email,
+                i.phone
+            ])
+            
+        return response

@@ -1,11 +1,13 @@
 <template>
-  <div class="flex flex-col h-screen bg-gray-200 font-sans">
+  <div class="flex flex-col h-screen bg-[#F9FAFB] font-sans">
     <!-- Premium Loading Overlay -->
     <LoadingOverlay :loading="isLoading" />
     
     <InstructorHeader 
+      class="no-print"
       :full-name="userStore.userFullName || 'Instructor'"
       :initials="initials"
+      :profile-picture="profilePictureUrl"
       :dropdown-open="dropdownOpen"
       :notifications-open="notificationDropdownOpen"
       :unseen-count="unseenCount"
@@ -13,19 +15,21 @@
       @toggle-sidebar="toggleSidebar"
       @toggle-dropdown="toggleDropdown"
       @toggle-notifications="toggleNotificationDropdown"
-      @go-to-profile="router.push('/profile')"
+      @go-to-profile="router.push('/instructor/profile')"
       @logout="handleLogout"
     />
 
     <div class="flex flex-1 overflow-hidden">
       <InstructorSidebar 
+        class="no-print"
         :sidebar-open="sidebarOpen"
         :sections="sections"
+        :profile-picture="profilePictureUrl"
         @nav="router.push($event)"
         @go-to-section="goToSection"
       />
 
-      <div class="flex-1 overflow-auto bg-gray-200">
+      <div class="flex-1 overflow-auto bg-[#F9FAFB]">
         <!-- Render the matched child component -->
         <router-view 
           v-if="!isLoading"
@@ -112,16 +116,27 @@ const getStorageKey = (base) => {
 }
 
 // Function to load user-specific state
-const loadUserState = () => {
+const loadUserState = async () => {
   const userId = userStore.user?.id
   if (!userId) return
 
+  // Load from LocalStorage for immediate UI feedback
   dismissedSchedules.value = new Set(JSON.parse(localStorage.getItem(getStorageKey('dismissedSchedules')) || '[]'))
   shownAlerts.value = new Set(JSON.parse(localStorage.getItem(getStorageKey('shownAlerts')) || '[]'))
   readNotificationIds.value = new Set(JSON.parse(localStorage.getItem(getStorageKey('readNotificationIds')) || '[]'))
+
+  // Sync with Backend for true persistence across devices/logouts
+  try {
+    const data = await instructorDashboardService.getReadStatuses();
+    if (data.read_notification_ids) {
+      data.read_notification_ids.forEach(id => readNotificationIds.value.add(id));
+      readNotificationIds.value = new Set(readNotificationIds.value);
+    }
+  } catch (error) {
+    console.error("Failed to sync notifications with backend:", error);
+  }
 }
 
-// Watchers for persistence
 watch(dismissedSchedules, (newVal) => {
   if (userStore.user?.id) {
     localStorage.setItem(getStorageKey('dismissedSchedules'), JSON.stringify([...newVal]))
@@ -140,8 +155,8 @@ watch(readNotificationIds, (newVal) => {
   }
 }, { deep: true })
 
-watch(() => userStore.user?.id, (newUserId) => {
-  if (newUserId) loadUserState()
+watch(() => userStore.user?.id, async (newUserId) => {
+  if (newUserId) await loadUserState()
 })
 
 const formatTimeOnly = (t) => {
@@ -207,7 +222,7 @@ const allNotifications = computed(() => {
         
         if (isPast && isWithinWindow) {
           const scheduleId = `${section.id}-${s.day}-${s.start_time}`
-          const dateStr = occurrence.toDateString().replace(/\\s+/g, '_')
+          const dateStr = occurrence.toDateString().replace(/\s+/g, '_')
           const notificationId = `${scheduleId}_${dateStr}_missed`
           
           if (!dismissedSchedules.value.has(scheduleId)) {
@@ -240,17 +255,41 @@ const initials = computed(() => {
   return u[0].toUpperCase()
 })
 
+const profilePictureUrl = computed(() => {
+  const avatar = userStore.user?.avatar
+  if (!avatar) return null
+  if (avatar.startsWith('http')) return avatar
+  const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+  return `${baseURL}${avatar}`
+})
+
 const toggleSidebar = () => { sidebarOpen.value = !sidebarOpen.value }
 const toggleDropdown = () => { 
   dropdownOpen.value = !dropdownOpen.value
   if (dropdownOpen.value) notificationDropdownOpen.value = false
 }
-const toggleNotificationDropdown = () => {
+const toggleNotificationDropdown = async () => {
   notificationDropdownOpen.value = !notificationDropdownOpen.value
   if (notificationDropdownOpen.value) {
     dropdownOpen.value = false
-    allNotifications.value.forEach(n => readNotificationIds.value.add(n.id))
-    readNotificationIds.value = new Set(readNotificationIds.value)
+    
+    // Find unread notification IDs
+    const unreadIds = allNotifications.value
+      .filter(n => !n.read)
+      .map(n => n.id)
+      
+    if (unreadIds.length > 0) {
+      // Mark as read locally
+      unreadIds.forEach(id => readNotificationIds.value.add(id))
+      readNotificationIds.value = new Set(readNotificationIds.value)
+      
+      // Persist to backend
+      try {
+        await instructorDashboardService.markNotificationsRead(unreadIds)
+      } catch (error) {
+        console.error("Failed to mark notifications read in backend:", error)
+      }
+    }
   }
 }
 
@@ -324,7 +363,7 @@ const fetchInstructorData = async () => {
 onMounted(async () => {
   isLoading.value = true
   await userStore.ensureUserLoaded();
-  loadUserState(); 
+  await loadUserState(); 
   await fetchInstructorData();
   isLoading.value = false
   

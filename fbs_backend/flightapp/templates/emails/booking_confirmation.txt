@@ -1,13 +1,9 @@
 BOOKING CONFIRMATION - {{ booking_reference }}
 ================================================
 
-⚠️ THIS IS YOUR E-TICKET — NOT A BOARDING PASS
+THIS IS YOUR E-TICKET
 
-Attached: itinerary_{{ booking_reference }}.pdf (E-Ticket / Itinerary)
-
-This confirms your booking, but you CANNOT use it to board your flight.
-You must complete CHECK-IN at the airport counter (24-48 hrs before 
-departure) to receive your actual Boarding Pass.
+Attached: itinerary_{{ booking_reference }}.pdf
 
 
 BOOKING DETAILS

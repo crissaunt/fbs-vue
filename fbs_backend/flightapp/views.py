@@ -1404,8 +1404,22 @@ def validate_activity_code(request):
                 'origin': activity.required_origin,
                 'destination': activity.required_destination,
                 'travel_class': activity.required_travel_class,
+                'seat_class': activity.required_seat_class if hasattr(activity, 'required_seat_class') else "",
                 'passengers': activity.required_passengers,
             },
+            'activity_addons': [
+                {
+                    "id": aa.id,
+                    "addon_id": aa.addon_id if hasattr(aa, 'addon_id') else aa.addon.id,
+                    "addon_name": aa.addon.name,
+                    "passenger": {
+                        "id": aa.passenger_id if hasattr(aa, 'passenger_id') else aa.passenger.id,
+                        "first_name": aa.passenger.first_name,
+                        "last_name": aa.passenger.last_name
+                    }
+                }
+                for aa in activity.activity_addons.all()
+            ],
             'section': {
                 'code': activity.section.section_code,
                 'name': activity.section.section_name
@@ -2112,13 +2126,33 @@ def _create_booking_detail(booking, passenger, segment, passenger_data=None, seg
                 print(f"  ERROR: Seat with ID {seat_data} not found")
                 seat = None
         
-        # If no seat selected, get default seat class
+        # If no seat selected (or seat had no seat_class), resolve seat class from flight data.
+        # The frontend sends: class_type = "Premium Economy", seat_class = "Premium Economy",
+        # fare_family_name = "Premium Saver" (the bundle — different from the class).
         if not seat_class:
-            fare_type = selected_flight.get('class_type', 'Economy')
+            # Try the different keys the frontend may send for the class name
+            fare_type_name = (
+                selected_flight.get('class_type') or
+                selected_flight.get('seat_class') or
+                'Economy'
+            ).strip()
+            # 1. Try airline-specific lookup first
             seat_class = SeatClass.objects.filter(
                 airline=schedule.flight.airline,
-                name__icontains=fare_type
+                name__iexact=fare_type_name
             ).first()
+            # 2. Try case-insensitive contains match with airline
+            if not seat_class:
+                seat_class = SeatClass.objects.filter(
+                    airline=schedule.flight.airline,
+                    name__icontains=fare_type_name
+                ).first()
+            # 3. Airline-agnostic fallback (any airline with matching name)
+            if not seat_class:
+                seat_class = SeatClass.objects.filter(name__iexact=fare_type_name).first()
+            if not seat_class:
+                seat_class = SeatClass.objects.filter(name__icontains=fare_type_name).first()
+            print(f"  [SEAT CLASS LOOKUP] fare_type='{fare_type_name}' -> seat_class={seat_class}")
         
         # Calculate base price - DO NOT TRUST FRONTEND
         session_id = booking.booking_session_id or "booking_creation"
@@ -2202,7 +2236,7 @@ def _create_booking_detail(booking, passenger, segment, passenger_data=None, seg
             seat=seat, 
             seat_class=seat_class,
             price=base_price,
-            fare_family_name=selected_flight.get('class_type') or selected_flight.get('seat_class'),
+            fare_family_name=selected_flight.get('fare_family_name') or selected_flight.get('class_type') or selected_flight.get('seat_class'),
             passenger_type=passenger.passenger_type,
             status='pending'
         )
@@ -4565,6 +4599,12 @@ def calculate_booking_price(request):
         total_child_base = Decimal('0.00')
         total_infant_base = Decimal('0.00')
         
+        # Categorized addon tracking
+        breakdown['seats'] = Decimal('0.00')
+        breakdown['baggage'] = Decimal('0.00')
+        breakdown['meals'] = Decimal('0.00')
+        breakdown['assistance'] = Decimal('0.00')
+        
         for idx, segment in enumerate(segments):
             selected_flight = segment.get('selectedFlight')
             if not selected_flight:
@@ -4578,9 +4618,6 @@ def calculate_booking_price(request):
                 else: segment_key = str(idx)
 
             # Base Fare calculation per passenger
-            # IMPORTANT: Use the frontend-provided price (which was calculated by the same ML engine
-            # during search). Re-running dynamic_pricing introduces new randomization factors and
-            # produces a different result. The frontend price is the "locked-in" quoted price.
             frontend_price = selected_flight.get('price', 0)
             fare_family = selected_flight.get('fare_family', 'basic')
             schedule_id = selected_flight.get('schedule_id') or selected_flight.get('id')
@@ -4589,11 +4626,8 @@ def calculate_booking_price(request):
                 schedule_obj = Schedule.objects.get(id=schedule_id)
                 
                 if frontend_price and float(frontend_price) > 0:
-                    # Use the price the user saw (ML-predicted + seat class + bundle already applied)
                     outbound_price = Decimal(str(float(frontend_price)))
-                    print(f"  [CALC-PRICE] Using frontend-provided price: {outbound_price} (fare_family={fare_family})")
                 else:
-                    # Fallback: recalculate if no frontend price
                     fare_type = selected_flight.get('seat_class') or selected_flight.get('class_type', 'Economy')
                     multiplier = get_shared_seat_class_multiplier(schedule_obj.flight.airline, fare_type)
                     
@@ -4616,20 +4650,16 @@ def calculate_booking_price(request):
                     raw_seat_price = Decimal(str(ml_base)) * Decimal(str(multiplier))
                     outbound_price = Decimal(str(dynamic_pricing.round_seat_class_price(raw_seat_price)))
                     
-                    # Apply Fare Family markup
                     markup = Decimal('0.00')
                     if fare_family == 'standard':
                         markup = Decimal('1200.00')
                     elif fare_family in ['premium', 'flex']:
                         markup = Decimal('2500.00')
                     outbound_price += markup
-                    
             except Schedule.DoesNotExist:
                 outbound_price = Decimal(str(frontend_price or 0))
 
-
             segment_base_fare = Decimal('0.00')
-            
             for pax in passengers:
                 pax_type = pax.get('type', 'adult').lower()
                 ph_discount = pax.get('ph_discount_type', 'none')
@@ -4645,13 +4675,11 @@ def calculate_booking_price(request):
                     total_child_base += pax_price
                 else:
                     total_adult_base += pax_price
-                
                 segment_base_fare += pax_price
                 
             breakdown['base_fare'] += segment_base_fare
             
             # Taxes
-            fare_family = selected_flight.get('fare_family', 'basic')
             breakdown['taxes'] += estimate_taxes_for_segment(
                 selected_flight, 
                 passengers, 
@@ -4662,9 +4690,9 @@ def calculate_booking_price(request):
                 base_price_override=outbound_price
             )
             
-            # Addons
-            segment_addons = segment.get('addons', {})
-            all_segment_addons = extract_ids(segment_addons, segment_key)
+            # Addons with categorized tracking
+            segment_addons_data = segment.get('addons', {})
+            all_segment_addons = extract_ids(segment_addons_data, segment_key)
             for item in all_segment_addons:
                 try:
                     price = Decimal('0.00')
@@ -4687,39 +4715,41 @@ def calculate_booking_price(request):
                                 else:
                                     price = Decimal(str(item.get('price', 0)))
                             except Seat.DoesNotExist:
-                                print(f"[WARN] Seat ID {item['id']} not found, using provided price if available")
                                 price = Decimal(str(item.get('price', 0)))
                         
                         if is_included:
                             price = Decimal('0.00')
                             
                     breakdown['addons'] += price
+                    
+                    # Store in category
+                    if item['type'] == 'seats': breakdown['seats'] += price
+                    elif item['type'] == 'baggage': breakdown['baggage'] += price
+                    elif item['type'] == 'meals': breakdown['meals'] += price
+                    elif item['type'] == 'wheelchair': breakdown['assistance'] += price
+                    
                 except Exception as e:
                     print(f"[WARN] Price calculation error for addon {item}: {e}")
 
-        # Finalize passenger-type breakdowns (they were already accumulated in total_xxx_base)
+        # Finalize passenger-type breakdowns
         breakdown['adult_base'] = total_adult_base
         breakdown['child_base'] = total_child_base
         breakdown['infant_base'] = total_infant_base
 
-        # 5. Calculate Insurance (per passenger, once)
+        # 5. Calculate Insurance
         insurance_plan_id = data.get('insurance_plan_id')
         if insurance_plan_id:
             try:
                 plan = TravelInsurancePlan.objects.get(id=insurance_plan_id, is_active=True)
-                # Insurance is per passenger (Adult + Child)
                 total_insurable = adult_count + child_count
                 breakdown['insurance'] = plan.retail_price * total_insurable
             except TravelInsurancePlan.DoesNotExist:
                 print(f"[WARN] Insurance plan {insurance_plan_id} not found")
 
-        # 5. Final Total (rounding up to nearest integer)
+        # 5. Final Total (rounding up)
         total_price = breakdown['base_fare'] + breakdown['taxes'] + breakdown['addons'] + breakdown['insurance']
         total_price = total_price.quantize(Decimal('1.'), rounding=ROUND_UP)
         breakdown['grand_total'] = total_price
-        
-        print(f"[OK] Calculated price: {total_price}")
-        print(f"=========== END DEBUG: calculate_booking_price ===========\n\n")
         
         return Response({
             'success': True,

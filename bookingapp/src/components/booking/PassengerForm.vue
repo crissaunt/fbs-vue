@@ -164,7 +164,9 @@
           </p>
           <p v-if="showAgeWarning" class="mt-2 text-[10px] text-amber-600 font-bold bg-amber-50 p-2 rounded border border-amber-100 flex items-center gap-2">
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-            This passenger should be categorized as a {{ correctPassengerType }}
+            <span v-if="type === 'Adult'">This passenger must be an Adult (12+ years old)</span>
+            <span v-else-if="type === 'Child'">This passenger must be a Child (2-11 years old)</span>
+            <span v-else>This passenger must be an Infant (Under 2 years old)</span>
           </p>
         </div>
       </section>
@@ -200,7 +202,7 @@
             <div class="mt-2">
               <span v-if="requiresPassport" class="text-[9px] font-black text-pink-500 uppercase tracking-tighter flex items-center gap-1">
                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                Passport Required
+                ID/Passport Required
               </span>
               <span v-else class="text-[9px] font-black text-emerald-500 uppercase tracking-tighter flex items-center gap-1">
                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -212,25 +214,27 @@
           <!-- Passport Number -->
           <div>
             <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5 ml-1">
-              Passport Number <span class="text-pink-500" v-if="requiresPassport">*</span>
+              {{ documentLabel }}
             </label>
             <input 
               v-model="form.passport" 
               type="text" 
-              placeholder="P0000000A"
+              :placeholder="requiresPassport && bookingStore.isInternational ? 'P0000000A' : 'ID or Passport Number'"
               @input="debounceEmit"
               class="w-full h-11 px-4 bg-white border rounded-lg text-sm font-medium transition-all outline-none focus:ring-2 focus:ring-pink-500/20"
               :class="[showErrors && requiresPassport && !form.passport ? 'border-pink-500 bg-pink-50' : 'border-slate-200 hover:border-slate-300 focus:border-pink-500']"
             >
-            <p v-if="showErrors && requiresPassport && !form.passport" class="mt-1 text-[9px] text-pink-500 font-medium ml-1">
-              Passport number is required
+            <p class="mt-1 text-[8px] text-slate-400 font-medium ml-1">
+               Enter if available or required by your destination
             </p>
           </div>
         </div>
 
         <!-- Passport Expiry -->
         <div v-if="requiresPassport || form.passport" class="space-y-2">
-          <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5 ml-1">Passport Expiry</label>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5 ml-1">
+            {{ requiresPassport ? 'Passport Expiry' : 'Expiry Date' }}
+          </label>
           <div class="grid grid-cols-6 gap-2 sm:gap-3">
             <div class="col-span-2 md:col-span-1 relative">
               <select 
@@ -414,12 +418,14 @@ const form = reactive({
     associatedAdult: null
 });
 
-const requiresPassport = computed(() => {
-  // 1. Mandatory for ANY international flight segment
-  if (bookingStore.isInternational) return true;
-  
-  // 2. Mandatory for non-Philippine nationals even on domestic flights (simulation standard)
-  return form.nationality && form.nationality !== 'Philippines';
+const requiresPassport = computed(() => false);
+
+const documentLabel = computed(() => {
+  // Use "ID / Passport" for domestic Filipino travel, otherwise "Passport"
+  if (form.nationality === 'Philippines' && !bookingStore.isInternational) {
+    return 'ID / Passport Number';
+  }
+  return 'Passport Number';
 });
 
 const passportStatus = computed(() => {
@@ -431,19 +437,23 @@ const passportStatus = computed(() => {
 
   // 1. Check if actually expired
   if (expDate <= today) {
-    return { isValid: false, message: 'Passport has expired', type: 'error' };
+    const label = requiresPassport.value ? 'Passport' : 'ID';
+    return { isValid: false, message: `${label} has expired`, type: 'error' };
   }
 
-  const travelDate = bookingStore.lastTravelDate ? new Date(bookingStore.lastTravelDate) : new Date();
-  const sixMonthsFromTravel = new Date(travelDate);
-  sixMonthsFromTravel.setMonth(sixMonthsFromTravel.getMonth() + 6);
-  
-  if (expDate < sixMonthsFromTravel) {
-    return { 
-      isValid: false, 
-      message: 'Passport must be valid for at least 6 months from travel', 
-      type: 'warning' 
-    };
+  // 2. Check 6-month validity (International Only)
+  if (bookingStore.isInternational) {
+    const travelDate = bookingStore.lastTravelDate ? new Date(bookingStore.lastTravelDate) : new Date();
+    const sixMonthsFromTravel = new Date(travelDate);
+    sixMonthsFromTravel.setMonth(sixMonthsFromTravel.getMonth() + 6);
+    
+    if (expDate < sixMonthsFromTravel) {
+      return { 
+        isValid: false, 
+        message: 'Passport must be valid for at least 6 months from travel', 
+        type: 'warning' 
+      };
+    }
   }
 
   return { isValid: true, message: '', type: 'success' };

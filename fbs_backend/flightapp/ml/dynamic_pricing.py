@@ -284,7 +284,8 @@ class DynamicPricingService:
         
         try:
             from django.core.cache import cache
-            cache_key = f"session_flight_{session_id}_{flight_data.get('flight_number', '')}"
+            flight_num = str(flight_data.get('flight_number', '')).replace(' ', '_')
+            cache_key = f"session_flight_{session_id}_{flight_num}"
             
             try:
                 if is_search:
@@ -314,7 +315,8 @@ class DynamicPricingService:
         
         try:
             from django.core.cache import cache
-            flight_key = f"flight_demand_{flight_data.get('flight_number', '')}"
+            flight_num = str(flight_data.get('flight_number', '')).replace(' ', '_')
+            flight_key = f"flight_demand_{flight_num}"
             search_count = cache.get(flight_key, 0)
             
             if config:
@@ -369,15 +371,27 @@ class DynamicPricingService:
         return factor
     
     def _parse_departure(self, flight_data):
-        """Parse departure_time from flight_data into an aware datetime."""
+        """Parse departure_time from flight_data into a datetime matching project's TZ setting."""
         departure = flight_data.get('departure_time')
         if departure is None:
             return None
+            
         if isinstance(departure, str):
             import dateutil.parser
-            departure = dateutil.parser.isoparse(departure)
-        if timezone.is_naive(departure):
-            departure = timezone.make_aware(departure)
+            try:
+                departure = dateutil.parser.isoparse(departure)
+            except (ValueError, TypeError):
+                return None
+                
+        # Synchronize awareness with Django settings to avoid subtraction errors
+        from django.conf import settings
+        if getattr(settings, 'USE_TZ', False):
+            if timezone.is_naive(departure):
+                departure = timezone.make_aware(departure)
+        else:
+            if timezone.is_aware(departure):
+                departure = timezone.make_naive(departure)
+                
         return departure
 
     def _date_in_range(self, d, sm, sd, em, ed):

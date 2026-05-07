@@ -55,6 +55,12 @@ const routes = [
     meta: { guestOnly: true }
   },
   {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('@/views/ForgotPassword.vue'),
+    meta: { guestOnly: true }
+  },
+  {
     path: '/instructor',
     component: () => import('@/views/Instructor/InstructorLayout.vue'),
     meta: { requiresAuth: true, role: 'instructor' },
@@ -98,14 +104,41 @@ const routes = [
         path: 'logs',
         name: 'InstructorLogs',
         component: () => import('@/views/Instructor/Activity/instructor_logs.vue')
+      },
+      {
+        path: 'sections',
+        name: 'InstructorSectionList',
+        component: () => import('@/views/Instructor/instructor_section_list.vue')
+      },
+      {
+        path: 'activities',
+        name: 'InstructorActivitiesList',
+        component: () => import('@/views/Instructor/instructor_activities_list.vue')
+      },
+      {
+        path: 'students',
+        name: 'InstructorStudentList',
+        component: () => import('@/views/Instructor/Instructor_student_list_sidebar.vue')
+      },
+      {
+        path: 'reports',
+        name: 'InstructorReports',
+        component: () => import('@/views/Instructor/instructor_reports.vue')
+      },
+      {
+        path: 'profile',
+        name: 'InstructorProfile',
+        component: ProfileView
       }
     ]
   },
   {
     path: '/profile',
-    name: 'Profile',
-    component: ProfileView,
-    meta: { requiresAuth: true, layout: 'StudentLayout' }
+    redirect: (to) => {
+      const userRole = AuthStorage.getRole()
+      if (userRole === 'instructor') return '/instructor/profile'
+      return '/student/dashboard'
+    }
   },
   {
     path: '/student',
@@ -258,6 +291,12 @@ const routes = [
         component: CheckinCounterView,
         meta: { title: 'DCS | Check-in Counter' },
         props: true
+      },
+      {
+        path: 'airline-checkin',
+        name: 'DcsAirlineCheckin',
+        component: () => import('@/views/booking/CheckInView.vue'),
+        meta: { title: 'DCS | Airline Check-in' }
       }
     ]
   }

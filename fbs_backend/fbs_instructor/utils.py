@@ -6,7 +6,7 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.core.mail import EmailMultiAlternatives
 from datetime import datetime, timedelta
-from .models import Section, ScheduleNotificationLog
+from .models import Section, ScheduleNotificationLog, SectionEnrollment
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,10 @@ def check_and_send_upcoming_notifications():
     """
     now = timezone.now()
     # Ensure we are working with the correct local time
-    local_now = timezone.localtime(now)
+    if settings.USE_TZ:
+        local_now = timezone.localtime(timezone.now())
+    else:
+        local_now = timezone.now()
     
     current_day = local_now.strftime('%A')
     # We look for schedules starting in exactly 5 minutes (plus/minus 30 seconds to be safe if run on the minute)
@@ -51,8 +54,10 @@ def check_and_send_upcoming_notifications():
                         date_sent=local_now.date()
                     ).exists():
                         
-                        success = send_upcoming_schedule_email(section.instructor, section, start_time)
-                        if success:
+                        success_inst = send_upcoming_schedule_email(section.instructor, section, start_time)
+                        success_stud = send_upcoming_student_notifications(section, start_time)
+                        
+                        if success_inst or success_stud:
                             ScheduleNotificationLog.objects.create(
                                 section=section,
                                 schedule_id=schedule_id,
@@ -106,4 +111,58 @@ def send_upcoming_schedule_email(instructor, section, start_time):
         return True
     except Exception as e:
         logger.error(f"Failed to send advance email to {instructor.email}: {str(e)}")
+        return False
+
+
+def send_upcoming_student_notifications(section, start_time):
+    """Notifies all students in a section about an upcoming session in 5 minutes"""
+    try:
+        enrollments = SectionEnrollment.objects.filter(section=section).select_related('student')
+        if not enrollments.exists():
+            return False
+
+        # Format time for display (AM/PM)
+        time_obj = datetime.strptime(start_time, '%H:%M')
+        display_time = time_obj.strftime('%I:%M %p')
+        local_now = timezone.localtime(timezone.now())
+        
+        instructor = section.instructor
+        instructor_name = f"{instructor.first_name} {instructor.last_name}"
+        
+        success_count = 0
+        for enrollment in enrollments:
+            student = enrollment.student
+            if not student.email:
+                continue
+                
+            try:
+                context = {
+                    'student_name': f"{student.first_name} {student.last_name}",
+                    'instructor_name': instructor_name,
+                    'section_name': section.section_name,
+                    'section_code': section.section_code,
+                    'start_time': display_time,
+                    'dashboard_url': getattr(settings, 'WEBSITE_URL', 'http://localhost:5173/') + 'student/dashboard',
+                    'current_year': local_now.year,
+                    'formal_date': local_now.strftime('%B %d, %Y')
+                }
+
+                html_content = render_to_string('emails/student_upcoming_schedule.html', context)
+                text_content = strip_tags(html_content)
+                
+                subject = f"URGENT: Your Flight Session Starts in 5 Minutes - {section.section_name}"
+                from_email = settings.DEFAULT_FROM_EMAIL
+                to_email = [student.email]
+                
+                email = EmailMultiAlternatives(subject, text_content, from_email, to_email)
+                email.attach_alternative(html_content, "text/html")
+                email.send()
+                success_count += 1
+            except Exception as e:
+                logger.error(f"Failed to send student reminder to {student.email}: {str(e)}")
+
+        print(f"Successfully sent advance notifications to {success_count} students for {section.section_name}")
+        return success_count > 0
+    except Exception as e:
+        logger.error(f"Error in send_upcoming_student_notifications: {str(e)}")
         return False

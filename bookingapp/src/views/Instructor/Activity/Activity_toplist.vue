@@ -46,9 +46,9 @@
                 </div>
 
                 <!-- Top 5 Leaderboard Highlights (Left Aligned) -->
-                <div v-if="topStudents.length > 0" class="flex flex-wrap items-center justify-start gap-4 mb-8 mt-6">
+                <div v-if="topStudents.length > 0" class="gap-4 mb-8 mt-6" style="display:grid; grid-template-columns: repeat(5, 1fr);">
                   <div v-for="(student, idx) in topStudents.slice(0, 5)" :key="student.student_id" 
-                    class="flex items-center gap-3 px-4 py-2.5 rounded-2xl border bg-white transition-all shadow-sm hover:shadow-md min-w-[180px]"
+                    class="flex items-center gap-3 px-4 py-2.5 rounded-2xl border bg-white transition-all shadow-sm hover:shadow-md w-full"
                     :class="[
                       idx === 0 ? 'border-amber-200 bg-amber-50/20 shadow-amber-100/20' : 
                       idx === 1 ? 'border-slate-200 bg-gray-50/10' : 
@@ -136,17 +136,51 @@
                   </div>
                 </div>
 
-                <!-- Main Leaderboard Table -->
-                <div class="overflow-hidden border border-gray-100 rounded-xl bg-white shadow-sm">
-                  <table class="w-full text-left border-collapse">
-                    <thead class="bg-gray-50 border-b border-gray-100">
+                <!-- Main Leaderboard Table: Classic Print Style -->
+                <div class="overflow-hidden border border-gray-100 rounded-xl bg-white shadow-sm print:border-none print:shadow-none print:mt-10">
+                  <!-- Print Header: Classic Form Layout -->
+                  <div class="hidden print:block mb-10 w-full">
+                    <div class="text-center mb-10">
+                      <h1 class="text-3xl font-black uppercase tracking-widest border-b-2 border-black pb-4">Grade Report</h1>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-x-12 gap-y-6">
+                      <div class="flex items-end gap-2 text-left">
+                        <span class="text-[11px] font-black uppercase whitespace-nowrap">Course Number:</span>
+                        <div class="border-b border-black flex-1 text-xs font-bold uppercase pb-0.5 px-2">{{ activity?.section_code }}</div>
+                      </div>
+                      <div class="flex items-end gap-2 text-left">
+                        <span class="text-[11px] font-black uppercase whitespace-nowrap">Section:</span>
+                        <div class="border-b border-black flex-1 text-xs font-bold uppercase pb-0.5 px-2">{{ activity?.section_name }}</div>
+                      </div>
+                      <div class="flex items-end gap-2 text-left">
+                        <span class="text-[11px] font-black uppercase whitespace-nowrap">Activity Title:</span>
+                        <div class="border-b border-black flex-1 text-xs font-bold uppercase pb-0.5 px-2">{{ activity?.title }}</div>
+                      </div>
+                      <div class="flex items-end gap-2 text-left">
+                        <span class="text-[11px] font-black uppercase whitespace-nowrap">Schedule:</span>
+                        <div class="border-b border-black flex-1 text-xs font-bold uppercase pb-0.5 px-2">{{ activity ? formatSchedule(activity.schedule) : '' }}</div>
+                      </div>
+                      <div class="flex items-end gap-2 text-left">
+                        <span class="text-[11px] font-black uppercase whitespace-nowrap">A.Y. Semester:</span>
+                        <div class="border-b border-black flex-1 text-xs font-bold uppercase pb-0.5 px-2">{{ activity?.academic_year }} - {{ activity?.semester }}</div>
+                      </div>
+                      <div class="flex items-end gap-2 text-left">
+                        <span class="text-[11px] font-black uppercase whitespace-nowrap">Date Printed:</span>
+                        <div class="border-b border-black flex-1 text-xs font-bold uppercase pb-0.5 px-2">{{ new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) }}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <table class="w-full text-left border-collapse print:border-2 print:border-black">
+                    <thead class="bg-gray-50 border-b border-gray-100 print:bg-gray-100">
                       <tr>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest w-16 text-center">Rank</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest">Student Information</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Raw Score</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Percentage</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-right">Result</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest w-16 text-center print:text-black print:border print:border-black">Rank</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest print:text-black print:border print:border-black">Student Information</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center print:text-black print:border print:border-black">Raw Score</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center print:text-black print:border print:border-black">Percentage</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center print:hidden">Status</th>
+                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-right print:text-black print:border print:border-black">Result</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-50 text-print-black">
@@ -154,7 +188,7 @@
                         class="hover:bg-gray-50/50 transition-colors"
                         :class="[sub.grade === null ? 'bg-gray-50/20' : '', index === 0 && sub.grade !== null && filterStatus === 'all' ? 'bg-amber-50/10' : '']"
                       >
-                        <td class="px-3 py-3">
+                        <td class="px-3 py-3 print:border print:border-gray-200">
                           <div class="flex items-center justify-center">
                             <span v-if="sub.grade !== null" :class="[
                               'px-2 py-0.5 rounded-full text-[9px] font-black shadow-sm border border-black/5 whitespace-nowrap',
@@ -165,34 +199,33 @@
                             <span v-else class="text-gray-300 font-bold text-[9px]">-</span>
                           </div>
                         </td>
-                        <td class="px-3 py-3">
+                        <td class="px-3 py-3 print:border print:border-gray-200">
                           <div class="flex items-center gap-2">
-                            <div class="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center font-bold text-gray-400 text-[9px] uppercase">
+                            <div class="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center font-bold text-gray-400 text-[9px] uppercase print:hidden">
                               {{ sub.first_name[0] }}{{ sub.last_name[0] }}
                             </div>
                             <div>
-                              <div class="font-bold text-xs text-gray-900 flex items-center gap-1.5 leading-tight">
+                              <div class="font-bold text-xs text-gray-900 flex items-center gap-1.5 leading-tight print:text-gray-800">
                                 {{ sub.first_name }} {{ sub.last_name }}
-                                <span v-if="index === 0 && sub.grade !== null" class="px-1 py-0.5 bg-amber-100 text-amber-700 text-[7px] font-black rounded uppercase tracking-tighter border border-amber-200">Top</span>
                               </div>
-                              <div class="text-[9px] text-gray-400 font-medium tracking-tight uppercase">{{ sub.student_number }}</div>
+                              <div class="text-[9px] text-gray-400 font-medium tracking-tight uppercase print:text-gray-500 print:font-bold print:mt-0.5">{{ sub.student_number }}</div>
                             </div>
                           </div>
                         </td>
-                        <td class="px-3 py-3 text-center font-mono font-bold text-xs">
+                        <td class="px-3 py-3 text-center font-mono font-bold text-xs print:border print:border-gray-200 print:text-gray-700">
                           <span v-if="sub.grade !== null" class="text-slate-700">
-                            {{ sub.grade }} <span class="text-gray-300 font-normal">/ {{ activity?.total_points }}</span>
+                            {{ sub.grade }} <span class="text-gray-300 font-normal print:hidden">/ {{ activity?.total_points }}</span>
                           </span>
                           <span v-else class="text-gray-300 italic text-[9px]">No Grade</span>
                         </td>
-                        <td class="px-3 py-3 text-center">
-                          <div v-if="sub.grade !== null" class="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-black" 
-                            :class="getPercentage(sub) >= 50 ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'">
+                        <td class="px-3 py-3 text-center print:border print:border-gray-200">
+                          <div v-if="sub.grade !== null" class="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-black print:text-gray-800 print:border-none" 
+                            :class="getPercentage(sub) >= 60 ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'">
                             {{ getPercentage(sub) }}%
                           </div>
                           <span v-else class="text-gray-300 italic text-[9px]">No Data</span>
                         </td>
-                        <td class="px-3 py-3 text-center">
+                        <td class="px-3 py-3 text-center print:hidden">
                           <span v-if="sub.grade !== null" :class="['px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest', sub.is_released ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600']">
                             {{ sub.is_released ? 'Released' : 'Pending' }}
                           </span>
@@ -200,14 +233,11 @@
                             Not Taken
                           </span>
                         </td>
-                        <td class="px-3 py-3 text-right">
+                        <td class="px-3 py-3 text-right print:text-center print:border print:border-gray-200">
                           <div v-if="sub.grade !== null">
-                            <span :class="['text-[9px] font-black uppercase tracking-widest', getPercentage(sub) >= 50 ? 'text-green-600' : 'text-red-600']">
-                              {{ getPercentage(sub) >= 50 ? 'Passed' : 'Failed' }}
+                            <span :class="['text-[9px] font-black uppercase tracking-widest print:text-[10px] print:font-bold', getPercentage(sub) >= 60 ? 'text-green-600' : 'text-red-600']">
+                              {{ getPercentage(sub) >= 60 ? 'Passed' : 'Failed' }}
                             </span>
-                            <div class="w-full bg-gray-100 h-1 rounded-full mt-1 overflow-hidden min-w-[50px] ml-auto">
-                              <div :class="['h-full rounded-full', getPercentage(sub) >= 50 ? 'bg-green-500' : 'bg-red-500']" :style="{ width: getPercentage(sub) + '%' }"></div>
-                            </div>
                           </div>
                           <span v-else class="text-gray-300 font-bold text-[8px] uppercase tracking-tighter">Incomplete</span>
                         </td>
@@ -301,9 +331,9 @@ const filteredSubmissions = computed(() => {
   // Apply Status Filter
   if (filterStatus.value !== 'all') {
     if (filterStatus.value === 'passed') {
-      list = list.filter(s => s.grade !== null && getPercentage(s) >= 50)
+      list = list.filter(s => s.grade !== null && getPercentage(s) >= 60)
     } else if (filterStatus.value === 'failed') {
-      list = list.filter(s => s.grade !== null && getPercentage(s) < 50)
+      list = list.filter(s => s.grade !== null && getPercentage(s) < 60)
     } else if (filterStatus.value === 'not taken') {
       list = list.filter(s => s.grade === null)
     }
@@ -314,7 +344,7 @@ const filteredSubmissions = computed(() => {
 
 const totalStudents = computed(() => submissions.value.length)
 const participationCount = computed(() => submissions.value.filter(s => s.booking !== null).length)
-const passedCount = computed(() => submissions.value.filter(s => s.grade !== null && getPercentage(s) >= 50).length)
+const passedCount = computed(() => submissions.value.filter(s => s.grade !== null && getPercentage(s) >= 60).length)
 
 const classAverage = computed(() => {
   const graded = submissions.value.filter(s => s.grade !== null)
@@ -362,6 +392,30 @@ const getRankWithSuffix = (rank) => {
     return rank + "rd";
   }
   return rank + "th";
+}
+
+const formatTimeOnly = (t) => {
+  if (!t) return ''
+  const [h, m] = t.split(':')
+  const hour = parseInt(h)
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  const h12 = hour % 12 || 12
+  return `${h12}:${m} ${ampm}`
+}
+
+const formatSchedule = (scheduleData) => {
+  if (!scheduleData) return 'No schedule set'
+  try {
+    const schedules = typeof scheduleData === 'string' ? JSON.parse(scheduleData) : scheduleData
+    if (Array.isArray(schedules)) {
+      if (schedules.length === 0) return 'No schedule set'
+      return schedules.map(s => {
+        const dayShort = s.day.substring(0, 3)
+        return `${dayShort} ${formatTimeOnly(s.start_time)}-${formatTimeOnly(s.end_time)}`
+      }).join(', ')
+    }
+  } catch (e) {}
+  return scheduleData
 }
 
 onMounted(fetchData)

@@ -6,5 +6,11 @@ export const activityService = {
             `api/instructor/sections/${sectionId}/activities/create/`,
             formData
         );
+    },
+    updateActivity: (sectionId, activityId, formData) => {
+        return api.put(
+            `api/instructor/sections/${sectionId}/activities/${activityId}/update/`,
+            formData
+        );
     }
 };

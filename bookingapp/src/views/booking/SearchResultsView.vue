@@ -59,7 +59,19 @@
                     @focus="fromSearchInput = ''; fromResults = []"
                     placeholder="e.g. MNL"
                     class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-transparent">
-                  <div v-if="fromResults.length" class="hidden"></div>
+                  <div v-if="fromResults.length" class="absolute z-[70] w-full bg-white border border-gray-200 rounded-md shadow-xl mt-1 max-h-60 overflow-y-auto">
+                    <div v-for="airport in fromResults" :key="airport.code" 
+                      @click="selectEditAirport(airport, 'from')"
+                      class="px-4 py-3 hover:bg-pink-50 cursor-pointer border-b border-gray-50 last:border-b-0">
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <span class="font-bold text-gray-900">{{ airport.code }}</span>
+                          <span class="ml-2 text-gray-600">{{ airport.city }}</span>
+                        </div>
+                        <span class="text-xs text-gray-400">{{ airport.name }}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div class="relative">
                   <label class="block text-sm font-medium text-gray-700 mb-2">To</label>
@@ -69,7 +81,19 @@
                     @focus="toSearchInput = ''; toResults = []"
                     placeholder="e.g. CEB"
                     class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-transparent">
-                  <div v-if="toResults.length" class="hidden"></div>
+                  <div v-if="toResults.length" class="absolute z-[70] w-full bg-white border border-gray-200 rounded-md shadow-xl mt-1 max-h-60 overflow-y-auto">
+                    <div v-for="airport in toResults" :key="airport.code" 
+                      @click="selectEditAirport(airport, 'to')"
+                      class="px-4 py-3 hover:bg-pink-50 cursor-pointer border-b border-gray-50 last:border-b-0">
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <span class="font-bold text-gray-900">{{ airport.code }}</span>
+                          <span class="ml-2 text-gray-600">{{ airport.city }}</span>
+                        </div>
+                        <span class="text-xs text-gray-400">{{ airport.name }}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
               
@@ -106,7 +130,18 @@
                       @focus="leg.fromSearch = ''; leg.fromResults = []"
                       placeholder="Origin"
                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-pink-500">
-                    <div v-if="leg.fromResults.length" class="hidden"></div>
+                    <div v-if="leg.fromResults.length" class="absolute z-[70] w-full bg-white border border-gray-200 rounded-md shadow-xl mt-1 max-h-40 overflow-y-auto">
+                      <div v-for="airport in leg.fromResults" :key="airport.code" 
+                        @click="selectEditAirport(airport, 'from', index)"
+                        class="px-3 py-2 hover:bg-pink-50 cursor-pointer border-b border-gray-50 last:border-b-0 text-sm">
+                        <div class="flex items-center justify-between">
+                          <div>
+                            <span class="font-bold text-gray-900">{{ airport.code }}</span>
+                            <span class="ml-1 text-gray-600">{{ airport.city }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   <div class="relative">
                     <label class="block text-xs font-medium text-gray-700 mb-1">To</label>
@@ -116,7 +151,18 @@
                       @focus="leg.toSearch = ''; leg.toResults = []"
                       placeholder="Destination"
                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-pink-500">
-                    <div v-if="leg.toResults.length" class="hidden"></div>
+                    <div v-if="leg.toResults.length" class="absolute z-[70] w-full bg-white border border-gray-200 rounded-md shadow-xl mt-1 max-h-40 overflow-y-auto">
+                      <div v-for="airport in leg.toResults" :key="airport.code" 
+                        @click="selectEditAirport(airport, 'to', index)"
+                        class="px-3 py-2 hover:bg-pink-50 cursor-pointer border-b border-gray-50 last:border-b-0 text-sm">
+                        <div class="flex items-center justify-between">
+                          <div>
+                            <span class="font-bold text-gray-900">{{ airport.code }}</span>
+                            <span class="ml-1 text-gray-600">{{ airport.city }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div>
@@ -803,7 +849,7 @@
               class="space-y-5"
             >
               <FlightCard 
-                v-for="f in filteredFlights" 
+                v-for="f in paginatedFlights" 
                 :key="f.id"
                 :flight="f"
                 :isRoundTrip="isRoundTrip"
@@ -822,6 +868,62 @@
                 @select-seat-class="handleInlineSeatClassSelection"
               />
             </TransitionGroup>
+
+            <!-- Pagination -->
+            <div v-if="totalPages > 1" class="mt-10 flex flex-col sm:flex-row items-center justify-between gap-4 py-8 border-t border-gray-100">
+              <div class="flex flex-col">
+                <div class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Results Navigation</div>
+                <div class="text-xs font-bold text-gray-600">
+                  Showing <span class="text-pink-600">{{ ((currentPage - 1) * itemsPerPage) + 1 }}</span> to 
+                  <span class="text-pink-600">{{ Math.min(currentPage * itemsPerPage, filteredFlights.length) }}</span> 
+                  of <span class="text-pink-600">{{ filteredFlights.length }}</span> flights
+                </div>
+              </div>
+              
+              <div class="flex items-center space-x-2">
+                <!-- Previous Button -->
+                <button 
+                  @click="changePage(currentPage - 1)" 
+                  :disabled="currentPage === 1"
+                  class="group flex items-center justify-center w-10 h-10 rounded-xl border border-gray-200 bg-white text-gray-500 hover:border-pink-300 hover:text-pink-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-300 shadow-sm hover:shadow-md"
+                >
+                  <svg class="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                
+                <!-- Page Numbers -->
+                <div class="flex items-center bg-gray-50 p-1 rounded-2xl border border-gray-100">
+                  <template v-for="page in totalPages" :key="page">
+                    <button 
+                      v-if="page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)"
+                      @click="changePage(page)"
+                      :class="[
+                        'min-w-[40px] h-10 rounded-xl text-xs font-black transition-all duration-300',
+                        currentPage === page 
+                          ? 'bg-white text-pink-600 shadow-lg shadow-pink-100/50 scale-105 ring-1 ring-pink-100' 
+                          : 'text-gray-400 hover:text-gray-900 hover:bg-white/50'
+                      ]"
+                    >
+                      {{ page }}
+                    </button>
+                    <span v-else-if="(page === 2 && currentPage > 3) || (page === totalPages - 1 && currentPage < totalPages - 2)" 
+                          class="w-6 text-center text-gray-300 font-black text-[10px] tracking-widest">...</span>
+                  </template>
+                </div>
+
+                <!-- Next Button -->
+                <button 
+                  @click="changePage(currentPage + 1)" 
+                  :disabled="currentPage === totalPages"
+                  class="group flex items-center justify-center w-10 h-10 rounded-xl border border-gray-200 bg-white text-gray-500 hover:border-pink-300 hover:text-pink-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-300 shadow-sm hover:shadow-md"
+                >
+                  <svg class="w-5 h-5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19l7-7-7-7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
           </div>
           </div>
         </main>
@@ -935,6 +1037,10 @@ const loading = ref(true);
 const isFiltering = ref(false); // New: for transient "jumping" feedback
 const showFilters = ref(false);
 const showNoResults = ref(false);
+
+// Pagination State
+const currentPage = ref(1);
+const itemsPerPage = ref(5);
 
 const todayDateString = computed(() => {
   return format(new Date(), 'yyyy-MM-dd');
@@ -1312,7 +1418,21 @@ const calculateSeatClassPrice = (basePrice, className, flight = null, fareFamily
   }
 
   // Add Fare Family markup
-  const markup = BUNDLE_MARKUPS[fareFamily] || 0;
+  let markup = 0;
+  const key = normalizeClassKey(className, flight?.airline_code);
+  
+  // NEW: Dynamic DB markup overrides hardcoded fallback
+  if (fareBundlesData.value && fareBundlesData.value[key]) {
+    const bundle = fareBundlesData.value[key].find(b => (b.type_code || b.code) === fareFamily);
+    if (bundle && bundle.markup_fee !== undefined) {
+      markup = Number(bundle.markup_fee);
+    } else {
+      markup = BUNDLE_MARKUPS[fareFamily] || 0;
+    }
+  } else {
+    markup = BUNDLE_MARKUPS[fareFamily] || 0;
+  }
+
   price += markup;
 
   // NEW: Trip Type Pricing Logic - 10% discount for Round-Trip on budget carriers
@@ -1940,8 +2060,8 @@ const extractSeatClassesFromFlight = (flight) => {
     // 2. Check API-provided bundles (fully dynamic from DB)
     const dbBundles = fareBundlesData.value[classKey];
 
-    // Priority: specialized mappings for known airlines (PR, 5J, Z2, T6), then DB
-    const familiesToUse = specializedFamilies || dbBundles;
+    // Priority: DB Bundles first (CRUD dynamic), then specialized mappings fallback
+    const familiesToUse = (dbBundles && dbBundles.length > 0) ? dbBundles : specializedFamilies;
 
     if (familiesToUse && familiesToUse.length > 0) {
       familiesToUse.forEach(bundle => {
@@ -1950,7 +2070,7 @@ const extractSeatClassesFromFlight = (flight) => {
           name: bundle.name,
           fare_family: bundle.name.toLowerCase().includes('flex') ? 'flex' : (bundle.code || bundle.type_code || 'standard'),
           description: bundle.description || getSeatClassDescription(displayClassName),
-          price: calculateSeatClassPrice(flight.price, displayClassName, flight, bundle.code || bundle.type_code || 'standard') + (Number(bundle.markup_fee) || 0),
+          price: calculateSeatClassPrice(flight.price, displayClassName, flight, bundle.code || bundle.type_code || 'standard'),
           icon: bundle.icon_svg || getSeatClassIcon(displayClassName),
           features: Array.isArray(bundle.features) ? bundle.features : [],
           ml_predicted: flight.ml_predicted
@@ -3134,14 +3254,7 @@ const selectedFlightsSummary = computed(() => {
 
 // Get total price
 const totalPrice = computed(() => {
-  let total = 0;
-  if (bookingStore.selectedOutbound) {
-    total += Number(bookingStore.selectedOutbound.price);
-  }
-  if (bookingStore.selectedReturn) {
-    total += Number(bookingStore.selectedReturn.price);
-  }
-  return total;
+  return bookingStore.grandTotal;
 });
 
 // Get modal title based on trip type and phase
@@ -3190,6 +3303,33 @@ const modalActionDescription = computed(() => {
   }
   return '';
 });
+
+// ============ PAGINATION LOGIC ============
+const paginatedFlights = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value;
+  const end = start + itemsPerPage.value;
+  return filteredFlights.value.slice(start, end);
+});
+
+const totalPages = computed(() => {
+  return Math.ceil(filteredFlights.value.length / itemsPerPage.value);
+});
+
+const changePage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page;
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }
+};
+
+// Reset to first page when filters or results change
+watch(filteredFlights, () => {
+  currentPage.value = 1;
+});
+// ==========================================
 
 // Get flight statistics
 const flightStats = computed(() => {

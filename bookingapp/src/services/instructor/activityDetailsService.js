@@ -71,13 +71,15 @@ export const activityDetailsService = {
     },
 
     /**
-     * Release all scores for an activity
+     * Release scores for given students in an activity
      * @param {number} activityId - Activity ID
+     * @param {Array} studentIds - Optional array of student IDs to release
      * @returns {Promise} Release response
      */
-    async releaseGrades(activityId) {
+    async releaseGrades(activityId, studentIds = null) {
         try {
-            const response = await api.post(`api/instructor/activities/${activityId}/release-grades/`, {});
+            const payload = studentIds ? { student_ids: studentIds } : {};
+            const response = await api.post(`api/instructor/activities/${activityId}/release-grades/`, payload);
             return response.data;
         } catch (error) {
             throw error;

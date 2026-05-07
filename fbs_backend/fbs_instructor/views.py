@@ -40,7 +40,7 @@ from decimal import Decimal
 # CROSS-APP IMPORTS (from app.models)
 # ============================================================================
 from app.models import AddOn, Airline, Airport, Students, UserProfile, Booking, TrackLog
-from django.db.models import Count
+from django.db.models import Count, Q
 
 from .models import (
     Activity,
@@ -52,11 +52,13 @@ from .models import (
     ActivityAddOn,
     ActivitySegment,
     UserSession,
-    InstructorLog
+    InstructorLog,
+    InstructorNotificationReadStatus
 )
 from .serializers import LoginSerializer, UserSerializer
 from .authentication import MultiSessionTokenAuthentication  # NEW: Our custom auth
 from .permissions import IsInstructor  # NEW: Custom permission
+from flightapp.services.grading_service import grade_booking
 
 import traceback
 from django.utils import timezone
@@ -214,6 +216,100 @@ def send_schedule_email_notification(instructor, section):
     except Exception as e:
         print(f"? ERROR sending schedule notification: {str(e)}")
         traceback.print_exc()
+        return False
+
+
+# ==========================================
+# HELPER: Send Student Schedule Notification
+# ==========================================
+def send_student_schedule_notification(student, section, instructor):
+    """
+    Sends a professional letter-style email notification to a student
+    when they are enrolled in a section or a schedule is updated.
+    """
+    if not student.email:
+        print(f"⚠️ WARNING: Student {student.student_number} has no email. Skipping notification.")
+        return False
+
+    try:
+        # 1. Prepare Content
+        display_schedule = "N/A"
+        if settings.USE_TZ:
+            local_now = timezone.localtime(timezone.now())
+        else:
+            local_now = timezone.now()
+        current_day = local_now.strftime('%A')
+        
+        if section.schedule:
+            try:
+                raw_schedule = json.loads(section.schedule)
+                if isinstance(raw_schedule, list):
+                    # Find today's first schedule to keep it simple
+                    today_schedules = [s for s in raw_schedule if s.get('day') == current_day]
+                    
+                    if today_schedules:
+                        target_sched = today_schedules[0]
+                        start_time = target_sched.get('start_time')
+                        if start_time:
+                            time_obj = datetime.strptime(start_time, '%H:%M')
+                            display_schedule = time_obj.strftime('%I:%M %p')
+                    else:
+                        first_sched = raw_schedule[0]
+                        start_time = first_sched.get('start_time')
+                        if start_time:
+                            time_obj = datetime.strptime(start_time, '%H:%M')
+                            display_schedule = f"{first_sched.get('day', 'N/A')} {time_obj.strftime('%I:%M %p')}"
+                else:
+                    display_schedule = section.schedule
+            except (json.JSONDecodeError, IndexError, KeyError):
+                display_schedule = section.schedule
+        
+        context = {
+            'student_name': f"{student.first_name} {student.last_name}",
+            'instructor_name': f"{instructor.first_name} {instructor.last_name}",
+            'section_name': section.section_name,
+            'section_code': section.section_code,
+            'display_schedule': display_schedule,
+            'academic_year': section.academic_year,
+            'dashboard_url': getattr(settings, 'FRONTEND_URL', 'http://localhost:5173') + '/student/dashboard',
+            'current_year': local_now.year,
+            'formal_date': local_now.strftime('%B %d, %Y')
+        }
+
+        # 2. Render Templates
+        html_content = render_to_string('emails/student_schedule_notification.html', context)
+        text_content = strip_tags(html_content)
+
+        # 3. Send Email
+        subject = f"Official Enrollment & Schedule: {section.section_name} ({section.section_code})"
+        from_email = settings.DEFAULT_FROM_EMAIL
+        to_email = [student.email]
+
+        email = EmailMultiAlternatives(subject, text_content, from_email, to_email)
+        email.attach_alternative(html_content, "text/html")
+        email.send()
+
+        print(f"Schedule notification sent to student {student.email} for section {section.section_name}")
+        return True
+
+    except Exception as e:
+        print(f"ERROR sending student schedule notification: {str(e)}")
+        # traceback.print_exc()
+        return False
+
+
+def send_bulk_student_schedule_notification(section, instructor):
+    """Sends schedule notification to all students enrolled in the section"""
+    try:
+        enrollments = SectionEnrollment.objects.filter(section=section)
+        count = 0
+        for enrollment in enrollments:
+            if send_student_schedule_notification(enrollment.student, section, instructor):
+                count += 1
+        print(f"Bulk schedule notification sent to {count} students in section {section.section_name}")
+        return True
+    except Exception as e:
+        print(f"ERROR in bulk student notification: {str(e)}")
         return False
 
 
@@ -377,6 +473,8 @@ def register_view(request):
                     phone_number=data.get('phone_number', ''),
                     mi=data.get('mi', ''),
                     gender=data.get('gender', ''),
+                    course=data.get('course') or 'BSHM',
+                    year_level=data.get('year_level') or '1',
                     password=''
                 )
             elif role == 'instructor':
@@ -490,19 +588,26 @@ def instructor_dashboard(request):
         activity_count=Count('activities', distinct=True)
     ).values(
         'id', 'section_name', 'section_code', 'semester', 'academic_year', 'schedule', 'description', 'is_active', 'student_count', 'activity_count'
-    ).order_by('-id') 
+    ).order_by('-id')
+
+    # Add enrolled_count alias so frontend can read it as section.enrolled_count
+    sections_list = []
+    for s in sections:
+        s['enrolled_count'] = s['student_count']
+        sections_list.append(s)
     
     print(f"? Found {sections.count()} sections for instructor")
     print(f"{'='*60}\n")
     
     return Response({
-        'sections': list(sections),
+        'sections': sections_list,
         'user': {
             'id': user.id,
             'username': user.username,
             'first_name': user.first_name,
             'last_name': user.last_name,
-            'email': user.email
+            'email': user.email,
+            'avatar': user.userprofile.avatar.url if user.userprofile.avatar else None
         },
         'session_info': {
             'session_id': session_obj.id,
@@ -524,10 +629,12 @@ def section_details(request, section_id):
     
     try:
         section = Section.objects.get(id=section_id, instructor=user)
+        student_count = section.enrollments.count()
         activities = Activity.objects.filter(section=section).order_by('-created_at')
         
         activities_data = []
         for activity in activities:
+            total_submissions = activity.student_bindings.filter(status__in=['submitted', 'graded']).count()
             activities_data.append({
                 'id': activity.id,
                 'title': activity.title,
@@ -539,6 +646,8 @@ def section_details(request, section_id):
                 'required_trip_type': activity.required_trip_type,
                 'required_origin': activity.required_origin,
                 'required_destination': activity.required_destination,
+                'is_code_active': getattr(activity, 'is_code_active', False),
+                'total_submissions': total_submissions,
             })
         
         return Response({
@@ -552,6 +661,7 @@ def section_details(request, section_id):
             'is_locked': section.is_locked,
             'is_active': section.is_active,
             'created_at': section.created_at,
+            'student_count': student_count,
             'activities': activities_data
         }, status=status.HTTP_200_OK)
         
@@ -614,6 +724,7 @@ def update_section(request, section_id):
         new_schedule = section.schedule
         if new_schedule and new_schedule != old_schedule:
              threading.Thread(target=send_schedule_email_notification, args=(user, section)).start()
+             threading.Thread(target=send_bulk_student_schedule_notification, args=(section, user)).start()
 
         return Response({
             "message": "Section updated successfully!",
@@ -703,6 +814,10 @@ class EnrollStudentView(APIView):
             section_name=section.section_name,
             details=f"Instructor enrolled student {student.student_number} ({student.first_name} {student.last_name}) to section '{section.section_name}'."
         )
+        
+        # Trigger Email Notification
+        threading.Thread(target=send_student_schedule_notification, args=(student, section, request.user)).start()
+        
         return Response({"message": f"Successfully enrolled {student.first_name}!"}, status=status.HTTP_201_CREATED)
 
 class UnenrollStudentView(APIView):
@@ -776,6 +891,7 @@ def bulk_enroll_students(request, section_id):
         not_found_list = []
         already_enrolled_elsewhere = []
         already_in_this_section = []
+        newly_enrolled_students = []
         
         # Process the rest of the rows
         rows = list(reader)
@@ -810,6 +926,7 @@ def bulk_enroll_students(request, section_id):
                 # Enroll
                 SectionEnrollment.objects.create(section=section, student=student)
                 enrolled_count += 1
+                newly_enrolled_students.append(student)
                 
             except Students.DoesNotExist:
                 not_found_list.append(student_num)
@@ -823,6 +940,10 @@ def bulk_enroll_students(request, section_id):
                 is_csv=True,
                 details=f"Instructor enrolled {enrolled_count} students to section '{section.section_name}' via CSV import."
             )
+            
+            # Notify newly enrolled students
+            for s in newly_enrolled_students:
+                threading.Thread(target=send_student_schedule_notification, args=(s, section, request.user)).start()
 
         return Response({
             "message": f"Successfully enrolled {enrolled_count} students.",
@@ -1171,6 +1292,7 @@ def create_activity(request, section_id):
                     required_departure_date=data.get('required_departure_date') or None,
                     required_return_date=data.get('required_return_date') or None,
                     required_travel_class=required_travel_class,
+                    required_seat_class=data.get('required_seat_class') or '',
                     required_passengers=required_passengers,
                     required_children=required_children,
                     required_infants=required_infants,
@@ -1257,6 +1379,165 @@ def create_activity(request, section_id):
             traceback.print_exc()
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['PUT'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated, IsInstructor])
+def update_activity(request, section_id, activity_id):
+    instructor = request.user
+    section = get_object_or_404(Section, id=section_id, instructor=instructor)
+    activity = get_object_or_404(Activity, id=activity_id, section=section)
+    
+    if activity.is_code_active:
+        return Response({"error": "Cannot edit an activated activity."}, status=400)
+        
+    data = request.data
+    try:
+        required_passengers = int(data.get('required_passengers', 1))
+        required_children = int(data.get('required_children', 0))
+        required_infants = int(data.get('required_infants', 0))
+
+        if required_passengers < 1:
+            return Response({"error": "At least one adult passenger is required"}, status=400)
+        if required_infants > required_passengers:
+            return Response({"error": "Number of infants cannot exceed number of adults"}, status=400)
+
+        required_travel_class_raw = data.get('required_travel_class', 'economy')
+        travel_class_map = {
+            'economy': 'economy',
+            'premium economy': 'premium_economy',
+            'premium_economy': 'premium_economy',
+            'business': 'business',
+            'first': 'first',
+            'first class': 'first',
+        }
+        required_travel_class = travel_class_map.get(
+            (required_travel_class_raw or 'economy').lower().strip(),
+            'economy'
+        )
+
+        final_instructions = data.get('instructions') or ""
+        addon_instructions_lines = []
+        passengers_data = data.get('passengers', [])
+        
+        if data.get('require_addons', False):
+            for p_data in passengers_data:
+                selected_addons = p_data.get('selected_addons', [])
+                if selected_addons:
+                    p_name = f"{p_data.get('first_name', '')} {p_data.get('last_name', '')}".strip()
+                    if not p_name:
+                        p_name = f"Passenger ({p_data.get('passenger_type', 'adult')})"
+                    addon_names = []
+                    for addon_item in selected_addons:
+                        addon_id = addon_item.get('id')
+                        qty = addon_item.get('quantity', 1)
+                        if addon_id:
+                            try:
+                                addon_obj = AddOn.objects.get(id=addon_id)
+                                addon_names.append(f"{qty}x {addon_obj.name}")
+                            except Exception:
+                                pass
+                    if addon_names:
+                        addon_instructions_lines.append(f"- {p_name}: {', '.join(addon_names)}")
+                        
+            if addon_instructions_lines:
+                if final_instructions:
+                    final_instructions += "\n\n"
+                final_instructions += "Add-ons Assigned:\n" + "\n".join(addon_instructions_lines)
+
+        with transaction.atomic():
+            activity.title = data.get('title')
+            activity.description = data.get('description', "")
+            activity.activity_type = data.get('activity_type', 'Flight Booking')
+            activity.required_trip_type = data.get('required_trip_type', 'one_way')
+            activity.required_origin = data.get('required_origin')
+            activity.required_destination = data.get('required_destination')
+            activity.required_departure_date = data.get('required_departure_date') or None
+            activity.required_return_date = data.get('required_return_date') or None
+            activity.required_travel_class = required_travel_class
+            activity.required_seat_class = data.get('required_seat_class') or ''
+            activity.required_passengers = required_passengers
+            activity.required_children = required_children
+            activity.required_infants = required_infants
+            activity.require_passenger_details = data.get('require_passenger_details', False)
+            activity.require_passport = data.get('require_passport', False)
+            activity.instructions = final_instructions
+            activity.total_points = float(data.get('total_points', 100))
+            activity.due_date = data.get('due_date')
+            activity.addon_grading_enabled = data.get('require_addons', False)
+            activity.time_limit_minutes = data.get('time_limit_minutes') or None
+            activity.save()
+
+            ActivitySegment.objects.filter(activity=activity).delete()
+            ActivityPassenger.objects.filter(activity=activity).delete()
+
+            if data.get('required_trip_type') == 'multi_city':
+                segments_data = data.get('segments', [])
+                for index, s_data in enumerate(segments_data):
+                    ActivitySegment.objects.create(
+                        activity=activity,
+                        origin=s_data.get('origin', ''),
+                        destination=s_data.get('destination', ''),
+                        departure_date=s_data.get('departure_date'),
+                        order=index
+                    )
+
+            for index, p_data in enumerate(passengers_data):
+                passenger = ActivityPassenger.objects.create(
+                    activity=activity,
+                    first_name=p_data.get('first_name', ''),
+                    middle_name=p_data.get('middle_name', ''),
+                    last_name=p_data.get('last_name', ''),
+                    passenger_type=p_data.get('passenger_type', 'adult'),
+                    passenger_category=p_data.get('passenger_category', 'none'),
+                    gender=p_data.get('gender', ''),
+                    date_of_birth=p_data.get('date_of_birth') or None,
+                    nationality=p_data.get('nationality', ''),
+                    passport_number=p_data.get('passport_number', ''),
+                    passport_expiry_date=p_data.get('passport_expiry_date') or None,
+                    pwd_id_number=p_data.get('pwd_id_number', '') or None,
+                    senior_id_number=p_data.get('senior_id_number', '') or None,
+                    is_primary=(index == 0)
+                )
+
+                selected_addons = p_data.get('selected_addons', [])
+                
+                for addon_item in selected_addons:
+                    try:
+                        addon_id = addon_item.get('id')
+                        if not addon_id:
+                            continue
+                        addon_instance = AddOn.objects.get(id=addon_id)
+                        ActivityAddOn.objects.create(
+                            activity=activity,
+                            addon=addon_instance,
+                            passenger=passenger,
+                            is_required=addon_item.get('is_required', False),
+                            quantity_per_passenger=addon_item.get('quantity', 1),
+                            notes=addon_item.get('notes', ''),
+                            points_value=10.00
+                        )
+                    except Exception as e:
+                        print(f"Error creating ActivityAddOn: {str(e)}")
+                        continue
+
+            log_instructor_event(
+                request,
+                action_type='ACTIVITY_UPDATED',
+                instructor=request.user,
+                section_name=section.section_name,
+                activity_name=activity.title,
+                details=f"Instructor updated activity '{activity.title}' in section '{section.section_name}'."
+            )
+
+            return Response({
+                "message": "Activity updated successfully!",
+                "activity_id": activity.id
+            }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 @api_view(['GET'])
 @authentication_classes([MultiSessionTokenAuthentication])
 @permission_classes([IsAuthenticated, IsInstructor])
@@ -1305,12 +1586,16 @@ def activity_details(request, activity_id):
             "description": activity.description,
             "section_name": activity.section.section_name if activity.section else "",
             "section_code": activity.section.section_code if activity.section else "",
-            "required_trip_type": activity.get_required_trip_type_display() if hasattr(activity, 'get_required_trip_type_display') else activity.required_trip_type,
+            "academic_year": activity.section.academic_year if activity.section else "",
+            "semester": activity.section.semester if activity.section else "",
+            "schedule": activity.section.schedule if activity.section else "",
+            "required_trip_type": activity.required_trip_type,
             "required_origin": activity.required_origin if hasattr(activity, 'required_origin') else "",
             "required_destination": activity.required_destination if hasattr(activity, 'required_destination') else "",
             "required_departure_date": activity.required_departure_date.strftime("%Y-%m-%d") if activity.required_departure_date else "",
             "required_return_date": activity.required_return_date.strftime("%Y-%m-%d") if activity.required_return_date else "",
-            "required_travel_class": activity.get_required_travel_class_display() if hasattr(activity, 'get_required_travel_class_display') else activity.required_travel_class,
+            "required_travel_class": activity.required_travel_class,
+            "required_seat_class": activity.required_seat_class if hasattr(activity, 'required_seat_class') else "",
             "required_passengers": activity.required_passengers if hasattr(activity, 'required_passengers') else 0,
             "required_children": activity.required_children if hasattr(activity, 'required_children') else 0,
             "required_infants": activity.required_infants if hasattr(activity, 'required_infants') else 0,
@@ -1320,6 +1605,10 @@ def activity_details(request, activity_id):
             "is_code_active": activity.is_code_active if hasattr(activity, 'is_code_active') else False,
             "total_points": float(activity.total_points) if activity.total_points else 100,
             "grades_released": activity.grades_released if hasattr(activity, 'grades_released') else False,
+            "require_passenger_details": activity.require_passenger_details if hasattr(activity, 'require_passenger_details') else False,
+            "require_passport": activity.require_passport if hasattr(activity, 'require_passport') else False,
+            "require_addons": activity.addon_grading_enabled if hasattr(activity, 'addon_grading_enabled') else False,
+            "time_limit_minutes": activity.time_limit_minutes if hasattr(activity, 'time_limit_minutes') else None,
             "passengers": [
                 {
                     "first_name": get_passenger_field(p, 'first_name'),
@@ -1529,6 +1818,11 @@ def release_activity_grades(request, activity_id):
         )
         
         
+        # Accept a specific list of student IDs to release if provided
+        # This ties into the frontend 'SHOW GRADES' logic, ensuring instructors
+        # only release grades they have explicitly revealed.
+        student_ids = request.data.get('student_ids', None)
+        
         # Determine if we are releasing for the first time or re-releasing
         released_count = 0
         if not activity.grades_released:
@@ -1536,11 +1830,12 @@ def release_activity_grades(request, activity_id):
             activity.grades_released = True
             activity.save()
             
-            # Release all existing bindings that have a grade
-            bindings_to_release = ActivityStudentBinding.objects.filter(
-                activity=activity,
-                grade__isnull=False
-            )
+            # Release all existing bindings that have a grade or are submitted
+            filters = Q(grade__isnull=False) | Q(status__in=['submitted', 'graded'])
+            bindings_to_release = ActivityStudentBinding.objects.filter(filters, activity=activity)
+            if student_ids:
+                bindings_to_release = bindings_to_release.filter(student__id__in=student_ids)
+                
             released_count = bindings_to_release.count()
             bindings_to_release.update(is_released=True)
             
@@ -1556,12 +1851,16 @@ def release_activity_grades(request, activity_id):
                 details=f"Instructor released grades for activity '{activity.title}' to {released_count} students."
             )
         else:
-            # Re-releasing: Release only those who haven't been released yet but have a grade
+            # Re-releasing: Release those unreleased but have a grade/status
+            filters = Q(grade__isnull=False) | Q(status__in=['submitted', 'graded'])
             bindings_to_release = ActivityStudentBinding.objects.filter(
+                filters,
                 activity=activity,
-                grade__isnull=False,
                 is_released=False
             )
+            if student_ids:
+                bindings_to_release = bindings_to_release.filter(student__id__in=student_ids)
+                
             released_count = bindings_to_release.count()
             bindings_to_release.update(is_released=True)
             
@@ -1590,141 +1889,17 @@ def release_activity_grades(request, activity_id):
 
 def calculate_submission_score(activity, booking):
     """
-    Advanced Deductive Scoring System (Aviation Professional Mode)
-    Optimized to eliminate N+1 query patterns using in-memory list operations.
+    Wrapper around the master grading service to maintain backward compatibility 
+    in views while ensuring consistent logic.
     """
-    default_res = {
-        "total": 0.0,
-        "breakdown": {
-            "compliance": 0.0,
-            "passengers": 0.0,
-            "completion": 0.0,
-            "addons": 0.0
-        },
-        "rubric_breakdown": {}
-    }
-    
-    if not booking:
-        return default_res
-        
-    total_points = float(activity.total_points or 100)
-    
-    # 0. Prefetch objects only if they are not already cached
-    prefetched = getattr(booking, '_prefetched_objects_cache', {})
-    if 'details' in prefetched:
-        details_list = list(booking.details.all())
-    else:
-        details_list = list(booking.details.select_related(
-            'schedule', 'schedule__flight', 'schedule__flight__route',
-            'schedule__flight__route__origin_airport', 'schedule__flight__route__destination_airport',
-            'seat_class', 'seat', 'passenger'
-        ).prefetch_related('addons').all())
-    
-    if not details_list:
-        return default_res
-
-    # Fetch binding for assigned seats
-    from .models import ActivityStudentBinding
-    binding = ActivityStudentBinding.objects.filter(
-        activity=activity,
-        student__user=booking.user
-    ).first()
-    assigned_seats = binding.assigned_seats if binding else []
-    
-    # Extract actual details from prefetched list
-    first_detail = details_list[0]
-    
-    actual_origin = first_detail.schedule.flight.route.origin_airport.code.lower() if first_detail.schedule.flight.route.origin_airport else ""
-    actual_destination = first_detail.schedule.flight.route.destination_airport.code.lower() if first_detail.schedule.flight.route.destination_airport else ""
-    actual_class = first_detail.seat_class.name.lower() if first_detail.seat_class else ""
-    actual_trip_type = booking.trip_type
-
-    req_origin = (activity.required_origin or "").lower()
-    req_destination = (activity.required_destination or "").lower()
-    req_class = (activity.required_travel_class or "").lower()
-    req_trip_type = activity.required_trip_type
-
-    # Data collection for scoring logic
-    unique_passengers = list({d.passenger_id: d.passenger for d in details_list if d.passenger}.values())
-    pax_counts = {'adult': 0, 'child': 0, 'infant': 0}
-    for p in unique_passengers:
-        t = (p.passenger_type or 'adult').lower()
-        if t in pax_counts: pax_counts[t] += 1
-    required_addons = list(activity.activity_addons.all()) if hasattr(activity, 'activity_addons') else []
-
-    # Helpers for normalized matching
-    def norm_s(s): return str(s or "").strip().lower()
-    def compare(a, b):
-        na, nb = norm_s(a), norm_s(b)
-        return na == nb or (na and nb and (na in nb or nb in na))
-
-    # 1. Accuracy (20%)
-    acc_c = [norm_s(booking.trip_type) == norm_s(activity.required_trip_type)]
-    if req_trip_type == 'one_way':
-        acc_c.extend([compare(actual_origin, req_origin), compare(actual_destination, req_destination)])
-    elif req_trip_type == 'round_trip':
-        acc_c.append(compare(actual_origin, req_origin) and compare(actual_destination, req_destination))
-    else:
-        acc_c.extend([compare(actual_origin, req_origin), compare(actual_destination, req_destination)])
-    acc_ratio = sum(1 for c in acc_c if c) / len(acc_c) if acc_c else 0
-    acc_level = 5 if acc_ratio >= 1.0 else (4 if acc_ratio >= 0.8 else (3 if acc_ratio >= 0.5 else 2))
-
-    # 2. Technical Skill (20%)
-    def n_cls(s): return str(s or "").lower().replace("class", "").replace("_","").strip()
-    tech_c = [n_cls(actual_class) == n_cls(req_class)]
-    pax_cat_match = all(norm_s(next((p for p in unique_passengers if compare(p.first_name, ep.first_name)), None).ph_discount_type or "none") == norm_s(ep.passenger_category or "none")
-                        for ep in activity.passengers.all() if next((p for p in unique_passengers if compare(p.first_name, ep.first_name)), None))
-    tech_c.append(pax_cat_match)
-    tech_ratio = sum(1 for c in tech_c if c) / len(tech_c) if tech_c else 0
-    tech_level = 5 if tech_ratio >= 1.0 else (4 if tech_ratio >= 0.7 else 3)
-
-    # 3. Organization (20%)
-    org_f = []
-    for exp in activity.passengers.all():
-        act = next((p for p in unique_passengers if compare(p.first_name, exp.first_name) and compare(p.last_name, exp.last_name)), None)
-        org_f.append(act is not None)
-        if act: org_f.extend([compare(act.first_name, exp.first_name), act.date_of_birth == exp.date_of_birth])
-    org_ratio = sum(1 for f in org_f if f) / len(org_f) if org_f else 1.0
-    org_level = 5 if org_ratio >= 1.0 else (4 if org_ratio >= 0.8 else 3)
-
-    # 4. Completeness (20%)
-    req_passengers_match = (
-        pax_counts.get('adult', 0) == (activity.required_passengers or 0) and
-        pax_counts.get('child', 0) == (activity.required_children or 0) and
-        pax_counts.get('infant', 0) == (activity.required_infants or 0)
-    )
-    
-    addon_match = True
-    if required_addons:
-        for req in required_addons:
-             detail = next((d for d in details_list if 
-                            d.passenger and compare(d.passenger.first_name, req.passenger.first_name) and compare(d.passenger.last_name, req.passenger.last_name)), None)
-             if not detail or not any(a.id == req.addon_id for a in detail.addons.all()):
-                 addon_match = False
-                 break
-
-    comp_c = [req_passengers_match, addon_match]
-    comp_ratio = sum(1 for c in comp_c if c) / len(comp_c) if comp_c else 1.0
-    comp_level = 5 if comp_ratio >= 1.0 else (4 if comp_ratio >= 0.5 else 3)
-
-    # 5. Professionalism (20%)
-    prof_ratio = (acc_ratio + tech_ratio + org_ratio) / 3
-    prof_level = 5 if prof_ratio >= 1.0 else (4 if prof_ratio >= 0.7 else 3)
-
-    final_grade = round((acc_ratio + tech_ratio + org_ratio + comp_ratio + prof_ratio) * (total_points / 5))
-    rubric_breakdown = [
-        {"label": "Accuracy", "level": acc_level, "ratio": acc_ratio, "status": "Excellent" if acc_level == 5 else "Good"},
-        {"label": "Technical Skill", "level": tech_level, "ratio": tech_ratio, "status": "Excellent" if tech_level == 5 else "Good"},
-        {"label": "Organization", "level": org_level, "ratio": org_ratio, "status": "Excellent" if org_level == 5 else "Good"},
-        {"label": "Completeness", "level": comp_level, "ratio": comp_ratio, "status": "Excellent" if comp_level == 5 else "Good"},
-        {"label": "Professionalism", "level": prof_level, "ratio": prof_ratio, "status": "Excellent" if prof_level == 5 else "Good"}
-    ]
-
-    return {
-        "total": float(final_grade),
-        "breakdown": {"accuracy": acc_ratio, "tech": tech_ratio, "org": org_ratio, "comp": comp_ratio, "prof": prof_ratio},
-        "rubric_breakdown": rubric_breakdown
-    }
+    result = grade_booking(booking, activity.id)
+    if result:
+        return {
+            "total": result["total"],
+            "breakdown": {}, # Legacy field, no longer used by new rubric
+            "rubric_breakdown": result["rubric_breakdown"]
+        }
+    return None
 
 
 def get_flight_notification_html(student, activity, section):
@@ -2036,13 +2211,9 @@ def Activity_Student_Bind(activity, student_ids=None, time_limit_minutes=None):
     for enrollment in enrolled_students_query:
         student = enrollment.student
         
-        # Determine number of seats needed (Adults + Children. Infants don't get seats)
-        total_seats_needed = getattr(activity, 'required_passengers', 1) + getattr(activity, 'required_children', 0)
-        
-        # Generate random unique seats based on travel class
+        # User requested: Students can now choose any seats.
+        # Remove automatic seat assignment during release.
         assigned_seats = []
-        if total_seats_needed > 0:
-            assigned_seats = generate_random_seats(activity, total_seats_needed)
             
         # Use provided limit OR activity's default
         final_time_limit = time_limit_minutes if time_limit_minutes is not None else activity.time_limit_minutes
@@ -2058,12 +2229,12 @@ def Activity_Student_Bind(activity, student_ids=None, time_limit_minutes=None):
             }
         )
         
-        # If binding already existed but we're re-activating with a new limit
+        # If binding already existed
         if not created:
             if time_limit_minutes is not None:
                 binding.time_limit_minutes = time_limit_minutes
-            if not binding.assigned_seats and assigned_seats:
-                binding.assigned_seats = assigned_seats
+            # Ensure we clear seats if re-binding
+            binding.assigned_seats = []
             binding.save()
         if created:
             students_bound += 1
@@ -2146,77 +2317,131 @@ def get_activity_submissions(request, activity_id):
         submissions_data = []
         
         for enrollment in enrollments:
-            student = enrollment.student
-            binding = bindings_map.get(student.id)
-            booking = bookings_map.get(student.user_id)
-            
-            submission = {
-                "student_id": student.id,
-                "student_number": student.student_number,
-                "first_name": student.first_name,
-                "last_name": student.last_name,
-                "email": student.email,
-                "status": binding.status if binding else "not_assigned",
-                "binding_id": binding.id if binding else None,
-                "grade": float(binding.grade) if (binding and binding.grade is not None) else None,
-                "rubric_breakdown": binding.rubric_breakdown if (binding and hasattr(binding, 'rubric_breakdown')) else None,
-                "assigned_seats": binding.assigned_seats if (binding and hasattr(binding, 'assigned_seats')) else [],
-                "is_released": binding.is_released if binding else False,
-                "submitted_at": binding.submitted_at.isoformat() if binding and binding.submitted_at else None,
-                "booking": None
-            }
-            
-            if booking:
-                # Optimized booking serialization using prefetched data
-                details_list = list(booking.details.all())
-                submission["booking"] = {
-                    "id": booking.id,
-                    "status": booking.status,
-                    "is_practice": booking.is_practice,
-                    "total_amount": float(booking.total_amount or 0.0),
-                    "trip_type": booking.get_trip_type_display(),
-                    "created_at": booking.created_at.isoformat() if booking.created_at else None,
-                    "details": [
-                        {
-                            "origin": d.schedule.flight.route.origin_airport.code if d.schedule.flight.route.origin_airport else "???",
-                            "destination": d.schedule.flight.route.destination_airport.code if d.schedule.flight.route.destination_airport else "???",
-                            "departure": d.schedule.departure_time.isoformat() if d.schedule.departure_time else None,
-                            "flight_number": d.schedule.flight.flight_number,
-                            "seat_class": d.seat_class.name if d.seat_class else "N/A",
-                            "seat_number": d.seat.seat_number if d.seat else "N/A"
-                        } for d in details_list
-                    ],
-                    "passengers": [
-                        {
-                            "name": p.get_full_name() if p else "Unknown",
-                            "type": p.passenger_type if p else "Adult"
-                        } for p in {d.passenger_id: d.passenger for d in details_list if d.passenger_id}.values()
-                    ]
+            try:
+                student = enrollment.student
+                binding = bindings_map.get(student.id)
+                
+                # Map confirmed booking by user_id
+                booking = bookings_map.get(student.user_id)
+                
+                score_data = None
+                if binding:
+                    # 1. Timeout Check: If time is up and no booking, auto-fail
+                    if binding.status in ['assigned', 'in_progress'] and not booking:
+                        if binding.expires_at and timezone.now() > binding.expires_at:
+                            binding.status = 'graded'
+                            binding.grade = 0.0
+                            binding.is_failed_due_to_time = True
+                            binding.feedback = "Time limit exceeded. Activity automatically failed."
+                            binding.submitted_at = timezone.now()
+                            binding.save()
+
+                    # 2. Dynamic Grading: If student has a booking but grade is missing or status is submitted
+                    # (Ensure we have the most up-to-date rubric_breakdown for the table)
+                    if booking:
+                        score_data = calculate_submission_score(activity, booking)
+                        if score_data and (binding.grade is None or binding.status == 'submitted'):
+                            binding.grade = score_data['total']
+                            binding.rubric_breakdown = score_data['rubric_breakdown']
+                            binding.status = 'graded'
+                            binding.save()
+
+                submission = {
+                    "student_id": student.id,
+                    "student_number": student.student_number,
+                    "first_name": student.first_name,
+                    "last_name": student.last_name,
+                    "email": student.email,
+                    "status": binding.status if binding else "not_assigned",
+                    "binding_id": binding.id if binding else None,
+                    "grade": float(binding.grade) if (binding and binding.grade is not None) else None,
+                    "rubric_breakdown": binding.rubric_breakdown if (binding and hasattr(binding, 'rubric_breakdown')) else None,
+                    "assigned_seats": binding.assigned_seats if (binding and hasattr(binding, 'assigned_seats')) else [],
+                    "is_released": binding.is_released if binding else False,
+                    "is_failed_due_to_time": binding.is_failed_due_to_time if (binding and hasattr(binding, 'is_failed_due_to_time')) else False,
+                    "submitted_at": binding.submitted_at.isoformat() if binding and binding.submitted_at else None,
+                    "booking": None
                 }
                 
-                if submission["status"] in ["assigned", "in_progress"] and booking.status == "Confirmed":
-                    submission["status"] = "submitted"
+                if booking:
+                    # Optimized booking serialization using prefetched data
+                    details_list = list(booking.details.all())
+                    submission["booking"] = {
+                        "id": booking.id,
+                        "status": booking.status,
+                        "is_practice": booking.is_practice,
+                        "total_amount": float(booking.total_amount or 0.0),
+                        "trip_type": booking.get_trip_type_display(),
+                        "created_at": booking.created_at.isoformat() if booking.created_at else None,
+                        "details": [
+                            {
+                                "origin": d.schedule.flight.route.origin_airport.code if d.schedule.flight.route.origin_airport else "???",
+                                "destination": d.schedule.flight.route.destination_airport.code if d.schedule.flight.route.destination_airport else "???",
+                                "departure": d.schedule.departure_time.isoformat() if d.schedule.departure_time else None,
+                                "flight_number": d.schedule.flight.flight_number,
+                                "seat_class": d.seat_class.name if d.seat_class else "N/A",
+                                "seat_number": d.seat.seat_number if d.seat else "N/A"
+                            } for d in details_list
+                        ],
+                        "passengers": [
+                            {
+                                "name": p.get_full_name() if p else "Unknown",
+                                "type": p.passenger_type if p else "Adult"
+                            } for p in {d.passenger_id: d.passenger for d in details_list if d.passenger_id}.values()
+                        ]
+                    }
+                    
+                    if submission["status"] in ["assigned", "in_progress"] and booking.status == "Confirmed":
+                        submission["status"] = "submitted"
 
-                # Calculate analysis (using optimized score function which will use prefetched details)
-                score_data = calculate_submission_score(activity, booking)
-                submission["analysis"] = score_data["breakdown"]
+                    # Calculate analysis (using optimized score function which will use prefetched details)
+                    # Use score_data from above if available, otherwise calculate it
+                    if not score_data:
+                        score_data = calculate_submission_score(activity, booking)
+                    
+                    if score_data:
+                        submission["analysis"] = score_data.get("breakdown", {})
+                        
+                        if binding and binding.grade is None:
+                            # Auto-set grade if not available
+                            binding.grade = score_data["total"]
+                            binding.rubric_breakdown = score_data["rubric_breakdown"]
+                            binding.status = 'graded' if booking.status == "Confirmed" else 'submitted'
+                            binding.is_released = False  # Wait for instructor to release grades
+                            if booking.submitted_at:
+                                binding.submitted_at = booking.submitted_at
+                            elif not binding.submitted_at:
+                                binding.submitted_at = timezone.now()
+                            binding.save()
+                            submission["status"] = binding.status
+                            submission["is_released"] = False
+                        
+                        # CRITICAL FIX: Always push the freshly computed grade + rubric_breakdown
+                        # into the response dict, regardless of whether we had to save the binding.
+                        # This ensures the API never returns stale/null data from the pre-fetched
+                        # binding object, which was causing 0/zero display in the submissions table.
+                        submission["grade"] = float(score_data["total"]) if score_data["total"] is not None else None
+                        submission["rubric_breakdown"] = score_data["rubric_breakdown"]
+                        submission["status"] = "graded" if booking.status == "Confirmed" else submission["status"]
+                    else:
+                        submission["analysis"] = {}
+                        print(f"⚠️ Warning: Grading failed for booking {booking.id}")
                 
-                if binding and binding.grade is None:
-                    # Auto-set grade if not available
-                    binding.grade = score_data["total"]
-                    binding.rubric_breakdown = score_data["rubric_breakdown"]
-                    binding.status = 'graded' if booking.status == "Confirmed" else 'submitted'
-                    binding.is_released = False  # Wait for instructor to release grades
-                    if booking.submitted_at:
-                        binding.submitted_at = booking.submitted_at
-                    elif not binding.submitted_at:
-                        binding.submitted_at = timezone.now()
-                    binding.save()
-                    submission["status"] = binding.status
-                    submission["grade"] = float(binding.grade)
-                    submission["is_released"] = False
-            
-            submissions_data.append(submission)
+                submissions_data.append(submission)
+            except Exception as e:
+                print(f"❌ Error processing submission for student {enrollment.student.student_number}: {str(e)}")
+                traceback.print_exc()
+                # Still add a basic record so the student shows up in the table
+                submissions_data.append({
+                    "student_id": enrollment.student.id,
+                    "student_number": enrollment.student.student_number,
+                    "first_name": enrollment.student.first_name,
+                    "last_name": enrollment.student.last_name,
+                    "email": enrollment.student.email,
+                    "status": "error",
+                    "error_detail": str(e),
+                    "booking": None
+                })
             
         # Sort submissions by grade descending (highest score first)
         submissions_data.sort(key=lambda x: x['grade'] if x['grade'] is not None else -1, reverse=True)
@@ -2448,96 +2673,362 @@ def start_activity(request, activity_id):
         return Response({"error": str(e)}, status=500)
 
 
+@api_view(['POST'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def fail_activity(request, activity_id):
+    """
+    Explicitly fail an activity for the student (e.g. when time is up).
+    Sets grade to 0 and is_failed_due_to_time to True.
+    """
+    from .models import ActivityStudentBinding, Activity
+    from app.models import Students
+    
+    try:
+        user = request.user
+        
+        # Get the student record
+        student = None
+        if hasattr(user, 'student_profile'):
+            student = user.student_profile
+        else:
+            student = Students.objects.get(user=user)
+            
+        if not student:
+            return Response({"error": "Student profile not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+        try:
+            binding = ActivityStudentBinding.objects.get(
+                activity_id=activity_id,
+                student=student
+            )
+        except ActivityStudentBinding.DoesNotExist:
+            return Response({"error": "Activity assignment not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+        # Update binding status to failed
+        # We set status to 'graded' so it shows the 0 grade, but set is_failed_due_to_time=True
+        binding.status = 'graded'
+        binding.grade = 0.0
+        binding.is_failed_due_to_time = True
+        binding.feedback = "Time limit exceeded. Activity automatically failed."
+        binding.submitted_at = timezone.now()
+        binding.save()
+        
+        # Log to InstructorLog that student failed due to timeout
+        log_instructor_event(
+            request,
+            action_type='ACTIVITY_FAILED_TIMEOUT',
+            student=student,
+            section_name=binding.activity.section.section_name,
+            activity_name=binding.activity.title,
+            details=f"Student {student.student_number} failed activity '{binding.activity.title}' due to time limit reached."
+        )
+        
+        return Response({
+            "success": True,
+            "message": "Activity marked as failed due to time limit.",
+            "grade": 0.0,
+            "status": "graded"
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 # ==========================================
 # 3. STUDENT DASHBOARD (Session-Based)
 # ==========================================
 @api_view(['GET'])
-@authentication_classes([MultiSessionTokenAuthentication])  # NEW: Use custom auth
+@authentication_classes([MultiSessionTokenAuthentication])
 @permission_classes([IsAuthenticated])
 def student_dashboard(request):
-    user = request.user
-    session_obj = request.session_obj  # Our UserSession object
-    
-    print(f"\n{'='*60}")
-    print(f"? STUDENT DASHBOARD REQUEST")
-    print(f"{'='*60}")
-    print(f"User: {user.username} (ID: {user.id})")
-    print(f"Session Token: {session_obj.session_token[:16]}...")
-    print(f"Session Role: {session_obj.role}")
-    print(f"Session ID: {session_obj.id}")
-    
-    # 1. Verify session role
     try:
-        if session_obj.role != 'student':
-            print(f"? ERROR: Session role is '{session_obj.role}', not 'student'")
+        user = request.user
+        session_obj = request.session_obj  # Our UserSession object
+        
+        print(f"\n{'='*60}")
+        print(f"? STUDENT DASHBOARD REQUEST")
+        print(f"{'='*60}")
+        print(f"User: {user.username} (ID: {user.id})")
+        print(f"Session Token: {session_obj.session_token[:16]}...")
+        print(f"Session Role: {session_obj.role}")
+        print(f"Session ID: {session_obj.id}")
+        
+        # 1. Verify session role
+        try:
+            if session_obj.role != 'student':
+                print(f"? ERROR: Session role is '{session_obj.role}', not 'student'")
+                return Response({
+                    "error": "Access denied. This session is not authorized for student access.",
+                    "session_role": session_obj.role,
+                    "required_role": "student"
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # Double-check with UserProfile
+            if not hasattr(user, 'userprofile') or user.userprofile.role != 'student':
+                print(f"? ERROR: User profile role mismatch")
+                return Response({"error": "Access denied. Student access only."}, status=status.HTTP_403_FORBIDDEN)
+            
+            print("? Session and profile verified as student")
+                
+        except Exception as e:
+            print(f"? ERROR during verification: {str(e)}")
+            traceback.print_exc()
+            return Response({"error": "Profile verification failed."}, status=status.HTTP_403_FORBIDDEN)
+
+        # 2. Get Students record
+        student = None
+        
+        # Try multiple methods
+        if hasattr(user, 'student_profile'):
+            student = user.student_profile
+            print(f"? Method 1: Found student via related_name")
+        
+        if not student:
+            try:
+                student = Students.objects.get(user=user)
+                print(f"? Method 2: Found student via user FK")
+            except Students.DoesNotExist:
+                print("?? Method 2: No Students record with user FK")
+            except Exception as e:
+                print(f"?? Method 2 error: {str(e)}")
+        
+        if not student:
+            try:
+                student = Students.objects.get(email=user.email)
+                print(f"? Method 3: Found student via email match")
+            except Students.DoesNotExist:
+                print("?? Method 3: No Students record with matching email")
+            except Exception as e:
+                print(f"?? Method 3 error: {str(e)}")
+        
+        if not student:
+            print("? FATAL: Could not find Students record!")
             return Response({
-                "error": "Access denied. This session is not authorized for student access.",
-                "session_role": session_obj.role,
-                "required_role": "student"
+                "error": "Student record not found. Please contact your administrator.",
+                "not_enrolled": True,
+                "debug_info": {
+                    "user_id": user.id,
+                    "user_email": user.email,
+                    "username": user.username
+                }
             }, status=status.HTTP_403_FORBIDDEN)
         
-        # Double-check with UserProfile
-        if not hasattr(user, 'userprofile') or user.userprofile.role != 'student':
-            print(f"? ERROR: User profile role mismatch")
-            return Response({"error": "Access denied. Student access only."}, status=status.HTTP_403_FORBIDDEN)
+        print(f"? Student record: {student.first_name} {student.last_name} (#{student.student_number})")
         
-        print("? Session and profile verified as student")
+        # 3. Get enrolled section
+        enrollment = SectionEnrollment.objects.filter(student=student, is_active=True).select_related('section').first()
+        
+        # Check if enrollment exists AND section is active
+        if not enrollment or not enrollment.section.is_active:
+            print("?? Student not enrolled in any session or section is disabled")
+            return Response({
+                'error': 'You are not enrolled in any section. Please contact your administrator.',
+                'not_enrolled': True,
+                'user': {
+                    'username': user.username,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'email': user.email,
+                    'student_number': student.student_number,
+                    'mi': student.mi if student.mi else '',
+                    'phone_number': student.phone_number if student.phone_number else ''
+                },
+                'section': None,
+                'activities': [],
+                'total_activities': 0,
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        section = enrollment.section
+        print(f"? Enrolled in: {section.section_name} ({section.section_code})")
+        
+        # 4. Get activities - Only Published or Closed activities (Hide Drafts)
+        # (We will identify bindings in the loop)
+        section_activities = Activity.objects.filter(
+            section=section
+        ).exclude(status='draft').order_by('-created_at')
+        
+        print(f"  Total visible activities: {section_activities.count()}")
+        for act in section_activities:
+            print(f"    - [{act.id}] {act.title}")
+        
+        # 5. Build activities data
+        from .models import ActivityStudentBinding
+        
+        activities_data = []
+        for activity in section_activities:
+            binding = ActivityStudentBinding.objects.filter(
+                activity=activity,
+                student=student
+            ).first()
             
-    except Exception as e:
-        print(f"? ERROR during verification: {str(e)}")
-        traceback.print_exc()
-        return Response({"error": "Profile verification failed."}, status=status.HTTP_403_FORBIDDEN)
+            # If no binding, it means the student has not been assigned or has not entered the code
+            if not binding:
+                activities_data.append({
+                    'id': activity.id,
+                    'title': activity.title,
+                    'description': activity.description or '',
+                    'instructions': activity.instructions or '',
+                    'activity_type': activity.activity_type,
+                    'due_date': activity.due_date.strftime('%B %d, %Y') if activity.due_date else None,
+                    'total_points': float(activity.total_points),
+                    'created_at': activity.created_at.isoformat(),
+                    'required_trip_type': activity.required_trip_type,
+                    'required_origin': activity.required_origin,
+                    'required_destination': activity.required_destination,
+                    'required_travel_class': activity.required_travel_class,
+                    'status': 'unassigned',
+                    'assigned_at': None,
+                    'is_active': activity.is_code_active,
+                    'grade': None,
+                    'completed': False,
+                    'confirmed_booking_id': None
+                })
+                continue
+            
+            # Search for a confirmed booking for this activity
+            booking_obj = Booking.objects.filter(
+                user=user,
+                activity=activity,
+                status='Confirmed',
+                is_practice=False
+            ).first()
 
-    # 2. Get Students record
-    student = None
-    
-    # Try multiple methods
-    if hasattr(user, 'student_profile'):
-        student = user.student_profile
-        print(f"? Method 1: Found student via related_name")
-    
-    if not student:
-        try:
-            student = Students.objects.get(user=user)
-            print(f"? Method 2: Found student via user FK")
-        except Students.DoesNotExist:
-            print("?? Method 2: No Students record with user FK")
-        except Exception as e:
-            print(f"?? Method 2 error: {str(e)}")
-    
-    if not student:
-        try:
-            student = Students.objects.get(email=user.email)
-            print(f"? Method 3: Found student via email match")
-        except Students.DoesNotExist:
-            print("?? Method 3: No Students record with matching email")
-        except Exception as e:
-            print(f"?? Method 3 error: {str(e)}")
-    
-    if not student:
-        print("? FATAL: Could not find Students record!")
+            if booking_obj and (binding.grade is None or binding.status in ['assigned', 'in_progress', 'submitted']):
+                score_data = calculate_submission_score(activity, booking_obj)
+                if score_data:
+                    binding.grade = score_data['total']
+                    binding.rubric_breakdown = score_data['rubric_breakdown']
+                    binding.status = 'graded'
+                    binding.is_released = False  # Wait for instructor to release grades
+                    if booking_obj.submitted_at:
+                        binding.submitted_at = booking_obj.submitted_at
+                    binding.save()
+                    print(f"  ? Auto-graded dashboard activity {activity.id}: {score_data['total']}")
+                else:
+                    print(f"  ⚠️ Warning: calculate_submission_score returned None for activity {activity.id}")
+
+            # ? NEW: Time Limit Check (Auto-fail if expired)
+            if binding.status in ['assigned', 'in_progress'] and not booking_obj:
+                if binding.expires_at and timezone.now() > binding.expires_at:
+                    binding.status = 'graded' # Mark as graded so it counts as done
+                    binding.grade = 0.0
+                    binding.is_failed_due_to_time = True
+                    binding.feedback = "Time limit reached. Activity failed."
+                    binding.save()
+                    print(f"  ⚠️ Activity {activity.id} failed due to time limit for {user.username}")
+
+            # ? Manual Grade Release Check (Include failed entries immediately)
+            effective_grade = float(binding.grade) if (binding.grade is not None and (binding.is_released or activity.grades_released or binding.is_failed_due_to_time)) else None
+
+            activities_data.append({
+                'id': activity.id,
+                'title': activity.title,
+                'description': activity.description or '',
+                'instructions': activity.instructions or '',
+                'activity_type': activity.activity_type,
+                'due_date': activity.due_date.strftime('%B %d, %Y') if activity.due_date else None,
+                'total_points': float(activity.total_points),
+                'created_at': activity.created_at.isoformat(),
+                'required_trip_type': activity.required_trip_type,
+                'required_origin': activity.required_origin,
+                'required_destination': activity.required_destination,
+                'required_travel_class': activity.required_travel_class,
+                'required_seat_class': activity.required_seat_class if hasattr(activity, 'required_seat_class') else "",
+                'required_passengers': activity.required_passengers,
+                'required_children': activity.required_children,
+                'required_infants': activity.required_infants,
+                'status': binding.status,
+                'assigned_at': binding.assigned_at.isoformat(),
+                'is_active': activity.is_code_active,
+                'section_id': section.id,
+                'section_name': section.section_name,
+                'section_code': section.section_code,
+                'grade': effective_grade,
+                'feedback': binding.feedback if (binding.is_released or activity.grades_released or binding.is_failed_due_to_time) else '',
+                'submitted_at': binding.submitted_at.isoformat() if binding.submitted_at else None,
+                'time_limit_minutes': binding.time_limit_minutes,
+                'started_at': binding.started_at.isoformat() if binding.started_at else None,
+                'expires_at': binding.expires_at.isoformat() if binding.expires_at else None,
+                'is_failed_due_to_time': binding.is_failed_due_to_time,
+                
+                'completed': (booking_obj is not None) or (binding and binding.status in ['submitted', 'graded']),
+                'confirmed_booking_id': booking_obj.id if booking_obj else None,
+                'grades_released': activity.grades_released or (binding.is_released if binding else False),
+            })
+        
+        section_data = {
+            'id': section.id,
+            'section_name': section.section_name,
+            'section_code': section.section_code,
+            'semester': section.semester,
+            'academic_year': section.academic_year,
+            'schedule': section.schedule,
+            'description': section.description,
+            'enrolled_at': enrollment.enrolled_at.strftime('%Y-%m-%d'),
+            'activities_count': len(activities_data)
+        }
+
+        # Fetch classmates (all enrolled students)
+        classmates_query = SectionEnrollment.objects.filter(section=section, is_active=True).select_related('student')
+        classmates_data = []
+        
+        from .models import ActivityStudentBinding
+        student_ids = [cls.student.id for cls in classmates_query]
+        bindings = ActivityStudentBinding.objects.filter(
+            student_id__in=student_ids,
+            activity__section=section,
+            status='graded',
+            grade__isnull=False
+        )
+        
+        student_stats = {}
+        for b in bindings:
+            if b.student_id not in student_stats:
+                student_stats[b.student_id] = {'total_grade': 0.0, 'count': 0}
+            student_stats[b.student_id]['total_grade'] += float(b.grade)
+            student_stats[b.student_id]['count'] += 1
+
+        section_leaderboard = []
+
+        for cls in classmates_query:
+            classmates_data.append({
+                'first_name': cls.student.first_name,
+                'last_name': cls.student.last_name,
+                'student_number': cls.student.student_number,
+                'email': cls.student.email,
+                'gender': cls.student.gender
+            })
+            
+            sid = cls.student.id
+            count = student_stats.get(sid, {}).get('count', 0)
+            total = student_stats.get(sid, {}).get('total_grade', 0.0)
+            avg_grade = (total / count) if count > 0 else 0.0
+            
+            section_leaderboard.append({
+                'id': user.id if sid == student.id else sid, # Use matching user ID for isMe logic
+                'student_id': sid,
+                'first_name': cls.student.first_name,
+                'last_name': cls.student.last_name,
+                'avg_grade': round(avg_grade, 2),
+                'graded_count': count
+            })
+            
+        instructor_obj = section.instructor
+        instructor_data = {
+            'first_name': instructor_obj.first_name,
+            'last_name': instructor_obj.last_name,
+            'email': instructor_obj.email
+        }
+        
+        print(f"? Returning {len(activities_data)} activities and {len(classmates_data)} classmates")
+        print(f"{'='*60}\n")
+        
         return Response({
-            "error": "Student record not found. Please contact your administrator.",
-            "not_enrolled": True,
-            "debug_info": {
-                "user_id": user.id,
-                "user_email": user.email,
-                "username": user.username
-            }
-        }, status=status.HTTP_403_FORBIDDEN)
-    
-    print(f"? Student record: {student.first_name} {student.last_name} (#{student.student_number})")
-    
-    # 3. Get enrolled section
-    enrollment = SectionEnrollment.objects.filter(student=student, is_active=True).select_related('section').first()
-    
-    # Check if enrollment exists AND section is active
-    if not enrollment or not enrollment.section.is_active:
-        print("?? Student not enrolled in any session or section is disabled")
-        return Response({
-            'error': 'You are not enrolled in any section. Please contact your administrator.',
-            'not_enrolled': True,
             'user': {
+                'id': user.id,
                 'username': user.username,
                 'first_name': user.first_name,
                 'last_name': user.last_name,
@@ -2546,134 +3037,29 @@ def student_dashboard(request):
                 'mi': student.mi if student.mi else '',
                 'phone_number': student.phone_number if student.phone_number else ''
             },
-            'section': None,
-            'activities': [],
-            'total_activities': 0,
-        }, status=status.HTTP_403_FORBIDDEN)
-    
-    section = enrollment.section
-    print(f"? Enrolled in: {section.section_name} ({section.section_code})")
-    
-    # 4. Get activities - ONLY those that have a binding for this student
-    section_activities = Activity.objects.filter(
-        section=section,
-        student_bindings__student=student
-    ).distinct().order_by('-created_at')
-    
-    print(f"  Total visible activities: {section_activities.count()}")
-    for act in section_activities:
-        print(f"    - [{act.id}] {act.title}")
-    
-    # 5. Build activities data
-    from .models import ActivityStudentBinding
-    
-    activities_data = []
-    for activity in section_activities:
-        binding = ActivityStudentBinding.objects.get(
-            activity=activity,
-            student=student
-        )
-        
-        # Search for a confirmed booking for this activity
-        booking_obj = Booking.objects.filter(
-            user=user,
-            activity=activity,
-            status='Confirmed',
-            is_practice=False
-        ).first()
-
-        if booking_obj and (binding.grade is None or binding.status in ['assigned', 'in_progress', 'submitted']):
-            score_data = calculate_submission_score(activity, booking_obj)
-            binding.grade = score_data['total']
-            binding.rubric_breakdown = score_data['rubric_breakdown']
-            binding.status = 'graded'
-            binding.is_released = False  # Wait for instructor to release grades
-            if booking_obj.submitted_at:
-                binding.submitted_at = booking_obj.submitted_at
-            binding.save()
-            print(f"  ? Auto-graded dashboard activity {activity.id}: {score_data['total']}")
-
-        # ? NEW: Time Limit Check (Auto-fail if expired)
-        if binding.status in ['assigned', 'in_progress'] and not booking_obj:
-            if binding.expires_at and timezone.now() > binding.expires_at:
-                binding.status = 'graded' # Mark as graded so it counts as done
-                binding.grade = 0.0
-                binding.is_failed_due_to_time = True
-                binding.feedback = "Time limit reached. Activity failed."
-                binding.save()
-                print(f"  ⚠️ Activity {activity.id} failed due to time limit for {user.username}")
-
-        # ? Manual Grade Release Check
-        effective_grade = float(binding.grade) if (binding.grade is not None and (binding.is_released or activity.grades_released)) else None
-
-        activities_data.append({
-            'id': activity.id,
-            'title': activity.title,
-            'description': activity.description or '',
-            'instructions': activity.instructions or '',
-            'activity_type': activity.activity_type,
-            'due_date': activity.due_date.strftime('%B %d, %Y') if activity.due_date else None,
-            'total_points': float(activity.total_points),
-            'created_at': activity.created_at.isoformat(),
-            'required_trip_type': activity.required_trip_type,
-            'required_origin': activity.required_origin,
-            'required_destination': activity.required_destination,
-            'required_travel_class': activity.required_travel_class,
-            'required_passengers': activity.required_passengers,
-            'required_children': activity.required_children,
-            'required_infants': activity.required_infants,
-            'status': binding.status,
-            'assigned_at': binding.assigned_at.isoformat(),
-            'is_active': activity.is_code_active,
-            'section_id': section.id,
-            'section_name': section.section_name,
-            'section_code': section.section_code,
-            'grade': effective_grade,
-            'submitted_at': binding.submitted_at.isoformat() if binding.submitted_at else None,
-            'time_limit_minutes': binding.time_limit_minutes,
-            'started_at': binding.started_at.isoformat() if binding.started_at else None,
-            'expires_at': binding.expires_at.isoformat() if binding.expires_at else None,
-            'is_failed_due_to_time': binding.is_failed_due_to_time,
-            
-            # ? NEW: Add completion status and booking ID
-            'completed': booking_obj is not None,
-            'confirmed_booking_id': booking_obj.id if booking_obj else None
-        })
-    
-    section_data = {
-        'id': section.id,
-        'section_name': section.section_name,
-        'section_code': section.section_code,
-        'semester': section.semester,
-        'academic_year': section.academic_year,
-        'schedule': section.schedule,
-        'description': section.description,
-        'enrolled_at': enrollment.enrolled_at.strftime('%Y-%m-%d'),
-        'activities_count': len(activities_data)
-    }
-    
-    print(f"? Returning {len(activities_data)} activities")
-    print(f"{'='*60}\n")
-    
-    return Response({
-        'user': {
-            'username': user.username,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'email': user.email,
-            'student_number': student.student_number,
-            'mi': student.mi if student.mi else '',
-            'phone_number': student.phone_number if student.phone_number else ''
-        },
-        'section': section_data,
-        'activities': activities_data,
-        'total_activities': len(activities_data),
-        'session_info': {
-            'session_id': session_obj.id,
-            'role': session_obj.role,
-            'last_activity': session_obj.last_activity.isoformat()
-        }
-    }, status=status.HTTP_200_OK)
+            'section': section_data,
+            'instructor': instructor_data,
+            'classmates': classmates_data,
+            'section_leaderboard': section_leaderboard,
+            'activities': activities_data,
+            'total_activities': len(activities_data),
+            'session_info': {
+                'session_id': session_obj.id,
+                'role': session_obj.role,
+                'last_activity': session_obj.last_activity.isoformat()
+            }
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        print(f"\n{'!'*60}")
+        print(f"❌ FATAL ERROR IN STUDENT DASHBOARD")
+        print(f"{'!'*60}")
+        print(f"Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            "error": "An internal server error occurred while loading your dashboard.",
+            "details": str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
@@ -2759,14 +3145,20 @@ def student_activity_details(request, activity_id):
     
     print(f"? Student record: {student.first_name} {student.last_name} (#{student.student_number})")
     
-    # 3. Get the activity
+    # 3. Get the activity - Exclude drafts for students
     try:
         activity = Activity.objects.select_related('section', 'section__instructor').prefetch_related(
             'passengers', 'segments', 'activity_addons', 'activity_addons__addon', 'activity_addons__passenger'
         ).get(
-            id=activity_id, 
-            is_code_active=True
+            id=activity_id
         )
+        
+        if activity.status == 'draft':
+            print(f"? Activity {activity_id} is still in DRAFT mode")
+            return Response({
+                "error": "This activity has not been activated by the instructor yet."
+            }, status=status.HTTP_403_FORBIDDEN)
+
         print(f"? Activity found: {activity.title}")
         print(f"? Activity code: {activity.activity_code}")
     except Activity.DoesNotExist:
@@ -2812,53 +3204,53 @@ def student_activity_details(request, activity_id):
             student=student
         ).first()
         
-        if not binding:
-            print(f"? Student {user.username} is NOT authorized for this activity (no binding)")
-            return Response({
-                "error": "Access denied. This activity has not been assigned to you yet."
-            }, status=status.HTTP_403_FORBIDDEN)
-            
-        print(f"? Found activity binding - Status: {binding.status}")
-            
-        # ? NEW: Automatic Grading Trigger for Student View
-        # Optimized with select_related and prefetch_related for scoring and serialization
-        booking_obj = Booking.objects.filter(
-            user=user, activity=activity, status='Confirmed', is_practice=False
-        ).select_related(
-            'user'
-        ).prefetch_related(
-            'details__schedule__flight__airline',
-            'details__schedule__flight__route__origin_airport',
-            'details__schedule__flight__route__destination_airport',
-            'details__seat_class',
-            'details__passenger',
-            'details__addons'
-        ).first()
+        if binding:
+            print(f"? Found activity binding - Status: {binding.status}")
+                
+            # ? NEW: Automatic Grading Trigger for Student View
+            # Optimized with select_related and prefetch_related for scoring and serialization
+            booking_obj = Booking.objects.filter(
+                user=user, activity=activity, status='Confirmed', is_practice=False
+            ).select_related(
+                'user'
+            ).prefetch_related(
+                'details__schedule__flight__airline',
+                'details__schedule__flight__route__origin_airport',
+                'details__schedule__flight__route__destination_airport',
+                'details__seat_class',
+                'details__passenger',
+                'details__addons'
+            ).first()
 
-        submission_score_data = None # Cache for analysis
-        if booking_obj:
-            submission_score_data = calculate_submission_score(activity, booking_obj)
-            
-            if (binding.grade is None or binding.status in ['assigned', 'in_progress', 'submitted']):
-                binding.grade = submission_score_data['total']
-                binding.rubric_breakdown = submission_score_data['rubric_breakdown']
-                binding.status = 'graded'
-                binding.is_released = False # Wait for instructor to release grades
-                if booking_obj.submitted_at:
-                    binding.submitted_at = booking_obj.submitted_at
-                binding.save()
-                print(f"? Auto-graded student {user.username}: {submission_score_data['total']}")
+            submission_score_data = None # Cache for analysis
+            if booking_obj:
+                submission_score_data = calculate_submission_score(activity, booking_obj)
+                
+                if submission_score_data and (binding.grade is None or binding.status in ['assigned', 'in_progress', 'submitted']):
+                    binding.grade = submission_score_data['total']
+                    binding.rubric_breakdown = submission_score_data['rubric_breakdown']
+                    binding.status = 'graded'
+                    binding.is_released = False # Wait for instructor to release grades
+                    if booking_obj.submitted_at:
+                        binding.submitted_at = booking_obj.submitted_at
+                    binding.save()
+                    print(f"? Auto-graded student {user.username}: {submission_score_data['total']}")
 
-        # ? NEW: Time limit check in details
-        is_timed_out = False
-        if binding.status in ['assigned', 'in_progress'] and binding.expires_at and timezone.now() > binding.expires_at:
-            is_timed_out = True
-            if not booking_obj:
-                binding.status = 'graded'
-                binding.grade = 0.0
-                binding.is_failed_due_to_time = True
-                binding.feedback = "Time limit reached."
-                binding.save()
+            # ? NEW: Time limit check in details
+            is_timed_out = False
+            if binding.status in ['assigned', 'in_progress'] and binding.expires_at and timezone.now() > binding.expires_at:
+                is_timed_out = True
+                if not booking_obj:
+                    binding.status = 'graded'
+                    binding.grade = 0.0
+                    binding.is_failed_due_to_time = True
+                    binding.feedback = "Time limit reached."
+                    binding.save()
+        else:
+            print(f"? No binding found for student {user.username} - Activity viewable due to enrollment")
+            booking_obj = None
+            is_timed_out = False
+            submission_score_data = None
             
     except Exception as e:
         print(f"? Error with ActivityStudentBinding: {str(e)}")
@@ -2990,6 +3382,7 @@ def student_activity_details(request, activity_id):
             'required_origin': activity.required_origin or '',
             'required_destination': activity.required_destination or '',
             'required_travel_class': activity.required_travel_class or '',
+            'required_seat_class': activity.required_seat_class if hasattr(activity, 'required_seat_class') else "",
             'required_passengers': activity.required_passengers or 0,
             'required_children': activity.required_children or 0,
             'required_infants': activity.required_infants or 0,
@@ -3027,19 +3420,20 @@ def student_activity_details(request, activity_id):
             'section_code': activity.section.section_code,
             
             # Student progress
-            'status': binding.status,
-            'assigned_at': safe_iso_format(binding.assigned_at),
-            'submitted_at': safe_iso_format(binding.submitted_at) if binding.submitted_at else None,
-            'grade': float(binding.grade) if (binding.grade is not None and (binding.is_released or activity.grades_released)) else None,
-            'feedback': binding.feedback if (binding.is_released or activity.grades_released) else '',
-            'rubric_breakdown': (binding.rubric_breakdown or (submission_score_data['rubric_breakdown'] if submission_score_data else None)) if (binding.is_released or activity.grades_released) else None,
-            'analysis': submission_score_data if (booking_obj and (binding.is_released or activity.grades_released)) else None,
-            'grades_released': binding.is_released or activity.grades_released,
-            'assigned_seats': binding.assigned_seats or [],
+            'status': binding.status if binding else 'unassigned',
+            'assigned_at': safe_iso_format(binding.assigned_at) if binding else None,
+            'submitted_at': safe_iso_format(binding.submitted_at) if (binding and binding.submitted_at) else None,
+            'grade': float(binding.grade) if (binding and binding.grade is not None and (binding.is_released or activity.grades_released or binding.is_failed_due_to_time)) else None,
+            'feedback': binding.feedback if (binding and (binding.is_released or activity.grades_released or binding.is_failed_due_to_time)) else '',
+            'rubric_breakdown': (binding.rubric_breakdown if binding else None) or (submission_score_data['rubric_breakdown'] if submission_score_data else None) if (activity.grades_released or (binding and binding.is_released)) else None,
+            'analysis': submission_score_data if (booking_obj and (activity.grades_released or (binding and binding.is_released))) else None,
+            'grades_released': activity.grades_released or (binding.is_released if binding else False),
+            'assigned_seats': binding.assigned_seats if binding else [],
             
             # Activity status info
             'is_active': activity.is_code_active,
             'activity_code': activity.activity_code or '',
+            'is_failed_due_to_time': binding.is_failed_due_to_time if binding else False,
             
             'segments': [
                 {
@@ -3076,12 +3470,12 @@ def student_activity_details(request, activity_id):
                 }
                 for aa in activity.activity_addons.all()
             ],
-            'completed': booking_obj is not None,
+            'completed': (booking_obj is not None) or (binding and binding.status in ['submitted', 'graded']),
             'confirmed_booking_id': booking_obj.id if booking_obj else None,
-            'time_limit_minutes': binding.time_limit_minutes,
-            'started_at': binding.started_at.isoformat() if binding.started_at else None,
-            'expires_at': binding.expires_at.isoformat() if binding.expires_at else None,
-            'is_failed_due_to_time': binding.is_failed_due_to_time,
+            'time_limit_minutes': binding.time_limit_minutes if binding else activity.time_limit_minutes,
+            'started_at': binding.started_at.isoformat() if (binding and binding.started_at) else None,
+            'expires_at': binding.expires_at.isoformat() if (binding and binding.expires_at) else None,
+            'is_failed_due_to_time': binding.is_failed_due_to_time if binding else False,
             'is_timed_out': is_timed_out
         }
         
@@ -3309,18 +3703,34 @@ def admin_lms_overview(request):
         # Sort by completion rate descending
         section_stats.sort(key=lambda x: x['rate'], reverse=True)
 
-        # ── 3. Submission Timeline (last 8 weeks) ──
-        eight_weeks_ago = timezone.now() - timedelta(weeks=8)
+        # ── 3. Submission Timeline (Dynamic Filtering) ──
+        period = request.query_params.get('period', 'weekly')
+        if period == 'weekly':
+            # Last 8 weeks
+            start_date = timezone.now() - timedelta(weeks=8)
+            trunc_func = TruncWeek('submitted_at')
+            date_format = '%b %d'
+        elif period == 'monthly':
+            # Last 6 months
+            start_date = timezone.now() - timedelta(days=180)
+            trunc_func = TruncMonth('submitted_at')
+            date_format = '%b %Y'
+        else:
+            # Last 12 months (yearly view)
+            start_date = timezone.now() - timedelta(days=365)
+            trunc_func = TruncMonth('submitted_at')
+            date_format = '%b'
+
         weekly = (
             ActivityStudentBinding.objects
-            .filter(submitted_at__gte=eight_weeks_ago, submitted_at__isnull=False)
-            .annotate(week=TruncWeek('submitted_at'))
-            .values('week')
+            .filter(submitted_at__gte=start_date, submitted_at__isnull=False)
+            .annotate(date_group=trunc_func)
+            .values('date_group')
             .annotate(count=Count('id'))
-            .order_by('week')
+            .order_by('date_group')
         )
         timeline = [
-            {'week': w['week'].strftime('%b %d'), 'count': w['count']}
+            {'week': w['date_group'].strftime(date_format), 'count': w['count']}
             for w in weekly
         ]
 
@@ -3343,7 +3753,36 @@ def admin_lms_overview(request):
             for s in top_students
         ]
 
-        # ── 5. Totals ──
+        # ── 5. Teacher Performance (Managerial) ──
+        instructors = Instructor.objects.all().select_related('user')
+        teacher_stats = []
+        for instructor_obj in instructors:
+            teacher = instructor_obj.user
+            if not teacher:
+                continue
+            
+            # Get sections for this teacher
+            teacher_sections = Section.objects.filter(instructor=teacher)
+            t_sections_count = teacher_sections.count()
+            
+            # Get all bindings for activities in these sections
+            t_bindings = ActivityStudentBinding.objects.filter(activity__section__in=teacher_sections)
+            t_total_tasks = t_bindings.count()
+            t_completed_tasks = t_bindings.filter(status='completed').count()
+            
+            # Get total students across sections
+            t_student_count = SectionEnrollment.objects.filter(section__in=teacher_sections).values('student').distinct().count()
+
+            teacher_stats.append({
+                'name': f"{teacher.first_name} {teacher.last_name}" if (teacher.first_name or teacher.last_name) else (instructor_obj.first_name + " " + instructor_obj.last_name if instructor_obj.first_name else teacher.username),
+                'sections': t_sections_count,
+                'students': t_student_count,
+                'tasks': t_total_tasks,
+                'completed': t_completed_tasks,
+                'rate': round((t_completed_tasks / t_total_tasks * 100), 1) if t_total_tasks > 0 else 0
+            })
+
+        # ── 6. Totals ──
         totals = {
             'students': Students.objects.count(),
             'instructors': Instructor.objects.count(),
@@ -3352,12 +3791,74 @@ def admin_lms_overview(request):
             'bindings': total_bindings,
         }
 
+        # ── 7. Students at Risk (Predictive Analysis) ──
+        from django.db.models import F
+        at_risk = []
+        risk_query = (
+            ActivityStudentBinding.objects
+            .values('student__first_name', 'student__last_name', 'student__student_number')
+            .annotate(
+                avg_grade=Avg('grade'),
+                total=Count('id'),
+                completed_count=Count('id', filter=Q(status='completed'))
+            )
+        )
+        
+        for s in risk_query:
+            reason = None
+            if s['avg_grade'] and s['avg_grade'] < 75:
+                reason = "Low Average Grade"
+            elif s['total'] > 0 and (s['completed_count'] / s['total']) < 0.3:
+                reason = "Low Engagement"
+                
+            if reason:
+                at_risk.append({
+                    'name': f"{s['student__first_name']} {s['student__last_name']}",
+                    'student_number': s['student__student_number'],
+                    'avg_grade': round(float(s['avg_grade']), 1) if s['avg_grade'] else 0,
+                    'reason': reason,
+                    'missing': s['total'] - s['completed_count']
+                })
+        
+        # Sort by lowest grade and limit
+        at_risk.sort(key=lambda x: x['avg_grade'])
+        at_risk = at_risk[:10]
+
+        # ── 8. Difficulty Map (Problematic Lessons) ──
+        # Find activities with lowest average grades or high failure rates
+        difficult_lessons = (
+            ActivityStudentBinding.objects
+            .values('activity__title')
+            .annotate(
+                avg_grade=Avg('grade'),
+                total=Count('id'),
+                completed_count=Count('id', filter=Q(status='completed')),
+                failed_count=Count('id', filter=Q(is_failed_due_to_time=True))
+            )
+            .order_by('avg_grade')[:10]
+        )
+        
+        difficulty_map = []
+        for d in difficult_lessons:
+            # Calculate failure rate or low score rate
+            avg = float(d['avg_grade']) if d['avg_grade'] else 0
+            if avg < 85 or (d['failed_count'] / d['total'] if d['total'] > 0 else 0) > 0.2:
+                difficulty_map.append({
+                    'title': d['activity__title'],
+                    'avg_grade': round(avg, 1),
+                    'failure_rate': round((d['failed_count'] / d['total'] * 100), 1) if d['total'] > 0 else 0,
+                    'total_students': d['total']
+                })
+
         return Response({
             'totals': totals,
             'status_breakdown': status_map,
             'section_stats': section_stats,
             'timeline': timeline,
             'top_students': top_list,
+            'at_risk_students': at_risk,
+            'teacher_stats': teacher_stats,
+            'difficulty_map': difficulty_map,
         }, status=200)
 
     except Exception as e:
@@ -3532,3 +4033,49 @@ def mark_notifications_read(request):
         import traceback
         traceback.print_exc()
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# ============================================
+# INSTRUCTOR NOTIFICATIONS (DB PERSISTENCE)
+# ============================================
+
+@api_view(['GET'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated, IsInstructor])
+def get_instructor_notifications_read_status(request):
+    """
+    Get all notification IDs that this instructor has already read.
+    """
+    read_statuses = InstructorNotificationReadStatus.objects.filter(instructor=request.user)
+    read_ids = list(read_statuses.values_list('notification_id', flat=True))
+    
+    return Response({
+        "read_notification_ids": read_ids
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated, IsInstructor])
+def mark_instructor_notifications_read(request):
+    """
+    Mark one or more notification IDs as read for this instructor.
+    """
+    notification_ids = request.data.get('notification_ids', [])
+    if not isinstance(notification_ids, list):
+        notification_ids = [notification_ids]
+        
+    created_count = 0
+    for nid in notification_ids:
+        if nid:
+            obj, created = InstructorNotificationReadStatus.objects.get_or_create(
+                instructor=request.user,
+                notification_id=nid
+            )
+            if created:
+                created_count += 1
+                
+    return Response({
+        "message": f"Successfully marked {created_count} notifications as read.",
+        "status": "success"
+    }, status=status.HTTP_200_OK)
+

@@ -54,11 +54,16 @@
           Current Cycle
         </button>
 
+
+
         <button 
-          @click="$router.push('/student/checkin-registry')"
-          class="px-6 py-3.5 rounded-[2px] text-[10px] font-black uppercase tracking-widest transition-all border-2 bg-white border-slate-100 text-slate-500 hover:border-pink-200 hover:text-pink-600 shrink-0"
+          @click="$router.push({ name: 'DcsAirlineCheckin' })"
+          class="px-6 py-3.5 rounded-[2px] text-[10px] font-black uppercase tracking-widest transition-all border-2 bg-slate-900 border-slate-900 text-white hover:bg-pink-600 hover:border-pink-600 shadow-lg shadow-slate-200 shrink-0 flex items-center gap-2"
         >
-          Global Registry
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Online Check-in
         </button>
 
         <button 

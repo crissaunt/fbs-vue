@@ -25,12 +25,12 @@
         </div>
 
         <div class="flex items-center gap-3 w-full sm:w-auto justify-center sm:justify-end">
-          <router-link to="/register" class="w-full sm:w-auto">
+          <!-- <router-link to="/register" class="w-full sm:w-auto">
             <button class="w-full sm:w-auto font-bold text-white bg-pink-500 px-4 md:px-8 py-2 md:py-2.5 rounded-sm text-xs md:text-sm cursor-pointer hover:bg-pink-500/80" 
                     >
               Register
             </button>
-          </router-link>
+          </router-link> -->
 
           <button class="hidden sm:block border-2 font-bold bg-white text-pink-500 hover:bg-pink-600/80 hover:text-white cursor-pointer px-4 md:px-8 py-2 md:py-2.5 rounded-sm text-xs md:text-sm transition-all duration-300 active:scale-95" 
                  >
@@ -108,9 +108,9 @@
                       <input type="checkbox" class="accent-rose-500 w-4 h-4 rounded">
                       <span class="text-xs text-gray-600 font-medium group-hover:text-gray-900 transition-colors">Remember me</span>
                     </label>
-                    <a href="#" class="text-xs font-bold text-rose-500 hover:text-rose-600 transition-colors">
+                    <router-link to="/forgot-password" class="text-xs font-bold text-rose-500 hover:text-rose-600 transition-colors">
                       Forgot password?
-                    </a>
+                    </router-link>
                   </div>
 
                   <button

@@ -81,12 +81,15 @@ class DashboardViewSet(viewsets.ViewSet):
             
             now = timezone.now()
             active_flights = Schedule.objects.filter(
-                departure_time__lte=now,
-                arrival_time__gte=now
+                status__iexact='On Flight'
             ).count()
             
             scheduled_flights = Schedule.objects.filter(
                 departure_time__date=today
+            ).count()
+
+            open_for_booking = Schedule.objects.filter(
+                status__iexact='Open'
             ).count()
 
             total_checkins = CheckInDetail.objects.count()
@@ -100,6 +103,7 @@ class DashboardViewSet(viewsets.ViewSet):
                 'pendingBookings': pending_bookings,
                 'activeFlights': active_flights,
                 'scheduledFlights': scheduled_flights,
+                'openForBooking': open_for_booking,
                 'totalCheckins': total_checkins
             })
         except Exception as e:
@@ -166,14 +170,9 @@ class DashboardViewSet(viewsets.ViewSet):
     def active_flights_map(self, request):
         now = timezone.now()
         
-        # A flight is considered active (showing on radar) if it's currently flying (On Flight)
-        # or about to fly (Closed for boarding but hasn't departed yet)
+        # Unify definition: Only show flights that are technically in the air
         active_schedules = Schedule.objects.filter(
-            Q(status__in=['On Flight', 'Closed']) | 
-            Q(
-                departure_time__lte=now + timedelta(minutes=30),
-                arrival_time__gt=now
-            )
+            status__iexact='On Flight'
         ).select_related(
             'flight__route__origin_airport',
             'flight__route__destination_airport',
@@ -184,6 +183,22 @@ class DashboardViewSet(viewsets.ViewSet):
         for s in active_schedules:
             origin = s.flight.route.origin_airport
             dest = s.flight.route.destination_airport
+            
+            # Enrich layovers with coordinates
+            layovers = s.flight.layovers_data or []
+            enriched_layovers = []
+            for stop in layovers:
+                from ..models import Airport
+                ap = Airport.objects.filter(code=stop.get('airport')).first()
+                if ap and ap.latitude and ap.longitude:
+                    enriched_layovers.append({
+                        **stop,
+                        'lat': float(ap.latitude),
+                        'lng': float(ap.longitude)
+                    })
+                else:
+                    enriched_layovers.append(stop)
+
             if origin.latitude and origin.longitude and dest.latitude and dest.longitude:
                 data.append({
                     'id': s.id,
@@ -191,6 +206,7 @@ class DashboardViewSet(viewsets.ViewSet):
                     'airline': s.flight.airline.name,
                     'origin': {'lat': float(origin.latitude), 'lng': float(origin.longitude), 'city': origin.city, 'code': origin.code},
                     'destination': {'lat': float(dest.latitude), 'lng': float(dest.longitude), 'city': dest.city, 'code': dest.code},
+                    'layovers': enriched_layovers,
                     'departure_time': s.departure_time,
                     'arrival_time': s.arrival_time,
                     'status': s.automatic_status
@@ -236,7 +252,18 @@ class DashboardViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['get'])
     def popular_routes(self, request):
-        routes = BookingDetail.objects.all().values(
+        period = request.query_params.get('period', 'all')
+        now = timezone.now()
+        
+        queryset = BookingDetail.objects.all()
+        if period == 'weekly':
+            queryset = queryset.filter(booking__created_at__gte=now - timedelta(days=7))
+        elif period == 'monthly':
+            queryset = queryset.filter(booking__created_at__gte=now - timedelta(days=30))
+        elif period == 'yearly':
+            queryset = queryset.filter(booking__created_at__gte=now - timedelta(days=365))
+
+        routes = queryset.values(
             'schedule__flight__route__origin_airport__city',
             'schedule__flight__route__destination_airport__city'
         ).annotate(count=Count('id')).order_by('-count')[:5]
@@ -252,10 +279,18 @@ class DashboardViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['get'])
     def flight_operations_stats(self, request):
-        stats = Schedule.objects.all().values('status').annotate(count=Count('id'))
+        # Precise operational mapping to ensure radar chart accuracy
+        target_statuses = ['On Flight', 'Arrived', 'Open', 'Closed']
+        schedules = Schedule.objects.all()
+        
+        counts = []
+        for status_name in target_statuses:
+            count = schedules.filter(status__iexact=status_name).count()
+            counts.append(count)
+            
         return Response({
-            'labels': [s['status'] for s in stats],
-            'data': [s['count'] for s in stats]
+            'labels': target_statuses,
+            'data': counts
         })
 
     @action(detail=False, methods=['get'])
@@ -275,6 +310,51 @@ class DashboardViewSet(viewsets.ViewSet):
             'data': [float(r['revenue']) for r in rev]
         })
     
+    @action(detail=False, methods=['get'])
+    def network_peak_hours(self, request):
+        from django.db.models.functions import ExtractHour
+        
+        # Get distribution of flights across 24 hours
+        distribution = Schedule.objects.annotate(
+            hour=ExtractHour('departure_time')
+        ).values('hour').annotate(count=Count('id')).order_by('hour')
+        
+        # Create full 24-hour array (defaulting to 0)
+        hourly_data = [0] * 24
+        for d in distribution:
+            if d['hour'] is not None:
+                hourly_data[d['hour']] = d['count']
+                
+        return Response({
+            'labels': [f"{h:02d}:00" for h in range(24)],
+            'data': hourly_data
+        })
+    
+    @action(detail=False, methods=['post'])
+    def sync_active_flights(self, request):
+        """
+        Simulation Utility: Adjusts departure/arrival times of all 'On Flight' 
+        schedules so they are currently somewhere in the middle of their duration.
+        """
+        now = timezone.now()
+        active_schedules = Schedule.objects.filter(status__iexact='On Flight')
+        count = active_schedules.count()
+        
+        for s in active_schedules:
+            duration = s.arrival_time - s.departure_time
+            if duration <= timedelta(0):
+                duration = timedelta(hours=2)
+            
+            # Scatter them based on ID
+            percent = (20 + (s.id * 17) % 60) / 100.0 
+            elapsed = duration.total_seconds() * percent
+            
+            s.departure_time = now - timedelta(seconds=elapsed)
+            s.arrival_time = s.departure_time + duration
+            s.save(update_fields=['departure_time', 'arrival_time'])
+            
+        return Response({'message': f'Synchronized {count} flights.', 'count': count})
+
     @action(detail=False, methods=['get'])
     def alerts(self, request):
         return Response([])

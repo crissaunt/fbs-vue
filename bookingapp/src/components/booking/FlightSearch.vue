@@ -236,9 +236,37 @@ const passengers = ref({ adult: 1, children: 0, infant: 0 });
 const totalPassengers = computed(() => passengers.value.adult + passengers.value.children + passengers.value.infant);
 
 const updateCount = (type, delta) => {
-  const newVal = passengers.value[type] + delta;
+  const current = passengers.value;
+  const newVal = current[type] + delta;
+
+  // Basic range check
+  if (newVal < 0 || newVal > 9) return;
+
+  // Adult minimum check
   if (type === 'adult' && newVal < 1) return;
-  if (newVal >= 0 && newVal <= 9) passengers.value[type] = newVal;
+
+  // Rule: Total (Adult + Children) usually capped at 9 in standard GDS
+  if ((type === 'adult' || type === 'children')) {
+    const totalBookable = (type === 'adult' ? newVal : current.adult) + (type === 'children' ? newVal : current.children);
+    if (totalBookable > 9) {
+      notificationStore.warn("Maximum 9 passengers (Adults + Children) allowed per booking.");
+      return;
+    }
+  }
+
+  // Rule: Infant count cannot exceed Adult count (1 infant per adult)
+  if (type === 'infant' && newVal > current.adult) {
+    notificationStore.warn("Each infant must be accompanied by an adult (1 Infant per Adult).");
+    return;
+  }
+
+  // Rule: If reducing adults, ensure we don't have more infants than remaining adults
+  if (type === 'adult' && delta < 0 && current.infant > newVal) {
+    notificationStore.warn("Cannot reduce adults below infant count. Each infant needs an accompanying adult.");
+    return;
+  }
+
+  passengers.value[type] = newVal;
 };
 
 // --- 5. SEARCH EXECUTION ---

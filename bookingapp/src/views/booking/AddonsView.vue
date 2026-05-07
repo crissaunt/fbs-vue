@@ -169,7 +169,18 @@
                         {{ bookingStore.fareFamilies[segment.key] }}
                       </span>
                     </div>
-                    <div v-for="p in eligiblePassengers" :key="p.key" class="rounded-sm border border-gray-100 bg-gray-50/60 p-4">
+                    <!-- If baggage is included in the fare, show banner, but STILL show add-on options. -->
+                    <div v-if="isAnyBaggageIncludedForSegment(segment.key)" class="flex items-center gap-3 p-4 rounded-sm bg-emerald-50 border border-emerald-200 mb-4">
+                      <div class="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                      </div>
+                      <div>
+                        <p class="text-sm font-bold text-emerald-800">Checked Baggage Included</p>
+                        <p class="text-[11px] text-emerald-600 mt-0.5">Your selected fare already includes checked baggage for all passengers on this flight. You may purchase additional baggage below if needed.</p>
+                      </div>
+                    </div>
+
+                    <div v-for="p in eligiblePassengers" :key="p.key" class="rounded-sm border border-gray-100 bg-gray-50/60 p-4 mb-3 last:mb-0">
                       <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-2">
                           <div class="w-7 h-7 rounded-full bg-[#003870] flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
@@ -185,19 +196,19 @@
                           @click="handleCopyAddon('baggage', p)">Apply to all flights</button>
                       </div>
                       <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        <div v-for="opt in (baggageOptionsMap[getAirlineId(segment.key)] || [])" :key="opt.id"
-                          v-show="!isBaggageIncluded(opt, segment.key)"
+                        <div v-for="opt in (baggageOptionsMap[getAirlineId(segment.key)] || []).filter(o => !isBaggageIncluded(o, segment.key))" :key="opt.id"
                           @click="selectBaggageDirect(p, opt, segment.key, $event)"
                           :class="['relative cursor-pointer rounded-sm border-2 p-3 text-center transition-all hover:-translate-y-0.5 hover:shadow-sm', getBaggageSelection(p.key, segment.key)?.id === opt.id ? 'border-pink-500 bg-pink-50' : 'border-gray-200 bg-white hover:border-pink-300']">
-                          <div v-if="getBaggageSelection(p.key, segment.key)?.id === opt.id" class="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center">
+                          
+                          <div v-if="getBaggageSelection(p.key, segment.key)?.id === opt.id" class="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center z-10">
                             <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
                           </div>
-                          
                           <div class="text-2xl mb-1">&#x1F9F3;</div>
                           <p class="text-sm font-black text-gray-900">{{ opt.formatted_weight }}</p>
-                          <p class="text-xs font-bold mt-0.5" :class="isBaggageIncluded(opt, segment.key) ? 'text-emerald-600' : 'text-pink-500'">
-                            {{ isBaggageIncluded(opt, segment.key) ? 'INCLUDED' : '+ ₱' + parseFloat(opt.price).toLocaleString() }}
-                          </p>
+                          <p class="text-xs font-bold text-pink-500 mt-0.5">+ ₱{{ parseFloat(opt.price).toLocaleString() }}</p>
+                        </div>
+                        <div v-if="!(baggageOptionsMap[getAirlineId(segment.key)] || []).filter(o => !isBaggageIncluded(o, segment.key)).length" class="col-span-3 text-center text-xs text-gray-400 py-4">
+                          No extra baggage options available for this flight.
                         </div>
                       </div>
                     </div>
@@ -739,15 +750,7 @@ const baggagePolicies = {
 };
 
 const resolveAirlineId = (flight) => {
-  if (!flight) return null;
-  // Try all possible fields where airline could be stored
-  const raw = flight.airline_id || flight.airline; 
-  if (!raw) return flight.airline_code || null;
-  
-  // If it's the full airline object, return its ID
-  if (typeof raw === 'object' && raw.id) return raw.id;
-  
-  return raw;
+  return resolveAirlineNumericId(flight);
 };
 
 const getAirlineId = (segmentKey) => {
@@ -927,6 +930,9 @@ const isBaggageIncluded = (opt, segmentKey) => {
                  segmentKey === 'return' ? bookingStore.selectedReturn : 
                  bookingStore.multiCitySegments[parseInt(segmentKey)]?.selectedFlight;
   
+  // If price is 0 or less, definitely "included" (free), so hide it from extra baggage
+  if (parseFloat(opt.price) <= 0) return true;
+  
   if (!flight) return false;
   
   const features = Array.isArray(flight.seat_class_features) ? flight.seat_class_features : [];
@@ -943,7 +949,7 @@ const isBaggageIncluded = (opt, segmentKey) => {
   const allowance = parseInt(weightMatch[1]);
   const weight = opt.weight_kg || opt.weight || 0;
   
-  // If the baggage option weight is less than or equal to what's already included, it should be $0
+  // If the baggage option weight is less than or equal to what's already included, it should be $0 (hidden)
   return weight > 0 && weight <= allowance;
 };
 
@@ -1076,6 +1082,13 @@ const confirmSelection = () => {
 };
 
 const eligiblePassengers = computed(() => bookingStore.passengers.filter(p => p.type !== 'Infant'));
+
+// Returns true if ANY baggage option for this segment is already included in the fare
+const isAnyBaggageIncludedForSegment = (segmentKey) => {
+  const options = baggageOptionsMap[getAirlineId(segmentKey)] || [];
+  if (!options.length) return false;
+  return options.some(opt => isBaggageIncluded(opt, segmentKey));
+};
 const indicatorStyle = computed(() => {
   const tabs = ['baggage', 'seat', 'meals', 'wheelchair'];
   const idx = tabs.indexOf(currentTab.value);
@@ -1094,7 +1107,7 @@ const addonsSubtotal = computed(() => {
   return (totalBaggage.value || 0) + (totalMeals.value || 0) + (totalSeats.value || 0) + 
          (totalAssistance.value || 0) + (bookingStore.insurancePrice || 0);
 });
-const grandTotal = computed(() => bookingStore.grandTotal);
+const grandTotal = computed(() => bookingStore.authoritativeTotal);
 const saveAndContinue = () => { 
   isNavigating.value = true;
   setTimeout(() => {

@@ -861,8 +861,9 @@ const goBack = () => {
 
 const downloadAllPasses = () => {
   selectedPassengers.value.forEach(p => {
-    // Bug fix: Use relative URL via dcsService instead of hardcoded localhost
-    window.open(`/api/dcs/boarding-pass/${p.booking_detail_id}/`, '_blank')
+    // UPDATED: Added /api/ prefix and use baseURL
+    const url = `${dcsService.axiosInstance.defaults.baseURL}api/dcs/boarding-pass/${p.booking_detail_id}/`
+    window.open(url, '_blank')
   })
 }
 </script>

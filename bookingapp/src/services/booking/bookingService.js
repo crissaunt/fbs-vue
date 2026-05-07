@@ -298,7 +298,8 @@ export const bookingService = {
             price: parseFloat(seg.selectedFlight?.price) || 0,
             airline: seg.selectedFlight?.airline,
             airline_code: seg.selectedFlight?.airline_code,
-            fare_family: bookingStore.fareFamilies?.[segKey] || 'basic'
+            fare_family: bookingStore.fareFamilies?.[segKey] || 'basic',
+            fare_family_name: bookingStore.fareFamilyNames?.[segKey] || ''
           },
           addons: segAddons
         };
@@ -317,7 +318,8 @@ export const bookingService = {
         departure_time: bookingStore.selectedOutbound.departure_time,
         airline: bookingStore.selectedOutbound.airline,
         airline_code: bookingStore.selectedOutbound.airline_code,
-        fare_family: bookingStore.fareFamilies?.['depart'] || 'basic'
+        fare_family: bookingStore.fareFamilies?.['depart'] || 'basic',
+        fare_family_name: bookingStore.fareFamilyNames?.['depart'] || ''
       } : null;
 
       bookingData.selectedReturn = bookingStore.selectedReturn ? {
@@ -329,7 +331,8 @@ export const bookingService = {
         origin: getAirportCode(bookingStore.selectedReturn.origin),
         destination: getAirportCode(bookingStore.selectedReturn.destination),
         departure_time: bookingStore.selectedReturn.departure_time,
-        fare_family: bookingStore.fareFamilies?.['return'] || 'basic'
+        fare_family: bookingStore.fareFamilies?.['return'] || 'basic',
+        fare_family_name: bookingStore.fareFamilyNames?.['return'] || ''
       } : null;
 
       bookingData.addons = formattedAddons;
@@ -370,6 +373,24 @@ export const bookingService = {
       return {
         success: false,
         error: error.response?.data?.error || error.message || 'Failed to calculate price'
+      }
+    }
+  },
+
+  /**
+   * Explicitly fail an activity when time is up
+   * @param {number} activityId - The ID of the activity to fail
+   */
+  async failActivity(activityId) {
+    try {
+      console.log(`⏰ Failing activity ID: ${activityId} due to timeout`)
+      const response = await api.post(`fbs_instructor/student/activity/fail/${activityId}/`)
+      return response.data
+    } catch (error) {
+      console.error('❌ Error failing activity:', error.response?.data || error.message)
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Failed to mark activity as failed'
       }
     }
   }

@@ -29,7 +29,7 @@ class EmailService:
         """
         try:
             # Get contact email from booking
-            contact = booking.contact
+            contact = getattr(booking, 'contact', None)
             if not contact or not contact.email:
                 logger.error(f"No contact email found for booking {booking.id}")
                 return False
@@ -121,7 +121,7 @@ class EmailService:
             # Use passenger email if available, else fallback to booking contact email
             recipient_email = getattr(passenger, 'email', None)
             if not recipient_email:
-                contact = booking.contact
+                contact = getattr(booking, 'contact', None)
                 recipient_email = contact.email if contact else None
                 
             if not recipient_email:
@@ -194,7 +194,7 @@ class EmailService:
             # Use the first booking detail to get common info
             first_detail = booking_details[0]
             booking = first_detail.booking
-            contact = booking.contact
+            contact = getattr(booking, 'contact', None)
             
             if not contact or not contact.email:
                 logger.error(f"No contact email for group checkin {booking.id}")
@@ -213,7 +213,7 @@ class EmailService:
                 passengers_list.append({
                     'name': det.passenger.get_full_name() if det.passenger else "Passenger",
                     'seat': det.seat.seat_number if det.seat else "TBA",
-                    'type': det.passenger.passenger_type if det.passenger else "Adult"
+                    'type': det.passenger_type or (det.passenger.passenger_type if det.passenger else "Adult")
                 })
             
             context = {
@@ -317,7 +317,7 @@ class EmailService:
                 })
         
         # Get contact info
-        contact = booking.contact
+        contact = getattr(booking, 'contact', None)
         contact_name = f"{contact.first_name} {contact.last_name}" if contact else "N/A"
         contact_email = contact.email if contact else "N/A"
         contact_phone = contact.phone if contact else "N/A"

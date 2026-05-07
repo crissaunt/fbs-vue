@@ -93,6 +93,7 @@ class Activity(models.Model):
         choices=[('economy', 'Economy'), ('premium_economy', 'Premium Economy'), ('business', 'Business'), ('first', 'First Class')],
         default='economy'
     )
+    required_seat_class = models.CharField(max_length=50, blank=True, null=True)
     
     required_passengers = models.PositiveIntegerField(default=1)
     required_children = models.PositiveIntegerField(default=0)
@@ -340,3 +341,19 @@ class StudentNotification(models.Model):
     def __str__(self):
         return f"[{'READ' if self.is_read else 'UNREAD'}] {self.student} - {self.title}"
 
+
+class InstructorNotificationReadStatus(models.Model):
+    """
+    Tracks which dynamic notifications (based on schedules) have been read by an instructor.
+    This ensures persistence across devices and logouts.
+    """
+    instructor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notification_read_statuses')
+    notification_id = models.CharField(max_length=255) # e.g. "1-Monday-09:00_Tue_Apr_14_2026_missed"
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('instructor', 'notification_id')
+        db_table = 'instructor_notification_read_status'
+
+    def __str__(self):
+        return f"{self.instructor.username} read {self.notification_id}"

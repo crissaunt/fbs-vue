@@ -15,7 +15,7 @@ const api = axios.create({
 api.interceptors.request.use(
     (config) => {
         // Do not attach token for authentication endpoints
-        if (config.url && (config.url.includes('auth/login') || config.url.includes('admin/login'))) {
+        if (config.url && (config.url.includes('auth/login') || config.url.includes('admin/login') || config.url.includes('auth/register'))) {
             return config;
         }
 

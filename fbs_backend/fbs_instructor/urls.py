@@ -9,6 +9,7 @@ from .views import (
     Enroll_Student_list,
     UnenrollStudentView,
     create_activity,
+    update_activity,
     delete_activity,
     activity_details,
     activate_activity,
@@ -61,6 +62,7 @@ urlpatterns = [
     
     # Activity Management - Create & Delete
     path('instructor/sections/<int:section_id>/activities/create/', create_activity, name='api_create_activity'),
+    path('instructor/sections/<int:section_id>/activities/<int:activity_id>/update/', update_activity, name='api_update_activity'),
     path('instructor/sections/<int:section_id>/activities/<int:activity_id>/delete/', delete_activity, name='delete_activity'),
     
     # Travel/Add-on Lookups (route+date aware)
@@ -99,10 +101,15 @@ urlpatterns = [
     
     # Existing student URLs...
     path('student/activity/start/<int:activity_id>/', views.start_activity, name='start_activity'),
+    path('student/activity/fail/<int:activity_id>/', views.fail_activity, name='fail_activity'),
     
     # Notifications
     path('student/notifications/', get_student_notifications, name='get_student_notifications'),
     path('student/notifications/mark-read/', mark_notifications_read, name='mark_notifications_read'),
+
+    # Instructor Dynamic Notifications (Persistent)
+    path('instructor/notifications/read-status/', views.get_instructor_notifications_read_status, name='get_instructor_notifications_read_status'),
+    path('instructor/notifications/mark-read/', views.mark_instructor_notifications_read, name='mark_instructor_notifications_read'),
 
     # Admin LMS Overview
     path('admin/lms-overview/', admin_lms_overview, name='admin_lms_overview'),

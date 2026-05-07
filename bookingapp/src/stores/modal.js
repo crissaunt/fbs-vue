@@ -15,11 +15,6 @@ export const useModalStore = defineStore('modal', {
     }),
 
     actions: {
-        /**
-         * Show a confirmation modal
-         * @param {Object} options - { title, message, confirmText, cancelText }
-         * @returns {Promise<boolean>}
-         */
         confirm(options = {}) {
             this.isOpen = true;
             this.type = 'confirm';
@@ -30,6 +25,20 @@ export const useModalStore = defineStore('modal', {
             this.variant = options.variant || 'standard';
             this.isLoading = false;
             this.loadingText = options.loadingText || '';
+
+            return new Promise((resolve) => {
+                this.resolvePromise = resolve;
+            });
+        },
+
+        error(options = {}) {
+            this.isOpen = true;
+            this.type = 'alert';
+            this.title = options.title || 'Error';
+            this.message = options.message || 'Something went wrong.';
+            this.confirmText = options.confirmText || 'Close';
+            this.variant = 'danger';
+            this.isLoading = false;
 
             return new Promise((resolve) => {
                 this.resolvePromise = resolve;

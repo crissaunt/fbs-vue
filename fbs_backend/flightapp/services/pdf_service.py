@@ -20,14 +20,14 @@ class BoardingPassPDFService:
     Professional boarding pass and itinerary PDF generation service
     """
     
-    # Refined color palette - professional navy/cyan theme
-    PRIMARY_DARK = HexColor('#0f172a')      # Navy header
-    PRIMARY_ACCENT = HexColor('#3b82f6')    # Blue accent
-    SECONDARY_ACCENT = HexColor('#06b6d4')  # Cyan accent
-    TEXT_PRIMARY = HexColor('#1e293b')      # Dark slate text
-    TEXT_SECONDARY = HexColor('#64748b')    # Gray text
-    BACKGROUND_LIGHT = HexColor('#f8fafc')  # Light gray background
-    BORDER_COLOR = HexColor('#e2e8f0')      # Border gray
+    # PINK THEME - Matching Student Dashboard
+    PRIMARY_DARK = HexColor('#FF579A')      # Signature Pink
+    PRIMARY_ACCENT = HexColor('#FF579A')    # Vibrant Pink
+    SECONDARY_ACCENT = HexColor('#db2777')  # Deep Pink
+    TEXT_PRIMARY = HexColor('#1e293b')      # Slate Navy
+    TEXT_SECONDARY = HexColor('#64748b')    # Gray
+    BACKGROUND_LIGHT = HexColor('#fff1f5')  # Soft Pink-White background
+    BORDER_COLOR = HexColor('#fbcfe8')      # Pink Border
     WHITE = HexColor('#ffffff')
     
     @staticmethod
@@ -64,13 +64,19 @@ class BoardingPassPDFService:
         origin_city = route.origin_airport.city if route else "Origin"
         destination_city = route.destination_airport.city if route else "Destination"
         
-        departure_time = schedule.departure_time.strftime("%H:%M") if schedule else "00:00"
-        boarding_time = (schedule.departure_time - __import__('datetime').timedelta(minutes=40)).strftime("%H:%M") if schedule else "00:00"
-        departure_date = schedule.departure_time.strftime("%d %b %Y").upper() if schedule else "00 JAN 0000"
-        
-        seat_number = seat.seat_number if seat else "--"
+        seat_number = seat.seat_number if seat else ("SEAT ON LAP" if getattr(booking_detail, 'passenger_type', None) == 'Infant' or (passenger and getattr(passenger, 'passenger_type', None) == 'Infant') else "--")
         gate = getattr(schedule, 'gate', 'TBA')
-        group = "A" if seat and seat.seat_number and int(''.join(filter(str.isdigit, seat.seat_number))) <= 10 else "B"
+        # Robust departure time handling
+        if schedule and schedule.departure_time:
+            departure_time = schedule.departure_time.strftime("%H:%M")
+            boarding_time = (schedule.departure_time - __import__('datetime').timedelta(minutes=40)).strftime("%H:%M")
+            departure_date = schedule.departure_time.strftime("%d %b %Y").upper()
+        else:
+            departure_time = "00:00"
+            boarding_time = "00:00"
+            departure_date = "TBA"
+        
+        group = "A" if seat and seat.seat_number and ''.join(filter(str.isdigit, seat.seat_number)).isdigit() and int(''.join(filter(str.isdigit, seat.seat_number))) <= 10 else "B"
         
         # Colors
         primary = BoardingPassPDFService.PRIMARY_DARK
@@ -319,9 +325,10 @@ class BoardingPassPDFService:
         c = canvas.Canvas(buffer, pagesize=A4)
         width, height = A4
         
-        # Colors
+        # Colors - Local cache
         primary = BoardingPassPDFService.PRIMARY_DARK
         accent = BoardingPassPDFService.PRIMARY_ACCENT
+        secondary_accent = BoardingPassPDFService.SECONDARY_ACCENT
         text = BoardingPassPDFService.TEXT_PRIMARY
         text_secondary = BoardingPassPDFService.TEXT_SECONDARY
         bg_light = BoardingPassPDFService.BACKGROUND_LIGHT
@@ -343,7 +350,7 @@ class BoardingPassPDFService:
         c.drawString(0.8*inch, height - 0.85*inch, "TRAVEL ITINERARY")
         
         c.setFont("Helvetica", 10)
-        c.setFillColor(HexColor('#94a3b8'))
+        c.setFillColor(HexColor('#fce7f3'))
         c.drawString(0.8*inch, height - 1.1*inch, "E-TICKET / BOOKING CONFIRMATION")
         
         # GDS Label
@@ -353,10 +360,10 @@ class BoardingPassPDFService:
         
         # Booking reference box (right)
         ref_x = width - 3.2*inch
-        c.setFillColor(HexColor('#1e293b'))
-        c.roundRect(ref_x, height - 1.2*inch, 2.4*inch, 0.9*inch, 4, fill=1, stroke=0)
+        c.setFillColor(secondary_accent)
+        c.roundRect(ref_x, height - 1.2*inch, 2.4*inch, 0.9*inch, 6, fill=1, stroke=0)
         
-        c.setFillColor(HexColor('#94a3b8'))
+        c.setFillColor(HexColor('#fce7f3')) # Light pink text
         c.setFont("Helvetica", 9)
         c.drawString(ref_x + 0.15*inch, height - 0.55*inch, "PNR / RECORD LOCATOR")
         
@@ -400,13 +407,13 @@ class BoardingPassPDFService:
         card_height = 1.3*inch
         
         c.setFillColor(white)
-        c.roundRect(0.6*inch, y_pos - card_height, width - 1.2*inch, card_height, 6, fill=1, stroke=0)
+        c.roundRect(0.6*inch, y_pos - card_height, width - 1.2*inch, card_height, 8, fill=1, stroke=0)
         c.setStrokeColor(border)
         c.setLineWidth(0.5)
-        c.roundRect(0.6*inch, y_pos - card_height, width - 1.2*inch, card_height, 6, fill=0, stroke=1)
+        c.roundRect(0.6*inch, y_pos - card_height, width - 1.2*inch, card_height, 8, fill=0, stroke=1)
         
         # Contact info
-        contact = booking.contact
+        contact = getattr(booking, 'contact', None)
         c.setFillColor(text)
         c.setFont("Helvetica-Bold", 10)
         
@@ -447,7 +454,7 @@ class BoardingPassPDFService:
             'schedule__flight__route__origin_airport',
             'schedule__flight__route__destination_airport',
             'seat'
-        ).all()
+        ).prefetch_related('addons').all()
         
         y_pos -= 0.3*inch
         
@@ -472,17 +479,17 @@ class BoardingPassPDFService:
             if has_layovers:
                 card_h += (len(layovers_data) * 0.25 * inch)
             
-            # Card shadow effect
-            c.setFillColor(HexColor('#e2e8f0'))
-            c.roundRect(0.65*inch, y_pos - card_h - 0.02*inch, width - 1.3*inch, card_h, 6, fill=1, stroke=0)
+            # Card shadow effect (soft pink shadow)
+            c.setFillColor(HexColor('#fce7f3'))
+            c.roundRect(0.63*inch, y_pos - card_h - 0.03*inch, width - 1.26*inch, card_h, 8, fill=1, stroke=0)
             
             # Card background
             c.setFillColor(white)
-            c.roundRect(0.6*inch, y_pos - card_h, width - 1.2*inch, card_h, 6, fill=1, stroke=0)
+            c.roundRect(0.6*inch, y_pos - card_h, width - 1.2*inch, card_h, 8, fill=1, stroke=0)
             
             # Left accent bar
             c.setFillColor(segment_color)
-            c.roundRect(0.6*inch, y_pos - card_h, 0.08*inch, card_h, 3, fill=1, stroke=0)
+            c.roundRect(0.6*inch, y_pos - card_h, 0.08*inch, card_h, 4, fill=1, stroke=0)
             
             # Flight type badge
             badge_y = y_pos - 0.25*inch
@@ -600,6 +607,26 @@ class BoardingPassPDFService:
                     c.setFont("Helvetica", 8)
                     c.drawString(0.9*inch, lay_row_y, f"STOP {l_idx + 1}: {layover.get('airport')} ({layover.get('city')})")
                     c.drawRightString(width - 0.9*inch, lay_row_y, f"Layover: {layover.get('duration')}")
+            
+            # NEW: Add-ons Section inside the card
+            addons = detail.addons.all()
+            if addons.exists():
+                addon_y = times_y - 0.6*inch
+                if has_layovers:
+                    addon_y -= ((len(layovers_data) + 1) * 0.25 * inch)
+                
+                c.setStrokeColor(border)
+                c.setLineWidth(0.5)
+                c.line(0.8*inch, addon_y + 0.15*inch, width - 0.8*inch, addon_y + 0.15*inch)
+                
+                c.setFillColor(text_secondary)
+                c.setFont("Helvetica-Bold", 7)
+                c.drawString(0.9*inch, addon_y, "ADDITIONAL SERVICES")
+                
+                addon_text = ", ".join([a.name for a in addons])
+                c.setFillColor(text)
+                c.setFont("Helvetica", 8)
+                c.drawString(0.9*inch, addon_y - 0.15*inch, addon_text)
 
             y_pos -= card_h + 0.3*inch
         
@@ -618,18 +645,22 @@ class BoardingPassPDFService:
         summary_h = 1.6*inch
         
         c.setFillColor(white)
-        c.roundRect(0.6*inch, y_pos - summary_h, width - 1.2*inch, summary_h, 6, fill=1, stroke=0)
+        c.roundRect(0.6*inch, y_pos - summary_h, width - 1.2*inch, summary_h, 8, fill=1, stroke=0)
         c.setStrokeColor(border)
-        c.roundRect(0.6*inch, y_pos - summary_h, width - 1.2*inch, summary_h, 6, fill=0, stroke=1)
+        c.roundRect(0.6*inch, y_pos - summary_h, width - 1.2*inch, summary_h, 8, fill=0, stroke=1)
         
         # Summary items
         summary_items = [
-            ("Base Fare", f"?{booking.base_fare_total:,.2f}" if booking.base_fare_total else "?0.00"),
-            ("Taxes & Fees", f"?{booking.tax_total:,.2f}" if booking.tax_total else "?0.00"),
+            ("Base Fare", f"P{booking.base_fare_total:,.2f}" if booking.base_fare_total else "P0.00"),
+            ("Taxes & Fees", f"P{booking.tax_total:,.2f}" if booking.tax_total else "P0.00"),
         ]
         
         if booking.insurance_total:
-            summary_items.append(("Travel Insurance", f"?{booking.insurance_total:,.2f}"))
+            summary_items.append(("Travel Insurance", f"P{booking.insurance_total:,.2f}"))
+        
+        addons_total = sum(d.addons_total for d in details)
+        if addons_total:
+            summary_items.append(("Additional Services", f"P{addons_total:,.2f}"))
         
         item_y = y_pos - 0.3*inch
         c.setFont("Helvetica", 10)
@@ -649,7 +680,7 @@ class BoardingPassPDFService:
         c.setFillColor(primary)
         c.setFont("Helvetica-Bold", 14)
         c.drawString(0.9*inch, item_y - 0.15*inch, "TOTAL PAID")
-        c.drawRightString(width - 0.9*inch, item_y - 0.15*inch, f"?{booking.total_amount:,.2f}" if booking.total_amount else "?0.00")
+        c.drawRightString(width - 0.9*inch, item_y - 0.15*inch, f"P{booking.total_amount:,.2f}" if booking.total_amount else "P0.00")
         
         # Payment method
         payment = booking.payments.filter(status='Completed').first()

@@ -53,5 +53,18 @@ export const instructorDashboardService = {
             console.warn('Logging failed:', error);
             return null;
         }
+    },
+
+    // GET: Fetch read notification IDs
+    async getReadStatuses() {
+        const response = await api.get('api/instructor/notifications/read-status/');
+        return response.data;
+    },
+
+    // POST: Mark notifications as read in DB
+    async markNotificationsRead(ids) {
+        const response = await api.post('api/instructor/notifications/mark-read/', { notification_ids: ids });
+        return response.data;
     }
 };
+

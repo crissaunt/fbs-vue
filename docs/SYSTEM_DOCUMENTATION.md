@@ -456,6 +456,11 @@ python scripts/verify_grading.py
 
 ---
 
-## License
 
-This project is for educational purposes.
+---
+
+## Supplementary Documentation
+- 📘 **[Admin Operations Guide](file:///c:/Users/user/OneDrive/Desktop/Folders/Fbs/fbs-vue/docs/ADMIN_GUIDE.md)** - Guide for managing flights, assets, and imports.
+- 🔄 **[System Workflow](file:///c:/Users/user/OneDrive/Desktop/Folders/Fbs/fbs-vue/docs/workflow.md)** - Operational flow diagrams and lifecycle.
+- 📋 **[Booking Process](file:///c:/Users/user/OneDrive/Desktop/Folders/Fbs/fbs-vue/docs/Booking%20Process%20Documentation)** - Detailed step-by-step booking logic.
+

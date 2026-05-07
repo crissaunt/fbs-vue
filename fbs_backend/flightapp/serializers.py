@@ -376,8 +376,20 @@ class BookingDetailSerializer(serializers.ModelSerializer):
     schedule = SimpleScheduleSerializer(read_only=True)
     seat = SimpleSeatSerializer(read_only=True)
     addons = AddOnSerializer(many=True, read_only=True)
-    seat_class_name = serializers.CharField(source='seat_class.name', read_only=True, allow_null=True)
+    # seat_class_name: Try detail.seat_class.name first (FK on the detail),
+    # then fall back to seat.seat_class.name (from the physical seat chosen).
+    # This covers both old bookings (seat_class FK was null) and new ones.
+    seat_class_name = serializers.SerializerMethodField()
     
+    def get_seat_class_name(self, obj):
+        # Priority 1: seat_class FK directly on the BookingDetail
+        if obj.seat_class and obj.seat_class.name:
+            return obj.seat_class.name
+        # Priority 2: seat_class FK on the associated Seat object
+        if obj.seat and obj.seat.seat_class and obj.seat.seat_class.name:
+            return obj.seat.seat_class.name
+        return None
+
     # Computed fields
     total_with_insurance = serializers.DecimalField(
         max_digits=10, decimal_places=2, read_only=True
@@ -395,9 +407,10 @@ class BookingDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'passenger', 'schedule', 'seat', 'seat_class', 'seat_class_name',
             'booking_date', 'price', 'tax_amount', 'status', 'passenger_type',
-            'addons', 'total_with_insurance', 'has_insurance', 'insurance_cost',
+            'fare_family_name', 'addons', 'total_with_insurance', 'has_insurance', 'insurance_cost',
             'total_amount'
         ]
+
 
 class PaymentSerializer(serializers.ModelSerializer):
     """Serializer for payment records"""
@@ -415,20 +428,109 @@ class BookingSerializer(serializers.ModelSerializer):
     details = BookingDetailSerializer(many=True, read_only=True)
     payments = PaymentSerializer(many=True, read_only=True)
     
+    # Extra fields for frontend
+    user_name = serializers.SerializerMethodField()
+    user_email = serializers.SerializerMethodField()
+    contact_phone = serializers.SerializerMethodField()
+    contact_email = serializers.SerializerMethodField()
+    
     # Computed fields
     total_amount = serializers.DecimalField(
         max_digits=10, decimal_places=2, read_only=True
     )
     has_insurance = serializers.BooleanField(read_only=True)
     
+    breakdown = serializers.SerializerMethodField()
+    tax_details = serializers.SerializerMethodField()
+    
     class Meta:
         model = Booking
         fields = [
-            'id', 'user', 'trip_type', 'status', 'created_at',
+            'id', 'pnr', 'user', 'user_name', 'user_email', 'contact_phone', 'contact_email',
+            'trip_type', 'status', 'created_at',
             'base_fare_total', 'insurance_total', 'tax_total', 'total_amount',
-            'has_insurance', 'details', 'payments'
+            'has_insurance', 'details', 'payments', 'breakdown', 'tax_details'
         ]
         read_only_fields = ['created_at', 'base_fare_total', 'insurance_total', 'tax_total']
+
+    def get_user_name(self, obj):
+        # Try to get the lead passenger's name first for the manifest
+        first_detail = obj.details.first()
+        if first_detail and first_detail.passenger:
+            return first_detail.passenger.get_full_name()
+            
+        # Fallback to booking contact info
+        if hasattr(obj, 'contact') and obj.contact:
+            return f"{obj.contact.first_name} {obj.contact.last_name}"
+            
+        # Fallback to the account user who made the booking
+        return obj.user.get_full_name() if obj.user else None
+
+    def get_user_email(self, obj):
+        if hasattr(obj, 'contact') and obj.contact:
+            return obj.contact.email
+        return obj.user.email if obj.user else None
+
+    def get_contact_phone(self, obj):
+        if hasattr(obj, 'contact') and obj.contact:
+            return obj.contact.phone
+        return None
+
+    def get_contact_email(self, obj):
+        return self.get_user_email(obj)
+
+    def get_breakdown(self, obj):
+        """Calculate a categorized breakdown for the UI summary"""
+        res = {
+            'base_fare': float(obj.base_fare_total or 0),
+            'taxes': float(obj.tax_total or 0),
+            'insurance': float(obj.insurance_total or 0),
+            'grand_total': float(obj.total_amount or 0),
+            'adult_base': 0,
+            'child_base': 0,
+            'infant_base': 0,
+            'seats': 0,
+            'baggage': 0,
+            'meals': 0,
+            'assistance': 0,
+            'addons': 0
+        }
+        
+        # Calculate passenger type bases
+        for detail in obj.details.all():
+            p_type = detail.passenger_type.lower() if detail.passenger_type else 'adult'
+            if p_type == 'adult': res['adult_base'] += float(detail.price or 0)
+            elif p_type == 'child': res['child_base'] += float(detail.price or 0)
+            elif p_type == 'infant': res['infant_base'] += float(detail.price or 0)
+            
+            # Calculate categorized addons
+            for addon in detail.addons.all():
+                if addon.price and not addon.included:
+                    price = float(addon.price)
+                    res['addons'] += price
+                    
+                    # Try to categorize
+                    if addon.meal_option: res['meals'] += price
+                    elif addon.baggage_option: res['baggage'] += price
+                    elif addon.assistance_service: res['assistance'] += price
+                    elif addon.seat: res['seats'] += price
+                    else:
+                        # Fallback to name search if relations aren't clear
+                        name = addon.name.lower()
+                        if 'seat' in name: res['seats'] += price
+                        elif 'baggage' in name: res['baggage'] += price
+                        elif 'meal' in name: res['meals'] += price
+                        elif 'assistance' in name: res['assistance'] += price
+        
+        return res
+
+    def get_tax_details(self, obj):
+        """Get granular tax details for the UI summary"""
+        taxes = {}
+        for tax in obj.taxes.all():
+            label = tax.tax_type.name if tax.tax_type else "Taxes & Fees"
+            taxes[label] = taxes.get(label, 0) + float(tax.amount or 0)
+        return taxes
 
 # ============================================================
 # CREATE BOOKING REQUEST SERIALIZERS
@@ -674,6 +776,7 @@ class SelectedFlightSerializer(serializers.Serializer):
     airline = serializers.CharField(max_length=100, required=False, allow_blank=True)
     airline_code = serializers.CharField(max_length=10, required=False, allow_blank=True)
     fare_family = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    fare_family_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
 
 class ReturnAddonDataSerializer(serializers.Serializer):
     """Serializer for return flight add-on data"""

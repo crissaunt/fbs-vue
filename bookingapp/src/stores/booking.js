@@ -51,7 +51,6 @@ export const useBookingStore = defineStore('booking', {
     isPractice: false,            // Whether this is a practice booking
     hasActivityCodeValidation: false, // Whether student has completed activity code step
     activityExpiresAt: null,      // ISO string from backend
-    activityTimeLimitMinutes: null,
 
     nonStopOnly: false,
     stopPreference: 'all', // 'all', 'nonstop', 'direct', 'connecting'
@@ -88,15 +87,35 @@ export const useBookingStore = defineStore('booking', {
       const segments = this.allSegments;
       if (segments.length === 0) return false;
 
-      const phAirports = ['MNL', 'CEB', 'DVO', 'ILO', 'BCD', 'PPS', 'TAC', 'LGP', 'CGY', 'MPH', 'USU', 'GES', 'KLO', 'ZAM', 'CYP', 'DPL', 'TUG', 'SFS', 'LAO', 'VAC'];
+      // Comprehensive list of PH airport codes
+      const phAirports = [
+        'MNL', 'CEB', 'DVO', 'ILO', 'BCD', 'PPS', 'TAC', 'LGP', 'CGY', 'MPH', 'USU', 'GES', 
+        'KLO', 'ZAM', 'CYP', 'DPL', 'TUG', 'SFS', 'LAO', 'VAC', 'BHL', 'TAG', 'DGT', 'SJI',
+        'RVN', 'SFE', 'BQA', 'BSO', 'CBO', 'CRM', 'CYP', 'DPL', 'MBT', 'NLO', 'OZC', 'PAG',
+        'RXS', 'SGL', 'SNC', 'SUG', 'TDP', 'TUG', 'VGA', 'WNP', 'XCN', 'IAO', 'CRM', 'SIA'
+      ];
 
       return segments.some(seg => {
         const flight = seg.selectedFlight;
         if (!flight) return false;
-        const fromPH = phAirports.includes(flight.origin);
-        const toPH = phAirports.includes(flight.destination);
-        // If either side is not a known PH airport, we treat as international for documentation purposes
-        return !fromPH || !toPH;
+
+        // Priority 1: Use explicit is_domestic flag from backend if available
+        if (flight.is_domestic === true) return false;
+        if (flight.is_domestic === false) return true;
+
+        // Priority 2: Fallback to airport code check
+        // Check multiple possible field names used across different parts of the app
+        const origin = (flight.origin || flight.origin_code || flight.origin_airport_code || '').toString().toUpperCase();
+        const destination = (flight.destination || flight.destination_code || flight.destination_airport_code || '').toString().toUpperCase();
+
+        const fromPH = phAirports.includes(origin) || origin.startsWith('PH-');
+        const toPH = phAirports.includes(destination) || destination.startsWith('PH-');
+        
+        // If both are PH, it's domestic (return false for international)
+        if (fromPH && toPH) return false;
+        
+        // Default to international if we can't confirm it's domestic
+        return true;
       });
     },
 
@@ -142,8 +161,10 @@ export const useBookingStore = defineStore('booking', {
 
         const segmentSeats = seats[segKey] || {};
         Object.values(segmentSeats).forEach(seat => {
-          if (seat && seat.seat_price !== undefined) {
-            total += (parseFloat(seat.seat_price) || 0);
+          if (seat) {
+            // Support both internal property names and backend-serialized names
+            const price = seat.final_price ?? seat.seat_price ?? seat.price ?? 0;
+            total += parseFloat(price) || 0;
           }
         });
       });
@@ -162,21 +183,14 @@ export const useBookingStore = defineStore('booking', {
         const isPremium = state.fareFamilies[segKey] === 'premium';
 
         Object.values(segmentBaggage).forEach(baggageItem => {
-          if (baggageItem && typeof baggageItem === 'object' && baggageItem.price !== undefined) {
-            // If Premium, the first 20kg (or all standard baggage) might be included.
-            // For now, let's assume ALL baggage selected is free if Premium, 
-            // OR we just discount the 20kg price if it matches.
-            // The policy usually is: "1x 20kg included".
-
-            let price = parseFloat(baggageItem.price) || 0;
+          if (baggageItem && typeof baggageItem === 'object') {
+            const rawPrice = baggageItem.sale_price ?? baggageItem.price ?? 0;
+            let price = parseFloat(rawPrice) || 0;
 
             if (isPremium && baggageItem.weight_kg <= 20) {
               price = 0;
             } else if (isPremium && baggageItem.weight_kg > 20) {
-              // If they buy 32kg and 20kg is included, maybe they pay difference?
-              // Usually it's simpler: 20kg is free, others are paid.
-              // For simplicity: if premium and weight <= 20, it's 0.
-              price = 0; // Standard premium usually includes the luggage option they pick.
+              price = 0;
             }
 
             total += price;
@@ -197,8 +211,9 @@ export const useBookingStore = defineStore('booking', {
         Object.values(segmentMeals).forEach(mealArray => {
           if (Array.isArray(mealArray)) {
             mealArray.forEach(meal => {
-              if (meal && typeof meal === 'object' && meal.price !== undefined) {
-                total += (parseFloat(meal.price) || 0);
+              if (meal && typeof meal === 'object') {
+                const price = meal.sale_price ?? meal.price ?? 0;
+                total += (parseFloat(price) || 0);
               }
             });
           }
@@ -358,29 +373,133 @@ export const useBookingStore = defineStore('booking', {
       return Math.ceil(rawTotal);
     },
 
-    // NEW: Authoritative Taxes (includes priorities)
+    // Authoritative Taxes (includes priorities)
     authoritativeTaxes(state) {
-      if (state.backendBreakdown?.taxes) {
+      if (state.backendBreakdown?.breakdown?.taxes !== undefined) {
+        return parseFloat(state.backendBreakdown.breakdown.taxes);
+      }
+      if (state.backendBreakdown?.taxes !== undefined) {
         return parseFloat(state.backendBreakdown.taxes);
       }
       return this.totalTaxes || 0;
     },
 
-    // NEW: Authoritative Grand Total (The "Payable" Amount)
+    // Authoritative Base Fare
+    authoritativeBaseFare(state) {
+      if (state.backendBreakdown?.breakdown?.base_fare !== undefined) {
+        return parseFloat(state.backendBreakdown.breakdown.base_fare);
+      }
+      if (state.backendBreakdown?.base_fare !== undefined) {
+        return parseFloat(state.backendBreakdown.base_fare);
+      }
+      return this.combinedBasePriceTotal || 0;
+    },
+
+    // Authoritative Adult Base
+    authoritativeAdultBase(state) {
+      if (state.backendBreakdown?.breakdown?.adult_base !== undefined) {
+        return parseFloat(state.backendBreakdown.breakdown.adult_base);
+      }
+      if (state.backendBreakdown?.adult_base !== undefined) {
+        return parseFloat(state.backendBreakdown.adult_base);
+      }
+      return this.grandTotalForAdults || 0;
+    },
+
+    // Authoritative Child Base
+    authoritativeChildBase(state) {
+      if (state.backendBreakdown?.breakdown?.child_base !== undefined) {
+        return parseFloat(state.backendBreakdown.breakdown.child_base);
+      }
+      if (state.backendBreakdown?.child_base !== undefined) {
+        return parseFloat(state.backendBreakdown.child_base);
+      }
+      return this.grandTotalForChildren || 0;
+    },
+
+    // Authoritative Infant Base
+    authoritativeInfantBase(state) {
+      if (state.backendBreakdown?.breakdown?.infant_base !== undefined) {
+        return parseFloat(state.backendBreakdown.breakdown.infant_base);
+      }
+      if (state.backendBreakdown?.infant_base !== undefined) {
+        return parseFloat(state.backendBreakdown.infant_base);
+      }
+      return this.grandTotalForInfants || 0;
+    },
+
+    // Authoritative Addons
+    authoritativeAddons(state) {
+      if (state.backendBreakdown?.breakdown?.addons !== undefined) {
+        return parseFloat(state.backendBreakdown.breakdown.addons);
+      }
+      if (state.backendBreakdown?.addons !== undefined) {
+        return parseFloat(state.backendBreakdown.addons);
+      }
+      return this.totalAddonsPrice || 0;
+    },
+
+    // Authoritative Seats
+    authoritativeSeats(state) {
+      if (state.backendBreakdown?.breakdown?.seats !== undefined) {
+        return parseFloat(state.backendBreakdown.breakdown.seats);
+      }
+      return this.totalSeatsPrice || 0;
+    },
+
+    // Authoritative Baggage
+    authoritativeBaggage(state) {
+      if (state.backendBreakdown?.breakdown?.baggage !== undefined) {
+        return parseFloat(state.backendBreakdown.breakdown.baggage);
+      }
+      return this.totalBaggagePrice || 0;
+    },
+
+    // Authoritative Meals
+    authoritativeMeals(state) {
+      if (state.backendBreakdown?.breakdown?.meals !== undefined) {
+        return parseFloat(state.backendBreakdown.breakdown.meals);
+      }
+      return this.totalMealsPrice || 0;
+    },
+
+    // Authoritative Assistance
+    authoritativeAssistance(state) {
+      if (state.backendBreakdown?.breakdown?.assistance !== undefined) {
+        return parseFloat(state.backendBreakdown.breakdown.assistance);
+      }
+      return this.totalAssistancePrice || 0;
+    },
+
+    // Authoritative Insurance
+    authoritativeInsurance(state) {
+      if (state.backendBreakdown?.breakdown?.insurance !== undefined) {
+        return parseFloat(state.backendBreakdown.breakdown.insurance);
+      }
+      if (state.backendBreakdown?.insurance !== undefined) {
+        return parseFloat(state.backendBreakdown.insurance);
+      }
+      return this.insurancePrice || 0;
+    },
+
+    // Authoritative Grand Total (The "Payable" Amount)
     authoritativeTotal(state) {
-      // Priority 1: Confirmed backend total (Finalized)
+      // Priority 1: Confirmed backend total (Finalized after create-booking)
       if (state.booking_total > 0) {
         return state.booking_total;
       }
-      // Priority 2: Estimated backend total (from Review page confirm_price)
-      if (state.backendBreakdown?.total_amount) {
-        return state.backendBreakdown.total_amount;
+      // Priority 2: Estimated backend total (from Review page calculate-price)
+      if (state.backendBreakdown?.total_amount !== undefined) {
+        return parseFloat(state.backendBreakdown.total_amount);
+      }
+      if (state.backendBreakdown?.breakdown?.grand_total !== undefined) {
+        return parseFloat(state.backendBreakdown.breakdown.grand_total);
       }
       // Priority 3: Frontend Estimate Fallback
-      const baseTotal = this.combinedBasePriceTotal || 0;
-      const addonsTotal = this.totalAddonsPrice || 0;
-      const insuranceTotal = this.insurancePrice || 0;
-      const taxesTotal = this.totalTaxes || 0;
+      const baseTotal = this.authoritativeBaseFare || 0;
+      const addonsTotal = this.authoritativeAddons || 0;
+      const insuranceTotal = this.authoritativeInsurance || 0;
+      const taxesTotal = this.authoritativeTaxes || 0;
       return Math.ceil(baseTotal + addonsTotal + insuranceTotal + taxesTotal);
     },
 
@@ -493,10 +612,15 @@ export const useBookingStore = defineStore('booking', {
     },
 
     startSession() {
-      const expiryMinutes = (this.isPractice || this.activityCode) ? 30 : 15;
-      this.sessionExpiry = Date.now() + (expiryMinutes * 60 * 1000);
+      if (this.activityExpiresAt) {
+        this.sessionExpiry = new Date(this.activityExpiresAt).getTime();
+        console.log(`🔄 Activity Session started, strictly tied to instructor limits. Expires at:`, new Date(this.sessionExpiry).toLocaleString());
+      } else {
+        const expiryMinutes = (this.isPractice || this.activityCode) ? 30 : 15;
+        this.sessionExpiry = Date.now() + (expiryMinutes * 60 * 1000);
+        console.log(`🔄 Standard Session started (${expiryMinutes}m), expires at:`, new Date(this.sessionExpiry).toLocaleString());
+      }
       this.isFreshSession = true;
-      console.log(`🔄 Session started (${expiryMinutes}m), expires at:`, new Date(this.sessionExpiry).toLocaleString());
 
       setTimeout(() => {
         this.isFreshSession = false;
@@ -506,9 +630,9 @@ export const useBookingStore = defineStore('booking', {
     checkSession() {
       // Update reactive timestamp
       this.currentTime = Date.now();
-      
+
       const expiryTime = this.activityExpiresAt ? new Date(this.activityExpiresAt).getTime() : this.sessionExpiry;
-      
+
       if (!expiryTime) {
         if (!this.sessionExpiry && !this.activityExpiresAt) {
           console.log('❌ No active session or activity found');
@@ -524,9 +648,7 @@ export const useBookingStore = defineStore('booking', {
 
       if (timeLeft <= 0) {
         const type = this.activityExpiresAt ? 'Activity' : 'Session';
-        console.log(`⏰ ${type} expired, resetting booking`);
-        this.clearActivityCodeValidation();
-        this.resetBooking();
+        console.log(`⏰ ${type} expired`);
         return {
           valid: false,
           reason: `${type} expired`,
@@ -641,11 +763,9 @@ export const useBookingStore = defineStore('booking', {
       if (activityData && activityData.id) {
         this.activityId = activityData.id;
         this.activityExpiresAt = activityData.expires_at || null;
-        this.activityTimeLimitMinutes = activityData.time_limit_minutes || null;
-        console.log('🆔 Activity info stored in booking store:', { 
-          id: this.activityId, 
-          expires: this.activityExpiresAt,
-          limit: this.activityTimeLimitMinutes
+        console.log('🆔 Activity info stored in booking store:', {
+          id: this.activityId,
+          expires: this.activityExpiresAt
         });
       }
       this.isPractice = false;
@@ -656,6 +776,8 @@ export const useBookingStore = defineStore('booking', {
 
     setPracticeMode() {
       this.activityCode = null;
+      this.activityId = null;
+      this.activityExpiresAt = null;
       this.isPractice = true;
       this.hasActivityCodeValidation = true;
       this.startSession();
@@ -664,9 +786,24 @@ export const useBookingStore = defineStore('booking', {
 
     clearActivityCodeValidation() {
       this.activityCode = null;
+      this.activityId = null;
+      this.activityExpiresAt = null;
       this.isPractice = false;
       this.hasActivityCodeValidation = false;
       console.log('🔄 Activity code validation cleared');
+    },
+
+    async failActivity() {
+      if (this.activityId && !this.isPractice) {
+        try {
+          const result = await bookingService.failActivity(this.activityId);
+          console.log('⏰ Activity failed via API:', result);
+          return result;
+        } catch (error) {
+          console.error('❌ Error calling failActivity API:', error);
+        }
+      }
+      return { success: false };
     },
 
     setTripType(type) {
@@ -1227,26 +1364,43 @@ export const useBookingStore = defineStore('booking', {
       console.log('✅ Booking ID and reference set:', id, this.booking_reference);
     },
 
-    setBackendBreakdown(breakdown) {
-      this.backendBreakdown = breakdown;
+    setBackendBreakdown(response) {
+      // If full response object is passed (with success, total_amount, breakdown, etc)
+      if (response && response.breakdown) {
+        this.backendBreakdown = response;
+        if (response.tax_details) {
+          this.backendTaxDetails = response.tax_details;
+        }
+      } else {
+        // Fallback for simple breakdown object
+        this.backendBreakdown = response;
+      }
       console.log('📊 Authoritative backend breakdown stored');
     },
 
-    // UPDATED: Reset booking with segmented seats
-    resetBooking() {
-      console.log('🧹 Resetting booking store and clearing persistent IDs');
+    // UPDATED: Reset booking with optional session preservation
+    resetBooking(clearSession = true) {
+      console.log(`🧹 Resetting booking store (clearSession: ${clearSession})`);
+
+      // Preserve activity session data if requested
+      const preservedData = clearSession ? {} : {
+        activityCode: this.activityCode,
+        isPractice: this.isPractice,
+        hasActivityCodeValidation: this.hasActivityCodeValidation,
+        activityId: this.activityId,
+        activityExpiresAt: this.activityExpiresAt,
+        activityTimeLimitMinutes: this.activityTimeLimitMinutes,
+      };
 
       const keysToRemove = [
         'current_booking_id',
         'current_booking_reference',
         'current_booking_total',
         'current_booking_status',
-        'booking_session_id', // Added missing key
+        'booking_session_id',
         'payment_session',
         'booking',
         'current_booking',
-        'booking-store',
-        'pinia-booking',
         'last_booking_ref',
         ...Array.from({ length: 10 }, (_, i) => `pax_${i + 1}`),
         ...Array.from({ length: 15 }, (_, i) => `passenger_${i + 1}_details`),
@@ -1304,13 +1458,17 @@ export const useBookingStore = defineStore('booking', {
             price: 0
           }
         },
-        activityCode: null,
-        isPractice: false,
-        hasActivityCodeValidation: false,
-        activityId: null,
+        // Preserve or reset activity session
+        activityCode: clearSession ? null : preservedData.activityCode,
+        isPractice: clearSession ? false : preservedData.isPractice,
+        hasActivityCodeValidation: clearSession ? false : preservedData.hasActivityCodeValidation,
+        activityId: clearSession ? null : preservedData.activityId,
+        activityExpiresAt: clearSession ? null : preservedData.activityExpiresAt,
+        activityTimeLimitMinutes: clearSession ? null : preservedData.activityTimeLimitMinutes,
+        
         sessionExpiry: null,
         isFreshSession: true,
-        bookingSessionId: newSessionId, // Generated fresh start
+        bookingSessionId: newSessionId,
         fareFamilies: {
           depart: 'basic',
           return: 'basic'
@@ -1325,7 +1483,7 @@ export const useBookingStore = defineStore('booking', {
         backendTaxDetails: null
       });
 
-      console.log("✅ Booking Store has been completely reset.");
+      console.log(`✅ Booking Store has been ${clearSession ? 'completely' : 'partially'} reset.`);
     },
 
     forceCompleteReset() {
@@ -1333,12 +1491,13 @@ export const useBookingStore = defineStore('booking', {
 
       Object.keys(localStorage).forEach(key => {
         if (
-          key.includes('booking') ||
-          key.includes('pax') ||
-          key.includes('flight') ||
-          key.includes('pinia') ||
-          key.includes('passenger') ||
-          key.includes('seat')
+          key !== 'booking-store' && (
+            key.includes('booking') ||
+            key.includes('pax') ||
+            key.includes('flight') ||
+            key.includes('pinia') ||
+            key.includes('session')
+          )
         ) {
           localStorage.removeItem(key);
           console.log(`🗑️ Removed: ${key}`);

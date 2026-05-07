@@ -27,6 +27,7 @@ from .api.extra_services_views import (
 )
 from .api.tracklog_views import TrackLogViewSet
 from .api.import_views import UniversalImportView
+from .api.otp_views import RequestOTPView, VerifyOTPAndResetView
 from .api.dcs_views import get_dcs_flights, get_dcs_manifest, process_dcs_checkin, scan_qr_lookup, get_dcs_passenger_details, get_dcs_pnr_details, download_boarding_pass_view, assign_dcs_seat
 
 
@@ -86,6 +87,10 @@ router.register(r'tracklogs', TrackLogViewSet, basename='tracklog')
 urlpatterns = [
     # Manual path for login
     path('admin/login/', AdminLoginView.as_view(), name='admin-login'),
+    
+    # OTP Password Reset
+    path('auth/otp/request/', RequestOTPView.as_view(), name='otp-request'),
+    path('auth/otp/reset/', VerifyOTPAndResetView.as_view(), name='otp-reset'),
     
     # DCS Simulator paths
     path('dcs/flights/', get_dcs_flights, name='dcs_flights'),

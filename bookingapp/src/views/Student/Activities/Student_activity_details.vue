@@ -175,112 +175,84 @@
           <h2 class="text-base font-bold text-gray-900 mb-4">Flight Requirements</h2>
           
           <!-- Trip Type Buttons -->
-          <div class="flex gap-3 mb-5">
-            <div 
-              :class="[
-                'px-6 py-2 rounded-full text-sm font-bold uppercase tracking-wide',
-                normalizedTripType === 'round trip'
-                  ? 'bg-[#f5c842] text-gray-900' 
-                  : 'bg-[#f5c842] text-black'
-              ]"
-            >
-              {{ activity.required_trip_type || 'One Way' }}
+          <div class="flex gap-2 mb-6">
+            <span class="bg-[#FFC145] px-6 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider text-black">
+              {{ formatRequirement(activity.required_trip_type) || 'N/A' }}
+            </span>
+            <span class="bg-[#0D3111] text-white px-6 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+              {{ formatRequirement(activity.required_travel_class) || 'N/A' }}
+            </span>
+            <span v-if="activity.required_seat_class" class="bg-gray-800 text-white px-6 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+              {{ formatRequirement(activity.required_seat_class) }}
+            </span>
+          </div>
+
+          <!-- Dynamic Flight Requirements based on trip type -->
+          <div v-if="(activity.required_trip_type || '').toLowerCase().replace(/\s+/g, '_') !== 'multi_city'" class="border border-yellow-200 rounded-3xl py-6 px-10 flex items-center justify-between bg-white relative overflow-hidden">
+            <div class="text-center">
+              <p class="text-xs text-gray-400 uppercase font-bold tracking-widest">From</p>
+              <p class="text-xl font-bold text-gray-900">{{ activity.required_origin || '-' }}</p>
             </div>
-            <div 
-              :class="[
-                'px-6 py-2 rounded-full text-sm font-bold uppercase tracking-wide',
-                normalizedTravelClass === 'business'
-                  ? 'bg-[#1a472a] text-white' 
-                  : 'bg-[#093704] text-white'
-              ]"
-            >
-              {{ activity.required_travel_class || 'Economy' }}
+            <div class="text-center">
+              <p class="text-xs text-gray-400 uppercase font-bold tracking-widest">To</p>
+              <p class="text-xl font-bold text-gray-900">{{ activity.required_destination || '-' }}</p>
+            </div>
+            <div class="h-10 w-[1px] bg-gray-200 mx-2"></div>
+            <div class="text-center">
+              <p class="text-xs text-gray-400 uppercase font-bold tracking-widest">Depart</p>
+              <p class="text-sm font-bold text-gray-800">{{ activity.required_departure_date ? formatFullDate(activity.required_departure_date) : 'N/A' }}</p>
+            </div>
+            <div class="text-center">
+              <p class="text-xs text-gray-400 uppercase font-bold tracking-widest">Return</p>
+              <p class="text-sm font-bold text-gray-800">{{ activity.required_return_date ? formatFullDate(activity.required_return_date) : 'N/A' }}</p>
+            </div>
+            <div class="h-10 w-[1px] bg-gray-200 mx-2"></div>
+            <div class="text-center">
+              <p class="text-xs text-gray-400 uppercase font-bold tracking-widest">Passenger</p>
+              <p class="text-xs text-gray-700">
+                Adult: <b>{{ activity.required_passengers || 0 }}</b><br>
+                Child: <b>{{ activity.required_children || 0 }}</b><br>
+                Infant: <b>{{ activity.required_infants || 0 }}</b>
+              </p>
             </div>
           </div>
 
-          <!-- Standard Flight Details Box (Pill Shape) - Only for One Way -->
-          <div v-if="normalizedTripType === 'one way' || ((!activity.segments || activity.segments.length <= 1) && normalizedTripType !== 'round trip')" class="border-2 border-[#f5c842] rounded-full py-6 px-8 bg-white">
-            <div class="grid grid-cols-5 gap-6 items-center">
-              <div class="text-center">
-                <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">From</p>
-                <p class="text-2xl font-black text-gray-900">{{ activity.required_origin || 'N/A' }}</p>
-              </div>
-
-              <div class="text-center">
-                <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">To</p>
-                <p class="text-2xl font-black text-gray-900">{{ activity.required_destination || 'N/A' }}</p>
-              </div>
-
-              <div class="text-center">
-                <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Depart</p>
-                <p class="text-sm font-bold text-gray-900">{{ formatFullDate(activity.departure_date) }}</p>
-              </div>
-
-              <div class="text-center">
-                <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Return</p>
-                <p class="text-sm font-bold text-gray-900">{{ formatFullDate(activity.arrival_date) }}</p>
-              </div>
-
-              <div class="text-center">
-                <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Passenger</p>
-                <div class="flex flex-col items-center gap-0.5 text-[11px] text-gray-700">
-                  <div class="flex items-center gap-1">
-                    <span class="text-gray-500">Adult:</span>
-                    <span class="font-bold">{{ activity.required_passengers || 0 }}</span>
-                  </div>
-                  <div class="flex items-center gap-1">
-                    <span class="text-gray-500">Child:</span>
-                    <span class="font-bold">{{ activity.required_children || 0 }}</span>
-                  </div>
-                  <div class="flex items-center gap-1">
-                    <span class="text-gray-500">Infant:</span>
-                    <span class="font-bold">{{ activity.required_infants || 0 }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Multi-City / Round Trip Segments Display -->
-          <div v-else class="space-y-4">
-            <div 
-              v-for="(segment, idx) in activity.segments" 
-              :key="idx"
-              class="border-2 border-[#f5c842] rounded-2xl py-4 px-8 bg-white flex items-center justify-between shadow-sm relative overflow-hidden"
-            >
-              <div class="absolute left-0 top-0 bottom-0 w-2 bg-[#f5c842]"></div>
-              <div class="flex items-center gap-8 flex-1">
-                <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-black text-gray-400">
+          <!-- Multi-City / Round Trip Segments -->
+          <div v-else class="space-y-3">
+            <div v-for="(segment, idx) in activity.segments" :key="idx" class="border border-yellow-200 rounded-2xl py-4 px-8 flex items-center justify-between bg-white relative overflow-hidden">
+              <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-yellow-400"></div>
+              <div class="flex items-center gap-6">
+                <div class="w-8 h-8 rounded-full bg-yellow-50 flex items-center justify-center font-bold text-yellow-600 text-xs shadow-sm">
                   {{ idx + 1 }}
                 </div>
-                
-                <div class="flex-1 grid grid-cols-3 gap-8">
-                  <div class="flex items-center gap-4">
-                    <div>
-                      <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Origin</p>
-                      <p class="text-xl font-black text-gray-900 uppercase">{{ segment.origin }}</p>
-                    </div>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
-                    <div>
-                      <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Destination</p>
-                      <p class="text-xl font-black text-gray-900 uppercase">{{ segment.destination }}</p>
+                <div class="flex items-center gap-10">
+                  <div class="text-center">
+                    <p class="text-[9px] text-gray-400 uppercase font-black tracking-widest">From</p>
+                    <p class="text-lg font-bold text-gray-900 uppercase">{{ segment.origin }}</p>
+                  </div>
+                  <div class="flex flex-col items-center">
+                    <div class="w-12 h-[1px] bg-gray-200 relative mb-1">
+                      <div class="absolute -top-1 -right-0.5 text-[8px] text-gray-300">▶</div>
                     </div>
                   </div>
-                  
-                  <div>
-                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Flight Date</p>
-                    <p class="text-lg font-bold text-gray-800">{{ formatFullDate(segment.departure_date) }}</p>
+                  <div class="text-center">
+                    <p class="text-[9px] text-gray-400 uppercase font-black tracking-widest">To</p>
+                    <p class="text-lg font-bold text-gray-900 uppercase">{{ segment.destination }}</p>
                   </div>
-
-                  <div v-if="idx === 0" class="text-right flex flex-col justify-center">
-                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Passengers</p>
-                    <p class="text-sm font-bold text-gray-800">
-                      {{ activity.required_passengers }}A, {{ activity.required_children }}C, {{ activity.required_infants }}I
-                    </p>
+                  <div class="ml-4">
+                    <p class="text-[9px] text-gray-400 uppercase font-black tracking-widest">Departure Date</p>
+                    <p class="text-xs font-bold text-gray-700">{{ segment.departure_date ? formatFullDate(segment.departure_date) : 'N/A' }}</p>
                   </div>
                 </div>
+              </div>
+              
+              <div v-if="idx === 0" class="text-right border-l border-gray-100 pl-8">
+                <p class="text-[9px] text-gray-400 uppercase font-black tracking-widest mb-1">Passengers</p>
+                <p class="text-[10px] text-gray-700 font-medium">
+                  Adult: <b>{{ activity.required_passengers || 0 }}</b><br>
+                  Child: <b>{{ activity.required_children || 0 }}</b><br>
+                  Infant: <b>{{ activity.required_infants || 0 }}</b>
+                </p>
               </div>
             </div>
           </div>
@@ -501,7 +473,11 @@
                 </div>
                 <div>
                   <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Performance Score</p>
-                  <div v-if="activity.status === 'assigned' && isOverdue" class="flex flex-col">
+                  <div v-if="activity.is_failed_due_to_time" class="flex flex-col">
+                    <span class="text-2xl font-black text-red-600">0%</span>
+                    <span class="text-[9px] text-red-400 font-bold uppercase tracking-tighter italic">Failed due to timeReached</span>
+                  </div>
+                  <div v-else-if="activity.status === 'assigned' && isOverdue" class="flex flex-col">
                     <span class="text-sm font-bold text-red-600 uppercase tracking-tighter">Missed Deadline</span>
                     <span class="text-[9px] text-gray-400 italic font-medium">Activity is no longer accessible</span>
                   </div>
@@ -537,7 +513,7 @@
 
 
             <!-- Feedback -->
-            <div v-if="activity.feedback" class="mt-6 bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <div v-if="activity.feedback && activity.grades_released" class="mt-6 bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
               <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2 flex items-center gap-1">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
@@ -592,12 +568,14 @@
 
             <button 
               @click="openCodeModal"
-              :disabled="!activity.is_active || activity.grade !== null || activity.status === 'submitted' || activity.status === 'graded' || isOverdue || (activity.expires_at && secondsLeftLive <= 0) || activity.is_failed_due_to_time"
+              :disabled="!activity.is_active || activity.grade !== null || activity.status === 'submitted' || activity.status === 'graded' || isOverdue || (activity.expires_at && secondsLeftLive <= 0) || activity.is_failed_due_to_time || activity.status === 'unassigned'"
               :class="[
                 'w-full max-w-md py-4 rounded-lg font-bold text-sm uppercase tracking-wider transition-all shadow-md',
-                activity.is_active && activity.grade === null && !isOverdue && !(activity.expires_at && secondsLeftLive <= 0) && !activity.is_failed_due_to_time
-                  ? 'bg-[#f5c842] hover:bg-[#e5b832] text-gray-900' 
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                activity.status === 'unassigned'
+                  ? 'bg-rose-50 text-rose-600 border border-rose-200 cursor-not-allowed'
+                  : (activity.is_active && activity.grade === null && !isOverdue && !(activity.expires_at && secondsLeftLive <= 0) && !activity.is_failed_due_to_time
+                      ? 'bg-[#f5c842] hover:bg-[#e5b832] text-gray-900' 
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed')
               ]"
             >
               {{ getButtonText() }}
@@ -707,12 +685,14 @@ import ComparisonModal from '@/components/common/ComparisonModal.vue';
 import { comparisonService } from '@/services/Student/comparisonService';
 import { useUserStore } from '@/stores/user'
 import api from '@/services/api/axios';
+import { useModalStore } from '@/stores/modal';
 
 export default {
   name: 'StudentActivityDetails',
   setup() {
     const userStore = useUserStore()
-    return { userStore }
+    const modalStore = useModalStore()
+    return { userStore, modalStore }
   },
   components: {
     ComparisonModal
@@ -743,6 +723,7 @@ export default {
         segments: [],
         analysis: null,
         grades_released: false,
+        required_seat_class: '', // ✅ ADDED
         activity_addons: [] // ✅ ADDED
       },
       instructor: null,
@@ -760,6 +741,10 @@ export default {
       errorMessage: '',
       verifying: false,
 
+      // Comparison Modal State
+      showComparison: false,
+      isLoadingBooking: false,
+      comparisonBooking: null,
       comparisonError: null,
       
       // Live Timer State
@@ -911,8 +896,9 @@ export default {
           activity_addons: activityData.activity_addons || [], // ✅ ADDED
           
           // Dates
-          departure_date: activityData.departure_date,
-          arrival_date: activityData.arrival_date,
+          required_departure_date: activityData.required_departure_date || activityData.departure_date,
+          required_return_date: activityData.required_return_date || activityData.arrival_date,
+          required_seat_class: activityData.required_seat_class || '',
           
           // Status
           status: activityData.status || 'assigned',
@@ -1000,7 +986,25 @@ export default {
     },
 
     async openComparisonModal() {
-      this.$router.push(`/student/activity/${this.activity.id}/analysis`);
+      this.showComparison = true;
+      this.isLoadingBooking = true;
+      this.comparisonError = null;
+      this.comparisonBooking = null;
+
+      try {
+        const activityId = this.activity.id;
+        const res = await comparisonService.getComparisonData(activityId);
+        if (res.success) {
+          this.comparisonBooking = res.booking;
+        } else {
+          this.comparisonError = res.error || "Failed to load comparison data.";
+        }
+      } catch (err) {
+        console.error('Failed to open comparison modal:', err);
+        this.comparisonError = "Failed to load comparison data.";
+      } finally {
+        this.isLoadingBooking = false;
+      }
     },
     
     openCodeModal() {
@@ -1136,18 +1140,27 @@ export default {
       }
     },
     
+    formatRequirement(val) {
+      if (!val) return ''
+      return val.replace(/_/g, ' ').toUpperCase()
+    },
+
     getStatusLabel(status) {
+      if (this.activity.is_failed_due_to_time) return 'FAILED (TIMEOUT)';
       const labels = {
+        'unassigned': 'Missing',
         'assigned': 'Assigned',
         'in_progress': 'In Progress',
         'submitted': 'Submitted',
         'graded': 'Graded'
       };
-      return labels[status] || status;
+      return labels[status] || (status ? status.charAt(0).toUpperCase() + status.slice(1) : '');
     },
     
     getStatusClass(status) {
+      if (this.activity.is_failed_due_to_time) return 'bg-red-100 text-red-700 border border-red-200';
       const classes = {
+        'unassigned': 'bg-rose-50 text-rose-700 border-rose-100',
         'assigned': 'bg-gray-100 text-gray-600',
         'in_progress': 'bg-blue-100 text-blue-600',
         'submitted': 'bg-green-100 text-green-700',
@@ -1159,6 +1172,9 @@ export default {
     getButtonText() {
       if (this.activity.is_failed_due_to_time) {
         return 'Time Limit Reach';
+      }
+      if (this.activity.status === 'unassigned') {
+        return 'MISSING';
       }
       if (this.activity.completed || this.activity.grade !== null || this.activity.status === 'submitted' || this.activity.status === 'graded') {
         return 'Activity Completed';
@@ -1222,9 +1238,14 @@ export default {
         
         if (diff <= 0) {
           clearInterval(this.timerInterval);
-          // If time is up, we might need to refresh to show auto-fail
-          // ONLY if not already failed to prevent infinite loop/flickering
           if (!this.activity.is_failed_due_to_time) {
+            this.modalStore.error({
+              title: 'Time Reached!',
+              message: 'The time allocated for this activity has expired. This attempt will be marked as failed with a 0 score.',
+              confirmText: 'Back to Dashboard'
+            }).then(() => {
+              this.$router.push('/student/dashboard');
+            });
             this.loadActivityDetails();
           }
         }

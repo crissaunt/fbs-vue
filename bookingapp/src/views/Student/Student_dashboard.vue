@@ -31,23 +31,96 @@
     </div> -->
 
     <!-- TABS - Only show if section exists -->
-    <div v-if="section" class="mx-3 sm:mx-6 mt-4 sm:mt-5 flex items-center justify-between border-b border-slate-200">
-      <div class="flex overflow-x-auto no-scrollbar">
+    <div v-if="section" class="mx-3 sm:mx-6 mt-4 sm:mt-5 flex items-center justify-between border-b border-slate-200 pb-4">
+      <div class="flex items-center gap-4">
+        <!-- Main Filter Toggle -->
+        <div class="relative">
+          <button 
+            @click="showTabDropdown = !showTabDropdown"
+            class="flex items-center gap-3 bg-white px-5 sm:px-8 py-3 rounded-lg border border-slate-200 shadow-sm hover:border-[#FF579A] transition-all min-w-[200px] sm:min-w-[280px] group active:scale-[0.98]"
+          >
+            <div class="flex flex-col items-start text-left">
+              <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Filter View</span>
+              <span class="text-xs font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+                {{ activeTabLabel }}
+                <span class="px-1.5 py-0.5 bg-[#FF579A] text-white rounded-lg text-[8px]">
+                  {{ getTabCount(activeTab) }}
+                </span>
+              </span>
+            </div>
+            <div class="ml-auto flex items-center gap-3">
+              <div class="w-[1px] h-6 bg-slate-100"></div>
+              <i class="ph ph-caret-down text-slate-400 group-hover:text-[#FF579A] transition-transform duration-300" :class="{ 'rotate-180': showTabDropdown }"></i>
+            </div>
+          </button>
+
+          <!-- Premium Dropdown Menu -->
+          <div 
+            v-if="showTabDropdown"
+            class="absolute top-full left-0 mt-2 w-full bg-white rounded-lg shadow-2xl border border-slate-100 z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+          >
+            <div class="py-1">
+              <button 
+                v-for="tab in tabs" 
+                :key="tab.name"
+                @click="selectTab(tab.name)"
+                :class="[
+                  'w-full flex items-center justify-between px-6 py-4 text-left transition-all group/opt',
+                  activeTab === tab.name ? 'bg-pink-50/50' : 'bg-transparent hover:bg-slate-50'
+                ]"
+              >
+                <div class="flex items-center gap-3">
+                  <div 
+                    :class="[
+                      'w-1.5 h-1.5 rounded-full transition-all duration-300',
+                      activeTab === tab.name ? 'bg-[#FF579A] scale-125' : 'bg-slate-200 group-hover/opt:bg-slate-300'
+                    ]"
+                  ></div>
+                  <span :class="[
+                    'text-[10px] font-black uppercase tracking-widest transition-colors',
+                    activeTab === tab.name ? 'text-[#FF579A]' : 'text-slate-600 group-hover/opt:text-slate-900'
+                  ]">
+                    {{ tab.label }}
+                  </span>
+                </div>
+                <span :class="[
+                  'px-1.5 py-0.5 rounded-lg text-[8px] font-bold transition-colors',
+                  activeTab === tab.name ? 'bg-[#FF579A] text-white' : 'bg-slate-100 text-slate-400 group-hover/opt:bg-slate-200 group-hover/opt:text-slate-600'
+                ]">
+                  {{ getTabCount(tab.name) }}
+                </span>
+              </button>
+            </div>
+            
+            <div class="p-3 bg-slate-50 border-t border-slate-100">
+              <p class="text-[8px] text-center font-bold text-slate-400 uppercase tracking-widest">Select Category to Filter Results</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Class Registry Button (Stand-alone) -->
         <button 
-          v-for="tab in tabs" 
-          :key="tab.name"
+          @click="activeTab = 'classmates'"
           :class="[
-            'px-5 py-2 text-[10px] font-black transition-all uppercase tracking-widest border-b-2 flex-shrink-0',
-            activeTab === tab.name 
-              ? 'text-[#FF579A] border-[#FF579A] cursor-pointer' 
-              : 'text-slate-400 border-transparent hover:text-[#FF579A] cursor-pointer hover:bg-pink-50/50'
+            'hidden sm:flex items-center gap-3 px-6 py-3 rounded-lg border transition-all min-w-[200px] group active:scale-[0.98]',
+            activeTab === 'classmates' 
+              ? 'bg-gray-900 border-gray-900 text-white shadow-lg' 
+              : 'bg-white border-slate-200 text-slate-900 hover:border-[#FF579A] shadow-sm'
           ]"
-          @click="activeTab = tab.name"
         >
-          {{ tab.label }}
-          <span class="ml-1.5 px-1.5 py-0.5 bg-[#FF579A] text-white rounded-sm text-[8px]">
-            {{ getTabCount(tab.name) }}
-          </span>
+          <div class="flex flex-col items-start text-left">
+            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Explore Members</span>
+            <span class="text-xs font-black uppercase tracking-tight flex items-center gap-2">
+              Class Registry
+              <span :class="[
+                'px-1.5 py-0.5 rounded-lg text-[8px]',
+                activeTab === 'classmates' ? 'bg-[#FF579A] text-white' : 'bg-slate-100 text-slate-400'
+              ]">
+                {{ getTabCount('classmates') }}
+              </span>
+            </span>
+          </div>
+          <i class="ph ph-users-three ml-auto text-xl" :class="activeTab === 'classmates' ? 'text-white' : 'text-slate-400 group-hover:text-[#FF579A]'"></i>
         </button>
       </div>
       
@@ -72,10 +145,10 @@
         <div class="lg:hidden grid grid-cols-2 gap-3 mb-6">
           <button 
             @click="showSimulationModal = true"
-            class="w-full bg-gray-900 text-white py-5 px-6 rounded-sm shadow-xl font-bold flex flex-col items-center justify-center group active:scale-[0.98] transition-all relative overflow-hidden border border-white/10"
+            class="w-full bg-gray-900 text-white py-5 px-6 rounded-lg shadow-xl font-bold flex flex-col items-center justify-center group active:scale-[0.98] transition-all relative overflow-hidden border border-white/10"
           >
             <div class="absolute right-0 top-0 w-16 h-16 bg-white/5 rounded-full -mr-8 -mt-8 blur-xl"></div>
-            <div class="w-10 h-10 bg-white/10 rounded-sm flex items-center justify-center mb-3">
+            <div class="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center mb-3">
               <i class="ph ph-terminal-window text-xl"></i>
             </div>
             <span class="text-[10px] font-black uppercase tracking-widest text-center">Training Hub</span>
@@ -83,9 +156,9 @@
 
           <button 
             @click="showPerformanceModal = true"
-            class="w-full bg-white text-slate-900 py-5 px-6 rounded-sm shadow-xl font-bold flex flex-col items-center justify-center group active:scale-[0.98] transition-all relative overflow-hidden border border-slate-100"
+            class="w-full bg-white text-slate-900 py-5 px-6 rounded-lg shadow-xl font-bold flex flex-col items-center justify-center group active:scale-[0.98] transition-all relative overflow-hidden border border-slate-100"
           >
-             <div class="w-10 h-10 bg-pink-50 text-[#FF579A] rounded-sm flex items-center justify-center mb-3 border border-pink-100">
+             <div class="w-10 h-10 bg-pink-50 text-[#FF579A] rounded-lg flex items-center justify-center mb-3 border border-pink-100">
               <i class="ph ph-chart-line-up text-xl"></i>
             </div>
             <span class="text-[10px] font-black uppercase tracking-widest text-center">Performance</span>
@@ -100,12 +173,12 @@
           />
 
           <!-- Consolidated Simulation Console Button -->
-          <div class="hidden lg:block bg-gray-900 rounded-sm p-6 text-white shadow-lg transition-all relative overflow-hidden group cursor-pointer border border-white/10" @click="showSimulationModal = true">
+          <div class="hidden lg:block bg-gray-900 rounded-lg p-6 text-white shadow-lg transition-all relative overflow-hidden group cursor-pointer border border-white/10" @click="showSimulationModal = true">
             <div class="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
             
             <div class="relative z-10">
               <div class="flex items-center gap-3 mb-6">
-                <div class="w-12 h-12 bg-white/10 rounded-sm flex items-center justify-center backdrop-blur-md shadow-inner border border-white/10">
+                <div class="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center backdrop-blur-md shadow-inner border border-white/10">
                   <i class="ph ph-terminal-window text-2xl"></i>
                 </div>
                 <div>
@@ -117,7 +190,7 @@
 
 
               <button 
-                class="w-full bg-white text-gray-900 py-4 rounded-sm text-[10px] font-black cursor-pointer uppercase tracking-[0.2em] hover:bg-slate-50 transition-all active:scale-[0.97] shadow-xl flex items-center justify-center gap-3 group/btn border border-transparent"
+                class="w-full bg-white text-gray-900 py-4 rounded-lg text-[10px] font-black cursor-pointer uppercase tracking-[0.2em] hover:bg-slate-50 transition-all active:scale-[0.97] shadow-xl flex items-center justify-center gap-3 group/btn border border-transparent"
               >
                 Access Portal
                 <i class="ph ph-arrow-square-out text-lg transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5"></i>
@@ -127,24 +200,98 @@
 
         </div>
 
-        <!-- RIGHT PANEL - Activities -->
-        <div class="flex flex-col gap-5">
-          <TransitionGroup name="list" tag="div" class="space-y-4">
-            <ActivityCard 
-              v-if="filteredActivities.length > 0"
-              v-for="activity in filteredActivities" 
-              :key="activity.id"
-              :activity="activity"
-              @view="viewActivityDetails"
-              @compare="openComparisonModal"
-            />
-          </TransitionGroup>
-          <div v-if="filteredActivities.length === 0" class="bg-white border-2 border-dashed border-slate-200 rounded-sm p-12 text-center shadow-sm">
-            <div class="w-16 h-16 bg-slate-50 rounded-sm flex items-center justify-center mx-auto mb-4 border border-slate-100 text-slate-300 text-2xl">
-              <i class="ph ph-clipboard-text"></i>
+        <!-- RIGHT PANEL - Activities or Classmates -->
+        <div class="flex flex-col gap-3">
+          <p class="text-slate-500  font-bold text-[10px] uppercase tracking-widest">Activities</p>
+          <!-- Activities View -->
+          <template v-if="activeTab !== 'classmates'">
+            <TransitionGroup name="list" tag="div" class="space-y-4">
+              <ActivityCard 
+                v-if="filteredActivities.length > 0"
+                v-for="activity in filteredActivities" 
+                :key="activity.id"
+                :activity="activity"
+                @view="viewActivityDetails"
+                @compare="openComparisonModal"
+              />
+            </TransitionGroup>
+            <div v-if="filteredActivities.length === 0" class="bg-white border-2 border-dashed border-slate-200 rounded-lg p-12 text-center shadow-sm">
+              <div class="w-16 h-16 bg-slate-50 rounded-lg flex items-center justify-center mx-auto mb-4 border border-slate-100 text-slate-300 text-2xl">
+                <i class="ph ph-clipboard-text"></i>
+              </div>
+              <p class="text-slate-500 font-black text-[10px] uppercase tracking-widest">No activities found in this category</p>
             </div>
-            <p class="text-slate-500 font-black text-[10px] uppercase tracking-widest">No activities found in this category</p>
-          </div>
+          </template>
+
+          <!-- Classmates View -->
+          <template v-if="activeTab === 'classmates'">
+            <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+              <div class="p-4 sm:p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                <div>
+                  <h3 class="text-sm font-black text-slate-900 uppercase tracking-tight">Class Registry</h3>
+                  <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Instructor + {{ classmates.length }} Students Enrolled</p>
+                </div>
+                <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-[#FF579A] border border-pink-100 shadow-sm">
+                  <i class="ph ph-users-three text-xl"></i>
+                </div>
+              </div>
+              
+              <div class="divide-y divide-slate-100 p-0">
+                <!-- Instructor Card -->
+                <div v-if="instructor" class="p-4 sm:p-5 flex items-center gap-4 bg-pink-50/30">
+                  <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold shrink-0 shadow-sm bg-gray-900 relative">
+                    <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-[#FF579A] rounded-full border-2 border-white flex items-center justify-center text-[8px]">
+                      <i class="ph-fill ph-star"></i>
+                    </div>
+                    {{ instructor.first_name ? instructor.first_name.charAt(0) : '?' }}{{ instructor.last_name ? instructor.last_name.charAt(0) : '' }}
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <h4 class="text-sm font-black text-gray-900 truncate">{{ instructor.last_name }}, {{ instructor.first_name }} <span class="ml-2 px-1.5 py-0.5 rounded-lg bg-[#FF579A] text-white text-[8px] uppercase tracking-widest align-middle">Instructor</span></h4>
+                    <div class="flex items-center gap-3 mt-1">
+                      <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest flex items-center gap-1">
+                        <i class="ph ph-chalkboard-teacher"></i> Course Instructor
+                      </span>
+                    </div>
+                  </div>
+                  <div class="hidden sm:block">
+                    <a :href="`mailto:${instructor.email}`" class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-[#FF579A] hover:text-white transition-colors">
+                       <i class="ph ph-envelope-simple text-lg"></i>
+                    </a>
+                  </div>
+                </div>
+
+                <!-- Students List -->
+                <div v-for="student in classmates" :key="student.student_number" class="p-4 sm:p-5 flex items-center gap-4 hover:bg-slate-50 transition-colors">
+                  <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold shrink-0 shadow-sm" :class="student.gender === 'female' ? 'bg-[#FF579A]' : 'bg-[#0E8028]'">
+                    {{ student.first_name ? student.first_name.charAt(0) : '?' }}{{ student.last_name ? student.last_name.charAt(0) : '' }}
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <h4 class="text-sm font-black text-slate-900 truncate">
+                      {{ student.last_name }}, {{ student.first_name }}
+                      <span v-if="student.student_number === userStore.studentProfile?.student_number" class="ml-2 px-1.5 py-0.5 rounded-lg bg-slate-200 text-slate-600 text-[8px] uppercase tracking-widest align-middle">You</span>
+                    </h4>
+                    <div class="flex items-center gap-3 mt-1">
+                      <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest flex items-center gap-1">
+                        <i class="ph ph-identification-card"></i> {{ student.student_number }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="hidden sm:block">
+                    <a :href="`mailto:${student.email}`" class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-[#FF579A] hover:text-white transition-colors">
+                       <i class="ph ph-envelope-simple text-lg"></i>
+                    </a>
+                  </div>
+                </div>
+                
+                <div v-if="classmates.length === 0" class="p-12 text-center">
+                  <div class="w-16 h-16 bg-slate-50 rounded-lg flex items-center justify-center mx-auto mb-4 border border-slate-100 text-slate-300 text-2xl">
+                    <i class="ph ph-users-slash"></i>
+                  </div>
+                  <p class="text-slate-500 font-black text-[10px] uppercase tracking-widest">No students enrolled in this section yet</p>
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
     </div>
@@ -165,7 +312,7 @@
         <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" @click="showSimulationModal = false"></div>
         
         <Transition name="slide-up">
-          <div v-if="showSimulationModal" class="relative w-full max-w-md bg-white rounded-t-xl sm:rounded-sm shadow-2xl overflow-hidden">
+          <div v-if="showSimulationModal" class="relative w-full max-w-md bg-white rounded-t-xl sm:rounded-lg shadow-2xl overflow-hidden">
             <!-- Modal Header -->
             <div class="px-6 py-6 border-b border-white/10 flex items-center justify-between bg-gray-900 relative overflow-hidden">
               <div class="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
@@ -173,7 +320,7 @@
                 <h3 class="text-lg font-black text-white poppins uppercase tracking-tight">Simulation Console</h3>
                 <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Unified Training Environment</p>
               </div>
-              <button @click="showSimulationModal = false" class="relative z-10 w-10 h-10 rounded-sm bg-white/5 flex items-center justify-center text-slate-300 hover:text-white transition-all border border-white/10">
+              <button @click="showSimulationModal = false" class="relative z-10 w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-slate-300 hover:text-white transition-all border border-white/10">
                 <i class="ph ph-x text-xl"></i>
               </button>
             </div>
@@ -186,9 +333,9 @@
                   <div class="grid grid-cols-1 gap-3">
                      <button 
                         @click="startPracticeBooking(); showSimulationModal = false"
-                        class="flex items-center gap-4 p-5 bg-gray-50 rounded-sm border border-slate-200 text-left hover:bg-slate-100 transition-all group relative overflow-hidden"
+                        class="flex items-center cursor-pointer gap-4 p-5 bg-gray-50 rounded-lg border border-slate-200 text-left hover:bg-slate-100 transition-all group relative overflow-hidden"
                      >
-                        <div class="w-12 h-12 bg-gray-900 rounded-sm flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform">
+                        <div class="w-12 h-12 bg-gray-900 rounded-lg flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform">
                           <i class="ph ph-airplane text-2xl"></i>
                         </div>
                         <div class="relative z-10">
@@ -197,44 +344,45 @@
                         </div>
                      </button>
   
-                     <button 
-                        @click="$router.push('/dcs/dashboard'); showSimulationModal = false"
-                        class="flex items-center gap-4 p-5 bg-gray-50 rounded-sm border border-slate-200 text-left hover:bg-slate-100 transition-all group relative overflow-hidden"
-                     >
-                        <div class="w-12 h-12 bg-gray-900 rounded-sm flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform">
-                          <i class="ph ph-monitor text-2xl"></i>
-                        </div>
-                        <div class="relative z-10">
-                          <span class="block text-xs font-black text-slate-900 uppercase tracking-tight">DCS Operations</span>
-                          <span class="block text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Control & Check-in Console</span>
-                        </div>
-                     </button>
+
                   </div>
               </div>
 
               <!-- Logs & Registry Section -->
-              <div>
+              <div class="mt-8 border-t border-slate-50 pt-8">
                 <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4 px-1">Registry Access</p>
                   <div class="grid grid-cols-2 gap-3">
-                    <div @click="$router.push('/student/booking-registry'); showSimulationModal = false" class="p-5 bg-white border border-slate-100 rounded-sm hover:border-gray-900 hover:bg-slate-50 transition-all cursor-pointer group shadow-sm">
-                      <div class="w-10 h-10 bg-slate-50 text-slate-400 rounded-sm flex items-center justify-center mb-4 group-hover:bg-gray-900 group-hover:text-white transition-all border border-slate-100">
-                        <i class="ph ph-scroll text-xl"></i>
-                      </div>
-                      <span class="block text-[10px] font-black text-slate-900 uppercase tracking-tighter leading-tight">Booking<br/>Registry</span>
-                    </div>
-                    
-                    <div @click="$router.push('/student/checkin-registry'); showSimulationModal = false" class="p-5 bg-white border border-slate-100 rounded-sm hover:border-gray-900 hover:bg-slate-50 transition-all cursor-pointer group shadow-sm">
-                      <div class="w-10 h-10 bg-slate-50 text-slate-400 rounded-sm flex items-center justify-center mb-4 group-hover:bg-gray-900 group-hover:text-white transition-all border border-slate-100">
-                        <i class="ph ph-users-four text-xl"></i>
-                      </div>
-                      <span class="block text-[10px] font-black text-slate-900 uppercase tracking-tighter leading-tight">DCS<br/>Registry</span>
-                    </div>
+                     <button 
+                        @click="$router.push('/student/booking-registry'); showSimulationModal = false"
+                        class="flex flex-col gap-3 p-5 bg-gray-50 rounded-lg border border-slate-200 text-left hover:bg-slate-100 transition-all group relative overflow-hidden"
+                     >
+                        <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-slate-900 border border-slate-100 shadow-sm group-hover:scale-105 transition-transform">
+                          <i class="ph ph-address-book text-xl"></i>
+                        </div>
+                        <div>
+                          <span class="block text-[10px] font-black text-slate-900 uppercase tracking-tight poppins">Booking Registry</span>
+                          <span class="block text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 poppins">PNR Manifests</span>
+                        </div>
+                     </button>
+
+                     <button 
+                        @click="$router.push('/student/checkin-registry'); showSimulationModal = false"
+                        class="flex flex-col gap-3 p-5 bg-gray-50 rounded-lg border border-slate-200 text-left hover:bg-slate-100 transition-all group relative overflow-hidden"
+                     >
+                        <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-slate-900 border border-slate-100 shadow-sm group-hover:scale-105 transition-transform">
+                          <i class="ph ph-monitor text-xl"></i>
+                        </div>
+                        <div>
+                          <span class="block text-[10px] font-black text-slate-900 uppercase tracking-tight poppins">DCS Registry</span>
+                          <span class="block text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 poppins">Ops Dashboard</span>
+                        </div>
+                     </button>
                   </div>
-                </div>
               </div>
+            </div>
 
               <!-- Modal Footer -->
-              <div class="p-4 bg-gray-50 flex justify-center border-t border-gray-100 shrink-0">
+              <div class="p-4 bg-gray-50 flex justify-center border-t border-slate-100 shrink-0">
                 <p class="text-[9px] text-gray-400 font-medium uppercase tracking-widest">Aviation Training System v2.0</p>
               </div>
             </div>
@@ -248,14 +396,14 @@
         <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" @click="showPerformanceModal = false"></div>
         
         <Transition name="slide-up">
-          <div v-if="showPerformanceModal" class="relative w-full max-w-2xl bg-white rounded-t-xl sm:rounded-sm shadow-2xl overflow-hidden h-[90vh] flex flex-col">
+          <div v-if="showPerformanceModal" class="relative w-full max-w-2xl bg-white rounded-t-xl sm:rounded-lg shadow-2xl overflow-hidden h-[90vh] flex flex-col">
             <!-- Modal Header -->
             <div class="px-6 py-6 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
               <div>
                 <h3 class="text-lg font-black text-slate-900 uppercase tracking-tight">Academic Analytics</h3>
                 <p class="text-[9px] text-[#FF579A] font-bold uppercase tracking-widest">Performance Insights</p>
               </div>
-              <button @click="showPerformanceModal = false" class="w-10 h-10 rounded-sm bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all border border-slate-100">
+              <button @click="showPerformanceModal = false" class="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all border border-slate-100">
                 <i class="ph ph-x text-xl"></i>
               </button>
             </div>
@@ -294,6 +442,14 @@ export default {
     activities: {
       type: Array,
       default: () => []
+    },
+    classmates: {
+      type: Array,
+      default: () => []
+    },
+    instructor: {
+      type: Object,
+      default: () => null
     }
   },
   setup() {
@@ -325,10 +481,14 @@ export default {
       comparisonActivity: null,
       comparisonBooking: null,
       isLoadingBooking: false,
-      comparisonError: null
+      comparisonError: null,
+      showTabDropdown: false
     }
   },
   computed: {
+    activeTabLabel() {
+      return this.tabs.find(t => t.name === this.activeTab)?.label || 'All Activities';
+    },
     sectionDisplayName() {
       if (!this.section) return 'No section enrolled';
       return `${this.section.section_code} - ${this.section.section_name}`;
@@ -336,9 +496,9 @@ export default {
     filteredActivities() {
       let filtered = this.activities;
       if (this.activeTab === 'active') {
-        filtered = filtered.filter(a => a.is_active && !['submitted', 'graded'].includes(a.status));
+        filtered = filtered.filter(a => a.is_active && !['submitted', 'graded', 'unassigned'].includes(a.status) && !this.checkIsOverdue(a));
       } else if (this.activeTab === 'missing') {
-        filtered = filtered.filter(a => this.checkIsOverdue(a));
+        filtered = filtered.filter(a => this.checkIsOverdue(a) || a.status === 'unassigned');
       } else if (this.activeTab === 'submitted') {
         filtered = filtered.filter(a => a.status === 'submitted');
       } else if (this.activeTab === 'graded') {
@@ -362,17 +522,14 @@ export default {
     }
   },
   methods: {
+    selectTab(tabName) {
+      this.activeTab = tabName;
+      this.showTabDropdown = false;
+    },
     viewActivityDetails(activityId) {
       this.$router.push(`/student/activity/${activityId}`);
     },
-    async startPracticeBooking() {
-      const confirmed = await this.modalStore.confirm({
-        title: 'Start Practice Booking?',
-        message: 'This will start a simulation where you can practice the booking flow.',
-        confirmText: 'Start Simulation',
-        cancelText: 'Maybe Later'
-      });
-      if (!confirmed) return;
+    startPracticeBooking() {
       this.bookingStore.resetBooking();
       this.bookingStore.setPracticeMode();
       this.notificationStore.success('Practice mode enabled. Happy booking!');
@@ -400,10 +557,11 @@ export default {
       }
     },
     getTabCount(tabName) {
-      if (tabName === 'active') return this.activities.filter(a => a.is_active && !['submitted', 'graded'].includes(a.status)).length;
-      if (tabName === 'missing') return this.activities.filter(a => this.checkIsOverdue(a)).length;
+      if (tabName === 'active') return this.activities.filter(a => a.is_active && !['submitted', 'graded', 'unassigned'].includes(a.status) && !this.checkIsOverdue(a)).length;
+      if (tabName === 'missing') return this.activities.filter(a => this.checkIsOverdue(a) || a.status === 'unassigned').length;
       if (tabName === 'submitted') return this.activities.filter(a => a.status === 'submitted').length;
       if (tabName === 'graded') return this.activities.filter(a => a.status === 'graded').length;
+      if (tabName === 'classmates') return this.classmates.length + (this.instructor ? 1 : 0);
       return this.activities.length;
     },
     checkIsOverdue(activity) {

@@ -3,7 +3,7 @@ from rest_framework import serializers
 from .models import (
     AirlineTax, AirportFee, Booking, BookingDetail, BookingTax, CheckInDetail,
     PassengerInfo, Students, PassengerTypeTaxRate, Route, Airline, SeatClass,
-    Aircraft, Airport, AddOnType, Flight, Schedule, Seat, TaxType, TrackLog,
+    Aircraft, Airport, AddOnType, AddOn, Flight, Schedule, Seat, TaxType, TrackLog,
     SeatRequirement, Payment, Country, SeatClassFeature,
     InsuranceProvider, InsuranceBenefit, InsuranceCoverageType, TravelInsurancePlan,
     PlanCoverage, MealCategory, MealOption, AssistanceService, BaggageOption,
@@ -21,16 +21,15 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'first_name', 'last_name']
 
 
-# ==========================================
-# STUDENT SERIALIZER
-# ==========================================
 class StudentsSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
+    username = serializers.ReadOnlyField(source='user.username')
     
     class Meta:
         model = Students
         fields = [
             'id', 
+            'username',
             'student_number', 
             'first_name', 
             'last_name', 
@@ -39,6 +38,8 @@ class StudentsSerializer(serializers.ModelSerializer):
             'email', 
             'phone_number', 
             'gender', 
+            'course',
+            'year_level',
             'date_enrolled'
         ]
         read_only_fields = ['date_enrolled']
@@ -91,7 +92,7 @@ class FlightSerializer(serializers.ModelSerializer):
     class Meta:
         model = Flight
         fields = ['id', 'flight_number', 'airline', 'airline_display', 
-                  'aircraft', 'aircraft_display', 'route', 'route_display', 'total_stops']
+                  'aircraft', 'aircraft_display', 'route', 'route_display', 'total_stops', 'layovers_data']
 
 class ScheduleSerializer(serializers.ModelSerializer):
     flight_number = serializers.ReadOnlyField(source='flight.flight_number')
@@ -356,6 +357,7 @@ class MealCategorySerializer(serializers.ModelSerializer):
 
 class MealOptionSerializer(serializers.ModelSerializer):
     airline_name = serializers.ReadOnlyField(source='airline.name')
+    is_available = serializers.BooleanField(source='is_active', default=True)
     class Meta:
         model = MealOption
         fields = ['id', 'name', 'meal_type', 'airline', 'airline_name', 'price', 'is_available', 'display_order']
@@ -366,6 +368,7 @@ class MealOptionSerializer(serializers.ModelSerializer):
 # ==========================================
 class AssistanceServiceSerializer(serializers.ModelSerializer):
     airline_name = serializers.ReadOnlyField(source='airline.name')
+    is_available = serializers.BooleanField(source='is_active', default=True)
     class Meta:
         model = AssistanceService
         fields = ['id', 'name', 'service_type', 'airline', 'airline_name', 'price', 'is_available', 'display_order']
@@ -376,6 +379,7 @@ class AssistanceServiceSerializer(serializers.ModelSerializer):
 # ==========================================
 class BaggageOptionSerializer(serializers.ModelSerializer):
     airline_name = serializers.ReadOnlyField(source='airline.name')
+    is_available = serializers.BooleanField(source='is_active', default=True)
     class Meta:
         model = BaggageOption
         fields = ['id', 'weight_kg', 'airline', 'airline_name', 'price', 'is_available', 'display_order']
@@ -403,11 +407,13 @@ class BookingDetailSerializer(serializers.ModelSerializer):
     flight_number = serializers.ReadOnlyField(source='schedule.flight.flight_number')
     route_display = serializers.ReadOnlyField(source='schedule.flight.route.__str__')
     departure_time = serializers.ReadOnlyField(source='schedule.departure_time')
-    arrival_time = serializers.ReadOnlyField(source='schedule.arrival_time')
-    seat_number = serializers.ReadOnlyField(source='seat.seat_number')
-    seat_class_name = serializers.ReadOnlyField(source='seat_class.name')
+    seat_number = serializers.SerializerMethodField()
+    seat_class_name = serializers.SerializerMethodField()
     airline_name = serializers.ReadOnlyField(source='schedule.flight.airline.name')
-    
+    arrival_time = serializers.ReadOnlyField(source='schedule.arrival_time')
+    addons = serializers.PrimaryKeyRelatedField(many=True, queryset=AddOn.objects.all(), required=False)
+    addon_details = serializers.SerializerMethodField()
+
     class Meta:
         model = BookingDetail
         fields = [
@@ -425,15 +431,64 @@ class BookingDetailSerializer(serializers.ModelSerializer):
             'seat',
             'seat_number',
             'seat_class_name',
+            'addons',
+            'addon_details',
             'booking_date',
             'price',
             'tax_amount',
             'status',
         ]
-    
+
     def get_passenger_name(self, obj):
         """Get passenger's full name."""
         return obj.passenger.get_full_name()
+
+    def get_seat_number(self, obj):
+        """Get seat number safely."""
+        return obj.seat.seat_number if obj.seat else "NOT ASSIGNED"
+
+    def get_seat_class_name(self, obj):
+        """Get seat class name safely."""
+        return obj.seat_class.name if obj.seat_class else "Standard"
+
+    def get_addon_details(self, obj):
+        """Get list of addon names."""
+        return [a.name for a in obj.addons.all()]
+
+    def validate_seat(self, value):
+        """Ensure the chosen seat is available for the same schedule."""
+        if value:
+            # If we are changing seats, check availability
+            # (Note: Current seat of this booking detail is technically 'occupied')
+            booking_detailId = self.instance.id if self.instance else None
+            # If the seat is already assigned to THIS booking detail, it's fine
+            if self.instance and self.instance.seat == value:
+                return value
+                
+            if not value.is_available:
+                raise serializers.ValidationError("This seat is no longer available.")
+                
+            # Double check it belongs to the same schedule
+            if self.instance and value.schedule != self.instance.schedule:
+                raise serializers.ValidationError("Selected seat does not belong to this flight schedule.")
+                
+        return value
+
+    def update(self, instance, validated_data):
+        """Update instance and handle seat availability toggle."""
+        old_seat = instance.seat
+        new_seat = validated_data.get('seat', old_seat)
+        
+        # If seat changed
+        if old_seat != new_seat:
+            if old_seat:
+                old_seat.is_available = True
+                old_seat.save(update_fields=['is_available'])
+            if new_seat:
+                new_seat.is_available = False
+                new_seat.save(update_fields=['is_available'])
+        
+        return super().update(instance, validated_data)
 
 # ==========================================
 # PASSENGER MANAGEMENT SERIALIZERS
@@ -723,11 +778,40 @@ class PassengerTypeTaxRateSerializer(serializers.ModelSerializer):
     
 # Add this before BookingTaxSerializer
 class BookingSerializer(serializers.ModelSerializer):
-    user_name = serializers.ReadOnlyField(source='user.username')
+    user_name = serializers.SerializerMethodField()
+    user_email = serializers.SerializerMethodField()
+    contact_phone = serializers.SerializerMethodField()
+    contact_email = serializers.SerializerMethodField()
     
     class Meta:
         model = Booking
-        fields = ['id', 'user', 'user_name', 'trip_type', 'status', 'created_at', 'total_amount']
+        fields = ['id', 'pnr', 'user', 'user_name', 'user_email', 'contact_phone', 'contact_email', 'trip_type', 'status', 'created_at', 'total_amount']
+
+    def get_user_name(self, obj):
+        # Try to get the lead passenger's name first for the manifest
+        first_detail = obj.details.first()
+        if first_detail and first_detail.passenger:
+            return first_detail.passenger.get_full_name()
+            
+        # Fallback to booking contact info
+        if hasattr(obj, 'contact') and obj.contact:
+            return f"{obj.contact.first_name} {obj.contact.last_name}"
+            
+        # Fallback to the account user who made the booking
+        return obj.user.get_full_name() if obj.user else None
+
+    def get_user_email(self, obj):
+        if hasattr(obj, 'contact') and obj.contact:
+            return obj.contact.email
+        return obj.user.email if obj.user else None
+
+    def get_contact_phone(self, obj):
+        if hasattr(obj, 'contact') and obj.contact:
+            return obj.contact.phone
+        return None
+
+    def get_contact_email(self, obj):
+        return self.get_user_email(obj)
 
 # Your existing BookingTaxSerializer
 class BookingTaxSerializer(serializers.ModelSerializer):

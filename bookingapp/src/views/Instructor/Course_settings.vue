@@ -120,17 +120,7 @@
                           </label>
                         </div>
 
-                        <!-- Disable Section -->
-                        <div class="flex items-center justify-between pt-6 border-t border-gray-200/50">
-                          <div class="pr-8">
-                            <h4 class="text-sm font-bold text-gray-800">Disable Section</h4>
-                            <p class="text-xs text-gray-500 mt-1">If disabled, students will no longer see this section on their dashboard. Use this for past or inactive courses.</p>
-                          </div>
-                          <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" v-model="form.is_active" :true-value="false" :false-value="true" class="sr-only peer">
-                            <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-pink-500"></div>
-                          </label>
-                        </div>
+
                       </div>
                     </div>
 

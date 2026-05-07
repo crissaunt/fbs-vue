@@ -151,23 +151,58 @@ class CheckInDetailViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['post'])
     def lookup(self, request):
-        pnr = request.data.get('pnr')
-        last_name = request.data.get('last_name')
+        pnr = request.data.get('pnr', '').strip()
+        last_name = request.data.get('last_name', '').strip()
+        
+        print(f"DEBUG: Check-in Lookup Attempt - PNR: |{pnr}|, Last Name: |{last_name}|")
         
         if not pnr or not last_name:
             return Response({'error': 'PNR and last name are required'}, status=400)
             
+        # 1. First, check if there is at least one passenger in this PNR with the given Last Name
+        # This provides the "authorization" to see the booking party.
+        if last_name == 'QR_VERIFIED':
+            # QR scan bypass - just verify PNR exists
+            auth_exists = BookingDetail.objects.filter(booking__pnr=pnr.upper()).exists()
+            if not auth_exists:
+                return Response({'error': 'No matching booking found for this scanned QR code'}, status=404)
+        else:
+            auth_exists = BookingDetail.objects.filter(
+                booking__pnr=pnr.upper(),
+                passenger__last_name__iexact=last_name
+            ).exists()
+            
+            if not auth_exists:
+                return Response({'error': 'No matching booking found for this PNR and Last Name'}, status=404)
+            
+        # 2. If valid, retrieve ALL passengers in this PNR (the whole party)
         bookings = BookingDetail.objects.filter(
-            booking__pnr=pnr.upper(),
-            passenger__last_name__iexact=last_name
-        ).select_related('passenger', 'schedule__flight__route', 'schedule__flight__airline')
+            booking__pnr=pnr.upper()
+        ).select_related(
+            'passenger', 
+            'schedule__flight__route__origin_airport', 
+            'schedule__flight__route__destination_airport', 
+            'seat'
+        ).prefetch_related('addons', 'checkins')
         
         if not bookings.exists():
-            return Response({'error': 'No matching booking found'}, status=404)
+            return Response({'error': 'No records found for this PNR'}, status=404)
             
         # Serialize the booking details for the passenger to choose
         data = []
+        now = timezone.now()
+        
         for b in bookings:
+            departure = b.schedule.departure_time
+            time_until_departure = departure - now
+            
+            # DCS Logic: Window opens 48 hours before, closes 1 hour before
+            window_status = 'open'
+            if time_until_departure > timedelta(hours=48):
+                window_status = 'early'
+            elif time_until_departure < timedelta(hours=1):
+                window_status = 'late'
+            
             data.append({
                 'id': b.id,
                 'passenger_name': b.passenger.get_full_name(),
@@ -176,51 +211,177 @@ class CheckInDetailViewSet(viewsets.ModelViewSet):
                 'destination': b.schedule.flight.route.destination_airport.city,
                 'departure_time': b.schedule.departure_time,
                 'status': b.status,
-                'is_checked_in': b.checkins.exists()
+                'passenger_type': b.passenger_type or (b.passenger.passenger_type if b.passenger else 'Adult'),
+                'is_checked_in': b.checkins.exists(),
+                'checkin_window_status': window_status,
+                'time_until_departure_hours': round(time_until_departure.total_seconds() / 3600, 1),
+                'seat': b.seat.id if b.seat else None,
+                'seat_number': b.seat.seat_number if b.seat else ('SEAT ON LAP' if b.passenger_type == 'Infant' else 'NOT ASSIGNED'),
+                'addons': list(b.addons.values_list('id', flat=True)),
+                'addon_details': [a.name for a in b.addons.all()],
+                'schedule': b.schedule.id
             })
             
         return Response(data)
 
     @action(detail=False, methods=['post'])
     def self_checkin(self, request):
-        booking_detail_id = request.data.get('booking_detail_id')
+        """
+        Handles bulk check-in for multiple passengers.
+        Expected data: {
+            "passengers": [
+                {"booking_detail_id": ID, "email": "...", "phone": "..."},
+                ...
+            ],
+            "has_declared_safety": true
+        }
+        """
+        passenger_data = request.data.get('passengers', [])
         has_declared_safety = request.data.get('has_declared_safety', False)
         
-        if not booking_detail_id:
-            return Response({'error': 'Booking detail ID required'}, status=400)
+        if not passenger_data:
+            # Backward compatibility for single passenger if necessary
+            single_id = request.data.get('booking_detail_id')
+            if single_id:
+                passenger_data = [{
+                    'booking_detail_id': single_id,
+                    'email': request.data.get('email', ''),
+                    'phone': request.data.get('phone', '')
+                }]
+            else:
+                return Response({'error': 'Passenger data required'}, status=400)
             
         if not has_declared_safety:
             return Response({'error': 'Safety declaration is required'}, status=400)
             
+        results = []
+        errors = []
+        
+        from django.db import transaction
+        
         try:
-            booking_detail = BookingDetail.objects.get(id=booking_detail_id)
-            
-            # Use serializer for validation and creation
-            serializer = self.get_serializer(data={
-                'booking_detail_id': booking_detail_id,
-                'has_declared_safety': True,
-                'status': 'checked-in',
-                'student': request.user.id if request.user.is_authenticated else None,
-                'gate_number': booking_detail.schedule.gate or 'Gate 7'
-            })
-            
-            if serializer.is_valid():
-                checkin = serializer.save()
-                # Update booking detail status
-                booking_detail.status = 'checkin'
-                booking_detail.save(update_fields=['status'])
+            with transaction.atomic():
+                for p in passenger_data:
+                    bd_id = p.get('booking_detail_id')
+                    try:
+                        booking_detail = BookingDetail.objects.get(id=bd_id)
+                        
+                        # Guard: Check-in window enforcement
+                        departure = booking_detail.schedule.departure_time
+                        now = timezone.now()
+                        time_until_departure = departure - now
+                        
+                        if time_until_departure > timedelta(hours=48):
+                            errors.append({'id': bd_id, 'errors': 'Check-in window not yet open (Opens 48h before departure)'})
+                            continue
+                        elif time_until_departure < timedelta(hours=1):
+                            errors.append({'id': bd_id, 'errors': 'Check-in window closed (Closes 1h before departure)'})
+                            continue
+
+                        serializer = self.get_serializer(data={
+                            'booking_detail_id': bd_id,
+                            'has_declared_safety': True,
+                            'status': 'checked-in',
+                            'student': request.user.id if request.user.is_authenticated else None,
+                            'gate_number': booking_detail.schedule.gate or 'Gate 7'
+                        })
+                        
+                        if serializer.is_valid():
+                            checkin = serializer.save()
+                            
+                            # UPDATE: Persist email/phone to the booking contact so dispatch_email can find it
+                            email_provided = p.get('email', '')
+                            phone_provided = p.get('phone', '')
+                            
+                            if email_provided or phone_provided:
+                                from ..models import BookingContact
+                                booking = booking_detail.booking
+                                contact, created = BookingContact.objects.get_or_create(booking=booking)
+                                
+                                # Update fields if provided
+                                if email_provided: contact.email = email_provided
+                                if phone_provided: contact.phone = phone_provided
+                                contact.save()
+                                print(f"DEBUG: Updated booking contact for booking {booking.id} during check-in")
+
+                            booking_detail.status = 'checkin'
+                            booking_detail.save(update_fields=['status'])
+                            results.append(serializer.data)
+                        else:
+                            errors.append({'id': bd_id, 'errors': serializer.errors})
+                    except BookingDetail.DoesNotExist:
+                        errors.append({'id': bd_id, 'errors': 'Booking detail not found'})
                 
-                # Log the action
-                TrackLog.objects.create(
-                    user=request.user if request.user.is_authenticated else None,
-                    action=f"Self-check-in completed for {booking_detail.passenger.get_full_name()}."
-                )
-                
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                # AUTOMATIC EMAIL DISPATCH
+                if results and not errors:
+                    try:
+                        from flightapp.services.email_service import EmailService
+                        # Get all checked-in booking details for internal processing
+                        # The serializer returns 'booking_detail' as a nested object
+                        bd_ids = [r['booking_detail']['id'] for r in results if 'booking_detail' in r]
+                        bookings = BookingDetail.objects.filter(id__in=bd_ids)
+                        
+                        if bookings.exists():
+                            if bookings.count() > 1:
+                                EmailService.send_group_checkin_confirmation(list(bookings))
+                            else:
+                                EmailService.send_checkin_confirmation(bookings.first())
+                            print(f"DEBUG: Auto-dispatched check-in emails for {bookings.count()} passengers")
+                    except Exception as email_err:
+                        print(f"ERROR: Auto-email dispatch failed: {email_err}")
+                        # Don't fail the whole check-in if email fails
             
-        except BookingDetail.DoesNotExist:
-            return Response({'error': 'Booking not found'}, status=404)
+            if errors and not results:
+                return Response({'errors': errors}, status=400)
+                
+            return Response({
+                'results': results,
+                'errors': errors if errors else None
+            }, status=201 if not errors else 207)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+    @action(detail=False, methods=['post'])
+    def dispatch_email(self, request):
+        """
+        Triggers email dispatch for a list of booking details.
+        """
+        booking_detail_ids = request.data.get('booking_detail_ids', [])
+        
+        # Support single ID if provided
+        if not booking_detail_ids and request.data.get('booking_detail_id'):
+            booking_detail_ids = [request.data.get('booking_detail_id')]
+            
+        if not booking_detail_ids:
+            return Response({'error': 'Booking Detail IDs required'}, status=400)
+            
+        try:
+            from flightapp.services.email_service import EmailService
+            bookings = BookingDetail.objects.filter(id__in=booking_detail_ids)
+            
+            if not bookings.exists():
+                return Response({'error': 'No valid bookings found for provided IDs'}, status=404)
+            
+            if bookings.count() > 1:
+                success = EmailService.send_group_checkin_confirmation(list(bookings))
+            else:
+                success = EmailService.send_checkin_confirmation(bookings.first())
+                
+            if success:
+                return Response({'message': 'Dispatch protocol successful', 'count': bookings.count()})
+            
+            return Response({'error': 'Dispatch protocol failed. Verify email configuration and recipient details.'}, status=500)
+            
+        except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"CRITICAL ERROR in dispatch_email: {e}\n{error_trace}")
+            from django.conf import settings
+            return Response({
+                'error': f"Internal Dispatch Failure: {str(e)}",
+                'details': error_trace if settings.DEBUG else "Check server logs"
+            }, status=500)
 
     @action(detail=False, methods=['get'])
     def export(self, request):

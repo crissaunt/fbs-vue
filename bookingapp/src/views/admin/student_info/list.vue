@@ -14,8 +14,8 @@
             @change="fetchStudents"
           >
             <option value="">Any Gender</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
+            <option value="mr">Male</option>
+            <option value="mrs">Female</option>
             <option value="other">Other</option>
           </select>
         </div>
@@ -102,7 +102,10 @@
                 </div>
                 <div>
                   <span class="font-bold text-[#002D1E] block poppins">{{ student.full_name }}</span>
-                  <span class="text-[10px] text-gray-400 poppins uppercase tracking-wider">SN #{{ student.student_number }}</span>
+                  <div class="flex items-center gap-2">
+                    <span class="text-[10px] text-[#fe3787] bg-pink-50 px-1 rounded font-bold poppins uppercase tracking-wider">@{{ student.username || 'System' }}</span>
+                    <span class="text-[10px] text-gray-400 poppins uppercase tracking-wider">SN #{{ student.student_number }}</span>
+                  </div>
                 </div>
               </div>
             </td>
@@ -130,9 +133,7 @@
                 <button @click="editStudent(student)" class="text-green-600 hover:text-green-400 p-2 transition-colors">
                   <i class="ph ph-pencil-simple text-lg"></i>
                 </button>
-                <button @click="resetPassword(student)" class="text-orange-600 hover:text-orange-400 p-2 transition-colors" title="Reset Password">
-                  <i class="ph ph-key text-lg"></i>
-                </button>
+
                 <button @click="deleteStudent(student.id)" class="text-red-600 hover:text-red-400 p-2 transition-colors">
                   <i class="ph ph-trash text-lg"></i>
                 </button>
@@ -211,15 +212,12 @@
           <template v-if="!isEditing">
             <div class="bg-blue-50 border border-blue-100 rounded-[1px] p-3">
               <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest poppins">Account Credentials</p>
+              <p class="text-[9px] text-blue-400 poppins mt-1">Default password "FBSStudent@2024" will be applied automatically.</p>
             </div>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-4">
               <div>
                 <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Username *</label>
                 <input v-model="form.username" type="text" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px]" required placeholder="e.g. jdoe">
-              </div>
-              <div>
-                <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Password *</label>
-                <input v-model="form.password" type="password" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px]" required placeholder="••••••••">
               </div>
             </div>
           </template>
@@ -237,7 +235,7 @@
 
           <div>
             <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Middle Initial (Optional)</label>
-            <input v-model="form.mi" type="text" maxlength="1" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px]" placeholder="M">
+            <input v-model="form.mi" type="text" maxlength="5" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px]" placeholder="M">
           </div>
           
           <div class="grid grid-cols-2 gap-4">
@@ -249,8 +247,8 @@
               <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Gender</label>
               <select v-model="form.gender" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px] bg-white">
                 <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
+                 <option value="mr">Male</option>
+                <option value="mrs">Female</option>
                 <option value="other">Other</option>
               </select>
             </div>
@@ -264,6 +262,22 @@
             <div>
               <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Phone Number</label>
               <input v-model="form.phone_number" type="text" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px]">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Course</label>
+              <input v-model="form.course" type="text" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px]" placeholder="e.g. BSHM">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Year Level</label>
+              <select v-model="form.year_level" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px] bg-white">
+                <option value="1">1st Year</option>
+                <option value="2">2nd Year</option>
+                <option value="3">3rd Year</option>
+                <option value="4">4th Year</option>
+              </select>
             </div>
           </div>
 
@@ -297,6 +311,19 @@
             <div>
               <h3 class="text-xl font-bold text-[#002D1E] poppins">{{ selectedStudent.full_name }}</h3>
               <p class="text-xs font-bold text-gray-400 uppercase tracking-widest poppins">ID: STUDENT-{{ selectedStudent.id }}</p>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-6">
+            <div>
+              <p class="text-[10px] uppercase font-bold text-gray-400 mb-1 poppins">Course</p>
+              <p class="text-sm font-black text-blue-600 poppins uppercase">{{ selectedStudent.course || 'BSHM' }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase font-bold text-gray-400 mb-1 poppins">Year Level</p>
+              <p class="text-sm font-bold text-[#002D1E] poppins">
+                {{ selectedStudent.year_level }}{{ yearSuffix(selectedStudent.year_level) }} Year
+              </p>
             </div>
           </div>
           
@@ -417,7 +444,14 @@ const filteredStudents = computed(() => {
       s.email?.toLowerCase().includes(q)
     )
   }
-  if (selectedType.value) filtered = filtered.filter(s => s.gender === selectedType.value)
+  if (selectedType.value) {
+    filtered = filtered.filter(s => {
+      const g = s.gender?.toLowerCase()
+      if (selectedType.value === 'mr') return g === 'mr' || g === 'male'
+      if (selectedType.value === 'mrs') return g === 'mrs' || g === 'female'
+      return g === selectedType.value
+    })
+  }
   return filtered
 })
 
@@ -478,22 +512,22 @@ const fetchStudents = async () => {
 
 const calculateStats = () => {
   const total = students.value.length
-  const male = students.value.filter(s => s.gender === 'male').length
-  const female = students.value.filter(s => s.gender === 'female').length
+  const male = students.value.filter(s => s.gender === 'mr' || s.gender === 'male').length
+  const female = students.value.filter(s => s.gender === 'mrs' || s.gender === 'female').length
   const other = total - (male + female)
   stats.value = { total, male, female, other }
 }
 
 const openAddModal = () => {
   isEditing.value = false; currentId.value = null;
-  form.value = { username: '', password: '', student_number: '', id_number: '', first_name: '', last_name: '', mi: '', email: '', phone_number: '', gender: '' }
+  form.value = { username: '', password: '', student_number: '', id_number: '', first_name: '', last_name: '', mi: '', email: '', phone_number: '', gender: '', course: 'BSHM', year_level: '1' }
   formError.value = ''
   showModal.value = true
 }
 
 const editStudent = (s) => {
   isEditing.value = true; currentId.value = s.id;
-  form.value = { username: '', password: '', student_number: s.student_number || '', id_number: s.student_number || '', first_name: s.first_name || '', last_name: s.last_name || '', mi: s.mi || '', email: s.email || '', phone_number: s.phone_number || '', gender: s.gender || '' }
+  form.value = { username: '', password: '', student_number: s.student_number || '', id_number: s.student_number || '', first_name: s.first_name || '', last_name: s.last_name || '', mi: s.mi || '', email: s.email || '', phone_number: s.phone_number || '', gender: s.gender || '', course: s.course || 'BSHM', year_level: s.year_level || '1' }
   formError.value = ''
   showModal.value = true
 }
@@ -512,7 +546,9 @@ const saveStudent = async () => {
         student_number: form.value.student_number,
         email: form.value.email,
         phone_number: form.value.phone_number,
-        gender: form.value.gender
+        gender: form.value.gender,
+        course: form.value.course,
+        year_level: form.value.year_level
       })
       alert('Student updated successfully!')
     } else {
@@ -520,13 +556,15 @@ const saveStudent = async () => {
       await api.post('auth/register/', {
         role: 'student',
         username: form.value.username,
-        password: form.value.password,
+        password: 'FBSStudent@2024', // Force system default password
         first_name: form.value.first_name,
         last_name: form.value.last_name,
         mi: form.value.mi,
         id_number: form.value.id_number,
         email: form.value.email,
-        gender: form.value.gender
+        gender: form.value.gender,
+        course: form.value.course,
+        year_level: form.value.year_level
       })
       alert('Student account created successfully!')
     }
@@ -543,7 +581,7 @@ const saveStudent = async () => {
 const resetPassword = async (s) => {
   const confirmed = await modalStore.confirm({
     title: 'Security Override: Reset Password?',
-    message: `Are you sure you want to reset the password for ${s.full_name} to the default value: Gwapoko123?`,
+    message: `Are you sure you want to reset the password for ${s.full_name} to the default value: FBSStudent@2024?`,
     variant: 'warning',
     confirmText: 'Reset Password',
     loadingText: 'Resetting...'
@@ -553,7 +591,7 @@ const resetPassword = async (s) => {
     modalStore.setLoader(true);
     try {
       const res = await api.post(`/students/${s.id}/reset-password/`)
-      alert(res.data.message || 'Password has been reset to Gwapoko123')
+      alert(res.data.message || 'Password has been reset to FBSStudent@2024')
       modalStore.close(true);
     } catch (err) {
       console.error(err);
@@ -602,7 +640,9 @@ const exportStudents = async () => {
 
 const genderClass = (gender) => {
   switch(gender?.toLowerCase()) {
+    case 'mr':
     case 'male': return 'bg-blue-100 text-blue-700'
+    case 'mrs':
     case 'female': return 'bg-pink-100 text-pink-700'
     default: return 'bg-gray-100 text-gray-500'
   }
@@ -625,6 +665,14 @@ const nextPage = () => { if (currentPage.value < totalPages.value) currentPage.v
 const goToPage = (p) => { if (p !== '...') currentPage.value = p }
 
 watch([searchQuery, selectedType, bookingFilter], () => currentPage.value = 1)
+const yearSuffix = (yr) => {
+  const n = parseInt(yr)
+  if (n === 1) return 'st'
+  if (n === 2) return 'nd'
+  if (n === 3) return 'rd'
+  return 'th'
+}
+
 onMounted(fetchStudents)
 </script>
 

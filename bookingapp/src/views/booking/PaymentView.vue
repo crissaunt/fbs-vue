@@ -18,7 +18,7 @@
       />
 
       <!-- Session Expired -->
-      <div v-else-if="!isSessionValid" class="bg-white rounded-lg border border-gray-100 shadow-xl p-12 text-center max-w-lg mx-auto mt-20">
+      <div v-if="!loading && !isSessionValid" class="bg-white rounded-lg border border-gray-100 shadow-xl p-12 text-center max-w-lg mx-auto mt-20">
         <div class="w-20 h-20 bg-amber-50 rounded-lg flex items-center justify-center mx-auto mb-8 float-animation">
           <span class="text-3xl">⏰</span>
         </div>
@@ -33,7 +33,7 @@
       </div>
 
       <!-- Main Content -->
-      <div v-else class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div v-else-if="!loading" class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <!-- Left Column - Booking details & Summary -->
         <div class="lg:col-span-8 space-y-6">
           
@@ -67,7 +67,7 @@
                   <h2 class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-2 sm:mb-3">Total Amount to Pay</h2>
                   <div class="flex items-baseline">
                     <span class="text-xl sm:text-2xl font-light text-gray-400 mr-2">₱</span>
-                    <span class="text-4xl sm:text-5xl md:text-6xl font-black text-gray-900 tracking-tight leading-none">{{ totalAmount.toLocaleString() }}</span>
+                    <span class="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 tracking-tight leading-none">{{ totalAmount.toLocaleString() }}</span>
                   </div>
                   <p class="text-gray-400 text-xs mt-3 flex items-center">
                     <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -173,23 +173,23 @@
         </div>
 
         <!-- Right Column - Payment Panel -->
-        <div class="lg:col-span-4 space-y-6">
+        <div class="lg:col-span-4 space-y-3">
           <div class="bg-white rounded-xl border border-gray-100 shadow-lg shadow-pink-100/20 overflow-hidden">
             <div class="p-6 sm:p-8">
               <h3 class="text-xl font-bold text-gray-900 mb-2">Secure Checkout</h3>
-              <p class="text-xs text-gray-400 mb-6 leading-relaxed">You will be redirected to our secure PayMongo payment gateway to complete your transaction.</p>
+              <p class="text-[10px] text-gray-400 mb-6 leading-relaxed">You will be redirected to our secure PayMongo payment gateway to complete your transaction.</p>
 
             
               <div class="mb-8 p-6 bg-gray-50/50 rounded-xl border border-gray-100/50 space-y-4">
                 <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Price Summary</p>
                 
-                <div class="space-y-2.5">
+                <div class="space-y-1.5 text-sm">
                   <!-- Base Fares -->
                   <div class="flex items-center gap-2 mb-1">
                     <span class="w-1.5 h-1.5 rounded-full bg-pink-500"></span>
                     <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Base Fares</span>
                   </div>
-                  <div v-if="bookingStore.passengerCount.adults > 0" class="flex justify-between items-center text-sm">
+                  <div v-if="bookingStore.passengerCount.adults > 0" class="flex justify-between items-center text-xs">
                     <span class="text-gray-500 font-medium">{{ bookingStore.passengerCount.adults }} Adult(s)</span>
                     <span class="text-gray-900 font-bold"><AnimatedNumber :value="adultTotalLine" prefix="₱" /></span>
                   </div>
@@ -209,12 +209,12 @@
                       <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Taxes & Fees</span>
                     </div>
                     <div v-if="backendTaxDetails && Object.keys(backendTaxDetails).length > 0">
-                      <div v-for="(amount, label) in backendTaxDetails" :key="label" class="flex justify-between items-center text-sm mb-1 last:mb-0">
+                      <div v-for="(amount, label) in backendTaxDetails" :key="label" class="flex justify-between items-center text-xs mb-1 last:mb-0">
                         <span class="text-gray-500 font-medium">{{ label }}</span>
                         <span class="text-gray-900 font-bold"><AnimatedNumber :value="amount" prefix="₱" /></span>
                       </div>
                     </div>
-                    <div v-else class="flex justify-between items-center text-sm">
+                    <div v-else class="flex justify-between items-center text-xs">
                       <span class="text-gray-500 font-medium">Taxes, VAT & Fees</span>
                       <span class="text-gray-900 font-bold"><AnimatedNumber :value="taxesPrice" prefix="₱" /></span>
                     </div>
@@ -251,13 +251,13 @@
                   <div class="border-t border-gray-200 pt-5 mt-4">
                     <div class="flex justify-between items-end">
                       <div>
-                        <span class="text-gray-900 font-black text-lg block leading-none mb-1">Total Amount</span>
+                        <span class="text-gray-900 font-black text-base block leading-none mb-1">Total Amount</span>
                         <div class="bg-white border border-gray-200 rounded px-2 py-0.5 inline-flex items-center gap-1">
                           <span class="text-[9px] font-black text-gray-900 uppercase">{{ (bookingStore.passengerCount.adults || 0) + (bookingStore.passengerCount.children || 0) }} Passengers</span>
                         </div>
                       </div>
-                      <span class="text-3xl font-black text-gray-900 flex items-center">
-                        <span class="text-pink-500 text-xl mr-1">₱</span>
+                      <span class="text-2xl font-black text-gray-900 flex items-center">
+                        <span class="text-pink-500 text-base mr-1">₱</span>
                         <AnimatedNumber :value="totalAmount" />
                       </span>
                     </div>
@@ -266,38 +266,46 @@
               </div>
 
               <!-- Promo Code -->
-              <div class="mb-8">
+              <!-- <div class="mb-8">
                 <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Promo Code</p>
                 <div class="flex gap-2">
                   <input type="text" placeholder="Enter code" class="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-pink-500 outline-none transition-all">
                   <button class="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-400 hover:text-pink-500 hover:border-pink-200 transition-colors uppercase">Apply</button>
                 </div>
-              </div>
+              </div> -->
 
               <!-- Terms and Conditions -->
-              <div class="mb-8 p-4 bg-gray-50/50 rounded-lg border border-gray-100">
-                <label class="flex items-start gap-3 cursor-pointer group">
-                  <div class="flex items-center h-5 mt-0.5">
-                    <input type="checkbox" v-model="hasAgreedToTerms" class="w-4 h-4 text-[#FF579A] border-gray-300 rounded focus:ring-[#FF579A]/20 transition-all cursor-pointer">
+              <div class="mb-4 p-5 bg-pink-50/30 rounded-xl border border-pink-100/50 hover:bg-pink-50/50 transition-colors">
+                <label class="flex items-start gap-4 cursor-pointer group">
+                  <div class="flex items-center h-6 mt-0.5">
+                    <input type="checkbox" v-model="hasAgreedToTerms" 
+                           class="w-5 h-5 text-[#FF579A] border-pink-200 rounded focus:ring-[#FF579A]/20 transition-all cursor-pointer accent-[#FF579A]">
                   </div>
-                  <div class="text-[11px] leading-relaxed text-gray-500 group-hover:text-gray-700 transition-colors">
-                    I have read and agree to the <a href="#" class="text-[#FF579A] font-bold hover:underline">Fare Rules</a>, 
-                    <a href="#" class="text-[#FF579A] font-bold hover:underline">Privacy Policy</a>, and 
-                    <a href="#" class="text-[#FF579A] font-bold hover:underline">Terms of Transport</a>.
+                  <div class="text-[11px] sm:text-xs leading-relaxed text-gray-600 group-hover:text-gray-900 transition-colors">
+                    <span class="font-medium">I have read and agree to the </span>
+                    <a href="#" class="text-[#FF579A] font-black hover:underline px-1">Fare Rules</a>, 
+                    <a href="#" class="text-[#FF579A] font-black hover:underline px-1">Privacy Policy</a>, <span class="font-medium">and</span> 
+                    <a href="#" class="text-[#FF579A] font-black hover:underline px-1">Terms of Transport</a>.
                   </div>
                 </label>
               </div>
 
               <!-- Main Action -->
-              <div class="mt-8 pt-8 border-t border-gray-50">
+              <div class="border-t border-gray-50 pt-2">
+                <transition enter-active-class="transition duration-200 ease-out" enter-from-class="transform -translate-y-2 opacity-0" enter-to-class="transform translate-y-0 opacity-100">
+                  <p class="text-[11px] font-black text-[#FF579A] mb-3 uppercase tracking-wider flex items-center gap-2" v-if="!hasAgreedToTerms">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#FF579A] animate-pulse"></span>
+                    Please accept terms to proceed
+                  </p>
+                </transition>
                 <button @click="handlePayMongoCheckout" 
                         :disabled="loading || isRedirecting || !bookingId || !hasAgreedToTerms"
-                        class="w-full py-4 bg-[#FF579A] hover:bg-[#FF4081] text-white rounded-lg font-bold shadow-lg shadow-pink-200 transition-all active:scale-[0.98] disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none">
+                        class="w-full cursor-pointer py-4 bg-[#FF579A] hover:bg-[#FF4081] text-white rounded-lg font-bold shadow-lg shadow-pink-200 transition-all active:scale-[0.98] disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none">
                   {{ isRedirecting ? (loadingMessage || 'Redirecting...') : (loading ? 'Processing...' : 'Proceed to Payment') }}
                 </button>
                 
                 <button @click="goBack" 
-                        class="w-full mt-4 py-3 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-widest">
+                        class="w-full cursor-pointer mt-4 py-3 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-widest">
                   Back to Review
                 </button>
               </div>
@@ -432,10 +440,10 @@ const insurancePrice = computed(() => {
   return bookingStore.insurancePrice;
 });
 
-const totalSeatsPrice = computed(() => bookingStore.totalSeatsPrice);
-const totalBaggagePrice = computed(() => bookingStore.totalBaggagePrice);
-const totalMealsPrice = computed(() => bookingStore.totalMealsPrice);
-const totalAssistancePrice = computed(() => bookingStore.totalAssistancePrice);
+const totalSeatsPrice = computed(() => bookingStore.authoritativeSeats);
+const totalBaggagePrice = computed(() => bookingStore.authoritativeBaggage);
+const totalMealsPrice = computed(() => bookingStore.authoritativeMeals);
+const totalAssistancePrice = computed(() => bookingStore.authoritativeAssistance);
 
 const taxesPrice = computed(() => bookingStore.authoritativeTaxes);
 
@@ -457,10 +465,19 @@ const syncBookingTotalFromBackend = async () => {
     if (!bookingStore.booking_id) return;
     const res = await api.get(`flightapp/booking/${bookingStore.booking_id}/`);
     if (res.data?.success && res.data?.booking) {
-      const backendTotal = parseFloat(res.data.booking.total_amount);
-      if (Number.isFinite(backendTotal) && backendTotal > 0) {
-        bookingStore.booking_total = backendTotal;
-        localStorage.setItem('current_booking_total', backendTotal);
+      const b = res.data.booking;
+      
+      // Update store with authoritative totals and breakdown
+      bookingStore.saveBookingConfirmation({
+        booking_id: b.id,
+        pnr: b.pnr,
+        status: b.status,
+        total_amount: b.total_amount
+      });
+      
+      // Store the granular breakdown and tax details returned from serializer
+      if (b.breakdown) {
+        bookingStore.setBackendBreakdown(b);
       }
     }
   } catch (error) {
@@ -524,7 +541,7 @@ const goBack = () => {
 const restartBooking = () => {
   bookingStore.resetBooking();
   localStorage.removeItem('current_booking');
-  router.push({ name: 'SearchFlights' });
+  router.push({ name: 'Home' });
 };
 
 /**

@@ -106,8 +106,22 @@ def validate_activity_code(request):
                 'origin': activity.required_origin,
                 'destination': activity.required_destination,
                 'travel_class': activity.required_travel_class,
+                'seat_class': activity.required_seat_class if hasattr(activity, 'required_seat_class') else "",
                 'passengers': activity.required_passengers,
             },
+            'activity_addons': [
+                {
+                    "id": aa.id,
+                    "addon_id": aa.addon_id if hasattr(aa, 'addon_id') else aa.addon.id,
+                    "addon_name": aa.addon.name,
+                    "passenger": {
+                        "id": aa.passenger_id if hasattr(aa, 'passenger_id') else aa.passenger.id,
+                        "first_name": aa.passenger.first_name,
+                        "last_name": aa.passenger.last_name
+                    }
+                }
+                for aa in activity.activity_addons.all()
+            ],
             'section': {
                 'code': activity.section.section_code,
                 'name': activity.section.section_name

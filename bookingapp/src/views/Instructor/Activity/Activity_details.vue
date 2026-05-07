@@ -1,11 +1,11 @@
 <template>
   <div class="p-0 m-0">
     <!-- Main Application UI (Hidden during print) -->
-    <div v-if="!isPrinting" class="max-w-7xl mx-auto p-4 lg:p-8">
+    <div class="max-w-7xl mx-auto p-4 lg:p-8 print:p-0 print:m-0 print:max-w-none">
       <!-- Main Content -->
       <div class="max-w-5xl mx-auto">
           
-          <div class="flex justify-between items-center mb-6">
+          <div class="flex justify-between items-center mb-6 print:hidden">
             <button @click="router.back()" class="flex items-center text-gray-500 hover:text-black font-bold text-sm uppercase">
               <span class="mr-2">←</span> BACK
             </button>
@@ -22,16 +22,10 @@
               >
                 Student work
               </span>
-                            <span 
-                @click="router.push(`/instructor/activity/${route.params.activityId}/toplist`)"
-                class="text-gray-400 cursor-pointer hover:text-gray-600"
-              >
-                Overview
-              </span>
             </div>
           </div>
 
-          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-10 print:p-0 print:border-none print:shadow-none">
             <!-- Loading State (Skeleton UI) -->
             <div v-if="loading" class="animate-pulse">
               <div class="flex justify-between items-start mb-10">
@@ -63,8 +57,8 @@
             </div>
             
             <!-- Activity Content -->
-            <div v-else-if="activity">
-              <div v-if="activeTab === 'instructions'">
+            <div v-else-if="activity" :class="isPrinting ? 'print:block' : ''">
+              <div v-if="activeTab === 'instructions' && !isPrinting">
                 <div class="flex justify-between items-start mb-8">
                   <div>
                     <h1 class="text-4xl font-light text-gray-900 tracking-wide">{{ activity.title || 'Untitled Activity' }}</h1>
@@ -109,15 +103,18 @@
                   <h3 class="text-sm font-bold mb-4 text-gray-800">Flight Requirements</h3>
                   <div class="flex gap-2 mb-6">
                     <span class="bg-[#FFC145] px-6 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
-                      {{ activity.required_trip_type || 'N/A' }}
+                      {{ formatRequirement(activity.required_trip_type) || 'N/A' }}
                     </span>
                     <span class="bg-[#0D3111] text-white px-6 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
-                      {{ activity.required_travel_class || 'N/A' }}
+                      {{ formatRequirement(activity.required_travel_class) || 'N/A' }}
+                    </span>
+                    <span v-if="activity.required_seat_class" class="bg-gray-800 text-white px-6 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                      {{ formatRequirement(activity.required_seat_class) }}
                     </span>
                   </div>
 
                   <!-- Dynamic Flight Requirements based on trip type -->
-                  <div v-if="(activity.required_trip_type || '').toLowerCase().replace(/\s+/g, '_') === 'one_way' || ((!activity.segments || activity.segments.length <= 1) && (activity.required_trip_type || '').toLowerCase().replace(/\s+/g, '_') !== 'round_trip')" class="border border-yellow-200 rounded-3xl py-6 px-10 flex items-center justify-between bg-white relative overflow-hidden">
+                  <div v-if="(activity.required_trip_type || '').toLowerCase().replace(/\s+/g, '_') !== 'multi_city'" class="border border-yellow-200 rounded-3xl py-6 px-10 flex items-center justify-between bg-white relative overflow-hidden">
                     <div class="text-center">
                       <p class="text-xs text-gray-400 uppercase font-bold tracking-widest">From</p>
                       <p class="text-xl font-bold text-gray-900">{{ activity.required_origin || '-' }}</p>
@@ -131,7 +128,7 @@
                       <p class="text-xs text-gray-400 uppercase font-bold tracking-widest">Depart</p>
                       <p class="text-sm font-bold text-gray-800">{{ activity.required_departure_date || 'N/A' }}</p>
                     </div>
-                    <div class="text-center">
+                    <div class="text-center" v-if="activity.required_trip_type !== 'one_way'">
                       <p class="text-xs text-gray-400 uppercase font-bold tracking-widest">Return</p>
                       <p class="text-sm font-bold text-gray-800">{{ activity.required_return_date || 'N/A' }}</p>
                     </div>
@@ -384,141 +381,18 @@
               </div>
 
               <!-- Student Work Tab Content -->
-              <div v-else-if="activeTab === 'submissions'">
-                <div class="flex items-center justify-between mb-8">
-                  <h2 class="text-2xl font-black text-gray-900 uppercase tracking-tight">Student Submissions</h2>
-                  <div class="flex items-center gap-4">
-                    <button 
-                      v-if="activity && (!activity.grades_released || hasUnreleasedGradedSubmissions)"
-                      @click="handleReleaseGrades" 
-                      :disabled="releasingGrades"
-                      class="text-xs font-bold bg-pink-500 text-white px-4 py-2 hover:bg-pink-600 uppercase tracking-widest flex items-center gap-2 rounded transition-all shadow-sm disabled:opacity-50"
-                    >
-                      <svg v-if="releasingGrades" class="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      <span v-else>{{ activity.grades_released ? 'Release Pending Scores' : 'Release All Scores' }}</span>
-                    </button>
-                    <div v-else-if="activity?.grades_released" class="flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded border border-green-100">
-                       <span class="text-[9px] font-black uppercase tracking-widest">All Scores Released</span>
-                       <span class="text-green-500 text-xs">✓</span>
-                    </div>
-
-                    <button 
-                      @click="handlePrint" 
-                      class="text-[10px] font-black text-green-600 hover:text-green-800 uppercase tracking-widest flex items-center gap-2"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                      </svg>
-                      Print Report
-                    </button>
-
-                    <button 
-                      @click="fetchSubmissions" 
-                      class="text-[10px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest flex items-center gap-2"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" :class="['h-3 w-3', submissionsLoading ? 'animate-spin' : '']" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      Refresh
-                    </button>
-                  </div>
-                </div>
-
-                <div v-if="submissionsLoading && submissions.length === 0" class="text-center py-20">
-                  <div class="inline-block w-8 h-8 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                  <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Loading student work...</p>
-                </div>
-
-                <div v-else-if="submissions.length === 0" class="text-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-                  <p class="text-gray-400 text-sm italic">No students are currently enrolled in this section.</p>
-                </div>
-
-                <div v-else id="printable-submission-table" class="overflow-hidden border border-gray-100 rounded-xl bg-white shadow-sm">
-                  <table class="w-full text-left border-collapse">
-                    <thead class="bg-gray-50 border-b border-gray-100">
-                      <tr>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest">STUDENT</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 tracking-widest text-center">Accuracy</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 tracking-widest text-center">Tech Skill</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 tracking-widest text-center">Organization</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 tracking-widest text-center">Completeness</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 tracking-widest text-center">Professionalism</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest">TOTAL GRADE</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">STATUS</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">RELEASED</th>
-                        <th class="px-3 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest print:hidden text-right">ACTION</th>
-                      </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-50">
-                      <tr v-for="sub in submissions" :key="sub.student_id" class="hover:bg-gray-50/50 transition-colors">
-                        <td class="px-3 py-3">
-                          <div class="font-bold text-xs text-gray-900 truncate max-w-[120px]">{{ sub.first_name }} {{ sub.last_name }}</div>
-                          <div class="text-[9px] text-gray-400 font-medium tracking-tight uppercase">{{ sub.student_number }}</div>
-                        </td>
-                        <td class="px-3 py-3 text-center">
-                          <span v-if="sub.booking" class="text-[10px] font-bold" :class="getRubricStats(sub).accuracy.ratio > 0 ? 'text-green-600' : 'text-gray-400'">
-                            {{ getRubricStats(sub).accuracy.level }}
-                          </span>
-                          <span v-else class="text-gray-300 text-[10px]">—</span>
-                        </td>
-                        <td class="px-3 py-3 text-center">
-                          <span v-if="sub.booking" class="text-[10px] font-bold" :class="getRubricStats(sub).tech.ratio > 0 ? 'text-blue-600' : 'text-gray-400'">
-                            {{ getRubricStats(sub).tech.level }}
-                          </span>
-                          <span v-else class="text-gray-300 text-[10px]">—</span>
-                        </td>
-                        <td class="px-3 py-3 text-center">
-                          <span v-if="sub.booking" class="text-[10px] font-bold" :class="getRubricStats(sub).org.ratio > 0 ? 'text-amber-600' : 'text-gray-400'">
-                            {{ getRubricStats(sub).org.level }}
-                          </span>
-                          <span v-else class="text-gray-300 text-[10px]">—</span>
-                        </td>
-                        <td class="px-3 py-3 text-center">
-                          <span v-if="sub.booking" class="text-[10px] font-bold" :class="getRubricStats(sub).comp.ratio > 0 ? 'text-pink-600' : 'text-gray-400'">
-                            {{ getRubricStats(sub).comp.level }}
-                          </span>
-                          <span v-else class="text-gray-300 text-[10px]">—</span>
-                        </td>
-                        <td class="px-3 py-3 text-center">
-                          <span v-if="sub.booking" class="text-[10px] font-bold" :class="getRubricStats(sub).prof.ratio > 0 ? 'text-purple-600' : 'text-gray-400'">
-                            {{ getRubricStats(sub).prof.level }}
-                          </span>
-                          <span v-else class="text-gray-300 text-[10px]">—</span>
-                        </td>
-                        <td class="px-3 py-3 text-[11px] font-bold text-pink-500">
-                          <span v-if="sub.booking" class="text-pink-500 font-black">
-                            {{ Math.round((getRubricStats(sub).total / (activity?.total_points || 100)) * 100) }}%
-                          </span>
-                          <span v-else class="text-gray-300 text-[10px]">—</span>
-                        </td>
-                        <td class="px-3 py-3 text-center">
-                          <span :class="['px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider', getStatusClass(sub.status)]">
-                            {{ sub.status === 'graded' ? 'DONE' : sub.status === 'submitted' ? 'SUB' : 'NOT' }}
-                          </span>
-                        </td>
-                        <td class="px-3 py-3 text-center">
-                          <div v-if="sub.is_released" class="text-green-500 text-xs flex justify-center">✓</div>
-                          <div v-else-if="sub.grade !== null" class="text-amber-500 text-xs flex justify-center">○</div>
-                          <span v-else class="text-gray-300 text-[9px]">-</span>
-                        </td>
-                        <td class="px-3 py-3 print:hidden text-right">
-                          <button 
-                            v-if="sub.booking"
-                            @click="goToAnalysis(sub)"
-                            class="text-[8px] font-black text-pink-500 hover:text-pink-700 uppercase tracking-widest border border-pink-100 px-2 py-1 rounded hover:bg-pink-50 transition-all shadow-sm"
-                          >
-                            Details
-                          </button>
-                          <span v-else class="text-[8px] font-bold text-gray-300 uppercase tracking-widest">Waiting</span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <InstructorSubmission 
+                v-else-if="activeTab === 'submissions' || isPrinting"
+                :activity="activity"
+                :submissions="submissions"
+                :submissions_loading="submissionsLoading"
+                :releasing_grades="releasingGrades"
+                :is_printing="isPrinting"
+                @release-grades="handleReleaseGrades"
+                @print="handlePrint"
+                @refresh="fetchSubmissions"
+                @view-analysis="goToAnalysis"
+              />
             </div>
 
             <!-- Error State -->
@@ -533,53 +407,6 @@
               </button>
             </div>
           </div>
-      </div>
-    </div>
-
-    <!-- Strictly Table-Only Print Layout (Shown only during print) -->
-    <div v-else class="bg-white" style="padding: 0; margin: 0;">
-      <div style="border: 1px solid #e5e7eb; border-radius: 8px; margin: 12px; overflow: hidden;">
-        <table style="width: 100%; border-collapse: collapse; text-align: left; line-height: 1.2; font-family: Arial, sans-serif; table-layout: fixed;">
-          <colgroup>
-            <col style="width: 22%;">
-            <col style="width: 11%;">
-            <col style="width: 11%;">
-            <col style="width: 12%;">
-            <col style="width: 12%;">
-            <col style="width: 14%;">
-            <col style="width: 11%;">
-          </colgroup>
-          <thead style="background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
-            <tr>
-              <th style="padding: 6px 12px; font-size: 9px; font-weight: 900; color: #6b7280; letter-spacing: 0.08em; text-transform: uppercase;">STUDENT</th>
-              <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Accuracy</th>
-              <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Tech Skill</th>
-              <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Organization</th>
-              <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Completeness</th>
-              <th style="padding: 6px 4px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Professionalism</th>
-              <th style="padding: 6px 8px; font-size: 9px; font-weight: 900; color: #6b7280; text-align: center;">Total Grade</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="sub in submissions" :key="sub.student_id" style="border-bottom: 1px solid #f3f4f6;">
-              <td style="padding: 3px 12px;">
-                <div style="font-weight: 700; font-size: 10px; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ sub.first_name }} {{ sub.last_name }}</div>
-                <div style="font-size: 8px; color: #9ca3af; white-space: nowrap;">{{ sub.student_number }}</div>
-              </td>
-              <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).accuracy.level + '' : '—' }}</td>
-              <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).tech.level + '' : '—' }}</td>
-              <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).org.level + '' : '—' }}</td>
-              <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).comp.level + '' : '—' }}</td>
-              <td style="padding: 3px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #374151;">{{ sub.booking ? getRubricStats(sub).prof.level + '' : '—' }}</td>
-              <td style="padding: 3px 12px; text-align: center; font-size: 11px; font-weight: 900; color: #ec4899;">
-                <span v-if="sub.booking">
-                  {{ Math.round((getRubricStats(sub).total / (activity?.total_points || 100)) * 100) }}%
-                </span>
-                <span v-else>—</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
       </div>
     </div>
 
@@ -704,72 +531,13 @@ import { instructorDashboardService } from '@/services/instructor/instructorDash
 import { activityDetailsService } from '@/services/instructor/activityDetailsService'
 import { useNotificationStore } from '@/stores/notification'
 import { useUserStore } from '@/stores/user'
+import InstructorSubmission from '@/components/instructor/Instructor_submission.vue'
+import { calculatePercentage, calculateTotalGrade } from '@/utils/gradingLogic'
 
 const userStore = useUserStore()
 const notificationStore = useNotificationStore()
 const router = useRouter()
 const route = useRoute()
-
-// --- Helper Functions ---
-// --- Granular Scoring Helpers ---
-const getRubricStats = (sub) => {
-    // Determine the source of breakdown data
-    const rb = sub.rubric_breakdown || [];
-    const analysis = sub.analysis || {};
-    
-    // We strictly use the backend's provided grade and breakdown to ensure perfect matching
-    // with the Instructor Scoring area.
-    return {
-        accuracy: { 
-            level: rb[0]?.level || (analysis.accuracy >= 1 ? 5 : (analysis.accuracy >= 0.8 ? 4 : (analysis.accuracy >= 0.5 ? 3 : 2))), 
-            ratio: rb[0]?.ratio ?? analysis.accuracy ?? 0, 
-            status: rb[0]?.status 
-        },
-        tech: { 
-            level: rb[1]?.level || (analysis.tech >= 1 ? 5 : (analysis.tech >= 0.7 ? 4 : (analysis.tech >= 0.4 ? 3 : 2))), 
-            ratio: rb[1]?.ratio ?? analysis.tech ?? 0, 
-            status: rb[1]?.status 
-        },
-        org: { 
-            level: rb[2]?.level || (analysis.org >= 1 ? 5 : (analysis.org >= 0.8 ? 4 : (analysis.org >= 0.5 ? 3 : 2))), 
-            ratio: rb[2]?.ratio ?? analysis.org ?? 0, 
-            status: rb[2]?.status 
-        },
-        comp: { 
-            level: rb[3]?.level || (analysis.comp >= 1 ? 5 : (analysis.comp >= 0.5 ? 3 : 2)), 
-            ratio: rb[3]?.ratio ?? analysis.comp ?? 0, 
-            status: rb[3]?.status 
-        },
-        prof: { 
-            level: rb[4]?.level || (analysis.prof >= 1 ? 5 : (analysis.prof >= 0.7 ? 4 : (analysis.prof >= 0.4 ? 3 : 2))), 
-            ratio: rb[4]?.ratio ?? analysis.prof ?? 0, 
-            status: rb[4]?.status 
-        },
-        total: sub.grade ?? 0
-    };
-}
-
-const getStatusLabel = (status) => {
-  const labels = {
-    'assigned': 'Assigned',
-    'in_progress': 'In Progress',
-    'submitted': 'Submitted',
-    'graded': 'Graded',
-    'not_assigned': 'Not Taken'
-  }
-  return labels[status] || status
-}
-
-const getStatusClass = (status) => {
-  const classes = {
-    'assigned': 'bg-gray-100 text-gray-600',
-    'in_progress': 'bg-blue-100 text-blue-600',
-    'submitted': 'bg-green-100 text-green-700',
-    'graded': 'bg-purple-100 text-purple-700',
-    'not_assigned': 'bg-red-50 text-red-400'
-  }
-  return classes[status] || 'bg-gray-50 text-gray-500'
-}
 
 // --- UI State ---
 const showSuccessModal = ref(false)
@@ -781,6 +549,9 @@ const errorMessage = ref('')
 const activeTab = ref('instructions') // 'instructions' or 'submissions'
 const submissionsLoading = ref(false)
 const releasingGrades = ref(false)
+const rankFilter = ref('all')
+const searchQuery = ref('')
+const filterStatus = ref('all')
 
 // Selective Activation State
 const eligibleStudents = ref([])
@@ -796,15 +567,16 @@ const user = ref({ first_name: '', last_name: '', username: '' })
 const activity = ref(null)
 const submissions = ref([])
 
+// --- Helper Functions ---
 // --- Computed ---
 
-const hasUnreleasedGradedSubmissions = computed(() => {
-  return submissions.value.some(sub => sub.grade !== null && !sub.is_released)
-})
-
-// --- Helper Functions ---
 const hasValue = (value) => {
   return value !== null && value !== undefined && value !== '' && value !== '-'
+}
+
+const formatRequirement = (val) => {
+  if (!val) return ''
+  return val.replace(/_/g, ' ').toUpperCase()
 }
 
 const formatDate = (dateString) => {
@@ -825,45 +597,60 @@ const getPassengerAddons = (passenger) => {
   );
 }
 
-// --- Actions ---
+// getPercentage must match Instructor_submission.vue and instructor_students_score.vue
+// Formula: grade / totalPoints * 100, with rubric_breakdown ratio fallback
+const getPercentage = (sub) => {
+  const total = parseFloat(activity.value?.total_points || 100)
+  if (total === 0) return 0
 
+  // Priority 1: saved grade from backend grading service
+  if (sub.grade !== null && sub.grade !== undefined) {
+    return calculatePercentage(parseFloat(sub.grade), total)
+  }
+
+  // Priority 2: compute from rubric_breakdown ratios (matches instructor_students_score formula)
+  //   calculatedScore = sumOfRatios * (totalPoints / 5)
+  let rb = sub.rubric_breakdown || []
+  if (typeof rb === 'string') { try { rb = JSON.parse(rb) } catch(e) { rb = [] } }
+  if (Array.isArray(rb) && rb.length > 0) {
+    const sumRatios = rb.reduce((sum, r) => sum + (r.ratio ?? 0), 0)
+    const rawScore = sumRatios * (total / 5)
+    return calculatePercentage(rawScore, total)
+  }
+
+  // Priority 3: legacy analysis fallback
+  if (sub.analysis) {
+    const rawScore = calculateTotalGrade(sub.analysis, total)
+    return calculatePercentage(rawScore, total)
+  }
+
+  return 0
+}
+
+// --- Data Loaders ---
 const fetchData = async () => {
   loading.value = true
   errorMessage.value = ''
   
   try {
-    // 1. Fetch Dashboard data for sidebar sections and user info
-    const dashData = await instructorDashboardService.getDashboard()
-    sections.value = dashData.sections || []
-    user.value = dashData.user || { first_name: '', last_name: '', username: '' }
-
-    // 2. Fetch Activity details
-    const activityId = route.params.activityId 
-    
+    const activityId = route.params.activityId
     if (!activityId) {
       errorMessage.value = "No activity ID found in URL"
-      console.error("No activityId found in route parameters")
-      activity.value = null
+      loading.value = false
       return
     }
 
-    console.log('Fetching activity with ID:', activityId)
     const data = await activityDetailsService.getActivity(activityId)
-    console.log('Activity data received:', data)
     activity.value = data
     
-    // 3. Fetch eligible students for activation
-    await fetchEligibleStudents()
-    
-    // 4. Fetch submissions if we're on that tab
-    if (activeTab.value === 'submissions') {
-      await fetchSubmissions()
-    }
-    
+    // Once activity is loaded, fetch submissions and eligible students
+    await Promise.all([
+      fetchSubmissions(),
+      fetchEligibleStudents()
+    ])
   } catch (error) {
-    console.error("Fetch Error:", error)
-    errorMessage.value = error.response?.data?.error || error.response?.data?.detail || error.message || 'Unknown error occurred'
-    activity.value = null
+    console.error("Fetch error:", error)
+    errorMessage.value = error.response?.data?.error || "Failed to load activity data."
   } finally {
     loading.value = false
   }
@@ -871,54 +658,42 @@ const fetchData = async () => {
 
 const fetchSubmissions = async () => {
   if (!activity.value) return
-  
   submissionsLoading.value = true
   try {
-    const data = await activityDetailsService.getSubmissions(activity.value.id)
-    submissions.value = data.submissions || []
-    console.log('Submissions received:', submissions.value)
+    const res = await activityDetailsService.getSubmissions(activity.value.id)
+    submissions.value = res.submissions || []
   } catch (error) {
-    console.error("Error fetching submissions:", error)
+    console.error("Submissions error:", error)
   } finally {
     submissionsLoading.value = false
   }
 }
 
-const getBookingRoute = (booking) => {
-  if (!booking || !booking.details || booking.details.length === 0) return '-';
-  
-  const segments = booking.details;
-  if (segments.length === 1) {
-    return `${segments[0].origin} → ${segments[0].destination}`;
-  }
-  
-  // For multi-city or round trip, show the sequence
-  const cities = [segments[0].origin];
-  segments.forEach(seg => {
-    if (cities[cities.length - 1] !== seg.destination) {
-      cities.push(seg.destination);
-    }
-  });
-  return cities.join(' → ');
-};
-
 const fetchEligibleStudents = async () => {
-  const activityId = route.params.activityId
-  if (!activityId) return
-
+  if (!activity.value) return
   try {
-    const res = await activityDetailsService.getEligibleStudents(activityId)
+    const res = await activityDetailsService.getEligibleStudents(activity.value.id)
     eligibleStudents.value = res.eligible_students || []
-    console.log('Eligible students:', eligibleStudents.value)
   } catch (error) {
-    console.error("Error fetching eligible students:", error)
+    console.error("Eligible students error:", error)
   }
 }
 
-const toggleStudentSelection = (id) => {
-  const index = selectedStudentIds.value.indexOf(id)
+// --- Activation Logic ---
+const openActivationModal = async () => {
+  await fetchEligibleStudents()
+  selectedStudentIds.value = eligibleStudents.value.map(s => s.id) // Default checked all
+  // Set default time limit from activity if available
+  if (activity.value?.time_limit_minutes) {
+    timeLimit.value = activity.value.time_limit_minutes
+  }
+  showActivationModal.value = true
+}
+
+const toggleStudentSelection = (studentId) => {
+  const index = selectedStudentIds.value.indexOf(studentId)
   if (index === -1) {
-    selectedStudentIds.value.push(id)
+    selectedStudentIds.value.push(studentId)
   } else {
     selectedStudentIds.value.splice(index, 1)
   }
@@ -932,35 +707,23 @@ const toggleSelectAll = () => {
   }
 }
 
-const openActivationModal = async () => {
-  await fetchEligibleStudents()
-  selectedStudentIds.value = eligibleStudents.value.map(s => s.id) // Default checked all
-  // Set default time limit from activity if available
-  if (activity.value?.time_limit_minutes) {
-    timeLimit.value = activity.value.time_limit_minutes
-  }
-  showActivationModal.value = true
-}
-
 const confirmActivation = async () => {
   if (!activity.value || activating.value || selectedStudentIds.value.length === 0) return
   
   activating.value = true
-  
   try {
-    console.log('Confirming activation for students:', selectedStudentIds.value, 'with time limit:', timeLimit.value)
-    const res = await activityDetailsService.activateActivity(activity.value.id, selectedStudentIds.value, timeLimit.value)
+    const res = await activityDetailsService.activateActivity(
+      activity.value.id, 
+      selectedStudentIds.value, 
+      timeLimit.value
+    )
     
-    console.log('Activation response:', res)
-    
-    // Update activity data
     activity.value.activity_code = res.activity_code
     activity.value.is_code_active = true
     
     showActivationModal.value = false
     showSuccessModal.value = true
     
-    // Refresh eligible students and submissions
     await fetchEligibleStudents()
     if (activeTab.value === 'submissions') {
       await fetchSubmissions()
@@ -969,20 +732,16 @@ const confirmActivation = async () => {
     notificationStore.success(res.message)
   } catch (error) {
     console.error("Activation error:", error)
-    const errorMsg = error.response?.data?.error || error.response?.data?.detail || 'Failed to activate activity.'
-    notificationStore.error(errorMsg)
+    notificationStore.error(error.response?.data?.error || 'Failed to activate activity.')
   } finally {
     activating.value = false
   }
 }
 
-const handleActivation = () => {
-  openActivationModal()
-}
-
 const goToAnalysis = (sub) => {
-  if (!sub.booking) return
-  router.push(`/instructor/activity/${activity.value.id}/student/${sub.student_id}/score`)
+  if (sub.status === 'submitted' || sub.status === 'graded') {
+    router.push(`/instructor/activity/${activity.value.id}/student/${sub.student_id}/score`)
+  }
 }
 
 const handlePrint = async () => {
@@ -991,7 +750,6 @@ const handlePrint = async () => {
     return;
   }
 
-  // Check if any student hasn't taken/completed the activity
   const incompleteStudents = submissions.value.filter(sub => 
     sub.status === 'assigned' || sub.status === 'not_assigned' || sub.status === 'in_progress'
   );
@@ -1003,37 +761,76 @@ const handlePrint = async () => {
     }
   }
 
-  // Switch to print-only view
   isPrinting.value = true
-  
-  // Wait for Vue to fully re-render the print table before calling print
-  await nextTick()
-  await nextTick() // double nextTick for extra certainty
-  // Log the print action to the backend
-  if (activity.value) {
-    instructorDashboardService.logPrintReport({
-      activity_id: activity.value.id,
-      report_type: 'Grade Report'
+  document.body.classList.add('print-mode')
+
+  const devToolSelectors = [
+    'vite-dev-toolbar',
+    '#__vue-devtools-container__',
+    '__vue-devtools-host__',
+    '[data-v-inspector]',
+  ]
+  const hiddenDevEls = []
+  devToolSelectors.forEach(sel => {
+    document.querySelectorAll(sel).forEach(el => {
+      el.style.setProperty('display', 'none', 'important')
+      hiddenDevEls.push(el)
     })
-  }
-  
-  window.print()
-  isPrinting.value = false
+  })
+  document.body.childNodes.forEach(node => {
+    if (node.nodeType === 1) {
+      const tag = node.tagName?.toLowerCase() || ''
+      if (tag.includes('vite') || tag.includes('devtools') || tag.includes('vue-devtools')) {
+        node.style.setProperty('display', 'none', 'important')
+        hiddenDevEls.push(node)
+      }
+    }
+  })
+
+  setTimeout(() => {
+    if (activity.value) {
+      instructorDashboardService.logPrintReport({
+        activity_id: activity.value.id,
+        report_type: 'Grade Report'
+      })
+    }
+
+    window.print()
+
+    // Reset state right after print dialog returns
+    setTimeout(() => {
+      isPrinting.value = false
+      document.body.classList.remove('print-mode')
+      hiddenDevEls.forEach(el => el.style.removeProperty('display'))
+    }, 300)
+  }, 300)
 }
 
-const handleReleaseGrades = async () => {
+const handleReleaseGrades = async (revealedStudentIds = []) => {
   if (!activity.value || releasingGrades.value) return
-  
-  if (!confirm('Are you sure you want to release scores to all students? This will make their grades visible on their dashboard.')) {
+
+  // Count students who are graded, currently unreleased, AND have been explicitly revealed by the instructor
+  const toRelease = submissions.value.filter(s =>
+    (s.grade !== null || s.status === 'submitted' || s.status === 'graded') && 
+    !s.is_released &&
+    revealedStudentIds.includes(s.student_id)
+  )
+
+  if (toRelease.length === 0) {
+    alert('you need to show grade first before releasing the grade to the student')
+    return
+  }
+
+  if (!confirm(`Release grades for ${toRelease.length} specifically revealed student(s)? They will be able to see their scores on their dashboard.`)) {
     return
   }
 
   releasingGrades.value = true
   try {
-    const res = await activityDetailsService.releaseGrades(activity.value.id)
+    const res = await activityDetailsService.releaseGrades(activity.value.id, revealedStudentIds)
     activity.value.grades_released = res.grades_released
-    notificationStore.success(res.message)
-    // Refresh submissions to ensure everything is in sync
+    notificationStore.success(res.message || `Grades safely released to ${toRelease.length} student(s)!`)
+    // Refresh to update is_released flags in the submissions table
     await fetchSubmissions()
   } catch (error) {
     console.error("Release error:", error)
@@ -1068,50 +865,4 @@ const formatGender = (g) => {
 </script>
 
 <style>
-@media print {
-  /* HIDE THE ENTIRE PAGE CONTENT BY DEFAULT IF IT LEAKS */
-  body {
-    background: white !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  /* ENSURE THE TABLE WRAPPER LOOKS PREMIUM */
-  .bg-white.p-0.m-0 {
-    display: block !important;
-    width: 100% !important;
-  }
-
-  table {
-    width: 100% !important;
-    border-collapse: collapse !important;
-    margin-top: 20px !important;
-  }
-
-  th {
-    background-color: #f9fafb !important;
-    color: #6b7280 !important;
-    font-size: 10px !important;
-    font-weight: 900 !important;
-    padding: 16px !important;
-    border-bottom: 1px solid #f3f4f6 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  td {
-    padding: 20px 24px !important;
-    border-bottom: 1px solid #f9fafb !important;
-    color: #111827 !important;
-  }
-
-  .font-bold { font-weight: 700 !important; }
-  .text-pink-500 { color: #ec4899 !important; }
-  .text-gray-400 { color: #9ca3af !important; }
-
-  @page {
-    margin: 1cm !important;
-    size: auto !important;
-  }
-}
 </style>
