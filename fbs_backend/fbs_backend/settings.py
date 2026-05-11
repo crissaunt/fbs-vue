@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 import os
 from decouple import config
+import dj_database_url
 
 # PayMongo Configuration
 PAYMONGO_SECRET_KEY = config('PAYMONGO_SECRET_KEY', default='')
@@ -104,6 +105,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -186,14 +188,11 @@ SESSION_SAVE_EVERY_REQUEST = True
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'flight_database',                    
-        'USER': 'postgres',                 
-        'PASSWORD': 'postgres',     
-        'HOST': 'localhost',           
-        'PORT': '5432',                 
-    }
+    'default': dj_database_url.config(
+        default=config('DATABASE_URL', default='postgres://postgres:postgres@localhost:5432/flight_database'),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 
@@ -240,6 +239,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media Configuration (for user uploads)
 MEDIA_URL = '/media/'
