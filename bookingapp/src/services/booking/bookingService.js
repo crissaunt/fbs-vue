@@ -75,6 +75,7 @@ export const bookingService = {
       date_of_birth: p.dateOfBirth || this.getDefaultDOB(),
       nationality: p.nationality || 'Philippines',
       passport_number: p.passportNumber || '',
+      passport_expiry: p.passportExpiry || '',
       ph_discount_type: p.phDiscountType || 'none',
       ph_discount_id: p.phDiscountId || '',
       type: p.type || 'Adult',
