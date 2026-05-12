@@ -18,4 +18,16 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            return 'vendor'; // separates vendor libraries into their own chunk
+          }
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000 // optionally increase the limit if vendor is large
+  }
 })

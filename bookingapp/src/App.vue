@@ -10,14 +10,14 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
 
-// Import layouts
-import AdminLayout from '@/views/admin/adminlayout.vue'
-import InstructorLayout from '@/views/Instructor/InstructorLayout.vue'
-import StudentLayout from '@/views/Student/StudentLayout.vue'
-import BookingLayout from '@/views/booking/layout/BookingLayout.vue'
+// Import layouts dynamically for code-splitting
+const AdminLayout = defineAsyncComponent(() => import('@/views/admin/adminlayout.vue'))
+const InstructorLayout = defineAsyncComponent(() => import('@/views/Instructor/InstructorLayout.vue'))
+const StudentLayout = defineAsyncComponent(() => import('@/views/Student/StudentLayout.vue'))
+const BookingLayout = defineAsyncComponent(() => import('@/views/booking/layout/BookingLayout.vue'))
 import GlobalToast from '@/components/common/GlobalToast.vue'
 import GlobalModalManager from '@/components/common/GlobalModalManager.vue'
 
