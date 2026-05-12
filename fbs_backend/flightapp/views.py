@@ -1099,17 +1099,22 @@ def process_payment_from_paymongo(payment_id, payment_attrs, booking):
             print(f"   Amount: {amount} PHP")
             print(f"   Method: {payment_method}")
             
-            # Create payment record
-            payment = Payment.objects.create(
-                booking=booking,
-                amount=amount,
-                method=payment_method,
-                transaction_id=payment_id,
-                status='Completed',
-                payment_date=timezone.now()
-            )
-            
-            print(f"[OK] Payment saved: {payment.id}")
+            # Check if payment already exists
+            existing_payment = Payment.objects.filter(transaction_id=payment_id).first()
+            if existing_payment:
+                payment = existing_payment
+                print(f"[INFO] Payment already exists: {payment.id}")
+            else:
+                # Create payment record
+                payment = Payment.objects.create(
+                    booking=booking,
+                    amount=amount,
+                    method=payment_method,
+                    transaction_id=payment_id,
+                    status='Completed',
+                    payment_date=timezone.now()
+                )
+                print(f"[OK] Payment saved: {payment.id}")
             
             # Update booking status
             booking.status = 'Confirmed'
