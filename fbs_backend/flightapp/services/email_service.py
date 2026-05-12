@@ -97,7 +97,7 @@ class EmailService:
             
             # Send email
             logger.info(f"? Sending email to {recipient_email}...")
-            email.send(fail_silently=False)
+            email.send(fail_silently=True)
             
             logger.info(f"? Booking confirmation email sent successfully to {recipient_email}")
             return True
@@ -175,7 +175,7 @@ class EmailService:
                     logger.error(f"⚠️ Failed to attach boarding pass: {e}")
             
             # Send
-            email.send(fail_silently=False)
+            email.send(fail_silently=True)
             logger.info(f"🚀 Check-in confirmation sent to {recipient_email}")
             return True
         except Exception as e:
@@ -258,7 +258,7 @@ class EmailService:
                         logger.error(f"⚠️ Failed to attach pass for {det.id}: {pdf_err}")
             
             # Send
-            email.send(fail_silently=False)
+            email.send(fail_silently=True)
             logger.info(f"🚀 Bundled check-in confirmation sent to {recipient_email}")
             return True
             

@@ -1141,13 +1141,16 @@ def process_payment_from_paymongo(payment_id, payment_attrs, booking):
                     print(f"[WARN] Error during auto-grading: {str(e)}")
             
             # [?] SEND BOOKING CONFIRMATION EMAIL
-            print(f"[EMAIL] Sending booking confirmation email...")
-            email_sent = EmailService.send_booking_confirmation(booking, payment)
-            
-            if email_sent:
-                print(f"[OK] Booking confirmation email sent successfully!")
-            else:
-                print(f"[WARN] Failed to send booking confirmation email")
+            try:
+                print(f"[EMAIL] Sending booking confirmation email...")
+                email_sent = EmailService.send_booking_confirmation(booking, payment)
+                
+                if email_sent:
+                    print(f"[OK] Booking confirmation email sent successfully!")
+                else:
+                    print(f"[WARN] Failed to send booking confirmation email")
+            except Exception as e:
+                print(f"[WARN] Error sending email: {str(e)}")
             
             print(f"[?] Payment processing COMPLETED!")
             
