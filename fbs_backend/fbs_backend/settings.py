@@ -261,8 +261,8 @@ SERVER_EMAIL = 'cthmfbs@gmail.com'
 # Support Contact Info (used in emails)
 SUPPORT_EMAIL = 'support@philippineairlines.com'
 SUPPORT_PHONE = '(02) 8855-8888'
-WEBSITE_URL = config('WEBSITE_URL', default='https://fbs-vue.onrender.com/')
-FRONTEND_URL = config('FRONTEND_URL', default='https://fbs-vue.onrender.com/')
+WEBSITE_URL = config('WEBSITE_URL', default='https://fbs-vue-1.onrender.com/')
+FRONTEND_URL = config('FRONTEND_URL', default='https://fbs-vue-1.onrender.com/')
 # WEBSITE_URL = 'https://www.philippineairlines.com'
 
 # For development (prints emails to console instead of sending)
