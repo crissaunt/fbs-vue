@@ -259,7 +259,7 @@ const profilePictureUrl = computed(() => {
   const avatar = userStore.user?.avatar
   if (!avatar) return null
   if (avatar.startsWith('http')) return avatar
-  const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+  const baseURL = import.meta.env.VITE_API_URL || 'https://fbs-vue.onrender.com'
   return `${baseURL}${avatar}`
 })
 

@@ -276,7 +276,8 @@ const statIconClass = (label) => {
 const fetchBookings = async () => {
   loading.value = true
   try {
-    const res = await axios.get("http://localhost:8000/api/bookings/", {
+    const baseURL = import.meta.env.VITE_API_URL || 'https://fbs-vue.onrender.com'
+    const res = await axios.get(`${baseURL}/api/bookings/`, {
       headers: AuthStorage.getApiHeaders()
     })
     bookings.value = (res.data.results || res.data).sort((a, b) => b.id - a.id)

@@ -251,7 +251,7 @@ const downloadItinerary = async () => {
   showToastMessage('Generating your E-Ticket...');
   
   try {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const baseUrl = import.meta.env.VITE_API_URL || 'https://fbs-vue.onrender.com';
     const downloadUrl = `${baseUrl}/flightapp/download-itinerary/${bookingId.value}/`;
     
     // Open in new tab or trigger download

@@ -182,7 +182,8 @@ const statIconClass = (label) => {
 const fetchCheckIns = async () => {
   loading.value = true
   try {
-    const res = await axios.get("http://localhost:8000/api/checkins/", {
+    const baseURL = import.meta.env.VITE_API_URL || 'https://fbs-vue.onrender.com'
+    const res = await axios.get(`${baseURL}/api/checkins/`, {
       headers: AuthStorage.getApiHeaders()
     })
     checkIns.value = (res.data.results || res.data).map(c => ({
