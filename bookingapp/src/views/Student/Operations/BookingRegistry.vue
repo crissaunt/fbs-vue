@@ -276,7 +276,7 @@ const statIconClass = (label) => {
 const fetchBookings = async () => {
   loading.value = true
   try {
-    const baseURL = import.meta.env.VITE_API_URL || 'https://fbs-vue.onrender.com'
+    const baseURL = (import.meta.env.VITE_API_URL || 'https://fbs-vue.onrender.com').replace(/\/$/, '')
     const res = await axios.get(`${baseURL}/api/bookings/`, {
       headers: AuthStorage.getApiHeaders()
     })
