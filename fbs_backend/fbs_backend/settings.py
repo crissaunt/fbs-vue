@@ -74,7 +74,7 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # CSRF trusted origins for cross-site POSTs (development)
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://localhost:5173,http://192.168.1.10:5173').split(',')
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://localhost:5173,http://192.168.1.10:5173,https://fbs-vue-1.onrender.com,https://fbs-vue.onrender.com').split(',')
 
 # settings.py
 from decouple import config
