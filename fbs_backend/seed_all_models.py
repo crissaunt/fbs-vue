@@ -178,7 +178,8 @@ def seed_data():
     tax_names = ['VAT', 'Airport Fee', 'Terminal Fee', 'Fuel Surcharge', 'Security Fee']
     tax_types = []
     for name in tax_names:
-        tt, _ = TaxType.objects.get_or_create(name=name, defaults={'description': f'Description for {name}'})
+        code = name.replace(' ', '_').upper()
+        tt, _ = TaxType.objects.get_or_create(name=name, defaults={'description': f'Description for {name}', 'code': code})
         tax_types.append(tt)
     print(f"✅ TaxTypes: {len(tax_types)}")
 

@@ -348,8 +348,10 @@ def Login_view(request):
         if user.is_superuser or user.is_staff:
             role = 'admin'
         else:
-            print(f"❌ No profile found for user: {user.username}")
-            return Response({"error": "Profile not found"}, status=status.HTTP_403_FORBIDDEN)
+            # Auto-create profile based on username instead of failing
+            role = 'instructor' if 'instructor' in user.username.lower() else 'student'
+            UserProfile.objects.create(user=user, role=role)
+            print(f"✅ Auto-created missing profile for user: {user.username} with role: {role}")
 
     # 4. Create a NEW session for this login (allows multiple simultaneous logins)
     try:
