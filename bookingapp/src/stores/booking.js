@@ -1024,6 +1024,9 @@ export const useBookingStore = defineStore('booking', {
           dateOfBirth: passenger.dateOfBirth || this.getDefaultDOB(passenger.type),
           nationality: passenger.nationality || 'Philippines',
           passportNumber: passenger.passportNumber || '',
+          passportExpiry: passenger.passportExpiry || '',
+          phDiscountType: passenger.phDiscountType || 'none',
+          phDiscountId: passenger.phDiscountId || '',
           type: passenger.type || 'Adult'
         };
       });
