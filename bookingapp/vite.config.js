@@ -28,6 +28,6 @@ export default defineConfig({
         }
       }
     },
-    chunkSizeWarningLimit: 1000 // optionally increase the limit if vendor is large
+    chunkSizeWarningLimit: 1500 // Increased to silence the vendor chunk warning
   }
 })
