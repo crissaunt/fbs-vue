@@ -1165,7 +1165,7 @@ def process_payment_from_paymongo(payment_id, payment_attrs, booking):
                 'booking_status': 'confirmed',
                 'amount': float(amount),
                 'method': payment_method,
-                'email_sent': email_sent
+                'email_sent': True
             })
             
     except Exception as e:
