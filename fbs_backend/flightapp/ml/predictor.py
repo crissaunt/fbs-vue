@@ -266,13 +266,7 @@ class FlightPricePredictor:
                         features[dest_col] = 1
                         break
             
-            # Convert to DataFrame for prediction
-            df = pd.DataFrame([features])
-            
-            # Ensure columns are in the right order
-            df = df[self.feature_mapping['feature_columns']]
-
-            return df
+            return features
             
         except Exception as e:
             print(f"[ERROR] Error preparing features: {e}")
@@ -294,12 +288,18 @@ class FlightPricePredictor:
             return 0.0
         
         try:
-            features_df = self.prepare_features(flight_data)
-            if features_df is None:
+            features_dict = self.prepare_features(flight_data)
+            if features_dict is None:
                 return 0.0
             
+            # Convert to DataFrame for prediction
+            df = pd.DataFrame([features_dict])
+            
+            # Ensure columns are in the right order
+            df = df[self.feature_mapping['feature_columns']]
+            
             # XGBoost prediction - RAW value
-            predicted_price = self.model.predict(features_df)[0]
+            predicted_price = self.model.predict(df)[0]
             
             # XGBoost sometimes returns weird types
             if hasattr(predicted_price, 'item'):
@@ -327,22 +327,24 @@ class FlightPricePredictor:
             return [0.0] * len(flight_data_list)
             
         try:
-            # Prepare all feature vectors
-            all_features = []
+            # Prepare all feature dictionaries
+            all_feature_dicts = []
             for data in flight_data_list:
-                df = self.prepare_features(data)
-                if df is not None:
-                    all_features.append(df)
+                f_dict = self.prepare_features(data)
+                if f_dict:
+                    all_feature_dicts.append(f_dict)
                 else:
                     # Fallback for failed feature preparation
-                    all_features.append(pd.DataFrame(np.zeros((1, len(self.feature_mapping['feature_columns']))), 
-                                                 columns=self.feature_mapping['feature_columns']))
+                    all_feature_dicts.append({col: 0 for col in self.feature_mapping['feature_columns']})
             
-            if not all_features:
+            if not all_feature_dicts:
                 return [0.0] * len(flight_data_list)
                 
-            # Combine into one large DataFrame
-            batch_df = pd.concat(all_features, ignore_index=True)
+            # Create a single DataFrame from the list of dictionaries
+            batch_df = pd.DataFrame(all_feature_dicts)
+            
+            # Ensure columns are in the right order
+            batch_df = batch_df[self.feature_mapping['feature_columns']]
             
             # Batch prediction
             predictions = self.model.predict(batch_df)

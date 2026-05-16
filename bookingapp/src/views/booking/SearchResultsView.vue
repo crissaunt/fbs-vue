@@ -1038,6 +1038,15 @@ const isFiltering = ref(false); // New: for transient "jumping" feedback
 const showFilters = ref(false);
 const showNoResults = ref(false);
 
+// --- Debounce Helper ---
+const debounce = (fn, delay) => {
+  let timeoutId;
+  return (...args) => {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
+};
+
 // Pagination State
 const currentPage = ref(1);
 const itemsPerPage = ref(5);
@@ -1604,7 +1613,7 @@ const initializeEditSearch = () => {
 };
 
 // Search airports for autocomplete
-const searchEditAirports = async (query, target, index = null) => {
+const searchEditAirports = debounce(async (query, target, index = null) => {
   if (query.includes(' - ')) return;
 
   const searchQuery = query.toUpperCase().trim();
@@ -1641,7 +1650,7 @@ const searchEditAirports = async (query, target, index = null) => {
   } catch (error) {
     console.error("Airport search error:", error);
   }
-};
+}, 300);
 
 // Select airport from results
 const selectEditAirport = (airport, target, index = null) => {

@@ -63,7 +63,16 @@ const removeSegment = (index) => {
   }
 };
 
-const searchAirports = async (query, target, segmentIndex = null) => {
+// --- Debounce Helper ---
+const debounce = (fn, delay) => {
+  let timeoutId;
+  return (...args) => {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
+};
+
+const searchAirports = debounce(async (query, target, segmentIndex = null) => {
   if (query.includes(' - ')) return;
 
   const searchQuery = query.toUpperCase().trim();
@@ -107,7 +116,7 @@ const searchAirports = async (query, target, segmentIndex = null) => {
   } catch (error) {
     console.error("Search error:", error);
   }
-};
+}, 300);
 
 const selectAirport = (airport, target, segmentIndex = null) => {
   const displayString = `${airport.code} - ${airport.city}`;

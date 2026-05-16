@@ -137,16 +137,16 @@ class DynamicPricingService:
         if base_price is None:
             base_price = self.get_base_ml_price(flight_data)
         
-        # 2. Apply dynamic factors
-        price = base_price
+        # 2. Get config once
+        config = context.get('config') or self.get_config()
         
-        # DEBUG: Print base price (commented for performance)
-        # print(f"? Base price: ?{base_price:.2f}")
+        # 3. Apply dynamic factors
+        price = base_price
         
         # User-specific factors
         user_factor = context.get('user_factor')
         if user_factor is None:
-            user_factor = self.get_user_factor(user, flight_data)
+            user_factor = self.get_user_factor(user, flight_data, config=config)
         price *= user_factor
         
         # Session-specific factors
@@ -154,17 +154,17 @@ class DynamicPricingService:
         price *= session_factor
         
         # Real-time demand factor
-        demand_factor = self.get_demand_factor(flight_data)
+        demand_factor = self.get_demand_factor(flight_data, config=config)
         price *= demand_factor
         
         # Time-based factor
-        time_factor = self.get_time_factor(flight_data)
+        time_factor = self.get_time_factor(flight_data, config=config)
         price *= time_factor
         
         # Inventory factor
         inventory_factor = context.get('occupancy_factor')
         if inventory_factor is None:
-            inventory_factor = self.get_inventory_factor(flight_data)
+            inventory_factor = self.get_inventory_factor(flight_data, config=config)
         price *= inventory_factor
         
         # Randomization
@@ -242,9 +242,10 @@ class DynamicPricingService:
             logger.error(f"Fallback price calculation failed: {e}", exc_info=True)
             return 2500 # Ensure a baseline price is always returned
     
-    def get_user_factor(self, user, flight_data):
+    def get_user_factor(self, user, flight_data, config=None):
         """Different prices based on user history/loyalty"""
-        config = self.get_config()
+        if config is None:
+            config = self.get_config()
         
         if not user or user.is_anonymous:
             return float(config.anonymous_user_factor) if config else 1.05
@@ -308,9 +309,10 @@ class DynamicPricingService:
         
         return factor
     
-    def get_demand_factor(self, flight_data):
+    def get_demand_factor(self, flight_data, config=None):
         """Real-time demand pricing based on config"""
-        config = self.get_config()
+        if config is None:
+            config = self.get_config()
         factor = 1.0
         
         try:
@@ -408,12 +410,13 @@ class DynamicPricingService:
             # Wraps across year boundary (e.g. Dec 20 – Jan 5)
             return d >= start or d <= end
 
-    def get_time_factor(self, flight_data):
+    def get_time_factor(self, flight_data, config=None):
         """
         Time-based pricing using the 2026 Philippine Holiday Calendar.
         Checks: peak hours, weekends, national holidays, and academic breaks.
         """
-        config = self.get_config()
+        if config is None:
+            config = self.get_config()
         factor = 1.0
         
         try:
@@ -505,11 +508,12 @@ class DynamicPricingService:
         
         return factor
     
-    def get_inventory_factor(self, flight_data):
+    def get_inventory_factor(self, flight_data, config=None):
         """Inventory-based pricing based on config"""
         try:
             from app.models import Seat
-            config = self.get_config()
+            if config is None:
+                config = self.get_config()
             
             schedule_id = flight_data.get('schedule_id')
             if schedule_id:

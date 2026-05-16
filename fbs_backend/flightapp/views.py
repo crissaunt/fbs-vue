@@ -123,6 +123,19 @@ class AirportViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'city', 'code', 'country__name']
 
+    def list(self, request, *args, **kwargs):
+        from django.core.cache import cache
+        search_query = request.query_params.get('search', '')
+        cache_key = f"airport_search_{search_query.lower()}"
+        
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(cached_data)
+            
+        response = super().list(request, *args, **kwargs)
+        cache.set(cache_key, response.data, 60*60*24) # Cache for 24 hours
+        return response
+
 from .ml.predictor import predictor
 from decimal import Decimal
 
@@ -140,9 +153,7 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             'flight__route__origin_airport', 
             'flight__route__destination_airport'
         ).prefetch_related(
-            'flight__aircraft',
-            'seats',
-            'seats__seat_class'
+            'flight__aircraft'
         )
         
         origin = self.request.query_params.get('origin')
@@ -401,9 +412,17 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
         })
     
     def list(self, request, *args, **kwargs):
-        """REAL-TIME PRICING - Optimized with Batch Processing"""
-        # 0. Track search for demand pricing immediately (affects pricing factors for this request)
-        # Get base queryset early to pass to demand tracker
+        """REAL-TIME PRICING - Optimized with Batch Processing & Caching"""
+        # 0. Generate Cache Key based on search params
+        origin = request.query_params.get('origin')
+        destination = request.query_params.get('destination')
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        departure = request.query_params.get('departure')
+        
+        cache_key = f"schedules_list_{origin}_{destination}_{start_date}_{end_date}_{departure}"
+        
+        # 1. Track search for demand pricing immediately
         queryset = self.filter_queryset(self.get_queryset())
         self.track_search_demand(request, queryset)
 
@@ -425,79 +444,133 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
         if not schedules:
             return self.get_paginated_response([]) if page is not None else Response([])
 
-        # 2. Pre-calculate common factors
-        # User factor is same for all flights in this search
-        user_factor = dynamic_pricing.get_user_factor(user, None)
+        # 2. Pre-calculate common factors (Request-scoped, not cached)
+        # User factor: Fetch booking count ONCE for the whole request to avoid N+1
+        user_bookings_count = 0
+        if user:
+            from app.models import Booking
+            user_bookings_count = Booking.objects.filter(user=user).count()
         
-        # Bulk fetch occupancy for ALL schedules in the view
-        occupancy_data = Seat.objects.filter(schedule__in=schedules).values('schedule_id').annotate(
-            available=Count('id', filter=Q(is_available=True)),
-            total=Count('id')
-        )
-        occupancy_map = {item['schedule_id']: (1 - (item['available'] / item['total'])) if item['total'] > 0 else 1.0 
-                        for item in occupancy_data}
+        user_factor = dynamic_pricing.get_user_factor(user, None, config=config)
         
-        # 3. Batch ML Price Updates (for stale or missing prices)
-        stale_schedules = []
-        for s in schedules:
-            if (s.ml_base_price is None or 
-                s.ml_price_updated_at is None or 
-                (timezone.now() - s.ml_price_updated_at).total_seconds() > 300): # 5 min refresh
-                stale_schedules.append(s)
+        # 3. Check Cache for "Base" serialized results
+        from django.core.cache import cache
+        cached_base_data = cache.get(cache_key)
         
-        if stale_schedules:
-            flight_data_list = []
-            for s in stale_schedules:
-                flight_data_list.append({
-                    'flight_number': s.flight.flight_number,
-                    'airline_code': s.flight.airline.code,
-                    'airline_name': s.flight.airline.name,
-                    'origin': s.flight.route.origin_airport.code,
-                    'destination': s.flight.route.destination_airport.code,
-                    'departure_time': s.departure_time.isoformat(),
-                    'arrival_time': s.arrival_time.isoformat(),
-                    'total_stops': s.flight.total_stops,
-                    'is_domestic': s.flight.route.is_domestic,
+        if cached_base_data:
+            schedules = queryset # Need this for the loop later
+            data = cached_base_data['data']
+            occupancy_map = cached_base_data['occupancy_map']
+            # Note: schedules might have changed in DB, but for 60s cache it's usually fine
+        else:
+            # Apply pagination (only if not using cached data)
+            page = self.paginate_queryset(queryset)
+            schedules = page if page is not None else queryset
+            
+            if not schedules:
+                return self.get_paginated_response([]) if page is not None else Response([])
+
+            # Bulk fetch occupancy and available seats for ALL schedules in the view
+            occupancy_data = Seat.objects.filter(schedule__in=schedules).values('schedule_id').annotate(
+                available=Count('id', filter=Q(is_available=True)),
+                total=Count('id')
+            )
+            occupancy_map = {item['schedule_id']: (1 - (item['available'] / item['total'])) if item['total'] > 0 else 1.0 
+                            for item in occupancy_data}
+            available_seats_map = {item['schedule_id']: item['available'] for item in occupancy_data}
+
+            # Bulk fetch seat classes for ALL schedules
+            from collections import defaultdict
+            seat_classes_qs = Seat.objects.filter(
+                schedule__in=schedules,
+                is_available=True
+            ).values('schedule_id', 'seat_class__name', 'seat_class__price_multiplier').distinct()
+            
+            seat_classes_map = defaultdict(list)
+            for item in seat_classes_qs:
+                seat_classes_map[item['schedule_id']].append({
+                    'name': item['seat_class__name'] or 'Economy',
+                    'price_multiplier': float(item['seat_class__price_multiplier'] or 1.0)
                 })
             
-            # Use the new batch predictor
-            new_prices = predictor.predict_prices_batch(flight_data_list)
+            # Batch ML Price Updates (for stale or missing prices)
+            stale_schedules = []
+            for s in schedules:
+                if (s.ml_base_price is None or 
+                    s.ml_price_updated_at is None or 
+                    (timezone.now() - s.ml_price_updated_at).total_seconds() > 300): # 5 min refresh
+                    stale_schedules.append(s)
             
-            # Bulk update in DB (minimal hits)
-            now = timezone.now()
-            for s, price in zip(stale_schedules, new_prices):
-                # If ML prediction returns 0, use fallback
-                if price <= 0:
-                    print(f"[WARN] ML returned 0 for {s.flight.flight_number}, using fallback")
-                    price = float(s.flight.route.base_price) if s.flight.route.base_price else 5000.0
-                s.ml_base_price = Decimal(str(price))
-                s.ml_price_updated_at = now
-            
-            Schedule.objects.bulk_update(stale_schedules, ['ml_base_price', 'ml_price_updated_at'])
+            if stale_schedules:
+                flight_data_list = []
+                for s in stale_schedules:
+                    flight_data_list.append({
+                        'flight_number': s.flight.flight_number,
+                        'airline_code': s.flight.airline.code,
+                        'airline_name': s.flight.airline.name,
+                        'origin': s.flight.route.origin_airport.code,
+                        'destination': s.flight.route.destination_airport.code,
+                        'departure_time': s.departure_time.isoformat(),
+                        'arrival_time': s.arrival_time.isoformat(),
+                        'total_stops': s.flight.total_stops,
+                        'is_domestic': s.flight.route.is_domestic,
+                    })
+                
+                # Use the new batch predictor
+                new_prices = predictor.predict_prices_batch(flight_data_list)
+                
+                # Bulk update in DB (minimal hits)
+                now = timezone.now()
+                for s, price in zip(stale_schedules, new_prices):
+                    if price <= 0:
+                        price = float(s.flight.route.base_price) if s.flight.route.base_price else 5000.0
+                    s.ml_base_price = Decimal(str(price))
+                    s.ml_price_updated_at = now
+                
+                Schedule.objects.bulk_update(stale_schedules, ['ml_base_price', 'ml_price_updated_at'])
 
-        # 4. Final Serialization with Dynamic Pricing Context
-        serializer = self.get_serializer(schedules, many=True)
-        data = serializer.data
-        
-        for i, (schedule, flight_item) in enumerate(zip(schedules, data)):
+            # Final Serialization of Base Data
+            serializer = self.get_serializer(
+                schedules, 
+                many=True, 
+                context={
+                    'request': request,
+                    'available_seats_map': available_seats_map,
+                    'seat_classes_map': seat_classes_map
+                }
+            )
+            data = serializer.data
+            
+            # Cache the base serialized data for 60 seconds
+            cache.set(cache_key, {
+                'data': data,
+                'occupancy_map': occupancy_map
+            }, 60)
+            
+            page = None # Reset page if we just serialized it
+            
+        # 4. Final Loop for User-Specific Dynamic Pricing (Fast, O(N))
+        # 4. Final Loop for User-Specific Dynamic Pricing (EXTREMELY FAST, Memory Only)
+        for flight_item in data:
+            # Get base price - use ml_base_price or fallback
+            fallback_price = float(flight_item.get('base_fare') or 5000.0)
+            base_price = float(flight_item.get('ml_base_price') or fallback_price)
+            
             # Create flight data dict for dynamic pricing
             f_data = {
-                'schedule_id': schedule.id,
-                'flight_number': schedule.flight.flight_number,
-                'departure_time': schedule.departure_time.isoformat(),
-                'origin': schedule.flight.route.origin_airport.code,
-                'destination': schedule.flight.route.destination_airport.code,
+                'schedule_id': flight_item.get('id'),
+                'flight_number': flight_item.get('flight_number'),
+                'departure_time': flight_item.get('departure_time'),
+                'origin': flight_item.get('origin'),
+                'destination': flight_item.get('destination'),
+                'base_price': base_price,
             }
-            
-            # Get base price - use ml_base_price or fallback
-            fallback_price = float(schedule.flight.route.base_price) if schedule.flight and schedule.flight.route and schedule.flight.route.base_price else 5000.0
-            base_price = float(schedule.ml_base_price) if schedule.ml_base_price else fallback_price
             
             # Prepare context for "Turbo" pricing (no DB hits inside)
             pricing_context = {
                 'config': config,
-                'user_factor': user_factor,
-                'occupancy_factor': self._get_occ_factor(occupancy_map.get(schedule.id, 1.0), config),
+                'user_factor': user_factor, # Already pre-calculated at start of request
+                'occupancy_factor': self._get_occ_factor(occupancy_map.get(flight_item.get('id'), 1.0), config),
                 'base_price': base_price
             }
             
@@ -507,23 +580,20 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             
             # ============ ROUNDING LOGIC ============
             final_price = dynamic_pricing.round_price(pricing_result['final_price'])
-            base_price = dynamic_pricing.round_price(pricing_result['base_price'])
-            
-            fallback_price = float(schedule.flight.route.base_price) if schedule.flight and schedule.flight.route and schedule.flight.route.base_price else 5000.0
-            ml_base = float(schedule.ml_base_price) if schedule.ml_base_price else fallback_price
-            rounded_ml_base = dynamic_pricing.round_price(ml_base)
+            display_base_price = dynamic_pricing.round_price(pricing_result['base_price'])
+            rounded_ml_base = dynamic_pricing.round_price(base_price)
             
             # Inject dynamic results
             flight_item['price'] = final_price
-            flight_item['base_price'] = base_price
+            flight_item['base_price'] = display_base_price
             flight_item['ml_base_price'] = rounded_ml_base
             flight_item['ml_predicted'] = True
             flight_item['ml_factors'] = pricing_result['factors_applied']
-            flight_item['raw_ml_price'] = ml_base
+            flight_item['raw_ml_price'] = base_price
             
             # Price ID and Timestamp (per search consistency)
             timestamp = timezone.now().strftime('%Y%m%d%H%M%S%f')
-            price_id_input = f"{session_id}_{schedule.id}_{timestamp}_{random.randint(1, 1000)}"
+            price_id_input = f"{session_id}_{flight_item.get('id')}_{timestamp}_{random.randint(1, 1000)}"
             flight_item['price_id'] = hashlib.md5(price_id_input.encode()).hexdigest()[:8]
             flight_item['price_calculated_at'] = timezone.now().isoformat()
             
@@ -532,11 +602,12 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
                 for seat_class in flight_item['seat_classes']:
                     seat_class_name = seat_class.get('name', 'Economy')
                     # APPLY DYNAMIC PRICE (pricing_result['final_price']) TO SEAT CLASS
-                    # This ensures discounts/surges are reflected in the search results
-                    multiplier = get_shared_seat_class_multiplier(schedule.flight.airline, seat_class_name)
+                    # Fetch multiplier using ID if possible to avoid DB hits
+                    airline_id = flight_item.get('airline_id')
+                    multiplier = get_shared_seat_class_multiplier(airline_id, seat_class_name)
                     raw_seat_price = pricing_result['final_price'] * multiplier
                     
-                    seat_class['base_price'] = base_price
+                    seat_class['base_price'] = display_base_price
                     seat_class['price'] = dynamic_pricing.round_seat_class_price(raw_seat_price)
                     seat_class['raw_price'] = float(raw_seat_price)
         

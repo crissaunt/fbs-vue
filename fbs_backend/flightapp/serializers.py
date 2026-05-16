@@ -102,6 +102,8 @@ class ScheduleSerializer(serializers.ModelSerializer):
         allow_null=True,
         format='%Y-%m-%d %H:%M:%S'
     )
+    base_fare = serializers.ReadOnlyField(source='flight.route.base_price')
+    airline_id = serializers.ReadOnlyField(source='flight.airline.id')
     using_ml_price = serializers.SerializerMethodField()
     price_age_hours = serializers.SerializerMethodField()
     layovers_data = serializers.JSONField(source='flight.layovers_data', read_only=True)
@@ -115,7 +117,14 @@ class ScheduleSerializer(serializers.ModelSerializer):
         return []
 
     def get_available_classes(self, obj):
-        """Get unique seat classes with available seats"""
+        """Get unique seat classes with available seats (optimized)"""
+        # 1. Check context for pre-calculated map
+        seat_classes_map = self.context.get('seat_classes_map')
+        if seat_classes_map is not None:
+            classes = seat_classes_map.get(obj.id, [])
+            return [c['name'] for c in classes]
+            
+        # 2. Fallback to database query (N+1)
         from app.models import Seat
         seat_classes = Seat.objects.filter(
             schedule=obj,
@@ -124,7 +133,13 @@ class ScheduleSerializer(serializers.ModelSerializer):
         return list(seat_classes)
     
     def get_seat_classes(self, obj):
-        """Get seat classes with details"""
+        """Get seat classes with details (optimized)"""
+        # 1. Check context for pre-calculated map
+        seat_classes_map = self.context.get('seat_classes_map')
+        if seat_classes_map is not None:
+            return seat_classes_map.get(obj.id, [])
+            
+        # 2. Fallback to database query (N+1)
         from app.models import Seat
         seat_classes = Seat.objects.filter(
             schedule=obj,
@@ -140,7 +155,13 @@ class ScheduleSerializer(serializers.ModelSerializer):
         ]
     
     def get_available_seats(self, obj):
-        """Get total available seats count"""
+        """Get total available seats count (optimized)"""
+        # 1. Check context for pre-calculated map
+        available_seats_map = self.context.get('available_seats_map')
+        if available_seats_map is not None:
+            return available_seats_map.get(obj.id, 0)
+            
+        # 2. Fallback to database query (N+1)
         from app.models import Seat
         return Seat.objects.filter(schedule=obj, is_available=True).count()
     
@@ -176,7 +197,7 @@ class ScheduleSerializer(serializers.ModelSerializer):
             'departure_time', 'arrival_time', 'price', 'status', 'gate',
             'flight_duration', 'total_stops', 'layovers_data', 'available_classes', 'seat_classes', 
             'available_seat_classes', 'aircraft_name', 'aircraft_capacity',
-            'available_seats', 'is_domestic',
+            'available_seats', 'is_domestic', 'base_fare', 'airline_id',
             # ML pricing fields
             'ml_base_price', 'ml_price_updated_at', 'using_ml_price', 'price_age_hours'
         ]
