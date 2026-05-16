@@ -255,6 +255,8 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             except Exception as e:
                 print(f"Date filter error: {e}")
                 pass
+        
+        return queryset
 
     @action(detail=True, methods=['post'], url_path='generate-seats', permission_classes=[IsInstructorOrAdmin])
     def generate_seats(self, request, pk=None):
