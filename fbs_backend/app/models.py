@@ -760,14 +760,16 @@ class Seat(models.Model):
         adjustment = Decimal('0.00')
         
         # 1. Total from dynamic requirements
+        all_reqs = []
         if self.pk:
-            for req in self.requirements.all():
+            all_reqs = list(self.requirements.all())
+            for req in all_reqs:
                 adjustment += req.price
         
         # 2. Fallback for booleans (only if not already mapped via code)
         # This helps during migration from booleans to ManyToMany requirements
         fallbacks = self.get_price_adjustments()
-        codes_present = set(self.requirements.values_list('code', flat=True)) if self.pk else set()
+        codes_present = {req.code for req in all_reqs}
         
         boolean_fields = [
             ('is_exit_row', self.is_exit_row),
@@ -842,8 +844,10 @@ class Seat(models.Model):
         details = []
         
         # 1. From requirements
+        all_reqs = []
         if self.pk:
-            for req in self.requirements.all():
+            all_reqs = list(self.requirements.all())
+            for req in all_reqs:
                 details.append({
                     'feature': req.name,
                     'adjustment': float(req.price),
@@ -852,7 +856,7 @@ class Seat(models.Model):
         
         # 2. From booleans (fallback/legacy)
         fallbacks = self.get_price_adjustments()
-        codes_present = set(self.requirements.values_list('code', flat=True)) if self.pk else set()
+        codes_present = {req.code for req in all_reqs}
         
         boolean_fields = [
             ('is_exit_row', 'Exit Row Seat'),

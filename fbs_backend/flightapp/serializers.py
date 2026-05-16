@@ -207,7 +207,12 @@ class SeatSerializer(serializers.ModelSerializer):
         ]
     
     def get_is_booked(self, obj):
-        # Check if permanently booked
+        # Check context for pre-calculated booked seat IDs (optimization)
+        booked_seat_ids = self.context.get('booked_seat_ids')
+        if booked_seat_ids is not None:
+            return obj.id in booked_seat_ids
+            
+        # Fallback to database query (N+1)
         from app.models import BookingDetail
         # We check for booked seats for this specific schedule
         return BookingDetail.objects.filter(

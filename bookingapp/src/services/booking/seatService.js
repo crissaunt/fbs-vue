@@ -63,7 +63,7 @@ export const seatService = {
         console.log('✅ Seat data loaded with new endpoint:', {
           scheduleId: response.data.schedule_id,
           schedulePrice: response.data.schedule_price,
-          aircraftModel: response.data.aircraft_model,
+          aircraft_model: response.data.aircraft_model,
           totalSeats: response.data.total_seats,
           availableSeats: response.data.available_seats,
           sampleSeat: response.data.seats[0] ? {
@@ -76,19 +76,19 @@ export const seatService = {
         return response.data;
       } else {
         console.log('⚠️ New endpoint returned error:', response.data.error);
-        return await this.getSeatsByScheduleOld(scheduleId);
+        return await this.getSeatsByScheduleOld(scheduleId, sessionId);
       }
     } catch (error) {
       console.error(`❌ Error with new endpoint:`, error.message);
       console.log('🔄 Falling back to old endpoint...');
-      return await this.getSeatsByScheduleOld(scheduleId);
+      return await this.getSeatsByScheduleOld(scheduleId, sessionId);
     }
   },
 
   /**
    * Fallback: Use the old endpoint
    */
-  async getSeatsByScheduleOld(scheduleId) {
+  async getSeatsByScheduleOld(scheduleId, sessionId = null) {
     try {
       console.log(`🔄 Trying old endpoint for schedule ${scheduleId}...`);
       const response = await api.get('flightapp/api/seats/', {
