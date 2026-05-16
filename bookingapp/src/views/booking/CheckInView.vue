@@ -1085,10 +1085,19 @@ const toggleAll = () => {
 }
 
 
-const downloadIndividualPass = (bookingDetail) => {
+import { downloadAuthenticatedFile } from '@/utils/downloader';
+
+const downloadIndividualPass = async (bookingDetail) => {
     // Extract ID whether booking_detail is an object or a raw ID
     const id = (bookingDetail && typeof bookingDetail === 'object') ? bookingDetail.id : bookingDetail
-    window.open(`${axios.defaults.baseURL}api/dcs/boarding-pass/${id}/`, '_blank')
+    const url = `flightapp/download-boarding-pass/${id}/`;
+    const filename = `BoardingPass-${id}.pdf`;
+    
+    try {
+        await downloadAuthenticatedFile(url, filename);
+    } catch (err) {
+        error.value = "Failed to download boarding pass. Please try again.";
+    }
 }
 
 // NEW: Interactive Logic

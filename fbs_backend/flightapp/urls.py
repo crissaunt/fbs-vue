@@ -41,6 +41,7 @@ urlpatterns = [
     path('api/verify-and-process-payment/', views.verify_and_process_payment, name='verify_and_process_payment'),
     path('api/test-paymongo-setup', views.test_paymongo_setup, name='test_paymongo_setup'),
     path('check-booking-status/<int:booking_id>/', views.check_booking_status, name='check_booking_status'),
+    path('booking/reference/<str:reference>/', views.get_booking_by_reference, name='get_booking_by_reference'),
     # flightapp/urls.py
     path('verify-session-payment/', views.verify_session_payment, name='verify_session_payment'),
     path('seat-class-features/', views.get_seat_class_features, name='seat_class_features'),
@@ -49,6 +50,7 @@ urlpatterns = [
         # PDF download endpoints
     path('download-boarding-pass/<int:booking_detail_id>/', views.download_boarding_pass, name='download_boarding_pass'),
     path('download-itinerary/<int:booking_id>/', views.download_itinerary, name='download_itinerary'),
+    path('booking/<int:booking_id>/send-email/', views.send_itinerary_email, name='send_itinerary_email'),
 
     # Pricing
     path('calculate-price/', views.calculate_booking_price, name='calculate_booking_price'),

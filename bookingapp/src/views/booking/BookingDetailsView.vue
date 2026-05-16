@@ -567,26 +567,22 @@ const fetchBookingDetails = async () => {
     loading.value = true
     error.value = ''
     
-    // Extract booking ID from reference (BK00000071 -> 71)
-    const bookingId = bookingReference.replace('BK', '')
-    
-    console.log(`Fetching booking details for reference: ${bookingReference}, ID: ${bookingId}`)
-    
-    // Try to fetch by booking ID first
+    // Use the reference search endpoint which handles both PNR and legacy CSUCC IDs
     try {
-      const response = await api.get(`booking/${bookingId}/`)
+      const response = await api.get(`flightapp/booking/reference/${bookingReference}/`)
       if (response.data.success) {
         bookingData.value = response.data.booking
-        console.log('Booking data loaded:', bookingData.value)
+        console.log('Booking data loaded via reference:', bookingData.value)
       } else {
         error.value = response.data.error || 'Failed to load booking details'
       }
     } catch (err) {
-      console.error('Error fetching booking by ID:', err)
-      
-      // Fallback: Search for booking by reference in your list of bookings
-      // You might need to implement a search endpoint in your backend
-      error.value = 'Booking not found. Please check your reference number.'
+      console.error('Error fetching booking by reference:', err)
+      if (err.response && err.response.status === 403) {
+        error.value = 'You are not authorized to view this booking.'
+      } else {
+        error.value = 'Booking not found. Please check your reference number.'
+      }
     }
     
   } catch (err) {
@@ -869,16 +865,32 @@ const canDownloadETicket = computed(() => {
   return bookingData.value?.status?.toLowerCase() === 'confirmed'
 })
 
-const downloadETicket = () => {
-  if (canDownloadETicket.value) {
-    notificationStore.info('E-Ticket download functionality would be implemented here')
-    // Implement PDF generation/download
+import { downloadAuthenticatedFile } from '@/utils/downloader';
+
+const downloadETicket = async () => {
+  if (canDownloadETicket.value && bookingData.value) {
+    notificationStore.info('Generating your E-Ticket...')
+    try {
+      const url = `flightapp/download-itinerary/${bookingData.value.id}/`;
+      const filename = `E-Ticket-${bookingData.value.pnr || bookingData.value.id}.pdf`;
+      await downloadAuthenticatedFile(url, filename);
+      notificationStore.success('Download started!')
+    } catch (err) {
+      notificationStore.error('Failed to download e-ticket. Please try again.')
+    }
   }
 }
 
-const sendToEmail = () => {
-  notificationStore.info('Booking details would be sent to your email')
-  // Implement email sending
+const sendToEmail = async () => {
+  if (!bookingData.value) return
+  notificationStore.info('Sending itinerary to your email...')
+  try {
+    // This assumes an endpoint exists or we use the existing one if applicable
+    await api.post(`flightapp/booking/${bookingData.value.id}/send-email/`)
+    notificationStore.success('Itinerary sent successfully!')
+  } catch (err) {
+    notificationStore.error('Failed to send email. Please try again.')
+  }
 }
 
 const modifyBooking = () => {

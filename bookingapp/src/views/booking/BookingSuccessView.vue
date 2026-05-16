@@ -242,6 +242,8 @@ const handleActivitySubmission = async () => {
   }
 };
 
+import { downloadAuthenticatedFile } from '@/utils/downloader';
+
 const downloadItinerary = async () => {
   if (!bookingId.value) {
     showToastMessage('Booking ID missing - cannot download');
@@ -251,14 +253,14 @@ const downloadItinerary = async () => {
   showToastMessage('Generating your E-Ticket...');
   
   try {
-    const baseUrl = import.meta.env.VITE_API_URL || 'https://fbs-vue.onrender.com';
-    const downloadUrl = `${baseUrl}/flightapp/download-itinerary/${bookingId.value}/`;
+    const url = `flightapp/download-itinerary/${bookingId.value}/`;
+    const filename = `Itinerary-${bookingReference.value}.pdf`;
     
-    // Open in new tab or trigger download
-    window.open(downloadUrl, '_blank');
+    await downloadAuthenticatedFile(url, filename);
+    showToastMessage('Download started!');
   } catch (error) {
     console.error('Download error:', error);
-    showToastMessage('Failed to download itinerary');
+    showToastMessage('Failed to download itinerary. Please try again.');
   }
 };
 

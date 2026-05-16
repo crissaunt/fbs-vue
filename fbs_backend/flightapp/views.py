@@ -37,6 +37,75 @@ from .serializers import *
 from .services.paymongo_service import paymongo_service
 from .services.grading_service import grade_booking
 
+from rest_framework.permissions import BasePermission, IsAuthenticated, AllowAny
+
+class IsInstructorOrAdmin(BasePermission):
+    """
+    Allows access only to instructors or admin users.
+    """
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
+        # Check UserProfile role
+        try:
+            role = request.user.userprofile.role
+            return role in ['instructor', 'flight_admin', 'superadmin', 'lms_admin']
+        except AttributeError:
+            return request.user.is_staff or request.user.is_superuser
+
+def check_booking_ownership(request, booking):
+    """
+    Helper to check if the current user is authorized to access/modify a booking.
+    Authorized users include:
+    1. The user who created the booking.
+    2. An instructor or admin.
+    """
+    if not request.user or not request.user.is_authenticated:
+        return False
+    
+    # Owner check
+    if hasattr(booking, 'user') and booking.user == request.user:
+        return True
+        
+    # Admin/Instructor check
+    try:
+        role = request.user.userprofile.role
+        if role in ['instructor', 'flight_admin', 'superadmin', 'lms_admin']:
+            return True
+    except AttributeError:
+        if request.user.is_staff or request.user.is_superuser:
+            return True
+            
+    # LOG UNAUTHORIZED ACCESS ATTEMPT
+    try:
+        from fbs_instructor.models import InstructorLog
+        from django.contrib.auth.models import User
+        
+        # Find relevant instructors for this booking (if it's a student booking)
+        target_instructors = []
+        if booking.activity:
+            target_instructors = [booking.activity.section.instructor]
+        else:
+            # Fallback: Find any instructor who has this student
+            target_instructors = User.objects.filter(
+                sections__enrollments__student__user=booking.user
+            ).distinct()
+
+        for inst in target_instructors:
+            InstructorLog.objects.create(
+                instructor=inst,
+                actor=request.user,
+                action_type='FORBIDDEN_ACCESS',
+                details=f"Unauthorized attempt to access/modify booking {booking.id} (PNR: {booking.pnr}) by user {request.user.username}.",
+                ip_address=request.META.get('REMOTE_ADDR'),
+                device=request.META.get('HTTP_USER_AGENT', 'Unknown')[:255]
+            )
+    except Exception as e:
+        print(f"[AUDIT] Logging failed: {str(e)}")
+
+    return False
+
 class AirlineFilterMixin:
     """Mixin to handle common airline filtering logic by ID or Code"""
     def get_queryset(self):
@@ -54,10 +123,21 @@ class AirlineFilterMixin:
         
         return queryset
 
-def get_shared_seat_class_multiplier(airline, seat_class_name):
+def get_shared_seat_class_multiplier(airline, seat_class_name, multipliers_map=None):
     """Unified logic to fetch seat class multiplier across search and booking."""
     if not seat_class_name:
         return 1.0
+    
+    # 1. Use pre-fetched map if provided (FASTEST)
+    if multipliers_map is not None:
+        airline_id = airline.id if hasattr(airline, 'id') else airline if isinstance(airline, (int, str)) else None
+        # Try specific then general
+        norm_name = seat_class_name.lower().strip()
+        if (airline_id, norm_name) in multipliers_map:
+            return multipliers_map[(airline_id, norm_name)]
+        if (None, norm_name) in multipliers_map:
+            return multipliers_map[(None, norm_name)]
+        # Continue to legacy normalization if not found
     
     # Normalize name: "Economy Class" -> "Economy"
     name = seat_class_name.strip()
@@ -77,8 +157,7 @@ def get_shared_seat_class_multiplier(airline, seat_class_name):
         base_name = "First Class"
 
     try:
-        from app.models import SeatClass
-        from django.core.cache import cache
+        # Use cache from top-level import
         
         # Cache key includes airline if provided
         airline_id = airline.id if hasattr(airline, 'id') else airline if isinstance(airline, (int, str)) else 'gen'
@@ -101,7 +180,8 @@ def get_shared_seat_class_multiplier(airline, seat_class_name):
             cache.set(cache_key, multiplier, 3600)
             
         return multiplier
-    except Exception:
+    except Exception as e:
+        # print(f"Error in multiplier: {e}")
         return 1.0
 
 class CountryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -145,7 +225,7 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ScheduleSerializer
     queryset = Schedule.objects.none()
     pagination_class = None  # Disable pagination for schedules to show all
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.AllowAny] # AllowAny for listing (search)
     
     def get_queryset(self):
         queryset = Schedule.objects.filter(status='Open').select_related(
@@ -183,7 +263,7 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
 
         return queryset.order_by('departure_time')
 
-    @action(detail=True, methods=['post'], url_path='generate-seats')
+    @action(detail=True, methods=['post'], url_path='generate-seats', permission_classes=[IsInstructorOrAdmin])
     def generate_seats(self, request, pk=None):
         """Generate seats for this schedule based on layout config"""
         schedule = self.get_object()
@@ -420,50 +500,43 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
         end_date = request.query_params.get('end_date')
         departure = request.query_params.get('departure')
         
-        cache_key = f"schedules_list_{origin}_{destination}_{start_date}_{end_date}_{departure}"
+        # Build cache key including pagination if applicable
+        page_num = request.query_params.get('page', '1')
+        cache_key = f"schedules_list_{origin}_{destination}_{start_date}_{end_date}_{departure}_p{page_num}"
         
-        # 1. Track search for demand pricing immediately
-        queryset = self.filter_queryset(self.get_queryset())
-        self.track_search_demand(request, queryset)
-
-        # 1. Pre-fetch context data once
+        from django.core.cache import cache
+        
+        # 1. IMMEDIATE CACHE CHECK (Lowest latency path)
+        cached_base_data = cache.get(cache_key)
+        
+        # We still need user and session info for dynamic pricing later
         user = request.user if request.user.is_authenticated else None
         session_id = request.session.session_key
         if not session_id:
             request.session.save()
             session_id = request.session.session_key
         
-        # Load pricing config once
+        # Load pricing config once (cached internally in model)
         from app.models import PricingConfiguration
         config = PricingConfiguration.load()
         
-        # Apply pagination
-        page = self.paginate_queryset(queryset)
-        schedules = page if page is not None else queryset
-        
-        if not schedules:
-            return self.get_paginated_response([]) if page is not None else Response([])
-
-        # 2. Pre-calculate common factors (Request-scoped, not cached)
-        # User factor: Fetch booking count ONCE for the whole request to avoid N+1
-        user_bookings_count = 0
-        if user:
-            from app.models import Booking
-            user_bookings_count = Booking.objects.filter(user=user).count()
-        
+        # Pre-calculate common factors for this specific user
         user_factor = dynamic_pricing.get_user_factor(user, None, config=config)
-        
-        # 3. Check Cache for "Base" serialized results
-        from django.core.cache import cache
-        cached_base_data = cache.get(cache_key)
-        
+
         if cached_base_data:
-            schedules = queryset # Need this for the loop later
+            # We still need a queryset for the loop, but it will be executed lazily
+            queryset = self.filter_queryset(self.get_queryset())
+            schedules = queryset 
             data = cached_base_data['data']
             occupancy_map = cached_base_data['occupancy_map']
-            # Note: schedules might have changed in DB, but for 60s cache it's usually fine
         else:
-            # Apply pagination (only if not using cached data)
+            # 2. CACHE MISS - Full Processing
+            # Track demand (only on cache miss to avoid redundant hits)
+            self.track_search_demand(request)
+            
+            queryset = self.filter_queryset(self.get_queryset())
+            
+            # Apply pagination
             page = self.paginate_queryset(queryset)
             schedules = page if page is not None else queryset
             
@@ -493,13 +566,40 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
                     'price_multiplier': float(item['seat_class__price_multiplier'] or 1.0)
                 })
             
-            # Batch ML Price Updates (for stale or missing prices)
+            # 3. Batch ML Price Updates (Intelligent refresh to save time)
             stale_schedules = []
+            now = timezone.now()
+            
             for s in schedules:
-                if (s.ml_base_price is None or 
-                    s.ml_price_updated_at is None or 
-                    (timezone.now() - s.ml_price_updated_at).total_seconds() > 300): # 5 min refresh
+                if s.ml_base_price is None or s.ml_price_updated_at is None:
                     stale_schedules.append(s)
+                    continue
+                
+                # Calculate days until departure
+                days_until = (s.departure_time - now).days
+                age_seconds = (now - s.ml_price_updated_at).total_seconds()
+                
+                # Intelligent refresh intervals:
+                # - Today/Tomorrow: 15 mins
+                # - Within 3 days: 2 hours
+                # - Within 7 days: 6 hours
+                # - Further out: 24 hours
+                if days_until <= 1:
+                    is_stale = age_seconds > 900 # 15 mins
+                elif days_until <= 3:
+                    is_stale = age_seconds > 7200 # 2 hours
+                elif days_until <= 7:
+                    is_stale = age_seconds > 21600 # 6 hours
+                else:
+                    is_stale = age_seconds > 86400 # 24 hours
+                
+                if is_stale:
+                    stale_schedules.append(s)
+            
+            # CAP synchronous updates to 20 to ensure < 3s response time
+            # Remaining stale schedules will be updated by subsequent requests
+            if len(stale_schedules) > 20:
+                stale_schedules = stale_schedules[:20]
             
             if stale_schedules:
                 flight_data_list = []
@@ -541,16 +641,28 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             )
             data = serializer.data
             
-            # Cache the base serialized data for 60 seconds
+            # Cache the base serialized data for 5 minutes (reduced from 60s since logic is now more robust)
             cache.set(cache_key, {
                 'data': data,
                 'occupancy_map': occupancy_map
-            }, 60)
+            }, 300)
             
             page = None # Reset page if we just serialized it
             
-        # 4. Final Loop for User-Specific Dynamic Pricing (Fast, O(N))
-        # 4. Final Loop for User-Specific Dynamic Pricing (EXTREMELY FAST, Memory Only)
+        # 4. Prefetch all seat class multipliers once for the whole request (prevents O(N*M) hits)
+        # This must be outside the cache block because the dynamic pricing loop always runs
+        airline_ids = {f.get('airline_id') for f in data if f.get('airline_id')}
+        sc_qs = SeatClass.objects.filter(Q(airline_id__in=airline_ids) | Q(airline__isnull=True))
+        multipliers_map = {}
+        for sc in sc_qs:
+            # Store normalized names in map
+            name = sc.name.lower().strip()
+            multipliers_map[(sc.airline_id, name)] = float(sc.price_multiplier)
+            # Also store variations if needed
+            if "class" in name:
+                multipliers_map[(sc.airline_id, name.replace("class", "").strip())] = float(sc.price_multiplier)
+            
+        # 5. Final Loop for User-Specific Dynamic Pricing (EXTREMELY FAST, Memory Only)
         for flight_item in data:
             # Get base price - use ml_base_price or fallback
             fallback_price = float(flight_item.get('base_fare') or 5000.0)
@@ -604,7 +716,8 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
                     # APPLY DYNAMIC PRICE (pricing_result['final_price']) TO SEAT CLASS
                     # Fetch multiplier using ID if possible to avoid DB hits
                     airline_id = flight_item.get('airline_id')
-                    multiplier = get_shared_seat_class_multiplier(airline_id, seat_class_name)
+                    # Use the pre-fetched multipliers_map
+                    multiplier = get_shared_seat_class_multiplier(airline_id, seat_class_name, multipliers_map=multipliers_map)
                     raw_seat_price = pricing_result['final_price'] * multiplier
                     
                     seat_class['base_price'] = display_base_price
@@ -634,8 +747,8 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
     def get_seat_class_multiplier(self, seat_class_name):
         return get_shared_seat_class_multiplier(None, seat_class_name)
     
-    def track_search_demand(self, request, queryset):
-        """Track search queries for demand-based pricing"""
+    def track_search_demand(self, request):
+        """Track search queries for demand-based pricing (Lightweight)"""
         from django.core.cache import cache
         
         # Track origin-destination pair demand
@@ -1312,7 +1425,7 @@ def verify_payment(request):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def create_checkout_session(request):
     """
     Generate a PayMongo Checkout URL for method selection
@@ -1330,6 +1443,13 @@ def create_checkout_session(request):
         # Get booking to ensure amount is correct
         try:
             booking = Booking.objects.get(id=booking_id)
+            
+            # SECURITY: Check ownership
+            if not check_booking_ownership(request, booking):
+                return Response({
+                    'success': False,
+                    'error': 'You are not authorized to create a checkout session for this booking'
+                }, status=403)
         except Booking.DoesNotExist:
             return Response({
                 'success': False,
@@ -3971,7 +4091,7 @@ def get_seat_class_features(request):
 
 # Django views.py
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_booking_by_reference(request, reference):
     """Get booking by reference number (CSUCC00000071 or PNR)"""
     try:
@@ -3982,6 +4102,13 @@ def get_booking_by_reference(request, reference):
         else:
             # Search by PNR (GDS style)
             booking = Booking.objects.get(pnr=reference)
+            
+        # SECURITY: Check ownership
+        if not check_booking_ownership(request, booking):
+            return Response({
+                'success': False,
+                'error': 'You are not authorized to view this booking'
+            }, status=403)
             
         serializer = BookingSerializer(booking)
         return Response({
@@ -3995,11 +4122,19 @@ def get_booking_by_reference(request, reference):
         }, status=404)
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def cancel_booking(request, booking_id):
     """Cancel a booking"""
     try:
         booking = Booking.objects.get(id=booking_id)
+        
+        # SECURITY: Check ownership
+        if not check_booking_ownership(request, booking):
+            return Response({
+                'success': False,
+                'error': 'You are not authorized to cancel this booking'
+            }, status=403)
+
         booking.status = 'cancelled'
         booking.save()
         return Response({
@@ -4398,12 +4533,24 @@ def get_seats_with_schedule_info(request, schedule_id):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def download_boarding_pass(request, booking_detail_id):
     """
     Download boarding pass PDF for a specific booking detail
     """
     try:
+        # Optimization: Fetch booking relation to check ownership
+        from app.models import BookingDetail
+        try:
+            detail = BookingDetail.objects.select_related('booking').get(id=booking_detail_id)
+            if not check_booking_ownership(request, detail.booking):
+                return Response({
+                    'success': False,
+                    'error': 'You are not authorized to download this boarding pass'
+                }, status=403)
+        except BookingDetail.DoesNotExist:
+             return Response({'success': False, 'error': 'Booking detail not found'}, status=404)
+
         response = BoardingPassPDFService.download_boarding_pass(booking_detail_id)
         if response:
             return response
@@ -4419,12 +4566,22 @@ def download_boarding_pass(request, booking_detail_id):
         }, status=500)
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def download_itinerary(request, booking_id):
     """
     Download full itinerary PDF for a booking
     """
     try:
+        try:
+            booking = Booking.objects.get(id=booking_id)
+            if not check_booking_ownership(request, booking):
+                return Response({
+                    'success': False,
+                    'error': 'You are not authorized to download this itinerary'
+                }, status=403)
+        except Booking.DoesNotExist:
+            return Response({'success': False, 'error': 'Booking not found'}, status=404)
+
         response = BoardingPassPDFService.download_itinerary(booking_id)
         if response:
             return response
@@ -4433,6 +4590,38 @@ def download_itinerary(request, booking_id):
                 'success': False,
                 'error': 'Booking not found'
             }, status=404)
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_itinerary_email(request, booking_id):
+    """
+    Manually trigger sending itinerary email to the booking owner
+    """
+    try:
+        try:
+            booking = Booking.objects.get(id=booking_id)
+            if not check_booking_ownership(request, booking):
+                return Response({
+                    'success': False,
+                    'error': 'You are not authorized to send this itinerary'
+                }, status=403)
+        except Booking.DoesNotExist:
+            return Response({'success': False, 'error': 'Booking not found'}, status=404)
+
+        # Trigger email sending (assumes background thread if possible)
+        from .services.email_service import send_booking_confirmation_email
+        import threading
+        threading.Thread(target=send_booking_confirmation_email, args=(booking,)).start()
+        
+        return Response({
+            'success': True,
+            'message': 'Itinerary email dispatched successfully'
+        })
     except Exception as e:
         return Response({
             'success': False,
@@ -4578,11 +4767,16 @@ def calculate_booking_price(request):
                 return Decimal('0.00')
 
             route = schedule.flight.route
+            # USE PRE-FETCHED TAXES IF PROVIDED
+            if 'prefetched_taxes' in locals() or 'prefetched_taxes' in globals():
+                 # This is tricky because it's a helper function
+                 pass
+
             applicable_taxes = TaxType.objects.filter(
                 is_active=True,
                 applies_domestic=route.is_domestic,
                 applies_international=route.is_international,
-            )
+            ).prefetch_related('passenger_rates') # Optimization 1: Prefetch rates
             
             # Initialize breakdown if needed
             if tax_breakdown is None:
@@ -4604,13 +4798,17 @@ def calculate_booking_price(request):
                         if tax.adult_only and pax_type != 'adult':
                             continue
 
-                        try:
-                            rate = PassengerTypeTaxRate.objects.get(
-                                tax_type=tax,
-                                passenger_type=pax_type,
-                            )
-                            amount = rate.amount
-                        except PassengerTypeTaxRate.DoesNotExist:
+                        # Optimization 2: Use prefetched rates instead of querying
+                        rate_obj = None
+                        if hasattr(tax, 'passenger_rates'):
+                            for r in tax.passenger_rates.all():
+                                if r.passenger_type == pax_type:
+                                    rate_obj = r
+                                    break
+                        
+                        if rate_obj:
+                            amount = rate_obj.amount
+                        else:
                             amount = tax.base_amount
 
                         if not tax.per_passenger:
