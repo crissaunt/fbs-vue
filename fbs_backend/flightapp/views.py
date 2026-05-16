@@ -261,7 +261,58 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
                 print(f"Date filter error: {e}")
                 pass
 
-        return queryset.order_by('departure_time')
+    def list(self, request, *args, **kwargs):
+        """Optimized list view with pre-calculated seat classes and available seats (SOLVES N+1)"""
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # 1. Pre-calculate seat class availability in batch
+        schedule_ids = [s.id for s in queryset]
+        
+        seat_classes_map = {}
+        available_seats_map = {}
+        
+        if schedule_ids:
+            # Get all available seats for these schedules in ONE query
+            all_seats = Seat.objects.filter(
+                schedule_id__in=schedule_ids,
+                is_available=True
+            ).select_related('seat_class').values(
+                'schedule_id', 'seat_class__id', 'seat_class__name', 'seat_class__price_multiplier'
+            )
+            
+            # Group by schedule
+            for seat in all_seats:
+                sid = seat['schedule_id']
+                if sid not in seat_classes_map:
+                    seat_classes_map[sid] = {}
+                
+                cid = seat['seat_class__id']
+                if cid not in seat_classes_map[sid]:
+                    seat_classes_map[sid][cid] = {
+                        'id': cid,
+                        'name': seat['seat_class__name'] or "Standard",
+                        'price_multiplier': float(seat['seat_class__price_multiplier']) if seat['seat_class__price_multiplier'] else 1.0,
+                        'available_count': 0
+                    }
+                
+                seat_classes_map[sid][cid]['available_count'] += 1
+                available_seats_map[sid] = available_seats_map.get(sid, 0) + 1
+            
+            # Convert inner maps to lists for serializer
+            for sid in seat_classes_map:
+                seat_classes_map[sid] = list(seat_classes_map[sid].values())
+
+        # Pass maps to serializer context
+        serializer = self.get_serializer(
+            queryset, 
+            many=True, 
+            context={
+                **self.get_serializer_context(),
+                'seat_classes_map': seat_classes_map,
+                'available_seats_map': available_seats_map
+            }
+        )
+        return Response(serializer.data)
 
     @action(detail=True, methods=['post'], url_path='generate-seats', permission_classes=[IsInstructorOrAdmin])
     def generate_seats(self, request, pk=None):
@@ -4461,7 +4512,7 @@ def get_seats_with_schedule_info(request, schedule_id):
                 # Fallback calculation
                 base_price = schedule.price if schedule.price else Decimal('0.00')
                 multiplier = seat.seat_class.price_multiplier if seat.seat_class else Decimal('1.00')
-                adjustment = seat.price_adjustment if seat.price_adjustment else Decimal('0.00')
+                adjustment = seat.total_price_adjustment
                 final_price = (base_price * multiplier) + adjustment
             
             seat_info = {
@@ -4472,7 +4523,7 @@ def get_seats_with_schedule_info(request, schedule_id):
                 'column': seat.column,
                 'is_available': seat.is_available,
                 'final_price': float(final_price),
-                'price_adjustment': float(seat.price_adjustment) if seat.price_adjustment else 0.0,
+                'price_adjustment': float(seat.total_price_adjustment),
                 'has_extra_legroom': seat.has_extra_legroom,
                 'is_exit_row': seat.is_exit_row,
                 'is_bulkhead': seat.is_bulkhead,
@@ -4614,9 +4665,8 @@ def send_itinerary_email(request, booking_id):
             return Response({'success': False, 'error': 'Booking not found'}, status=404)
 
         # Trigger email sending (assumes background thread if possible)
-        from .services.email_service import send_booking_confirmation_email
         import threading
-        threading.Thread(target=send_booking_confirmation_email, args=(booking,)).start()
+        threading.Thread(target=EmailService.send_booking_confirmation, args=(booking,)).start()
         
         return Response({
             'success': True,

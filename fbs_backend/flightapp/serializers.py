@@ -124,7 +124,7 @@ class ScheduleSerializer(serializers.ModelSerializer):
             classes = seat_classes_map.get(obj.id, [])
             return [c['name'] for c in classes]
             
-        # 2. Fallback to database query (N+1)
+        # 2. Fallback to database query (N+1) - but fix the Postgres distinct() issue
         from app.models import Seat
         seat_classes = Seat.objects.filter(
             schedule=obj,
@@ -141,10 +141,11 @@ class ScheduleSerializer(serializers.ModelSerializer):
             
         # 2. Fallback to database query (N+1)
         from app.models import Seat
+        # PostgreSQL fix: distinct('seat_class__name') requires matching order_by
         seat_classes = Seat.objects.filter(
             schedule=obj,
             is_available=True
-        ).select_related('seat_class').distinct('seat_class__name')
+        ).select_related('seat_class').order_by('seat_class__name').distinct('seat_class__name')
         
         return [
             {
