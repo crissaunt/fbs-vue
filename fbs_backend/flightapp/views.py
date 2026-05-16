@@ -19,8 +19,6 @@ from .services.email_service import EmailService
 from .services.pdf_service import BoardingPassPDFService
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
-from .ml.predictor import predictor
-from .ml.dynamic_pricing import dynamic_pricing
 import hashlib
 import json
 import random
@@ -216,10 +214,7 @@ class AirportViewSet(viewsets.ReadOnlyModelViewSet):
         cache.set(cache_key, response.data, 60*60*24) # Cache for 24 hours
         return response
 
-from .ml.predictor import predictor
 from decimal import Decimal
-
-from .ml.dynamic_pricing import dynamic_pricing
 
 class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ScheduleSerializer
@@ -260,59 +255,6 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             except Exception as e:
                 print(f"Date filter error: {e}")
                 pass
-
-    def list(self, request, *args, **kwargs):
-        """Optimized list view with pre-calculated seat classes and available seats (SOLVES N+1)"""
-        queryset = self.filter_queryset(self.get_queryset())
-        
-        # 1. Pre-calculate seat class availability in batch
-        schedule_ids = [s.id for s in queryset]
-        
-        seat_classes_map = {}
-        available_seats_map = {}
-        
-        if schedule_ids:
-            # Get all available seats for these schedules in ONE query
-            all_seats = Seat.objects.filter(
-                schedule_id__in=schedule_ids,
-                is_available=True
-            ).select_related('seat_class').values(
-                'schedule_id', 'seat_class__id', 'seat_class__name', 'seat_class__price_multiplier'
-            )
-            
-            # Group by schedule
-            for seat in all_seats:
-                sid = seat['schedule_id']
-                if sid not in seat_classes_map:
-                    seat_classes_map[sid] = {}
-                
-                cid = seat['seat_class__id']
-                if cid not in seat_classes_map[sid]:
-                    seat_classes_map[sid][cid] = {
-                        'id': cid,
-                        'name': seat['seat_class__name'] or "Standard",
-                        'price_multiplier': float(seat['seat_class__price_multiplier']) if seat['seat_class__price_multiplier'] else 1.0,
-                        'available_count': 0
-                    }
-                
-                seat_classes_map[sid][cid]['available_count'] += 1
-                available_seats_map[sid] = available_seats_map.get(sid, 0) + 1
-            
-            # Convert inner maps to lists for serializer
-            for sid in seat_classes_map:
-                seat_classes_map[sid] = list(seat_classes_map[sid].values())
-
-        # Pass maps to serializer context
-        serializer = self.get_serializer(
-            queryset, 
-            many=True, 
-            context={
-                **self.get_serializer_context(),
-                'seat_classes_map': seat_classes_map,
-                'available_seats_map': available_seats_map
-            }
-        )
-        return Response(serializer.data)
 
     @action(detail=True, methods=['post'], url_path='generate-seats', permission_classes=[IsInstructorOrAdmin])
     def generate_seats(self, request, pk=None):
@@ -427,6 +369,7 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             session_id = request.session.session_key
 
         from app.models import PricingConfiguration
+        from .ml.dynamic_pricing import dynamic_pricing
         config = PricingConfiguration.load()
         user_factor = dynamic_pricing.get_user_factor(user, None)
 
@@ -485,6 +428,7 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
                         'destination': destination,
                     }
                     
+                    from .ml.dynamic_pricing import dynamic_pricing
                     price_result = dynamic_pricing.get_price_for_user(
                         f_data, user, session_id, context=pricing_context
                     )
@@ -570,6 +514,9 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
         # Load pricing config once (cached internally in model)
         from app.models import PricingConfiguration
         config = PricingConfiguration.load()
+        
+        from .ml.dynamic_pricing import dynamic_pricing
+        from .ml.predictor import predictor
         
         # Pre-calculate common factors for this specific user
         user_factor = dynamic_pricing.get_user_factor(user, None, config=config)
@@ -4993,6 +4940,7 @@ def calculate_booking_price(request):
                     }
                     session_id = data.get('booking_session_id', "booking_creation")
                     user = request.user if request.user.is_authenticated else None
+                    from .ml.dynamic_pricing import dynamic_pricing
                     price_data = dynamic_pricing.get_price_for_user(flight_pricing_data, user=user, session_id=session_id)
                     ml_base = float(price_data.get('final_price', schedule_obj.ml_base_price or schedule_obj.price))
                     raw_seat_price = Decimal(str(ml_base)) * Decimal(str(multiplier))
