@@ -757,20 +757,23 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
             route_key = f"route_demand_{origin}_{destination}"
             try:
                 cache.incr(route_key)
-            except ValueError:
+            except (ValueError, Exception):
                 cache.set(route_key, 1, 3600)
         
-        # Track specific flight demand
-        for schedule in queryset[:10]:  # Track top 10 only
-            try:
-                flight_key = f"flight_demand_{schedule.flight.flight_number}"
+        # Track specific flight demand (safely)
+        try:
+            # Use a limited queryset to avoid overhead
+            for schedule in self.get_queryset()[:5]: 
                 try:
-                    cache.incr(flight_key)
-                except ValueError:
-                    cache.set(flight_key, 1, 3600)
-            except Exception as e:
-                logger.warning(f"Error tracking demand: {e}")
-                continue
+                    flight_key = f"flight_demand_{schedule.flight.flight_number}"
+                    try:
+                        cache.incr(flight_key)
+                    except (ValueError, Exception):
+                        cache.set(flight_key, 1, 3600)
+                except:
+                    continue
+        except:
+            pass
 # ====================================================================
 
 @api_view(['GET'])
