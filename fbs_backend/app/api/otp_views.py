@@ -40,16 +40,18 @@ class RequestOTPView(APIView):
         html_message = render_to_string('emails/password_reset_otp.html', context)
         plain_message = strip_tags(html_message)
 
-        send_mail(
-            subject,
-            plain_message,
-            settings.DEFAULT_FROM_EMAIL,
-            [email],
-            html_message=html_message,
-            fail_silently=False,
-        )
-
-        return Response({'message': 'OTP sent successfully'})
+        try:
+            send_mail(
+                subject,
+                plain_message,
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+            return Response({'message': 'OTP sent successfully'})
+        except Exception as e:
+            return Response({'error': 'Failed to send OTP email. Please check server configuration or try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class VerifyOTPAndResetView(APIView):
     permission_classes = []
