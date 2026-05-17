@@ -176,8 +176,20 @@ def grade_booking(booking, activity_id):
                 all_pax_passport = False
                 continue
             
-            # Category — PassengerInfo uses passenger_type (Adult/Child/Infant)
-            if not match_exact(rp.passenger_category, ap.passenger_type):
+            # Category — PassengerInfo uses ph_discount_type (none/senior/pwd)
+            def normC(s):
+                return norm_str(s).replace('(none)', '').replace('citizen', '').replace(' ', '').replace('-', '').replace('_', '')
+            
+            actCat = normC(ap.ph_discount_type)
+            expCat = normC(rp.passenger_category)
+            if 'senior' in expCat:
+                cat_met = 'senior' in actCat
+            elif 'pwd' in expCat:
+                cat_met = 'pwd' in actCat
+            else:
+                cat_met = 'senior' not in actCat and 'pwd' not in actCat
+                
+            if not cat_met:
                 all_pax_category = False
                 
             # Passport
@@ -186,7 +198,11 @@ def grade_booking(booking, activity_id):
                     all_pax_passport = False
                     
         tech_criteria.append({"label": "Category", "isMet": all_pax_category})
-        if activity.require_passport:
+        
+        # Always append Passport Info, just like frontend. If not required, it's always met.
+        if not activity.require_passport:
+            tech_criteria.append({"label": "Passport Info", "isMet": True})
+        else:
             tech_criteria.append({"label": "Passport Info", "isMet": all_pax_passport})
 
         tech["ratio"] = sum(1 for c in tech_criteria if c["isMet"]) / len(tech_criteria) if tech_criteria else 1.0
@@ -328,22 +344,37 @@ def grade_booking(booking, activity_id):
         prof["criteria"] = prof_criteria
 
 
-        # Final Score Calculation based on Rubric Levels
-        grand_total_ratio = sum(c["ratio"] for c in rubric_breakdown) / 5.0
-        
-        # Update levels for UI based on frontend thresholds
-        for cat in rubric_breakdown:
-            r = cat["ratio"]
-            if r == 1.0: cat["level"], cat["status"] = 5, "Excellent"
-            elif r >= 0.8: cat["level"], cat["status"] = 4, "Very Good"
-            elif r >= 0.5: cat["level"], cat["status"] = 3, "Satisfactory"
-            elif r >= 0.2: cat["level"], cat["status"] = 2, "Needs Improvement"
-            else: cat["level"], cat["status"] = 1, "Poor"
+        # Final Score Calculation — MUST match frontend gradingLogic.js GRADING_THRESHOLDS exactly.
+        # Each rubric type has DIFFERENT thresholds in the frontend — we replicate them here.
+        GRADING_THRESHOLDS = {
+            "accuracy": [(1.0, 5, "Excellent"), (0.8, 4, "Very Good"), (0.5, 3, "Satisfactory"), (0.2, 2, "Needs Improvement"), (0.0, 1, "Poor")],
+            "tech":     [(1.0, 5, "Excellent"), (0.7, 4, "Very Good"), (0.4, 3, "Satisfactory"), (0.1, 2, "Needs Improvement"), (0.0, 1, "Poor")],
+            "org":      [(1.0, 5, "Excellent"), (0.8, 4, "Very Good"), (0.5, 3, "Satisfactory"), (0.2, 2, "Needs Improvement"), (0.0, 1, "Poor")],
+            "comp":     [(1.0, 5, "Excellent"), (0.5, 3, "Satisfactory"), (0.01, 2, "Needs Improvement"), (0.0, 1, "Poor")],
+            "prof":     [(1.0, 5, "Excellent"), (0.7, 4, "Very Good"), (0.4, 3, "Satisfactory"), (0.1, 2, "Needs Improvement"), (0.0, 1, "Poor")],
+        }
 
-        total_score = float(activity.total_points)
+        def apply_level(cat, rubric_key):
+            r = cat["ratio"]
+            for threshold, level, status in GRADING_THRESHOLDS[rubric_key]:
+                if r >= threshold:
+                    cat["level"] = level
+                    cat["status"] = status
+                    return
+
+        apply_level(get_cat("Accuracy"), "accuracy")
+        apply_level(get_cat("Technical"), "tech")
+        apply_level(get_cat("Organization"), "org")
+        apply_level(get_cat("Completeness"), "comp")
+        apply_level(get_cat("Professionalism"), "prof")
+
+        # Score formula MUST match frontend exactly:
+        # calculatedScore = sumOfRatios * (totalPoints / 5)
+        # where sumOfRatios = acc.ratio + tech.ratio + org.ratio + comp.ratio + prof.ratio
+        sum_of_ratios = sum(c["ratio"] for c in rubric_breakdown)
+        total_points = float(activity.total_points)
         # Use math.floor(val + 0.5) to mimic Javascript's Math.round
-        # Python's round() uses Banker's rounding which causes a 1 point discrepancy.
-        earned_score = math.floor((total_score * grand_total_ratio) + 0.5)
+        earned_score = math.floor((sum_of_ratios * (total_points / 5.0)) + 0.5)
 
         # Update Binding
         binding.grade = earned_score

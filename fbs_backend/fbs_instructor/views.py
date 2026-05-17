@@ -2393,24 +2393,32 @@ def get_activity_submissions(request, activity_id):
                             binding.submitted_at = timezone.now()
                             binding.save()
 
-                    # 2. Dynamic Grading: Always compute fresh score_data when a booking exists.
-                    # This guarantees rubric_breakdown is never stale/null in the API response,
-                    # even for already-graded students whose DB record predates the rubric system.
+                    # 2. Grading: Use saved rubric_breakdown from DB if available (set by
+                    # instructor_students_score.vue). Only recalculate if nothing is saved yet.
+                    # This guarantees the submissions table always matches the score page.
                     if booking:
-                        score_data = calculate_submission_score(activity, booking)
-                        if score_data:
-                            # Always update grade and rubric_breakdown in DB when we have fresh data.
-                            # This ensures the DB stays current and subsequent fetches are fast.
-                            needs_save = (
-                                binding.grade is None or
-                                binding.status == 'submitted' or
-                                not binding.rubric_breakdown  # Also save if rubric_breakdown was missing
-                            )
-                            if needs_save:
-                                binding.grade = score_data['total']
-                                binding.rubric_breakdown = score_data['rubric_breakdown']
-                                binding.status = 'graded'
-                                binding.save()
+                        has_saved_rubric = bool(binding and binding.rubric_breakdown)
+                        if not has_saved_rubric:
+                            # No saved rubric yet — calculate and save it
+                            score_data = calculate_submission_score(activity, booking)
+                            if score_data:
+                                needs_save = (
+                                    binding.grade is None or
+                                    binding.status == 'submitted'
+                                )
+                                if needs_save:
+                                    binding.grade = score_data['total']
+                                    binding.rubric_breakdown = score_data['rubric_breakdown']
+                                    binding.status = 'graded'
+                                    binding.save()
+                        else:
+                            # Use the saved grade and rubric (already set by score page)
+                            # Only recalculate the score_data for analysis field, but don't override saved rubric
+                            score_data = {
+                                'total': binding.grade,
+                                'rubric_breakdown': binding.rubric_breakdown,
+                                'breakdown': {}
+                            }
 
                 submission = {
                     "student_id": student.id,
@@ -2482,12 +2490,14 @@ def get_activity_submissions(request, activity_id):
                             submission["status"] = binding.status
                             submission["is_released"] = False
                         
-                        # CRITICAL FIX: Always push the freshly computed grade + rubric_breakdown
-                        # into the response dict, regardless of whether we had to save the binding.
-                        # This ensures the API never returns stale/null data from the pre-fetched
-                        # binding object, which was causing 0/zero display in the submissions table.
-                        submission["grade"] = float(score_data["total"]) if score_data["total"] is not None else None
-                        submission["rubric_breakdown"] = score_data["rubric_breakdown"]
+                        # Use the saved grade + rubric_breakdown from DB (set by score page).
+                        # If the score page has already visited and saved the correct rubric,
+                        # we must use that — not override it with a fresh backend recalculation.
+                        # This guarantees the submissions table always matches instructor_students_score.
+                        saved_rubric = binding.rubric_breakdown if binding else None
+                        saved_grade = binding.grade if binding else None
+                        submission["grade"] = float(saved_grade) if saved_grade is not None else (float(score_data["total"]) if score_data["total"] is not None else None)
+                        submission["rubric_breakdown"] = saved_rubric if saved_rubric else score_data["rubric_breakdown"]
                         submission["status"] = "graded" if booking.status == "Confirmed" else submission["status"]
                     else:
                         submission["analysis"] = {}
