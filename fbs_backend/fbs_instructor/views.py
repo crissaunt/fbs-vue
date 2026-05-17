@@ -585,8 +585,9 @@ def instructor_dashboard(request):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
     # 3. Handling the GET (Fetching data)
-    sections = Section.objects.filter(instructor=user).annotate(
-        student_count=Count('enrollments', distinct=True),
+    # Only return NON-archived sections — archived ones live in the Archive sidebar
+    sections = Section.objects.filter(instructor=user, is_archived=False).annotate(
+        student_count=Count('enrollments', filter=Q(enrollments__is_active=True), distinct=True),
         activity_count=Count('activities', distinct=True)
     ).values(
         'id', 'section_name', 'section_code', 'semester', 'academic_year', 'schedule', 'description', 'is_active', 'student_count', 'activity_count'
@@ -631,7 +632,8 @@ def section_details(request, section_id):
     
     try:
         section = Section.objects.get(id=section_id, instructor=user)
-        student_count = section.enrollments.count()
+        # Only count ACTIVE enrollments — archived soft-unenrolled rows don't count
+        student_count = section.enrollments.filter(is_active=True).count()
         activities = Activity.objects.filter(section=section).order_by('-created_at')
         
         activities_data = []
@@ -792,21 +794,37 @@ class EnrollStudentView(APIView):
         except Students.DoesNotExist:
             return Response({"error": "Student number not found."}, status=status.HTTP_404_NOT_FOUND)
         
-        existing_enrollment = SectionEnrollment.objects.filter(student=student).first()
-        
-        if existing_enrollment:
-            enrolled_section = existing_enrollment.section
+        # ── Google Classroom logic ──────────────────────────────────────────────
+        # Only ACTIVE enrollments in OTHER sections block re-enrollment.
+        # Students who were soft-unenrolled when a section was archived (is_active=False)
+        # are free to be enrolled in any section, just like Google Classroom.
+        active_enrollment_elsewhere = SectionEnrollment.objects.filter(
+            student=student,
+            is_active=True
+        ).exclude(section=section).first()
+
+        if active_enrollment_elsewhere:
+            enrolled_section = active_enrollment_elsewhere.section
             return Response({
                 "error": f"Student {student.first_name} {student.last_name} is already enrolled in section '{enrolled_section.section_name}' ({enrolled_section.section_code}). Students can only be enrolled in one section at a time."
             }, status=status.HTTP_400_BAD_REQUEST)
-            
-        enrollment, created = SectionEnrollment.objects.get_or_create(
+
+        # Check if there is an existing enrollment row for THIS section
+        # (could be inactive from a previous archive — reactivate it instead of duplicating)
+        existing_in_section = SectionEnrollment.objects.filter(
             section=section,
             student=student
-        )
-        
-        if not created:
-            return Response({"error": "Student is already enrolled in this section."}, status=status.HTTP_400_BAD_REQUEST)
+        ).first()
+
+        if existing_in_section:
+            if existing_in_section.is_active:
+                return Response({"error": "Student is already enrolled in this section."}, status=status.HTTP_400_BAD_REQUEST)
+            # Reactivate the soft-unenrolled record
+            existing_in_section.is_active = True
+            existing_in_section.save(update_fields=['is_active'])
+            enrollment = existing_in_section
+        else:
+            enrollment = SectionEnrollment.objects.create(section=section, student=student)
             
         log_instructor_event(
             request,
@@ -913,20 +931,35 @@ def bulk_enroll_students(request, section_id):
             try:
                 student = Students.objects.get(student_number=student_num)
                 
-                # Check if enrolled anywhere
-                existing_enrollment = SectionEnrollment.objects.filter(student=student).first()
-                if existing_enrollment:
-                    if existing_enrollment.section == section:
-                        already_in_this_section.append(student_num)
-                    else:
-                        already_enrolled_elsewhere.append({
-                            "id": student_num,
-                            "section": existing_enrollment.section.section_name
-                        })
+                # ── Google Classroom logic ──────────────────────────────────────────
+                # Only active enrollments block re-enrollment. Soft-unenrolled
+                # (is_active=False) students from archived sections are free to join.
+                active_in_this_section = SectionEnrollment.objects.filter(
+                    student=student, section=section, is_active=True
+                ).exists()
+                if active_in_this_section:
+                    already_in_this_section.append(student_num)
+                    continue
+
+                active_elsewhere = SectionEnrollment.objects.filter(
+                    student=student, is_active=True
+                ).exclude(section=section).first()
+                if active_elsewhere:
+                    already_enrolled_elsewhere.append({
+                        "id": student_num,
+                        "section": active_elsewhere.section.section_name
+                    })
                     continue
                     
-                # Enroll
-                SectionEnrollment.objects.create(section=section, student=student)
+                # Enroll — reactivate if a soft-unenrolled row exists, otherwise create fresh
+                inactive_record = SectionEnrollment.objects.filter(
+                    section=section, student=student, is_active=False
+                ).first()
+                if inactive_record:
+                    inactive_record.is_active = True
+                    inactive_record.save(update_fields=['is_active'])
+                else:
+                    SectionEnrollment.objects.create(section=section, student=student)
                 enrolled_count += 1
                 newly_enrolled_students.append(student)
                 
@@ -979,7 +1012,9 @@ def clear_section_enrollments(request, section_id):
 @permission_classes([IsAuthenticated, IsInstructor])
 def Enroll_Student_list(request, section_id):
     section = get_object_or_404(Section, id=section_id, instructor=request.user)
-    enrollments = section.enrollments.all().select_related('student')
+    # Only return ACTIVE enrollments — soft-unenrolled (is_active=False) records
+    # from archived sections should not appear in the active student list.
+    enrollments = section.enrollments.filter(is_active=True).select_related('student')
     
     student_data = [
         {
@@ -1165,12 +1200,21 @@ def create_activity(request, section_id):
         students = Students.objects.all()
         seat_classes = SeatClass.objects.filter(is_active=True).values('name').distinct()
         
-        # ? NEW: Fetch valid routes (schedules with available seats) for randomization
-        # We limit to upcoming schedules to keep it relevant and fast.
+        # Fetch valid routes for the randomizer.
+        # IMPORTANT: Do NOT filter by status='Open' — that field is set only when a
+        # schedule is saved(), so it can be stale and exclude valid future flights.
+        # Instead, rely entirely on departure_time which is always accurate.
+        # Rules:
+        # 1. At least 24 hours in the future (student has time to find and book it)
+        # 2. Has available seats (proven bookable)
+        # 3. Ordered by soonest departure so instructors see near-future dates
         now = timezone.now()
+        from datetime import timedelta
+        earliest_allowed = now + timedelta(hours=24)
+
         valid_schedules = Schedule.objects.filter(
-            departure_time__gte=now,
-            seats__is_available=True
+            departure_time__gte=earliest_allowed,  # Time-based — always accurate
+            seats__is_available=True               # Must have free seats
         ).select_related(
             'flight__route__origin_airport',
             'flight__route__destination_airport',
@@ -1180,17 +1224,28 @@ def create_activity(request, section_id):
             'flight__route__destination_airport__code',
             'departure_time',
             'flight__airline__code'
-        ).distinct()[:50] # Top 50 valid routes
+        ).order_by('departure_time').distinct()[:100]  # Soonest first
 
-        valid_routes = [
-            {
-                'origin': s['flight__route__origin_airport__code'],
-                'destination': s['flight__route__destination_airport__code'],
-                'date': s['departure_time'].date().isoformat() if s['departure_time'] else None,
-                'airline': s['flight__airline__code']
-            }
-            for s in valid_schedules
-        ]
+        # De-duplicate by (origin, destination, date) so one busy route doesn't
+        # dominate the entire randomizer pool.
+        seen = set()
+        valid_routes = []
+        for s in valid_schedules:
+            key = (
+                s['flight__route__origin_airport__code'],
+                s['flight__route__destination_airport__code'],
+                s['departure_time'].date().isoformat() if s['departure_time'] else None,
+            )
+            if key not in seen:
+                seen.add(key)
+                valid_routes.append({
+                    'origin': key[0],
+                    'destination': key[1],
+                    'date': key[2],
+                    'airline': s['flight__airline__code']
+                })
+            if len(valid_routes) >= 50:
+                break
 
         return Response({
             'airports': [
@@ -2338,15 +2393,24 @@ def get_activity_submissions(request, activity_id):
                             binding.submitted_at = timezone.now()
                             binding.save()
 
-                    # 2. Dynamic Grading: If student has a booking but grade is missing or status is submitted
-                    # (Ensure we have the most up-to-date rubric_breakdown for the table)
+                    # 2. Dynamic Grading: Always compute fresh score_data when a booking exists.
+                    # This guarantees rubric_breakdown is never stale/null in the API response,
+                    # even for already-graded students whose DB record predates the rubric system.
                     if booking:
                         score_data = calculate_submission_score(activity, booking)
-                        if score_data and (binding.grade is None or binding.status == 'submitted'):
-                            binding.grade = score_data['total']
-                            binding.rubric_breakdown = score_data['rubric_breakdown']
-                            binding.status = 'graded'
-                            binding.save()
+                        if score_data:
+                            # Always update grade and rubric_breakdown in DB when we have fresh data.
+                            # This ensures the DB stays current and subsequent fetches are fast.
+                            needs_save = (
+                                binding.grade is None or
+                                binding.status == 'submitted' or
+                                not binding.rubric_breakdown  # Also save if rubric_breakdown was missing
+                            )
+                            if needs_save:
+                                binding.grade = score_data['total']
+                                binding.rubric_breakdown = score_data['rubric_breakdown']
+                                binding.status = 'graded'
+                                binding.save()
 
                 submission = {
                     "student_id": student.id,
@@ -2822,10 +2886,39 @@ def student_dashboard(request):
         
         # 3. Get enrolled section
         enrollment = SectionEnrollment.objects.filter(student=student, is_active=True).select_related('section').first()
-        
+
         # Check if enrollment exists AND section is active
         if not enrollment or not enrollment.section.is_active:
-            print("?? Student not enrolled in any session or section is disabled")
+            # No active enrollment — check if the student was in an archived section
+            archived_enrollment = SectionEnrollment.objects.filter(
+                student=student,
+                section__is_archived=True
+            ).select_related('section').order_by('-section__archived_at').first()
+
+            if archived_enrollment:
+                archived_sec = archived_enrollment.section
+                print(f"?? Student was in archived section: {archived_sec.section_name}")
+                return Response({
+                    'error': f'Your section "{archived_sec.section_name}" has been archived. You have been unenrolled.',
+                    'section_archived': True,
+                    'archived_section_name': archived_sec.section_name,
+                    'archived_section_code': archived_sec.section_code,
+                    'user': {
+                        'username': user.username,
+                        'first_name': user.first_name,
+                        'last_name': user.last_name,
+                        'email': user.email,
+                        'student_number': student.student_number,
+                        'mi': student.mi if student.mi else '',
+                        'phone_number': student.phone_number if student.phone_number else ''
+                    },
+                    'section': None,
+                    'activities': [],
+                    'total_activities': 0,
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            # Truly not enrolled in any section
+            print("?? Student not enrolled in any active section")
             return Response({
                 'error': 'You are not enrolled in any section. Please contact your administrator.',
                 'not_enrolled': True,
@@ -2842,7 +2935,7 @@ def student_dashboard(request):
                 'activities': [],
                 'total_activities': 0,
             }, status=status.HTTP_403_FORBIDDEN)
-        
+
         section = enrollment.section
         print(f"? Enrolled in: {section.section_name} ({section.section_code})")
         
@@ -4081,3 +4174,222 @@ def mark_instructor_notifications_read(request):
         "status": "success"
     }, status=status.HTTP_200_OK)
 
+
+# ============================================
+# ARCHIVE / UNARCHIVE SECTION (INSTRUCTOR)
+# ============================================
+
+@api_view(['POST'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated, IsInstructor])
+def archive_section(request, section_id):
+    """
+    Archive a section. Soft-unenrolls all students (is_active=False).
+    Both instructor and students can still view it in read-only mode.
+    """
+    user = request.user
+    section = get_object_or_404(Section, id=section_id, instructor=user)
+
+    if section.is_archived:
+        return Response({"error": "Section is already archived."}, status=status.HTTP_400_BAD_REQUEST)
+
+    with transaction.atomic():
+        enrollments = SectionEnrollment.objects.filter(section=section, is_active=True)
+        enrolled_students = list(enrollments.select_related('student__user'))
+        unenrolled_count = enrollments.count()
+
+        # Collect the Django User IDs of enrolled students
+        enrolled_user_ids = [
+            e.student.user_id
+            for e in enrolled_students
+            if e.student and e.student.user_id
+        ]
+
+        # Soft-unenroll all students
+        enrollments.update(is_active=False)
+
+        # Force-logout: deactivate all active sessions of enrolled students
+        if enrolled_user_ids:
+            deactivated_sessions = UserSession.objects.filter(
+                user_id__in=enrolled_user_ids,
+                is_active=True
+            ).update(is_active=False)
+        else:
+            deactivated_sessions = 0
+
+        section.is_archived = True
+        section.is_active = False
+        section.archived_at = timezone.now()
+        section.save()
+
+    log_instructor_event(
+        request,
+        action_type='SECTION_ARCHIVED',
+        instructor=user,
+        section_name=section.section_name,
+        details=f"Instructor archived section '{section.section_name}'. {unenrolled_count} student(s) unenrolled and {deactivated_sessions} session(s) deactivated."
+    )
+
+    return Response({
+        "message": f"Section '{section.section_name}' archived. {unenrolled_count} student(s) unenrolled.",
+        "section_id": section.id
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated, IsInstructor])
+def unarchive_section(request, section_id):
+    """
+    Restore an archived section back to active.
+    Students must be re-enrolled manually.
+    """
+    user = request.user
+    section = get_object_or_404(Section, id=section_id, instructor=user)
+
+    if not section.is_archived:
+        return Response({"error": "Section is not archived."}, status=status.HTTP_400_BAD_REQUEST)
+
+    section.is_archived = False
+    section.is_active = True
+    section.archived_at = None
+    section.save()
+
+    log_instructor_event(
+        request,
+        action_type='SECTION_UNARCHIVED',
+        instructor=user,
+        section_name=section.section_name,
+        details=f"Instructor restored archived section '{section.section_name}'."
+    )
+
+    return Response({
+        "message": f"Section '{section.section_name}' has been restored.",
+        "section_id": section.id
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated, IsInstructor])
+def get_archived_sections(request):
+    """
+    Return all archived sections for this instructor,
+    including historical students and activities (read-only).
+    """
+    user = request.user
+    sections = Section.objects.filter(instructor=user, is_archived=True).order_by('-archived_at')
+
+    result = []
+    for section in sections:
+        enrollments = SectionEnrollment.objects.filter(section=section).select_related('student')
+        students_data = [{
+            'id': e.student.id,
+            'student_number': e.student.student_number,
+            'first_name': e.student.first_name,
+            'last_name': e.student.last_name,
+            'email': e.student.email,
+            'enrolled_at': e.enrolled_at,
+        } for e in enrollments]
+
+        activities = Activity.objects.filter(section=section).order_by('-created_at')
+        activities_data = [{
+            'id': a.id,
+            'title': a.title,
+            'description': a.description or '',
+            'activity_type': a.activity_type,
+            'due_date': a.due_date,
+            'total_points': float(a.total_points),
+            'status': a.status,
+            'created_at': a.created_at,
+        } for a in activities]
+
+        result.append({
+            'id': section.id,
+            'section_name': section.section_name,
+            'section_code': section.section_code,
+            'semester': section.semester,
+            'academic_year': section.academic_year,
+            'schedule': section.schedule,
+            'description': section.description,
+            'archived_at': section.archived_at,
+            'student_count': enrollments.count(),
+            'activity_count': activities.count(),
+            'students': students_data,
+            'activities': activities_data,
+        })
+
+    return Response({'archived_sections': result}, status=status.HTTP_200_OK)
+
+
+# ============================================
+# STUDENT: VIEW ARCHIVED SECTIONS
+# ============================================
+
+@api_view(['GET'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_student_archived_sections(request):
+    """
+    Returns all sections the student was enrolled in that are now archived.
+    Read-only: shows section info, activities, and classmates.
+    """
+    print(f"?? DEBUG: get_student_archived_sections called by {request.user}")
+    try:
+        student = Students.objects.get(user=request.user)
+    except Students.DoesNotExist:
+        print(f"?? DEBUG: Student profile NOT FOUND for user {request.user}")
+        return Response({"error": "Student profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    enrollments = SectionEnrollment.objects.filter(
+        student=student,
+        section__is_archived=True
+    ).select_related('section', 'section__instructor')
+
+    result = []
+    for enrollment in enrollments:
+        section = enrollment.section
+        instructor_user = section.instructor
+
+        activities = Activity.objects.filter(section=section).order_by('-created_at')
+        activities_data = [{
+            'id': a.id,
+            'title': a.title,
+            'description': a.description or '',
+            'activity_type': a.activity_type,
+            'due_date': a.due_date,
+            'total_points': float(a.total_points),
+            'status': a.status,
+            'created_at': a.created_at,
+        } for a in activities]
+
+        classmates = SectionEnrollment.objects.filter(section=section).exclude(student=student).select_related('student')
+        classmates_data = [{
+            'id': c.student.id,
+            'student_number': c.student.student_number,
+            'first_name': c.student.first_name,
+            'last_name': c.student.last_name,
+        } for c in classmates]
+
+        try:
+            instr = Instructor.objects.get(user=instructor_user)
+            instructor_name = instr.get_full_name()
+        except Instructor.DoesNotExist:
+            instructor_name = f"{instructor_user.first_name} {instructor_user.last_name}".strip() or instructor_user.username
+
+        result.append({
+            'id': section.id,
+            'section_name': section.section_name,
+            'section_code': section.section_code,
+            'semester': section.semester,
+            'academic_year': section.academic_year,
+            'schedule': section.schedule,
+            'description': section.description,
+            'archived_at': section.archived_at,
+            'instructor_name': instructor_name,
+            'enrolled_at': enrollment.enrolled_at,
+            'activities': activities_data,
+            'classmates': classmates_data,
+        })
+
+    return Response({'archived_sections': result}, status=status.HTTP_200_OK)

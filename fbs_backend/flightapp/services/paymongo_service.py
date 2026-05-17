@@ -63,7 +63,12 @@ class PayMongoService:
             print(f"\n? Creating checkout session for booking {booking_id}")
             print(f"   Amount: {amount} PHP ({amount_in_centavos} centavos)")
             
-            frontend_base = getattr(settings, 'WEBSITE_URL', 'http://localhost:5173').rstrip('/')
+            # Force localhost redirect during local development, use production URL when deployed
+            if getattr(settings, 'DEBUG', False):
+                frontend_base = 'http://localhost:5173'
+            else:
+                frontend_base = getattr(settings, 'WEBSITE_URL', 'https://fbs-vue-1.onrender.com').rstrip('/')
+                
             backend_base = config('BACKEND_PUBLIC_URL', default='http://localhost:8000').rstrip('/')
             webhook_url = f"{backend_base}/flightapp/paymongo-webhook/"
             

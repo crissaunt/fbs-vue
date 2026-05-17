@@ -294,6 +294,80 @@
           </template>
         </div>
       </div>
+
+      <!-- NOT ENROLLED STATE -->
+      <div v-else class="flex flex-col items-center justify-center py-16 px-6">
+
+        <!-- Status Card -->
+        <div class="w-full max-w-lg bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
+          <!-- Top accent bar -->
+          <div class="h-1.5 w-full bg-gradient-to-r from-[#FF579A] via-pink-400 to-amber-400"></div>
+
+          <div class="px-8 py-10 flex flex-col items-center text-center">
+            <!-- Pulsing status badge -->
+            <div class="flex items-center gap-2 bg-amber-50 border border-amber-200 px-4 py-1.5 rounded-full mb-8 shadow-sm">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span class="relative inline-flex h-2 w-2 rounded-full bg-amber-500"></span>
+              </span>
+              <span class="text-[10px] font-black uppercase tracking-widest text-amber-700">Not Enrolled to a Section</span>
+            </div>
+
+            <!-- Icon -->
+            <div class="relative mb-6">
+              <div class="w-24 h-24 bg-gradient-to-br from-slate-100 to-slate-50 rounded-3xl flex items-center justify-center border border-slate-200 shadow-inner">
+                <i class="ph ph-chalkboard text-5xl text-slate-300"></i>
+              </div>
+              <div class="absolute -bottom-2 -right-2 w-9 h-9 bg-[#FF579A] rounded-xl flex items-center justify-center shadow-lg border-2 border-white">
+                <i class="ph ph-x text-white text-base font-black"></i>
+              </div>
+            </div>
+
+            <!-- Headline -->
+            <h2 class="text-xl font-black text-slate-900 tracking-tight mb-2">You are not Enrolled in a Section</h2>
+            <p class="text-sm text-slate-500 leading-relaxed max-w-sm mb-8">
+              You do not have an active section enrollment. This may be because your previous section was archived, or you have not been added to one yet.
+            </p>
+
+            <!-- Info tiles -->
+            <div class="w-full grid grid-cols-2 gap-3 mb-8">
+              <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 text-left">
+                <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-slate-200 mb-3 shadow-sm">
+                  <i class="ph ph-archive text-slate-500 text-lg"></i>
+                </div>
+                <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Previous Sections</p>
+                <p class="text-xs text-slate-600 font-semibold leading-snug">View your archived section history in the Archive tab.</p>
+              </div>
+              <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 text-left">
+                <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-slate-200 mb-3 shadow-sm">
+                  <i class="ph ph-chalkboard-teacher text-slate-500 text-lg"></i>
+                </div>
+                <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Next Steps</p>
+                <p class="text-xs text-slate-600 font-semibold leading-snug">Contact your instructor to be enrolled in an active section.</p>
+              </div>
+            </div>
+
+            <!-- CTA Buttons -->
+            <div class="w-full flex flex-col sm:flex-row gap-3">
+              <router-link to="/student/archive" class="flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 bg-white border-2 border-slate-200 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-700 hover:border-[#FF579A] hover:text-[#FF579A] transition-all active:scale-95 group shadow-sm">
+                <i class="ph ph-archive text-lg group-hover:scale-110 transition-transform"></i>
+                View Archive
+              </router-link>
+              <router-link to="/student/archive" class="flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 bg-[#FF579A] rounded-xl text-[11px] font-black uppercase tracking-widest text-white hover:bg-pink-600 transition-all active:scale-95 shadow-lg shadow-pink-200 group">
+                <i class="ph ph-clock-clockwise text-lg group-hover:scale-110 transition-transform"></i>
+                Check History
+              </router-link>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom hint -->
+        <p class="mt-6 text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
+          <i class="ph ph-info text-base"></i>
+          Waiting for enrollment &middot; Refresh the page after being added
+        </p>
+      </div>
+
     </div>
 
     <!-- Comparison Modal -->

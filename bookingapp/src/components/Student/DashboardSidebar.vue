@@ -1,14 +1,14 @@
 <template>
   <div class="sidebar-wrapper h-full">
     <Transition name="fade">
-      <div 
-        v-if="sidebarOpen" 
+      <div
+        v-if="sidebarOpen"
         class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[90] lg:hidden"
         @click="$emit('close-sidebar')"
       ></div>
     </Transition>
 
-    <div 
+    <div
       :class="[
         'bg-[#F9F9F9] text-gray-800 transition-all duration-300 ease-in-out flex flex-col font-normal overflow-hidden z-[100]',
         'fixed inset-y-0 left-0 lg:relative lg:inset-auto lg:h-full border-r border-gray-200/50',
@@ -17,7 +17,7 @@
     >
       <div class="flex-shrink-0 w-full flex flex-col h-full overflow-y-auto space-y-2 mt-6 no-scrollbar">
         <!-- Navigation Links -->
-        <router-link 
+        <router-link
           v-for="item in navItems"
           :key="item.to"
           :to="item.to"
@@ -26,30 +26,46 @@
             $route.path === item.to ? 'bg-[#FF579A] text-white ' : 'hover:bg-pink-50 text-gray-600 hover:text-[#FF579A]'
           ]"
         >
-          <div class="flex items-center justify-center w-8 flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+          <div class="flex items-center justify-center w-8 flex-shrink-0 group-hover:scale-110 transition-transform duration-300 relative">
             <i :class="[item.icon, 'text-xl']"></i>
+            <!-- Badge for archived count -->
+            <span
+              v-if="item.badge && item.badge > 0"
+              class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-amber-500 text-white text-[8px] font-black rounded-full flex items-center justify-center px-1 leading-none shadow-sm"
+            >
+              {{ item.badge }}
+            </span>
           </div>
-          <div 
+          <div
             class="ml-4 flex-1 overflow-hidden transition-all duration-300 ease-in-out"
             :class="[sidebarOpen ? 'max-w-[200px] opacity-100' : 'max-w-0 opacity-0']"
           >
-            <span class="text-sm font-semibold tracking-wide whitespace-nowrap">{{ item.label }}</span>
+            <span class="text-sm font-semibold tracking-wide whitespace-nowrap flex items-center gap-2">
+              {{ item.label }}
+              <span
+                v-if="item.badge && item.badge > 0 && sidebarOpen"
+                class="px-1.5 py-0.5 bg-amber-100 text-amber-600 text-[8px] font-black rounded-full leading-none"
+              >
+                {{ item.badge }}
+              </span>
+            </span>
           </div>
 
           <!-- Tooltip for collapsed state -->
           <div v-if="!sidebarOpen" class="absolute left-full ml-4 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-[110]">
             {{ item.label }}
+            <span v-if="item.badge && item.badge > 0"> ({{ item.badge }})</span>
           </div>
         </router-link>
 
         <!-- My Section (Only if enrolled) -->
-        <router-link 
+        <router-link
           v-if="section"
           to="/student/dashboard"
           class="flex items-center mt-auto border-t border-gray-200/50 transition-all duration-300 group hover:bg-black/5"
           :class="sidebarOpen ? 'px-6 py-5' : 'px-0 justify-center py-6'"
         >
-          <div 
+          <div
             :class="[
               'rounded-xl bg-white text-[#FF579A] flex items-center justify-center font-bold shadow-sm transition-all duration-300 border border-pink-100 flex-shrink-0',
               sidebarOpen ? 'w-12 h-12 text-xl group-hover:rotate-6' : 'w-10 h-10 text-lg'
@@ -57,8 +73,8 @@
           >
             {{ section.section_code?.charAt(0).toUpperCase() || section.section_name?.charAt(0).toUpperCase() }}
           </div>
-          
-          <div 
+
+          <div
             class="overflow-hidden transition-all duration-300 ease-in-out"
             :class="[sidebarOpen ? 'ml-4 max-w-[150px] opacity-100' : 'max-w-0 opacity-0']"
           >
@@ -87,13 +103,18 @@ export default {
     section: {
       type: Object,
       default: null
+    },
+    archivedSectionCount: {
+      type: Number,
+      default: 0
     }
   },
-  data() {
-    return {
-      navItems: [
-        { to: '/student/dashboard', label: 'Dashboard', icon: 'ph ph-house' },
-        { to: '/student/calendar', label: 'Calendar', icon: 'ph ph-calendar' }
+  computed: {
+    navItems() {
+      return [
+        { to: '/student/dashboard', label: 'Dashboard', icon: 'ph ph-house', badge: 0 },
+        { to: '/student/calendar', label: 'Calendar', icon: 'ph ph-calendar', badge: 0 },
+        { to: '/student/archive', label: 'Archive', icon: 'ph ph-archive', badge: this.archivedSectionCount }
       ]
     }
   }
@@ -116,4 +137,3 @@ export default {
   opacity: 0;
 }
 </style>
-

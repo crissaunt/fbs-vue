@@ -50,8 +50,15 @@
         </button>
       </div>
 
+      <!-- Loading State -->
+      <div v-if="isLoading" class="w-full flex flex-col items-center justify-center py-20 animate-pulse">
+        <div class="w-16 h-16 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin mb-4"></div>
+        <p class="text-pink-600 font-bold text-sm tracking-widest uppercase mb-2">Loading Seat Map...</p>
+        <p class="text-xs text-gray-400">Please wait while we prepare the aircraft cabin.</p>
+      </div>
+
       <!-- Main Layout -->
-      <div v-if="!isLoading || rawSeats.length > 0" class="flex flex-col xl:grid xl:grid-cols-[280px_1fr_320px] gap-8 items-start">
+      <div v-else-if="rawSeats.length > 0" class="flex flex-col xl:grid xl:grid-cols-[280px_1fr_320px] gap-8 items-start">
         
         <!-- Sidebar Left: Passengers & Detailed Legend -->
         <div class="w-full space-y-6">
@@ -686,7 +693,11 @@ const getSeatAmenities = (seat) => {
 // Data Fetching
 const fetchSeatData = async (silent = false) => {
   const scheduleId = currentFlight.value?.id;
-  if (!scheduleId) return;
+  if (!scheduleId) {
+    console.warn("No flight selected, redirecting to search");
+    router.push('/booking/results');
+    return;
+  }
 
   try {
     if (!silent) isLoading.value = true;

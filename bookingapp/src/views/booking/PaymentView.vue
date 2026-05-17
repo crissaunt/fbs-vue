@@ -589,10 +589,20 @@ const handlePayMongoCheckout = async () => {
         timestamp: Date.now()
       }));
 
-      loadingMessage.value = "Redirecting to PayMongo...";
+      loadingMessage.value = "Redirecting to secure confirmation...";
       
-      // Redirect immediately — keep loading=true so user can't click again
-      window.location.href = response.data.checkout_url;
+      // If it's a local mock URL, use Vue Router to prevent full page reload
+      const checkoutUrl = response.data.checkout_url;
+      if (checkoutUrl && checkoutUrl.includes('/payment-callback')) {
+        const urlObj = new URL(checkoutUrl, window.location.origin);
+        router.push({
+          path: urlObj.pathname,
+          query: Object.fromEntries(urlObj.searchParams)
+        });
+      } else {
+        // External redirect
+        window.location.href = checkoutUrl;
+      }
       
     } else {
       let errorMsg = 'Failed to create checkout session';

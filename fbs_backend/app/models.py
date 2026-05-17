@@ -767,7 +767,8 @@ class Seat(models.Model):
         # 2. Fallback for booleans (only if not already mapped via code)
         # This helps during migration from booleans to ManyToMany requirements
         fallbacks = self.get_price_adjustments()
-        codes_present = set(self.requirements.values_list('code', flat=True)) if self.pk else set()
+        # Use a list comprehension over .all() to respect prefetch_related caches
+        codes_present = {req.code for req in self.requirements.all()} if self.pk else set()
         
         boolean_fields = [
             ('is_exit_row', self.is_exit_row),

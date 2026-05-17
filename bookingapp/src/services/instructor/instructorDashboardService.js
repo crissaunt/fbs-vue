@@ -33,6 +33,36 @@ export const instructorDashboardService = {
         }
     },
 
+    // POST: Archive a section
+    async archiveSection(id) {
+        try {
+            const response = await api.post(`api/instructor/sections/${id}/archive/`);
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    // POST: Unarchive a section
+    async unarchiveSection(id) {
+        try {
+            const response = await api.post(`api/instructor/sections/${id}/unarchive/`);
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    // GET: Fetch all archived sections for this instructor
+    async getArchivedSections() {
+        try {
+            const response = await api.get('api/instructor/archived-sections/');
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
     // GET: Fetch all instructor logs
     async getLogs() {
         try {

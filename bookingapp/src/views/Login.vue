@@ -95,17 +95,34 @@
                     <div class="relative group">
                       <input
                         v-model="password"
-                        type="password"
-                        class="w-full px-5 py-1.5 md:py-2 bg-gray-50 border border-gray-300 rounded-md focus:outline-none focus:border-rose-400 focus:bg-white transition-all duration-300 font-medium"
+                        :type="showPassword ? 'text' : 'password'"
+                        class="w-full px-5 py-1.5 md:py-2 pr-12 bg-gray-50 border border-gray-300 rounded-md focus:outline-none focus:border-rose-400 focus:bg-white transition-all duration-300 font-medium"
                         placeholder="••••••••"
                         @keyup.enter="handleLogin"
                       />
+                      <button 
+                        type="button" 
+                        @click="showPassword = !showPassword"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-rose-500 transition-colors p-1"
+                      >
+                        <svg v-if="!showPassword" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
 
                   <div class="flex items-center justify-between px-1">
                     <label class="flex items-center gap-2 cursor-pointer group">
-                      <input type="checkbox" class="accent-rose-500 w-4 h-4 rounded">
+                      <input 
+                        type="checkbox" 
+                        v-model="rememberMe"
+                        class="accent-rose-500 w-4 h-4 rounded"
+                      >
                       <span class="text-xs text-gray-600 font-medium group-hover:text-gray-900 transition-colors">Remember me</span>
                     </label>
                     <router-link to="/forgot-password" class="text-xs font-bold text-rose-500 hover:text-rose-600 transition-colors">
@@ -172,7 +189,19 @@ export default {
     return {
       username: '',
       password: '',
-      loading: false
+      showPassword: false,
+      loading: false,
+      rememberMe: false
+    }
+  },
+  mounted() {
+    // Check if there's a saved username and "remember me" preference
+    const savedUsername = localStorage.getItem('remembered_username');
+    const savedRememberMe = localStorage.getItem('remember_me_preference');
+    
+    if (savedRememberMe === 'true' && savedUsername) {
+      this.username = savedUsername;
+      this.rememberMe = true;
     }
   },
   computed: {
@@ -195,10 +224,28 @@ export default {
         console.log('🔐 Attempting login for:', this.username);
         
         // 1. Send Login Request
-        const { token, user, role, dashboard_route } = await authService.login(this.username, this.password);
+        const { token, user, role, dashboard_route, sectionArchivedInfo } = await authService.login(this.username, this.password, this.rememberMe);
+        
+        // Handle "Remember Me" for username persistence
+        if (this.rememberMe) {
+          localStorage.setItem('remembered_username', this.username);
+          localStorage.setItem('remember_me_preference', 'true');
+        } else {
+          localStorage.removeItem('remembered_username');
+          localStorage.setItem('remember_me_preference', 'false');
+        }
         
         // 2. Update Central Store
-        this.userStore.setAuth({ token, user, role });
+        this.userStore.setAuth({ token, user, role }, this.rememberMe);
+
+        // Handle archived section state
+        if (sectionArchivedInfo) {
+          this.userStore.setSectionArchived(true, sectionArchivedInfo.name);
+          this.userStore.setEnrolled(false);
+          this.notificationStore.warn(`Your section "${sectionArchivedInfo.name || 'previous section'}" was archived. You can view your history below.`);
+        } else {
+          this.userStore.setSectionArchived(false);
+        }
         
         console.log('✅ Login successful - User Store Updated');
         this.notificationStore.success('Login successful! Redirecting...')

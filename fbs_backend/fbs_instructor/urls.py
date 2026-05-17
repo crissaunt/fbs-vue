@@ -33,6 +33,10 @@ from .views import (
     log_report_print,
     get_student_notifications,
     mark_notifications_read,
+    archive_section,
+    unarchive_section,
+    get_archived_sections,
+    get_student_archived_sections,
 )
 
 urlpatterns = [
@@ -113,4 +117,17 @@ urlpatterns = [
 
     # Admin LMS Overview
     path('admin/lms-overview/', admin_lms_overview, name='admin_lms_overview'),
+
+    # ============================================
+    # ARCHIVE ENDPOINTS
+    # ============================================
+    # Instructor: Archive / Unarchive / View archived sections
+    path('instructor/sections/<int:section_id>/archive/', archive_section, name='archive_section'),
+    path('instructor/sections/<int:section_id>/unarchive/', unarchive_section, name='unarchive_section'),
+    path('instructor/archived-sections/', get_archived_sections, name='get_archived_sections'),
+
+    # Student: View archived sections they were enrolled in
+    path('student/archived-sections/', get_student_archived_sections, name='get_student_archived_sections'),
+    path('student/archived-sections', get_student_archived_sections),
+    path('test-routing/', lambda r: Response({"ok": True}), name='test_routing'),
 ]

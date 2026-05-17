@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://fbs-vue.onrender.com/api', // Match your Django URL
+  baseURL: (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000' : 'https://fbs-vue.onrender.com')) + '/api',
   headers: {
     'Content-Type': 'application/json'
   }

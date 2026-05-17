@@ -123,6 +123,11 @@
             
             <div class="flex items-center gap-1.5">
               <span v-if="!section.is_active" class="bg-red-50 text-red-500 text-[9px] px-2 py-0.5 rounded-md border border-red-100 font-bold uppercase tracking-wider">Inactive</span>
+              <button @click.stop="showArchiveConfirm(section)" class="p-1.5 text-slate-300 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors" title="Archive section">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2L19 8M10 12v4M14 12v4" />
+                </svg>
+              </button>
               <button @click.stop="editSection(section)" class="p-1.5 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -351,25 +356,38 @@
 
           <div class="mb-4">
             <label class="block text-[10px] font-black text-gray-400 uppercase mb-2">Schedule(s)</label>
-            <div v-for="(sched, index) in form.schedules" :key="index" class="flex gap-2 mb-2 items-center">
-              <select v-model="sched.day" class="flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-400 outline-none bg-gray-50 text-sm" required>
-                <option value="" disabled>Day</option>
-                <option value="Monday">Monday</option>
-                <option value="Tuesday">Tuesday</option>
-                <option value="Wednesday">Wednesday</option>
-                <option value="Thursday">Thursday</option>
-                <option value="Friday">Friday</option>
-                <option value="Saturday">Saturday</option>
-                <option value="Sunday">Sunday</option>
-              </select>
-              <input v-model="sched.start_time" type="time" class="flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-400 outline-none bg-gray-50 text-sm" required>
-              <span class="text-gray-400 text-xs">-</span>
-              <input v-model="sched.end_time" type="time" class="flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-400 outline-none bg-gray-50 text-sm" required>
-              <button v-if="form.schedules.length > 1" type="button" @click="removeSchedule(index)" class="text-red-400 hover:text-red-500 p-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-              </button>
+            <div v-for="(sched, index) in form.schedules" :key="index" class="mb-4 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+              <div class="flex gap-3 items-end">
+                <div class="flex-[1.5]">
+                  <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1 ml-1">Day</label>
+                  <select v-model="sched.day" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-400 outline-none bg-white text-sm font-medium" required>
+                    <option value="" disabled>Day</option>
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                    <option value="Saturday">Saturday</option>
+                    <option value="Sunday">Sunday</option>
+                  </select>
+                </div>
+                <div class="flex-1">
+                  <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1 ml-1">Start Time</label>
+                  <input v-model="sched.start_time" type="time" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-400 outline-none bg-white text-sm font-medium" required>
+                </div>
+                <div class="flex-none text-gray-300 pb-2.5 font-bold">
+                  <span>-</span>
+                </div>
+                <div class="flex-1">
+                  <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1 ml-1">End Time</label>
+                  <input v-model="sched.end_time" type="time" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-400 outline-none bg-white text-sm font-medium" required>
+                </div>
+                <button v-if="form.schedules.length > 1" type="button" @click="removeSchedule(index)" class="text-red-400 hover:text-red-500 pb-2 flex-shrink-0 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
             </div>
             <button type="button" @click="addSchedule" class="text-pink-500 text-[10px] font-bold uppercase tracking-widest hover:text-pink-600 flex items-center gap-1 mt-1 transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -389,6 +407,26 @@
             <button type="submit" class="px-8 py-3 bg-pink-500 text-white rounded-lg font-black uppercase text-xs shadow-lg active:scale-95 transition-all">Create Section</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Archive Confirm Modal -->
+    <div v-if="archiveTarget" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+        <div class="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2L19 8M10 12v4M14 12v4" />
+          </svg>
+        </div>
+        <h3 class="text-lg font-black text-slate-800 mb-2">Archive this Section?</h3>
+        <p class="text-sm text-slate-500 mb-1"><strong>{{ archiveTarget?.section_name }}</strong></p>
+        <p class="text-xs text-slate-400 mb-6">All enrolled students will be automatically unenrolled. They can still view the section in read-only mode. No new activities or students can be added.</p>
+        <div class="flex gap-3">
+          <button @click="archiveTarget = null" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest transition-all">Cancel</button>
+          <button @click="doArchive" :disabled="archiving" class="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-sm transition-all active:scale-95 disabled:opacity-60">
+            {{ archiving ? 'Archiving...' : 'Archive' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -412,6 +450,8 @@ const notificationStore = useNotificationStore()
 const searchQuery = ref('')
 const showModal = ref(false)
 const lastSyncTime = ref(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+const archiveTarget = ref(null)
+const archiving = ref(false)
 
 // Form state for creating a new section
 const form = ref({
@@ -515,6 +555,25 @@ const goToSection = (id) => {
 
 const editSection = (section) => {
   router.push(`/instructor/section/${section.id}/settings`)
+}
+
+const showArchiveConfirm = (section) => {
+  archiveTarget.value = section
+}
+
+const doArchive = async () => {
+  if (!archiveTarget.value) return
+  archiving.value = true
+  try {
+    await instructorDashboardService.archiveSection(archiveTarget.value.id)
+    notificationStore.success(`Section "${archiveTarget.value.section_name}" has been archived.`)
+    archiveTarget.value = null
+    emit('refresh-data')
+  } catch (e) {
+    notificationStore.error(e?.response?.data?.error || 'Failed to archive section.')
+  } finally {
+    archiving.value = false
+  }
 }
 
 const submitSection = async () => {

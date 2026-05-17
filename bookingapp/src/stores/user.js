@@ -9,6 +9,9 @@ export const useUserStore = defineStore('user', {
         studentProfile: null,
         instructorProfile: null,
         isEnrolled: localStorage.getItem('isEnrolled') !== 'false',  // Track enrollment status
+        sectionArchived: false,  // Track if student was unenrolled due to archiving
+        archivedSectionName: '',
+        rememberMe: localStorage.getItem('remember_me_preference') === 'true',
         isLoading: false,
         error: null,
     }),
@@ -16,7 +19,7 @@ export const useUserStore = defineStore('user', {
     persist: {
         key: 'user-store',
         storage: localStorage,
-        paths: ['user', 'role', 'token', 'studentProfile', 'instructorProfile', 'isEnrolled'],
+        paths: ['user', 'role', 'studentProfile', 'instructorProfile', 'isEnrolled', 'rememberMe'],
     },
 
     getters: {
@@ -42,20 +45,33 @@ export const useUserStore = defineStore('user', {
     },
 
     actions: {
-        setAuth(authData) {
+        setAuth(authData, rememberMe = false) {
             this.token = authData.token;
             this.user = authData.user;
             this.role = authData.role;
-            this.isEnrolled = true;  // Reset enrollment on login - will be verified on dashboard
+            this.rememberMe = rememberMe;
+            this.isEnrolled = true;
             this.error = null;
 
-            // Keep localStorage in sync for now for any legacy code
-            localStorage.setItem('token', authData.token);
-            localStorage.setItem('auth_token', authData.token);
-            localStorage.setItem('user', JSON.stringify(authData.user));
-            localStorage.setItem('user_data', JSON.stringify(authData.user));
-            localStorage.setItem('role', authData.role);
-            localStorage.setItem('isEnrolled', 'true');
+            // Handle persistence based on "Remember Me"
+            if (rememberMe) {
+                localStorage.setItem('token', authData.token);
+                localStorage.setItem('auth_token', authData.token);
+                localStorage.setItem('user', JSON.stringify(authData.user));
+                localStorage.setItem('user_data', JSON.stringify(authData.user));
+                localStorage.setItem('role', authData.role);
+                localStorage.setItem('isEnrolled', 'true');
+                localStorage.setItem('remember_me_preference', 'true');
+            } else {
+                // Clear any existing persistent auth data
+                localStorage.removeItem('token');
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user');
+                localStorage.removeItem('user_data');
+                localStorage.removeItem('role');
+                // We keep isEnrolled as it's not sensitive, but could clear it too
+                localStorage.setItem('remember_me_preference', 'false');
+            }
         },
 
         async fetchUserProfile() {
@@ -98,6 +114,11 @@ export const useUserStore = defineStore('user', {
             localStorage.setItem('isEnrolled', status ? 'true' : 'false');
         },
 
+        setSectionArchived(archived, sectionName = '') {
+            this.sectionArchived = archived;
+            this.archivedSectionName = sectionName;
+        },
+
         logout() {
             // Call backend to logout
             try {
@@ -111,6 +132,8 @@ export const useUserStore = defineStore('user', {
             this.token = null;
             this.studentProfile = null;
             this.instructorProfile = null;
+            this.sectionArchived = false;
+            this.archivedSectionName = '';
 
             // Targeted clearing of auth-related keys only
             const keysToRemove = [

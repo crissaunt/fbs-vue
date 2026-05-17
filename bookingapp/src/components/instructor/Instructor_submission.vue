@@ -617,45 +617,65 @@ const getRubricStats = (sub) => {
     if (typeof rb === 'string') {
         try { rb = JSON.parse(rb); } catch(e) { rb = []; }
     }
+    // Ensure rb is a proper array
+    if (!Array.isArray(rb)) rb = [];
+
     const analysis = sub.analysis || {};
-    
+
+    // Students who timed out with no grade: show all Poor
     if (sub.is_failed_due_to_time && sub.grade === null) {
         return {
-            accuracy: { level: 1, ratio: 0, status: 'POOR' },
-            tech: { level: 1, ratio: 0, status: 'POOR' },
-            org: { level: 1, ratio: 0, status: 'POOR' },
-            comp: { level: 1, ratio: 0, status: 'POOR' },
-            prof: { level: 1, ratio: 0, status: 'POOR' },
+            accuracy: { level: 1, ratio: 0, status: 'Poor' },
+            tech:     { level: 1, ratio: 0, status: 'Poor' },
+            org:      { level: 1, ratio: 0, status: 'Poor' },
+            comp:     { level: 1, ratio: 0, status: 'Poor' },
+            prof:     { level: 1, ratio: 0, status: 'Poor' },
             total: 0
         };
     }
 
-    // Safely extract from instructor_student_score's rigorous breakdown data based on matching label keywords
+    // Helper: find a rubric item by label keyword (matches backend label names)
     const getField = (keyword) => {
-        // Priority 1: Exact mapping based on known labels from grading_service.py
         const mapping = {
             'accuracy': 'Accuracy',
-            'tech': 'Technical',
-            'org': 'Organization',
-            'comp': 'Completeness',
-            'prof': 'Professionalism'
+            'tech':     'Technical',
+            'org':      'Organization',
+            'comp':     'Completeness',
+            'prof':     'Professionalism'
         };
         const target = mapping[keyword];
         return rb.find(r => r.label && r.label.includes(target));
     };
 
-    const accuracy = getField('accuracy') || (analysis.accuracy !== undefined ? { ...calculateLevel(analysis.accuracy, 'accuracy'), ratio: analysis.accuracy } : null);
-    const tech = getField('tech') || (analysis.tech !== undefined ? { ...calculateLevel(analysis.tech, 'tech'), ratio: analysis.tech } : null);
-    const org = getField('org') || (analysis.org !== undefined ? { ...calculateLevel(analysis.org, 'org'), ratio: analysis.org } : null);
-    const comp = getField('comp') || (analysis.comp !== undefined ? { ...calculateLevel(analysis.comp, 'comp'), ratio: analysis.comp } : null);
-    const prof = getField('prof') || (analysis.prof !== undefined ? { ...calculateLevel(analysis.prof, 'prof'), ratio: analysis.prof } : null);
+    // Fallback: derive synthetic level/status from saved grade when rubric_breakdown
+    // and analysis are both missing (old DB records before the rubric system was added).
+    // This prevents showing all 1s for students who actually passed.
+    const rbMissing = rb.length === 0;
+    const analysisMissing = !analysis || Object.keys(analysis).length === 0;
+    let gradeFallback = null;
+    if (rbMissing && analysisMissing && sub.grade !== null && sub.grade !== undefined) {
+        const totalPoints = parseFloat(props.activity?.total_points || 100);
+        const pct = Math.round((parseFloat(sub.grade) / totalPoints) * 100);
+        let lvl = 1; let st = 'Poor'; let rt = 0.1;
+        if (pct >= 100) { lvl = 5; st = 'Excellent';        rt = 1.0; }
+        else if (pct >= 80) { lvl = 4; st = 'Very Good';   rt = 0.85; }
+        else if (pct >= 60) { lvl = 3; st = 'Satisfactory'; rt = 0.65; }
+        else if (pct >= 40) { lvl = 2; st = 'Needs Improvement'; rt = 0.45; }
+        gradeFallback = { level: lvl, status: st, ratio: rt };
+    }
+
+    const accuracy = getField('accuracy') || (analysis.accuracy !== undefined ? { ...calculateLevel(analysis.accuracy, 'accuracy'), ratio: analysis.accuracy } : gradeFallback);
+    const tech     = getField('tech')     || (analysis.tech     !== undefined ? { ...calculateLevel(analysis.tech,     'tech'),     ratio: analysis.tech     } : gradeFallback);
+    const org      = getField('org')      || (analysis.org      !== undefined ? { ...calculateLevel(analysis.org,      'org'),      ratio: analysis.org      } : gradeFallback);
+    const comp     = getField('comp')     || (analysis.comp     !== undefined ? { ...calculateLevel(analysis.comp,     'comp'),     ratio: analysis.comp     } : gradeFallback);
+    const prof     = getField('prof')     || (analysis.prof     !== undefined ? { ...calculateLevel(analysis.prof,     'prof'),     ratio: analysis.prof     } : gradeFallback);
 
     return {
-        accuracy: { level: accuracy?.level || 1, ratio: accuracy?.ratio ?? 0, status: accuracy?.status || '—' },
-        tech: { level: tech?.level || 1, ratio: tech?.ratio ?? 0, status: tech?.status || '—' },
-        org: { level: org?.level || 1, ratio: org?.ratio ?? 0, status: org?.status || '—' },
-        comp: { level: comp?.level || 1, ratio: comp?.ratio ?? 0, status: comp?.status || '—' },
-        prof: { level: prof?.level || 1, ratio: prof?.ratio ?? 0, status: prof?.status || '—' },
+        accuracy: { level: accuracy?.level ?? 1, ratio: accuracy?.ratio ?? 0, status: accuracy?.status || '—' },
+        tech:     { level: tech?.level     ?? 1, ratio: tech?.ratio     ?? 0, status: tech?.status     || '—' },
+        org:      { level: org?.level      ?? 1, ratio: org?.ratio      ?? 0, status: org?.status      || '—' },
+        comp:     { level: comp?.level     ?? 1, ratio: comp?.ratio     ?? 0, status: comp?.status     || '—' },
+        prof:     { level: prof?.level     ?? 1, ratio: prof?.ratio     ?? 0, status: prof?.status     || '—' },
         total: sub.grade !== null ? sub.grade : (analysis ? calculateTotalGrade(analysis, props.activity?.total_points) : 0)
     };
 }

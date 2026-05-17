@@ -8,7 +8,7 @@ export const authService = {
      * @param {string} password 
      * @returns {Promise<{token: string, user: object, role: string, dashboard_route: string}>}
      */
-    async login(username, password) {
+    async login(username, password, rememberMe = false) {
         try {
             // 1. Get Token and User Data from Custom Login Endpoint
             const response = await api.post('api/auth/login/', { username, password });
@@ -22,21 +22,32 @@ export const authService = {
 
             const user = data.user;
             const role = data.role;
-            const dashboard_route = data.dashboard_route || '/';
+            let dashboard_route = data.dashboard_route || '/';
+            let sectionArchivedInfo = null;
 
             if (role === 'student') {
                 try {
-                    const enrollResponse = await api.get('api/student/dashboard/data/', {
+                    await api.get('api/student/dashboard/data/', {
                         headers: { Authorization: `Token ${token}` },
                         skipGlobalToast: true
                     });
                 } catch (enrollError) {
-                    if (enrollError.response?.status === 403 && enrollError.response?.data?.not_enrolled) {
-                        throw new Error('NOT_ENROLLED');
-                    }
                     if (enrollError.response?.status === 403) {
-                        throw new Error('NOT_ENROLLED');
+                        const errData = enrollError.response?.data;
+                        if (errData?.section_archived) {
+                            // Section was archived — allow login but redirect to archive page
+                            // so the student sees their history directly, not the dashboard banner loop.
+                            sectionArchivedInfo = {
+                                name: errData.archived_section_name || '',
+                                code: errData.archived_section_code || ''
+                            };
+                            dashboard_route = '/student/archive';
+                        } else {
+                            // Truly not enrolled
+                            throw new Error('NOT_ENROLLED');
+                        }
                     }
+                    // Non-403 errors: proceed with login anyway
                 }
             }
 
@@ -49,13 +60,23 @@ export const authService = {
                 dashboard_route
             });
 
-            // Fallback for legacy components reading from localStorage directly without AuthStorage
-            localStorage.setItem('token', token);
-            localStorage.setItem('auth_token', token);
-            localStorage.setItem('user', JSON.stringify(user));
-            localStorage.setItem('role', role);
+            // If rememberMe is checked, store persistent data in localStorage
+            if (rememberMe) {
+                localStorage.setItem('token', token);
+                localStorage.setItem('auth_token', token);
+                localStorage.setItem('user', JSON.stringify(user));
+                localStorage.setItem('role', role);
+                localStorage.setItem('session_id', session_id);
+            } else {
+                // Ensure legacy keys are removed if NOT remembering
+                localStorage.removeItem('token');
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user');
+                localStorage.removeItem('role');
+                localStorage.removeItem('session_id');
+            }
 
-            return { token, user, role, dashboard_route };
+            return { token, user, role, dashboard_route, sectionArchivedInfo };
         } catch (error) {
             // Return error for handling in UI
             throw error;

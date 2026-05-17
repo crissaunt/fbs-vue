@@ -221,10 +221,26 @@ class ScheduleViewSet(viewsets.ReadOnlyModelViewSet):
         from .serializers import SeatSerializer
         
         seats = Seat.objects.filter(schedule=schedule).select_related(
-            'seat_class'
+            'seat_class', 'schedule'
+        ).prefetch_related(
+            'requirements'
         ).order_by('row', 'column')
         
-        serializer = SeatSerializer(seats, many=True, context={'session_id': request.query_params.get('session_id')})
+        # Optimize is_booked check by getting all booked seat IDs for this schedule once
+        from app.models import BookingDetail
+        booked_seat_ids = set(BookingDetail.objects.filter(
+            schedule=schedule,
+            status__in=['pending', 'confirmed', 'checkin', 'boarding', 'completed'],
+            seat__isnull=False
+        ).values_list('seat_id', flat=True))
+        
+        # Pass the pre-calculated set to the serializer context
+        context = {
+            'session_id': request.query_params.get('session_id'),
+            'booked_seat_ids': booked_seat_ids
+        }
+        
+        serializer = SeatSerializer(seats, many=True, context=context)
         
         return Response({
             'success': True,

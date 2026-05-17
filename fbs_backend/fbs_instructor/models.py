@@ -41,6 +41,8 @@ class Section(models.Model):
     
     is_locked = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    is_archived = models.BooleanField(default=False)
+    archived_at = models.DateTimeField(null=True, blank=True)
     
     instructor = models.ForeignKey(
         User, 

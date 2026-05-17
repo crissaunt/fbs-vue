@@ -210,14 +210,15 @@
         <form @submit.prevent="saveStudent" class="space-y-4">
           <!-- Account credentials (only shown when adding) -->
           <template v-if="!isEditing">
-            <div class="bg-blue-50 border border-blue-100 rounded-[1px] p-3">
-              <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest poppins">Account Credentials</p>
-              <p class="text-[9px] text-blue-400 poppins mt-1">Default password "FBSStudent@2024" will be applied automatically.</p>
-            </div>
-            <div class="grid grid-cols-1 gap-4">
+
+            <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Username *</label>
                 <input v-model="form.username" type="text" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px]" required placeholder="e.g. jdoe">
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Password *</label>
+                <input v-model="form.password" type="password" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px]" required placeholder="Set password">
               </div>
             </div>
           </template>
@@ -556,7 +557,7 @@ const saveStudent = async () => {
       await api.post('auth/register/', {
         role: 'student',
         username: form.value.username,
-        password: 'FBSStudent@2024', // Force system default password
+        password: form.value.password, // Use user-provided password
         first_name: form.value.first_name,
         last_name: form.value.last_name,
         mi: form.value.mi,

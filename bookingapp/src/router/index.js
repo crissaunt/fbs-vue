@@ -126,6 +126,11 @@ const routes = [
         component: () => import('@/views/Instructor/instructor_reports.vue')
       },
       {
+        path: 'archive',
+        name: 'InstructorArchive',
+        component: () => import('@/views/Instructor/InstructorArchivedSections.vue')
+      },
+      {
         path: 'profile',
         name: 'InstructorProfile',
         component: ProfileView
@@ -188,6 +193,12 @@ const routes = [
         name: 'StudentLeaderboard',
         component: () => import('@/views/Student/StudentLeaderboard.vue'),
         meta: { title: 'Section Leaderboard' }
+      },
+      {
+        path: 'archive',
+        name: 'StudentArchive',
+        component: () => import('@/views/Student/StudentArchivedSections.vue'),
+        meta: { title: 'Archived Sections' }
       },
     ]
   },

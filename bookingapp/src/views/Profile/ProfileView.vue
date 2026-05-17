@@ -366,7 +366,7 @@ const displayAvatar = computed(() => {
   if (previewAvatar.value) return previewAvatar.value
   if (!form.value.avatar) return null
   if (form.value.avatar.startsWith('http')) return form.value.avatar
-  const baseURL = import.meta.env.VITE_API_URL || 'https://fbs-vue.onrender.com'
+  const baseURL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000' : 'https://fbs-vue.onrender.com')
   return `${baseURL}${form.value.avatar}`
 })
 
