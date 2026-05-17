@@ -64,12 +64,8 @@ class PayMongoService:
             print(f"   Amount: {amount} PHP ({amount_in_centavos} centavos)")
             
             # Force localhost redirect during local development, use production URL when deployed
-            if getattr(settings, 'DEBUG', False):
-                frontend_base = 'http://localhost:5173'
-            else:
-                frontend_base = getattr(settings, 'WEBSITE_URL', 'https://fbs-vue-1.onrender.com').rstrip('/')
-                
-            backend_base = config('BACKEND_PUBLIC_URL', default='http://localhost:8000').rstrip('/')
+            frontend_base = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+            backend_base = config('BACKEND_PUBLIC_URL', default='https://fbs-backend-3rdm.onrender.com').rstrip('/')
             webhook_url = f"{backend_base}/flightapp/paymongo-webhook/"
             
             payload = {
@@ -128,7 +124,7 @@ class PayMongoService:
         except requests.exceptions.ConnectionError as e:
             print(f"⚠️ PayMongo Connection Error (Fallback active): {str(e)}")
             # For students/activities, provide a local fallback URL to prevent blocking
-            mock_url = f"http://localhost:5173/payment-callback?booking_id={booking_id}&payment_success=true&mock=true"
+            mock_url = f"{getattr(settings, 'FRONTEND_URL', 'http://localhost:5173').rstrip('/')}/payment-callback?booking_id={booking_id}&payment_success=true&mock=true"
             return {
                 "success": True, 
                 "checkout_url": mock_url,
@@ -244,7 +240,7 @@ class PayMongoService:
             
             url = f"{self.api_url}/sources"
             
-            frontend_base = getattr(settings, 'WEBSITE_URL', 'http://localhost:5173').rstrip('/')
+            frontend_base = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173').rstrip('/')
             payload = {
                 "data": {
                     "attributes": {
@@ -291,7 +287,7 @@ class PayMongoService:
         try:
             url = f"{self.api_url}/payment_intents/{intent_id}/attach"
             
-            frontend_base = getattr(settings, 'WEBSITE_URL', 'http://localhost:5173').rstrip('/')
+            frontend_base = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173').rstrip('/')
             payload = {
                 "data": {
                     "attributes": {
