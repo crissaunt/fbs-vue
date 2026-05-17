@@ -82,10 +82,12 @@ def grade_booking(booking, activity_id):
         acc = get_cat("Accuracy")
         acc_criteria = []
         
-        is_tt_met = match_exact(activity.required_trip_type, booking.trip_type)
+        normalized_req_tt = norm_str(activity.required_trip_type).replace(" ", "_")
+        normalized_book_tt = norm_str(booking.trip_type).replace(" ", "_")
+        is_tt_met = (normalized_req_tt == normalized_book_tt)
         acc_criteria.append({"label": "Trip Type", "isMet": is_tt_met})
         
-        normalized_trip_type = norm_str(activity.required_trip_type).replace(" ", "_")
+        normalized_trip_type = normalized_req_tt
         
         if normalized_trip_type == 'one_way':
             o_met = False; d_met = False; date_met = False
@@ -154,9 +156,19 @@ def grade_booking(booking, activity_id):
                 seen_p.add(d.passenger.id)
                 
         outbound_detail = details.filter(schedule=all_schedules[0]).first() if all_schedules else None
-        booked_class = norm_str(outbound_detail.seat_class.name if outbound_detail and outbound_detail.seat_class else "")
-        req_class = norm_str(activity.required_travel_class).replace('_', '')
-        is_class_met = req_class in booked_class or booked_class in req_class or not req_class
+        
+        def norm_class(s):
+            import re
+            return re.sub(r'[\s_\-\.]', '', norm_str(s)).replace('class', '').strip()
+            
+        booked_class = norm_class(outbound_detail.seat_class.name if outbound_detail and outbound_detail.seat_class else "")
+        req_class = norm_class(activity.required_travel_class)
+        
+        if req_class in ["na", "n/a", ""]:
+            is_class_met = True
+        else:
+            is_class_met = (req_class == booked_class)
+            
         tech_criteria.append({"label": "Travel Class", "isMet": is_class_met})
         
         # Fare Type Check
@@ -165,13 +177,21 @@ def grade_booking(booking, activity_id):
         is_fare_met = not req_fare or req_fare in booked_fare or booked_fare in req_fare
         tech_criteria.append({"label": "Fare Type", "isMet": is_fare_met})
         
-        req_pax = activity.passengers.all()
+        req_pax = list(activity.passengers.all())
         all_pax_category = True
         all_pax_passport = True
         
+        used_pax_ids = set()
         for rp in req_pax:
-            ap = next((p for p in booked_pax if norm_str(p.first_name) == norm_str(rp.first_name) and norm_str(p.last_name) == norm_str(rp.last_name)), None)
+            # 1. Exact match
+            ap = next((p for p in booked_pax if p.id not in used_pax_ids and norm_str(p.first_name) == norm_str(rp.first_name) and norm_str(p.last_name) == norm_str(rp.last_name)), None)
+            # 2. Positional fallback (just like frontend)
             if not ap:
+                ap = next((p for p in booked_pax if p.id not in used_pax_ids), None)
+            
+            if ap:
+                used_pax_ids.add(ap.id)
+            else:
                 all_pax_category = False
                 all_pax_passport = False
                 continue
@@ -213,27 +233,30 @@ def grade_booking(booking, activity_id):
         org_criteria = []
         
         org_fields = []
+        used_pax_ids_org = set()
         for rp in req_pax:
-            ap = next((p for p in booked_pax if norm_str(p.first_name) == norm_str(rp.first_name) and norm_str(p.last_name) == norm_str(rp.last_name)), None)
+            # 1. Exact match
+            ap = next((p for p in booked_pax if p.id not in used_pax_ids_org and norm_str(p.first_name) == norm_str(rp.first_name) and norm_str(p.last_name) == norm_str(rp.last_name)), None)
+            # 2. Positional fallback
+            if not ap:
+                ap = next((p for p in booked_pax if p.id not in used_pax_ids_org), None)
             
-            # Name met
-            name_met = bool(ap)
+            if ap:
+                used_pax_ids_org.add(ap.id)
+            
+            # Name met (Strict check: must match exactly)
+            name_met = bool(ap and norm_str(ap.first_name) == norm_str(rp.first_name) and norm_str(ap.last_name) == norm_str(rp.last_name))
             org_fields.append({"label": "Name", "isMet": name_met})
             
             # Gender met
             def get_frontend_gender(title, g):
-                gf = norm_str(g)
-                if not gf:
-                    tf = norm_str(title).replace('.','')
-                    if tf in ['mr','male']: return 'mr'
-                    if tf in ['mrs','female']: return 'mrs'
-                    if tf == 'ms': return 'ms'
-                if gf in ['mr','male']: return 'mr'
-                if gf in ['mrs','female']: return 'mrs'
-                return gf
+                val = norm_str(g)
+                if not val:
+                    val = norm_str(title).replace('.','')
+                if val in ['mr', 'male']: return 'mr'
+                if val in ['mrs', 'ms', 'female']: return 'female_title'
+                return val
             
-            # PassengerInfo has no 'gender' field — it uses 'title' (MR/MRS/MS).
-            # Pass empty string for gender so get_frontend_gender falls back to title.
             gen_met = get_frontend_gender(ap.title if ap else '', '') == get_frontend_gender('', rp.gender) if ap else False
             org_fields.append({"label": "Gender", "isMet": gen_met})
             
@@ -276,11 +299,26 @@ def grade_booking(booking, activity_id):
 
         req_addons = activity.activity_addons.all()
         if req_addons:
+            used_pax_ids_addons = set()
             for ra in req_addons:
                 req_fn = norm_str(ra.passenger.first_name)
                 req_ln = norm_str(ra.passenger.last_name)
                 
-                pax_details = [d for d in details if norm_str(d.passenger.first_name) == req_fn and norm_str(d.passenger.last_name) == req_ln]
+                # Try exact match first
+                pax_details = [d for d in details if d.passenger and d.passenger.id not in used_pax_ids_addons and norm_str(d.passenger.first_name) == req_fn and norm_str(d.passenger.last_name) == req_ln]
+                
+                # Positional fallback
+                if not pax_details:
+                    # Find a passenger detail that hasn't been used for addons yet
+                    # We group by passenger
+                    available_details = [d for d in details if d.passenger and d.passenger.id not in used_pax_ids_addons]
+                    if available_details:
+                        fallback_passenger_id = available_details[0].passenger.id
+                        pax_details = [d for d in details if d.passenger and d.passenger.id == fallback_passenger_id]
+                
+                if pax_details and pax_details[0].passenger:
+                    used_pax_ids_addons.add(pax_details[0].passenger.id)
+
                 all_actual_addons = []
                 for d in pax_details:
                     all_actual_addons.extend(d.addons.all())
