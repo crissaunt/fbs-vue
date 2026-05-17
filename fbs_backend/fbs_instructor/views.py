@@ -727,8 +727,12 @@ def update_section(request, section_id):
         # Trigger notification if schedule was updated or added
         new_schedule = section.schedule
         if new_schedule and new_schedule != old_schedule:
-             threading.Thread(target=send_schedule_email_notification, args=(user, section)).start()
-             threading.Thread(target=send_bulk_student_schedule_notification, args=(section, user)).start()
+             # Synchronous dispatch to prevent Render WSGI termination
+             try:
+                 send_schedule_email_notification(user, section)
+                 send_bulk_student_schedule_notification(section, user)
+             except Exception as e:
+                 print(f"Failed to send schedule notifications: {e}")
 
         return Response({
             "message": "Section updated successfully!",
@@ -836,7 +840,10 @@ class EnrollStudentView(APIView):
         )
         
         # Trigger Email Notification
-        threading.Thread(target=send_student_schedule_notification, args=(student, section, request.user)).start()
+        try:
+            send_student_schedule_notification(student, section, request.user)
+        except Exception as e:
+            print(f"Failed to send student enrollment notification: {e}")
         
         return Response({"message": f"Successfully enrolled {student.first_name}!"}, status=status.HTTP_201_CREATED)
 
@@ -978,7 +985,10 @@ def bulk_enroll_students(request, section_id):
             
             # Notify newly enrolled students
             for s in newly_enrolled_students:
-                threading.Thread(target=send_student_schedule_notification, args=(s, section, request.user)).start()
+                try:
+                    send_student_schedule_notification(s, section, request.user)
+                except Exception as e:
+                    pass
 
         return Response({
             "message": f"Successfully enrolled {enrolled_count} students.",

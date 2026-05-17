@@ -1161,19 +1161,13 @@ def process_payment_from_paymongo(payment_id, payment_attrs, booking):
                 except Exception as e:
                     print(f"[WARN] Error during auto-grading: {str(e)}")
             
-            # [?] SEND BOOKING CONFIRMATION EMAIL (Background)
+            # [?] SEND BOOKING CONFIRMATION EMAIL (Synchronous)
             try:
-                import threading
-                print(f"[EMAIL] Starting background thread for confirmation email...")
-                email_thread = threading.Thread(
-                    target=EmailService.send_booking_confirmation,
-                    args=(booking, payment)
-                )
-                email_thread.daemon = True
-                email_thread.start()
-                print(f"[OK] Background email thread started.")
+                print(f"[EMAIL] Sending confirmation email...")
+                EmailService.send_booking_confirmation(booking, payment)
+                print(f"[OK] Email sent successfully.")
             except Exception as e:
-                print(f"[WARN] Error starting background email thread: {str(e)}")
+                print(f"[WARN] Error sending email: {str(e)}")
             
             print(f"[?] Payment processing COMPLETED!")
             
