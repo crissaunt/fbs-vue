@@ -2306,17 +2306,13 @@ def Activity_Student_Bind(activity, student_ids=None, time_limit_minutes=None):
                 message=f"An activity '{activity.title}' has been assigned to you."
             )
             
-    # Dispatch emails in the background (slow network operations)
+    # Dispatch emails synchronously to guarantee delivery on serverless/WSGI environments (Render)
     if bound_students_list:
-        # Pass necessary data to the thread
-        # Note: We pass the queryset or list to ensure the thread can access the data
-        email_thread = threading.Thread(
-            target=_send_activity_notification_worker, 
-            args=(activity, bound_students_list, section)
-        )
-        email_thread.daemon = True # Ensure it doesn't block server shutdown
-        email_thread.start()
-    
+        try:
+            _send_activity_notification_worker(activity, bound_students_list, section)
+        except Exception as e:
+            print(f"Error dispatching activity emails: {str(e)}")
+            
     return students_bound
 
 
