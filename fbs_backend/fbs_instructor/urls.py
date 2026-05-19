@@ -1,5 +1,8 @@
+from rest_framework.response import Response
 from django.urls import path
+# pyrefly: ignore [missing-import]
 from . import views
+# pyrefly: ignore [missing-import]
 from .views import (
     Login_view,
     instructor_dashboard,
@@ -17,6 +20,7 @@ from .views import (
     student_dashboard,
     submit_grade,
     release_activity_grades,
+    batch_recompute_grades,
     validate_session,
     list_sessions,
     logout_view,
@@ -80,6 +84,7 @@ urlpatterns = [
     path('instructor/activity/<int:activity_id>/eligible-students/', get_eligible_students, name='get_eligible_students'),
     path('instructor/activities/<int:activity_id>/submissions/<int:student_id>/grade/', submit_grade, name='submit-grade'),
     path('instructor/activities/<int:activity_id>/release-grades/', release_activity_grades, name='release-grades'),
+    path('instructor/activities/<int:activity_id>/batch-recompute/', batch_recompute_grades, name='batch-recompute-grades'),
 
     # ============================================
     # STUDENT URLS - ? FIXED

@@ -655,8 +655,8 @@
                             <input type="text" v-model="passenger.firstName" placeholder="Enter first name" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm">
                           </div>
                           <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Middle Name</label>
-                            <input type="text" v-model="passenger.middleName" placeholder="Enter middle name" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Middle Initial</label>
+                            <input type="text" v-model="passenger.middleName" placeholder="Enter middle initial" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm">
                           </div>
                           <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Last Name *</label>
@@ -744,8 +744,8 @@
                             <input type="text" v-model="passenger.firstName" placeholder="Enter first name" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400 text-sm">
                           </div>
                           <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Middle Name</label>
-                            <input type="text" v-model="passenger.middleName" placeholder="Enter middle name" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400 text-sm">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Middle Initial</label>
+                            <input type="text" v-model="passenger.middleName" placeholder="Enter middle initial" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400 text-sm">
                           </div>
                           <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Last Name *</label>
@@ -833,8 +833,8 @@
                             <input type="text" v-model="passenger.firstName" placeholder="Enter first name" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm">
                           </div>
                           <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Middle Name</label>
-                            <input type="text" v-model="passenger.middleName" placeholder="Enter middle name" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Middle Initial</label>
+                            <input type="text" v-model="passenger.middleName" placeholder="Enter middle initial" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm">
                           </div>
                           <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Last Name *</label>
@@ -1073,7 +1073,7 @@ const resetActivityForm = () => {
 const sampleTitles = ['Flight Booking Assessment', 'Advanced Reservation Task', 'Round Trip Coordination', 'Emergency Rebooking', 'Group Booking', 'Multi-city Itinerary', 'Flight Activity', 'Travel Planning', 'Luxury Flight Arrangement', 'International Travel Simulation' , 'Budget Travel Challenge', 'Family Vacation Planning', 'Business Trip Coordination', 'Last-minute Booking', 'Holiday Travel Arrangement', 'Student Travel Task', 'Airport Transfer Booking', 'Frequent Flyer Challenge', 'Airline Comparison Activity', 'Travel Class Upgrade Simulation', 'Flight Change Scenario'];
 const firstNames = ['James', 'Mary', 'Robert', 'Patricia', 'John', 'Jennifer', 'Michael', 'Linda', 'William', 'Elizabeth', 'David', 'Maria', 'Richard', 'Susan', 'Joseph', 'Rose' , 'Pathrick', 'Kyle', 'Samantha', 'Brian', 'Jessica', 'Kevin', 'Sarah', 'Thomas', 'Karen' , 'Charles', 'Nancy', 'Christopher', 'Lisa', 'Daniel', 'Betty' , 'Matthew', 'Margaret', 'Anthony', 'Sandra', 'Mark', 'Ashley', 'Donald', 'Kimberly', 'Steven', 'Emily', 'Paul', 'Donna', 'Andrew', 'Michelle' , 'Joshua', 'Dorothy', 'Kenneth', 'Carol', 'Kevin', 'Amanda'];
 const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson', 'Walker', 'Young', 'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores', 'Green', 'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera', 'Campbell', 'Mitchell', 'Carter', 'Roberts' ];
-const middleNames = ['Lee', 'Garcia', 'Quinto', 'Santos', 'Reyes', 'Cruz', 'Bautista', 'Ocampo', 'Mae', 'Ann', 'Marie', 'Louise' , 'James', 'John', 'Ray', 'Lynn', 'Grace', 'Rose', 'Mae', 'Jean', 'Paul', 'Mark', 'Jane', 'Louise', 'Michael', 'Elizabeth', 'Ann', 'Lee', 'Marie', 'Ray', 'Lynn', 'Grace', 'Rose', 'Jean', 'Paul', 'Mark', 'Jane', 'Louise'];
+const middleInitials = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
 // Must match exactly the options available in PassengerForm.vue (booking side)
 const nationalities = ['Philippines', 'United States', 'Japan', 'South Korea', 'Singapore', 'Australia'];
 
@@ -2114,7 +2114,9 @@ const randomizeData = async () => {
     if (!students.value || students.value.length === 0) return;
     const randomStudent = students.value[Math.floor(Math.random() * students.value.length)];
     p.firstName = randomStudent.first_name || '';
-    p.middleName = randomStudent.middle_name || '';
+    // Extract just the first character as the middle initial (matches booking-side format)
+    const rawMiddle = randomStudent.middle_name || randomStudent.middle_initial || '';
+    p.middleName = rawMiddle ? rawMiddle.charAt(0).toUpperCase() : middleInitials[Math.floor(Math.random() * middleInitials.length)];
     p.lastName = randomStudent.last_name || '';
     
     // Smart gender assignment based on name

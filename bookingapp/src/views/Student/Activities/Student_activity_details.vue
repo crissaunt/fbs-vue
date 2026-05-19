@@ -286,18 +286,17 @@
           <div v-if="displayPassengers.length === 0" class="text-center py-8 text-gray-500">
             <p>No passenger information available for this activity.</p>
           </div>
-          
-          <!-- Passenger Cards -->
+                <!-- Passenger Cards -->
           <div v-for="(passenger, index) in displayPassengers" :key="index" class="mb-6">
             <div class="border border-gray-300 rounded-lg p-6">
               <!-- Passenger Header -->
-              <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center justify-between mb-6">
                 <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide">
-                  Passenger {{ index + 1 }} ({{ passenger.passenger_type || 'Adult' }})
+                  Passenger {{ index + 1 }} ({{ passenger.passenger_type || passenger.type || 'Adult' }})
                 </h3>
                 <div class="flex items-center gap-4">
-                  <span class="text-xs text-gray-600 uppercase tracking-wide">
-                    seat preference: <strong>{{ passenger.seat_preference || 'Window' }}</strong>
+                  <span v-if="passenger.seat_preference" class="text-xs text-gray-600 uppercase tracking-wide">
+                    seat preference: <strong>{{ passenger.seat_preference }}</strong>
                   </span>
                   <span v-if="getAssignedSeat(index)" class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-black uppercase tracking-wider border border-blue-200 shadow-sm flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -308,138 +307,100 @@
                 </div>
               </div>
 
-              <!-- Form Fields -->
-              <div class="space-y-4">
-                <!-- Row 1: Gender, First Name, Last Name, MI -->
-                <div class="grid grid-cols-12 gap-3">
-                  <div class="col-span-2">
-                    <label class="block text-[10px] font-bold text-red-600 uppercase mb-1.5 tracking-wide">Gender*</label>
-                    <div class="px-3 py-2.5 border border-gray-300 rounded text-sm bg-white text-gray-700">
-                      {{ formatGender(passenger.gender) }}
-                    </div>
-                  </div>
-                  <div class="col-span-4">
-                    <label class="block text-[10px] font-bold text-red-600 uppercase mb-1.5 tracking-wide">First Name*</label>
-                    <div class="px-3 py-2.5 border border-gray-300 rounded text-sm bg-white text-gray-700">
-                      {{ passenger.first_name || 'N/A' }}
-                    </div>
-                  </div>
-                  <div class="col-span-5">
-                    <label class="block text-[10px] font-bold text-red-600 uppercase mb-1.5 tracking-wide">Last Name*</label>
-                    <div class="px-3 py-2.5 border border-gray-300 rounded text-sm bg-white text-gray-700">
-                      {{ passenger.last_name || 'N/A' }}
-                    </div>
-                  </div>
-                  <div class="col-span-1">
-                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1.5 tracking-wide">MI</label>
-                    <div class="px-3 py-2.5 border border-gray-300 rounded text-sm bg-white text-gray-700 text-center">
-                      {{ passenger.middle_initial || passenger.middle_name || '-' }}
-                    </div>
+              <!-- Dynamic Passenger Fields Grid (matches instructor layout) -->
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+
+                <!-- Gender -->
+                <div v-if="passenger.gender">
+                  <label class="block text-[9px] font-black text-red-500 uppercase tracking-tight mb-1">Gender*</label>
+                  <div class="p-3 border border-gray-200 rounded-lg text-xs bg-gray-50/50 text-gray-700 uppercase">
+                    {{ formatGender(passenger.gender) }}
                   </div>
                 </div>
 
-                <!-- Row 2: Date of Birth -->
+                <!-- First Name -->
+                <div v-if="passenger.first_name">
+                  <label class="block text-[9px] font-black text-red-500 uppercase tracking-tight mb-1">First Name*</label>
+                  <div class="p-3 border border-gray-200 rounded-lg text-xs bg-gray-50/50 text-gray-700 uppercase">
+                    {{ passenger.first_name }}
+                  </div>
+                </div>
+
+                <!-- Middle Initial -->
+                <div v-if="passenger.middle_initial || passenger.middle_name">
+                  <label class="block text-[9px] font-black text-gray-400 uppercase tracking-tight mb-1">Middle Initial</label>
+                  <div class="p-3 border border-gray-200 rounded-lg text-xs bg-gray-50/50 text-gray-700 uppercase">
+                    {{ passenger.middle_initial || passenger.middle_name }}
+                  </div>
+                </div>
+
+                <!-- Last Name -->
+                <div v-if="passenger.last_name">
+                  <label class="block text-[9px] font-black text-red-500 uppercase tracking-tight mb-1">Last Name*</label>
+                  <div class="p-3 border border-gray-200 rounded-lg text-xs bg-gray-50/50 text-gray-700 uppercase">
+                    {{ passenger.last_name }}
+                  </div>
+                </div>
+
+                <!-- Date of Birth (formatted, single field like instructor side) -->
+                <div v-if="passenger.date_of_birth || passenger.birth_day">
+                  <label class="block text-[9px] font-black text-red-500 uppercase tracking-tight mb-1">Date of Birth*</label>
+                  <div class="p-3 border border-gray-200 rounded-lg text-xs bg-gray-50/50 text-gray-700 uppercase">
+                    {{ formatPassengerDob(passenger) }}
+                  </div>
+                </div>
+
+                <!-- Nationality -->
+                <div v-if="passenger.nationality">
+                  <label class="block text-[9px] font-black text-red-500 uppercase tracking-tight mb-1">Nationality*</label>
+                  <div class="p-3 border border-gray-200 rounded-lg text-xs bg-gray-50/50 text-gray-700 uppercase">
+                    {{ passenger.nationality }}
+                  </div>
+                </div>
+
+                <!-- Category -->
                 <div>
-                  <label class="block text-[10px] font-bold text-gray-700 uppercase mb-1.5 tracking-wide">Date of Birth</label>
-                  <div class="grid grid-cols-3 gap-3">
-                    <div>
-                      <label class="block text-[10px] text-gray-500 mb-1">Day*</label>
-                      <div class="px-3 py-2.5 border border-gray-300 rounded text-sm bg-white text-gray-700">
-                        {{ passenger.birth_day || 'N/A' }}
-                      </div>
-                    </div>
-                    <div>
-                      <label class="block text-[10px] text-gray-500 mb-1">Month*</label>
-                      <div class="px-3 py-2.5 border border-gray-300 rounded text-sm bg-white text-gray-700">
-                        {{ passenger.birth_month || 'N/A' }}
-                      </div>
-                    </div>
-                    <div>
-                      <label class="block text-[10px] text-gray-500 mb-1">Year*</label>
-                      <div class="px-3 py-2.5 border border-gray-300 rounded text-sm bg-white text-gray-700">
-                        {{ passenger.birth_year || 'N/A' }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Row 3: Nationality and Passport -->
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-[10px] font-bold text-red-600 uppercase mb-1.5 tracking-wide">Nationality*</label>
-                    <div class="px-3 py-2.5 border border-gray-300 rounded text-sm bg-white text-gray-700">
-                      {{ passenger.nationality || 'N/A' }}
-                    </div>
-                  </div>
-                  <div>
-                    <label class="block text-[10px] font-bold text-red-600 uppercase mb-1.5 tracking-wide">Passport*</label>
-                    <div class="px-3 py-2.5 border border-gray-300 rounded text-sm bg-white text-gray-700">
-                      {{ passenger.passport_number || passenger.passport || 'N/A' }}
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Row 4: Passenger Category -->
-                <div class="mt-4">
-                  <label class="block text-[10px] font-bold text-red-600 uppercase mb-1.5 tracking-wide">Required Category*</label>
-                  <div class="px-3 py-2.5 border border-gray-300 rounded text-sm bg-white text-gray-700">
+                  <label class="block text-[9px] font-black text-red-500 uppercase tracking-tight mb-1">Category*</label>
+                  <div class="p-3 border border-gray-200 rounded-lg text-xs bg-gray-50/50 text-gray-700 uppercase">
                     {{ passenger.passenger_category === 'senior' ? 'Senior Citizen' : (passenger.passenger_category === 'pwd' ? 'PWD' : 'Regular') }}
                   </div>
                 </div>
 
-                <!-- Row 5: PWD ID Number (shown only for PWD passengers) -->
-                <div v-if="passenger.passenger_category === 'pwd' && passenger.pwd_id_number" class="mt-3">
-                  <label class="block text-[10px] font-bold text-blue-600 uppercase mb-1.5 tracking-wide">PWD ID Number*</label>
-                  <div class="px-3 py-2.5 border border-blue-300 rounded text-sm bg-blue-50 text-blue-800 font-mono">
+                <!-- PWD ID Number -->
+                <div v-if="passenger.passenger_category === 'pwd' && passenger.pwd_id_number">
+                  <label class="block text-[9px] font-black text-blue-600 uppercase tracking-tight mb-1">PWD ID Number*</label>
+                  <div class="p-3 border border-blue-200 rounded-lg text-xs bg-blue-50/50 text-blue-800 font-mono uppercase">
                     {{ passenger.pwd_id_number }}
                   </div>
                 </div>
 
-                <!-- Row 6: Senior Citizen ID (shown only for Senior passengers) -->
-                <div v-if="passenger.passenger_category === 'senior' && passenger.senior_id_number" class="mt-3">
-                  <label class="block text-[10px] font-bold text-amber-600 uppercase mb-1.5 tracking-wide">Senior Citizen ID*</label>
-                  <div class="px-3 py-2.5 border border-amber-300 rounded text-sm bg-amber-50 text-amber-800 font-mono">
+                <!-- Senior Citizen ID -->
+                <div v-if="passenger.passenger_category === 'senior' && passenger.senior_id_number">
+                  <label class="block text-[9px] font-black text-amber-600 uppercase tracking-tight mb-1">Senior Citizen ID*</label>
+                  <div class="p-3 border border-amber-200 rounded-lg text-xs bg-amber-50/50 text-amber-800 font-mono uppercase">
                     {{ passenger.senior_id_number }}
                   </div>
                 </div>
 
-                <!-- Row 7: Passport Expiry Date (shown only for non-Philippines nationality) -->
-                <div v-if="passenger.nationality && passenger.nationality.toLowerCase() !== 'philippines' && passenger.passport_expiry_date" class="mt-3">
-                  <label class="block text-[10px] font-bold text-red-600 uppercase mb-1.5 tracking-wide">Passport Expiry Date*</label>
-                  <div class="px-3 py-2.5 border border-red-300 rounded text-sm bg-red-50 text-red-800">
+                <!-- Passport Expiry Date -->
+                <div v-if="passenger.passport_expiry_date">
+                  <label class="block text-[9px] font-black text-red-500 uppercase tracking-tight mb-1">Passport Expiry*</label>
+                  <div class="p-3 border border-gray-200 rounded-lg text-xs bg-gray-50/50 text-gray-700 uppercase">
                     {{ passenger.passport_expiry_date }}
                   </div>
                 </div>
 
-                <!-- Checkboxes -->
-                <div class="space-y-2 pt-2">
-                  <label class="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
-                    <div :class="[
-                      'w-4 h-4 border border-gray-400 rounded flex items-center justify-center flex-shrink-0',
-                      passenger.has_reservation ? 'bg-blue-500 border-blue-500' : 'bg-white'
-                    ]">
-                      <svg v-if="passenger.has_reservation" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                      </svg>
-                    </div>
-                    <span>I have a reservation / request</span>
-                  </label>
-                  <label class="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
-                    <div :class="[
-                      'w-4 h-4 border border-gray-400 rounded flex items-center justify-center flex-shrink-0',
-                      passenger.is_pwd ? 'bg-blue-500 border-blue-500' : 'bg-white'
-                    ]">
-                      <svg v-if="passenger.is_pwd" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                      </svg>
-                    </div>
-                    <span>I am a Person with Disability</span>
-                  </label>
+                <!-- Passport Number -->
+                <div v-if="passenger.passport_number || passenger.passport">
+                  <label class="block text-[9px] font-black text-red-500 uppercase tracking-tight mb-1">Passport Number*</label>
+                  <div class="p-3 border border-gray-200 rounded-lg text-xs bg-gray-50/50 text-gray-700 uppercase">
+                    {{ passenger.passport_number || passenger.passport }}
+                  </div>
                 </div>
 
-                <!-- Passenger Add-ons -->
-                <div v-if="getPassengerAddons(passenger).length > 0" class="mt-4 border-t border-gray-100 pt-3">
-                  <label class="block text-[10px] font-bold text-pink-500 uppercase tracking-wide mb-2">Assigned Add-ons</label>
+                <!-- Assigned Add-ons (spans full width like instructor side) -->
+                <div v-if="getPassengerAddons(passenger).length > 0" class="md:col-span-4 mt-2">
+                  <label class="block text-[9px] font-black text-pink-500 uppercase tracking-wide mb-2">Assigned Add-ons</label>
                   <div class="flex flex-wrap gap-2">
                     <span v-for="addon in getPassengerAddons(passenger)" :key="addon.id" class="px-3 py-1.5 bg-pink-50 border border-pink-200 text-pink-700 rounded-md text-xs font-bold shadow-sm">
                       {{ addon.addon_name }}
@@ -918,7 +879,15 @@ export default {
           segments: activityData.segments || [],
           grades_released: activityData.grades_released || false,
           assigned_seats: activityData.assigned_seats || [],
-          expires_at: activityData.expires_at // ✅ Added for live timer
+          expires_at: activityData.expires_at, // ✅ Added for live timer
+
+          // ✅ SOURCE OF TRUTH: instructor-saved rubric breakdown & grade
+          // Passed directly to ComparisonModal so it shows the finalized
+          // instructor assessment — not a frontend re-calculation.
+          rubric_breakdown: activityData.rubric_breakdown || null,
+
+          // ✅ Required passengers list for the comparison table
+          passengers: activityData.passengers || []
         };
         
         if (this.activity.expires_at && !this.activity.completed && this.activity.status !== 'graded' && !this.activity.is_failed_due_to_time) {
@@ -933,13 +902,13 @@ export default {
           console.log('✅ Instructor loaded:', this.instructor.first_name, this.instructor.last_name);
         }
         
-        // Load passengers
-        if (response.data.passengers && Array.isArray(response.data.passengers)) {
-          this.passengers = response.data.passengers;
-          console.log('✅ Passengers loaded:', this.passengers.length);
-        } else {
-          console.log('ℹ️ No passengers in response');
-        }
+        // Load passengers — prefer activityData.passengers (has ALL fields: passport_expiry_date,
+        // pwd_id_number, senior_id_number, date_of_birth, etc.) over the stripped root passengers array.
+        const fullPassengers = activityData.passengers && activityData.passengers.length > 0
+          ? activityData.passengers
+          : (response.data.passengers || []);
+        this.passengers = fullPassengers;
+        console.log('✅ Passengers loaded:', this.passengers.length, '(with full fields)');
         
         console.log('='.repeat(60) + '\n');
         
@@ -985,6 +954,21 @@ export default {
       this.$router.push('/student/dashboard');
     },
 
+    formatPassengerDob(passenger) {
+      // Prefer the combined date_of_birth field (YYYY-MM-DD format from backend)
+      if (passenger.date_of_birth) {
+        try {
+          const d = new Date(passenger.date_of_birth + 'T00:00:00');
+          return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase();
+        } catch { return passenger.date_of_birth; }
+      }
+      // Fallback: combine split birth_day / birth_month / birth_year
+      if (passenger.birth_day || passenger.birth_month || passenger.birth_year) {
+        const parts = [passenger.birth_month, passenger.birth_day, passenger.birth_year].filter(Boolean);
+        return parts.join(' ').toUpperCase();
+      }
+      return 'N/A';
+    },
     async openComparisonModal() {
       this.showComparison = true;
       this.isLoadingBooking = true;

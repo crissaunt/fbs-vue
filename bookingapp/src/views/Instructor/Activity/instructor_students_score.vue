@@ -552,6 +552,8 @@ const studentId = route.params.studentId;
 
 const loading = ref(true);
 const error = ref(null);
+const dbRubricBreakdown = ref(null);
+const dbGrade = ref(null);
 const activity = ref(null);
 const booking = ref(null);
 const student = ref(null);
@@ -570,17 +572,24 @@ const fetchData = async () => {
         activity.value = actData.activity || actData;
 
         const subData = await activityDetailsService.getSubmissions(activityId);
-        const submission = subData.submissions.find(s => s.student_id == studentId);
+        const studentSubmission = subData.submissions.find(s => s.student_id == studentId);
         
-        if (!submission) throw new Error("Submission not found.");
+        if (!studentSubmission) throw new Error("Submission not found.");
         
-        student.value = { first_name: submission.first_name, last_name: submission.last_name, student_number: submission.student_number };
-        storedGrade.value = submission.grade;
-        backendAnalysis.value = submission.analysis;
-        assignedSeats.value = submission.assigned_seats || [];
+        student.value = { first_name: studentSubmission.first_name, last_name: studentSubmission.last_name, student_number: studentSubmission.student_number };
+        storedGrade.value = studentSubmission.grade;
+        
+        // Capture the backend's source of truth
+        dbRubricBreakdown.value = typeof studentSubmission.rubric_breakdown === 'string' 
+            ? JSON.parse(studentSubmission.rubric_breakdown || '[]') 
+            : (studentSubmission.rubric_breakdown || []);
+        dbGrade.value = studentSubmission.grade;
 
-        if (submission.booking) {
-            const bookingRes = await bookingService.getBookingDetails(submission.booking.id);
+        backendAnalysis.value = studentSubmission.analysis;
+        assignedSeats.value = studentSubmission.assigned_seats || [];
+
+        if (studentSubmission.booking) {
+            const bookingRes = await bookingService.getBookingDetails(studentSubmission.booking.id);
             if (bookingRes.success) {
                 booking.value = bookingRes.booking;
             } else {
@@ -594,25 +603,31 @@ const fetchData = async () => {
         // Wait for computed properties to update based on new data
         await new Promise(resolve => setTimeout(resolve, 300));
 
-        // Auto-save the calculated grade directly to the backend
-        const sumOfRatios = rubricBreakdown.value.reduce((acc, r) => acc + r.ratio, 0);
-        const totalPoints = parseFloat(activity.value?.total_points || 100);
-        const latestGrade = Math.round(sumOfRatios * (totalPoints / 5));
+        // If the backend didn't have a grade yet, auto-save the newly calculated one
+        if (dbGrade.value === null || dbGrade.value === undefined || (Array.isArray(dbRubricBreakdown.value) && dbRubricBreakdown.value.length === 0)) {
+            const sumOfRatios = rubricBreakdown.value.reduce((acc, r) => acc + r.ratio, 0);
+            const totalPoints = parseFloat(activity.value?.total_points || 100);
+            const latestGrade = Math.round(sumOfRatios * (totalPoints / 5));
 
-        // Format the breakdown match exactly what the backend expects
-        const breakdownPayload = rubricBreakdown.value.map(r => ({
-            label: r.label,
-            level: r.level,
-            ratio: r.ratio,
-            status: r.status,
-            description: r.description
-        }));
+            const breakdownPayload = rubricBreakdown.value.map(r => ({
+                label: r.label,
+                level: r.level,
+                ratio: r.ratio,
+                status: r.status,
+                description: r.description,
+                criteria: r.criteria || [] // Ensure criteria is saved to backend for display
+            }));
 
-        await activityDetailsService.saveGrade(activityId, studentId, {
-            grade: latestGrade,
-            feedback: "Auto-calculated based on rubric.",
-            rubric_breakdown: breakdownPayload
-        });
+            await activityDetailsService.saveGrade(activityId, studentId, {
+                grade: latestGrade,
+                feedback: "Auto-calculated based on rubric.",
+                rubric_breakdown: breakdownPayload
+            });
+            
+            // Update local refs to prevent re-saving on next render
+            dbGrade.value = latestGrade;
+            dbRubricBreakdown.value = breakdownPayload;
+        }
 
     } catch (err) {
         error.value = err.message;
@@ -657,6 +672,12 @@ const calculateMultiCityRoutingScore = (totalPoints, m) => {
 };
 
 const rubricBreakdown = computed(() => {
+    // 🛑 CRITICAL SOURCE OF TRUTH: Always prioritize the backend's saved rubric breakdown
+    // to guarantee 100% parity with the Instructor Submission Table!
+    if (dbRubricBreakdown.value && Array.isArray(dbRubricBreakdown.value) && dbRubricBreakdown.value.length > 0) {
+        return dbRubricBreakdown.value;
+    }
+
     if (!activity.value) return [];
     
     const isPassport = activity.value.title?.toLowerCase().includes('passport');
@@ -877,10 +898,11 @@ const getBarColorForLevel = (level) => {
 };
 
 const calculatedScore = computed(() => {
+    if (dbGrade.value !== null && dbGrade.value !== undefined) {
+        return parseFloat(dbGrade.value);
+    }
     const totalPoints = parseFloat(activity.value?.total_points || 100);
-    const sumOfRatios = rubricBreakdown.value.reduce((acc, r) => acc + r.ratio, 0);
-    // Each rubric contributes 1/5th of the total points if its ratio is 1.
-    // So, sumOfRatios (max 5) * (totalPoints / 5)
+    const sumOfRatios = rubricBreakdown.value.reduce((acc, r) => acc + (r.ratio || 0), 0);
     return sumOfRatios * (totalPoints / 5);
 });
 

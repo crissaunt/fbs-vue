@@ -1417,11 +1417,18 @@ export const useBookingStore = defineStore('booking', {
         }
       });
 
-      try {
-        sessionStorage.clear();
-      } catch (error) {
-        console.warn('Could not clear sessionStorage:', error);
-      }
+      const sessionKeysToRemove = [
+        'payment_session',
+        'current_booking',
+        'booking'
+      ];
+      sessionKeysToRemove.forEach(key => {
+        try {
+          sessionStorage.removeItem(key);
+        } catch (error) {
+          console.warn(`Could not remove sessionStorage key ${key}:`, error);
+        }
+      });
 
       const newSessionId = `sess_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`;
       localStorage.setItem('booking_session_id', newSessionId);

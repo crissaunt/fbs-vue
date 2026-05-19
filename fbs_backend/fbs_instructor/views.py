@@ -1639,6 +1639,7 @@ def activity_details(request, activity_id):
         
         data = {
             "id": activity.id,
+            "section_id": activity.section.id if activity.section else None,
             "title": activity.title,
             "description": activity.description,
             "section_name": activity.section.section_name if activity.section else "",
@@ -2262,7 +2263,8 @@ def Activity_Student_Bind(activity, student_ids=None, time_limit_minutes=None):
         enrolled_students_query = enrolled_students_query.filter(student_id__in=student_ids)
     
     students_bound = 0
-    bound_students_list = []
+    bound_students_list = []   # newly created bindings → email
+    renotify_students_list = []  # already bound but explicitly selected → also email
     
     # Process bindings synchronously (fast database operations)
     for enrollment in enrolled_students_query:
@@ -2293,7 +2295,10 @@ def Activity_Student_Bind(activity, student_ids=None, time_limit_minutes=None):
             # Ensure we clear seats if re-binding
             binding.assigned_seats = []
             binding.save()
-        if created:
+            # Re-selected by instructor → still notify via email
+            if student_ids and student.id in list(student_ids):
+                renotify_students_list.append(student)
+        else:
             students_bound += 1
             bound_students_list.append(student)
 
@@ -2305,19 +2310,21 @@ def Activity_Student_Bind(activity, student_ids=None, time_limit_minutes=None):
                 title="New Activity Available",
                 message=f"An activity '{activity.title}' has been assigned to you."
             )
-            
+    
+    # Combine: new + re-selected students all get emailed
+    all_students_to_notify = bound_students_list + renotify_students_list
+        
     # Dispatch emails in the background (slow network operations)
-    if bound_students_list:
-        # Pass necessary data to the thread
-        # Note: We pass the queryset or list to ensure the thread can access the data
+    if all_students_to_notify:
         email_thread = threading.Thread(
             target=_send_activity_notification_worker, 
-            args=(activity, bound_students_list, section)
+            args=(activity, all_students_to_notify, section)
         )
-        email_thread.daemon = True # Ensure it doesn't block server shutdown
+        email_thread.daemon = True  # Ensure it doesn't block server shutdown
         email_thread.start()
     
     return students_bound
+
 
 
 @api_view(['GET'])
@@ -3680,6 +3687,89 @@ def submit_grade(request, activity_id, student_id):
     except Exception as e:
         traceback.print_exc()
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+# ============================================================
+# BATCH RECOMPUTE GRADES FOR ALL STUDENTS IN AN ACTIVITY
+# Called when instructor clicks "SHOW GRADE" to ensure table
+# always reflects the same values as the individual score pages.
+# ============================================================
+@api_view(['POST'])
+@authentication_classes([MultiSessionTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def batch_recompute_grades(request, activity_id):
+    """
+    Recomputes rubric_breakdown and grade for every graded/submitted student
+    in the given activity using the authoritative calculate_submission_score logic.
+    Returns a summary of how many records were updated.
+    """
+    try:
+        # Verify the requesting instructor owns this activity
+        activity = get_object_or_404(
+            Activity,
+            id=activity_id,
+            section__instructor=request.user
+        )
+
+        # Only recompute if not already graded by the JS frontend
+        bindings = ActivityStudentBinding.objects.filter(
+            activity=activity,
+            status='submitted'
+        ).select_related('student__user')
+
+        updated = 0
+        skipped = 0
+        errors = 0
+
+        for binding in bindings:
+            try:
+                user = binding.student.user
+                booking_obj = Booking.objects.filter(
+                    user=user,
+                    activity=activity,
+                    status='Confirmed',
+                    is_practice=False
+                ).prefetch_related(
+                    'details__schedule__flight__airline',
+                    'details__schedule__flight__route__origin_airport',
+                    'details__schedule__flight__route__destination_airport',
+                    'details__seat_class',
+                    'details__passenger',
+                    'details__addons'
+                ).first()
+
+                if not booking_obj:
+                    # No booking — timed out student, skip recompute
+                    skipped += 1
+                    continue
+
+                score_data = calculate_submission_score(activity, booking_obj)
+                if score_data:
+                    binding.grade = score_data['total']
+                    binding.rubric_breakdown = score_data['rubric_breakdown']
+                    binding.status = 'graded'
+                    if booking_obj.submitted_at and not binding.submitted_at:
+                        binding.submitted_at = booking_obj.submitted_at
+                    binding.save()
+                    updated += 1
+                else:
+                    skipped += 1
+
+            except Exception as e:
+                print(f"  ⚠️ batch_recompute: error for binding {binding.id}: {e}")
+                errors += 1
+                continue
+
+        return Response({
+            "message": f"Batch recompute complete.",
+            "updated": updated,
+            "skipped": skipped,
+            "errors": errors
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # ============================================================
 # NEW: GET PRACTICE BOOKINGS (STUDENT)

@@ -6,7 +6,7 @@
 const fieldLabels = {
     firstName: 'First Name',
     lastName: 'Last Name',
-    middleName: 'Middle Name',
+    middleName: 'Middle Initial',
     dateOfBirth: 'Date of Birth',
     passport_number: 'Passport Number',
     email: 'Email',

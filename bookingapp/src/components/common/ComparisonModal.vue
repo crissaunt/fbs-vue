@@ -384,6 +384,16 @@ const profRows = computed(() => {
 // --- Performance Rubrics (5 Items) ---
 
 const rubricBreakdown = computed(() => {
+    // 🛑 SOURCE OF TRUTH: Prioritize the backend's saved rubric breakdown
+    // to guarantee 100% parity with the Instructor's Score Page!
+    let dbRb = props.activity?.rubric_breakdown;
+    if (typeof dbRb === 'string') {
+        try { dbRb = JSON.parse(dbRb); } catch (e) { dbRb = null; }
+    }
+    if (dbRb && Array.isArray(dbRb) && dbRb.length > 0) {
+        return dbRb;
+    }
+
     if (!props.activity || !props.booking) return [];
     const m = matches.value;
     const isPassport = props.activity.title?.toLowerCase().includes('passport');

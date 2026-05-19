@@ -6,7 +6,7 @@
       <div class="max-w-5xl mx-auto">
           
           <div class="flex justify-between items-center mb-6 print:hidden">
-            <button @click="router.back()" class="flex items-center text-gray-500 hover:text-black font-bold text-sm uppercase">
+            <button @click="goToSection" class="flex items-center text-gray-500 hover:text-black font-bold text-sm uppercase">
               <span class="mr-2">←</span> BACK
             </button>
             <div class="flex gap-6 text-[11px] font-bold uppercase tracking-widest">
@@ -217,9 +217,9 @@
                           </div>
                         </div>
                         
-                        <!-- Middle Name -->
+                        <!-- Middle Initial -->
                         <div v-if="hasValue(p.middle_name)">
-                          <label class="text-[9px] font-black text-gray-400 uppercase">Middle Name</label>
+                          <label class="text-[9px] font-black text-gray-400 uppercase">Middle Initial</label>
                           <div class="mt-1 p-3 border border-gray-200 rounded-lg text-xs bg-gray-50/50 uppercase text-gray-700">
                             {{ p.middle_name }}
                           </div>
@@ -273,8 +273,8 @@
                           </div>
                         </div>
 
-                        <!-- Passport Expiry Date (shown only for non-Philippines nationality) -->
-                        <div v-if="p.nationality && p.nationality.toLowerCase() !== 'philippines' && hasValue(p.passport_expiry_date)">
+                        <!-- Passport Expiry Date -->
+                        <div v-if="hasValue(p.passport_expiry_date)">
                           <label class="text-[9px] font-black text-red-500 uppercase">Passport Expiry*</label>
                           <div class="mt-1 p-3 border border-red-200 rounded-lg text-xs bg-red-50/50 uppercase text-red-800">
                             {{ p.passport_expiry_date }}
@@ -568,6 +568,14 @@ const activity = ref(null)
 const submissions = ref([])
 
 // --- Helper Functions ---
+const goToSection = () => {
+  if (activity.value?.section_id) {
+    router.push(`/instructor/section/${activity.value.section_id}`)
+  } else {
+    router.push('/instructor/dashboard')
+  }
+}
+
 // --- Computed ---
 
 const hasValue = (value) => {

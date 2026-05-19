@@ -84,5 +84,23 @@ export const activityDetailsService = {
         } catch (error) {
             throw error;
         }
+    },
+
+    /**
+     * Batch recompute rubric_breakdown and grades for all graded students
+     * in an activity using the authoritative server-side grading logic.
+     * Call this before revealing grades to guarantee table values match the score page.
+     * @param {number} activityId - Activity ID
+     * @returns {Promise} Summary of updated/skipped/error counts
+     */
+    async batchRecomputeGrades(activityId) {
+        try {
+            const response = await api.post(`api/instructor/activities/${activityId}/batch-recompute/`);
+            return response.data;
+        } catch (error) {
+            // Non-fatal — log and continue so grade reveal still works
+            console.warn('[batchRecomputeGrades] failed:', error);
+            return null;
+        }
     }
 };

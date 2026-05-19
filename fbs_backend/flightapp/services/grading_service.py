@@ -176,8 +176,26 @@ def grade_booking(booking, activity_id):
                 all_pax_passport = False
                 continue
             
-            # Category — PassengerInfo uses passenger_type (Adult/Child/Infant)
-            if not match_exact(rp.passenger_category, ap.passenger_type):
+            # Category uses ph_discount_type (Senior/PWD/Regular)
+            def norm_cat(c):
+                c = norm_str(c).replace('(none)', '').replace('citizen', '').strip()
+                return c
+            
+            act_cat = norm_cat(ap.ph_discount_type if ap else 'none')
+            exp_cat = norm_cat(rp.passenger_category if rp else 'none')
+            
+            is_s = lambda x: 'senior' in x
+            is_p = lambda x: 'pwd' in x
+            is_r = lambda x: not is_s(x) and not is_p(x)
+            
+            if is_s(exp_cat): 
+                cat_met = is_s(act_cat)
+            elif is_p(exp_cat): 
+                cat_met = is_p(act_cat)
+            else:
+                cat_met = is_r(act_cat)
+                
+            if not cat_met:
                 all_pax_category = False
                 
             # Passport
@@ -198,7 +216,7 @@ def grade_booking(booking, activity_id):
         
         org_fields = []
         for rp in req_pax:
-            ap = next((p for p in booked_pax if norm_str(p.first_name) == norm_str(rp.first_name) and norm_str(p.last_name) == norm_str(rp.last_name)), None)
+            ap = next((p for p in booked_pax if norm_str(p.first_name) == norm_str(rp.first_name) and norm_str(p.last_name) == norm_str(rp.last_name) and norm_str(p.middle_name) == norm_str(rp.middle_name)), None)
             
             # Name met
             name_met = bool(ap)

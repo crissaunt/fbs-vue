@@ -8,11 +8,17 @@
         <button 
           @click="revealGrades"
           :class="['text-[10px] font-bold text-white px-3 py-1.5 uppercase tracking-widest flex items-center gap-1.5 rounded-md transition-all shadow-sm',
-                   hasHiddenGrades ? 'bg-pink-500 hover:bg-pink-600' : 'bg-pink-300 cursor-not-allowed border border-pink-200/50 shadow-none']"
-          :disabled="!hasHiddenGrades"
+                   (hasHiddenGrades && !isRecomputing) ? 'bg-pink-500 hover:bg-pink-600' : 'bg-pink-300 cursor-not-allowed border border-pink-200/50 shadow-none']"
+          :disabled="!hasHiddenGrades || isRecomputing"
         >
           <span>SHOW GRADE</span>
-          <span class="bg-white/90 text-pink-600 text-[8px] font-black px-1 py-0.5 rounded-sm drop-shadow-sm leading-none">{{ pendingHiddenCount }}</span>
+          <span v-if="isRecomputing" class="flex items-center gap-1">
+            <svg class="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </span>
+          <span v-else class="bg-white/90 text-pink-600 text-[8px] font-black px-1 py-0.5 rounded-sm drop-shadow-sm leading-none">{{ pendingHiddenCount }}</span>
         </button>
 
         <!-- RELEASE GRADES button — For sending to student's dashboard -->
@@ -360,6 +366,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { calculateLevel, calculateTotalGrade, calculatePercentage } from '@/utils/gradingLogic'
+import { activityDetailsService } from '@/services/instructor/activityDetailsService'
 
 const props = defineProps({
   activity: Object,
@@ -414,8 +421,9 @@ const pendingHiddenCount = computed(() => {
 })
 
 const autoRevealPending = ref(false)
+const isRecomputing = ref(false)
 
-const revealGrades = () => {
+const revealGrades = async () => {
     // 1. Immediately reveal any already-loaded submitted/graded students
     props.submissions.forEach(sub => {
         if (sub.status === 'submitted' || sub.status === 'graded' || sub.is_failed_due_to_time) {
@@ -424,8 +432,19 @@ const revealGrades = () => {
             }
         }
     })
-    // 2. Flag to auto-reveal after refresh, then trigger a server-side data refresh
-    // This fetches the latest saved grades from the DB without visiting each student page
+
+    // 2. Batch-recompute ALL student rubrics server-side before refreshing
+    //    This guarantees the table values match the individual score pages.
+    if (props.activity?.id) {
+        isRecomputing.value = true
+        try {
+            await activityDetailsService.batchRecomputeGrades(props.activity.id)
+        } finally {
+            isRecomputing.value = false
+        }
+    }
+
+    // 3. Flag to auto-reveal after refresh, then fetch fresh data from server
     autoRevealPending.value = true
     emit('refresh')
 }
@@ -562,7 +581,12 @@ watch([searchQuery, filterStatus, pageSize], () => {
 const getPercentage = (sub) => {
   const totalPoints = parseFloat(props.activity?.total_points || 100)
 
-  // Priority 1: Compute strictly from rubric_breakdown using live JS Math
+  // Priority 1: Use the saved grade (set by backend grading service)
+  if (sub.grade !== null && sub.grade !== undefined) {
+    return calculatePercentage(parseFloat(sub.grade), totalPoints) // legacy DB fallback
+  }
+
+  // Priority 2: Compute strictly from rubric_breakdown using live JS Math
   // This guarantees 100% parity with instructor_students_score final assessment display.
   let rb = sub.rubric_breakdown || [];
   if (typeof rb === 'string') { try { rb = JSON.parse(rb); } catch(e) { rb = []; } }
@@ -570,11 +594,6 @@ const getPercentage = (sub) => {
     const sumRatios = rb.reduce((sum, r) => sum + (r.ratio ?? 0), 0);
     const rawScore = sumRatios * (totalPoints / 5);
     return calculatePercentage(rawScore, totalPoints);
-  }
-
-  // Priority 2: Use the saved grade (set by backend grading service)
-  if (sub.grade !== null && sub.grade !== undefined) {
-    return calculatePercentage(parseFloat(sub.grade), totalPoints) // legacy DB fallback
   }
 
   // Priority 3: fall back to legacy analysis object
@@ -644,7 +663,10 @@ const getRubricStats = (sub) => {
             'prof':     'Professionalism'
         };
         const target = mapping[keyword];
-        return rb.find(r => r.label && r.label.includes(target));
+        const item = rb.find(r => r.label && r.label.includes(target));
+        if (!item) return null;
+        
+        return item;
     };
 
     // Fallback: derive synthetic level/status from saved grade when rubric_breakdown

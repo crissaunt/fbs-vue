@@ -199,7 +199,7 @@
               <input v-model="form.first_name" type="text" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px]" placeholder="e.g. JUAN" required>
             </div>
             <div>
-              <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Middle Name (Optional)</label>
+              <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1 poppins">Middle Initial (Optional)</label>
               <input v-model="form.middle_name" type="text" class="w-full border p-2 text-sm outline-none focus:border-[#fe3787] transition-all rounded-[1px]" placeholder="e.g. DELA">
             </div>
             <div>
