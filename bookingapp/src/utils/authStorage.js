@@ -65,8 +65,15 @@ class AuthStorage {
     }
   }
 
+  static getSession() {
+    const token = sessionStorage.getItem('token') || sessionStorage.getItem('auth_token') || localStorage.getItem('token') || localStorage.getItem('auth_token')
+    const sessionId = sessionStorage.getItem('session_id') || localStorage.getItem('session_id')
+    const role = sessionStorage.getItem('role') || localStorage.getItem('role')
+    return { token, sessionId, role, isAuthenticated: !!(token && sessionId && role) }
+  }
+
   static isAuthenticated() {
-    return !!(this.getToken() && this.getSessionId() && this.getRole())
+    return this.getSession().isAuthenticated
   }
 
   static clearCurrentSession() {

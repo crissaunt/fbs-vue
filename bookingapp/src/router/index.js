@@ -7,36 +7,9 @@ import AuthStorage from '@/utils/authStorage';
 // 1. Import your new admin routes file
 import adminRoutes from './admin';
 
-// Booking Views
-import HomeView from '@/views/booking/HomeView.vue';
-import SearchResults from '@/views/booking/SearchResultsView.vue';
-import PassengerDetails from '@/views/booking/PassengerDetailsView.vue';
-import AddonsView from '@/views/booking/AddonsView.vue';
-import SeatSelection from '@/views/booking/SeatSelectionView.vue';
-import ProfileView from '@/views/Profile/ProfileView.vue';
-import ReviewBooking from '@/views/booking/ReviewBookingView.vue';
-import Payment from '@/views/booking/PaymentView.vue';
-import AirbusA321Layout from '@/components/seatmaps/AirbusA321Layout.vue';
-
-// Authentication Views
-// import Base_login from '@/views/Login.vue';
-// import Register from '@/views/Register.vue';
-
-// Instructor Views
-import InstructorDashboard from '@/views/Instructor/instructor_dashboard.vue';
-import Activity_details from '@/views/Instructor/Activity/Activity_details.vue';
-import InstructorStudentScore from '@/views/Instructor/Activity/instructor_students_score.vue';
-
-// Student Views
-import StudentLayout from '@/views/Student/StudentLayout.vue';
-import StudentDashboard from '@/views/Student/Student_dashboard.vue';
-import StudentActivityDetails from '@/views/Student/Activities/Student_activity_details.vue'
-
-// DCS Views
-import DcsLayout from '@/views/dcs/DcsLayout.vue';
-import FlightDashboardView from '@/views/dcs/FlightDashboardView.vue';
-import ManifestView from '@/views/dcs/ManifestView.vue';
-import CheckinCounterView from '@/views/dcs/CheckinCounterView.vue';
+// Booking Views are lazy-loaded via dynamic imports in route definitions.
+// Authentication Views are also lazy-loaded.
+// Instructor, Student, and DCS views are lazy-loaded via dynamic imports in route definitions.
 
 const routes = [
   // 3. Use the Spread Operator (...) to include all admin routes
@@ -68,7 +41,7 @@ const routes = [
       {
         path: 'dashboard',
         name: 'instructor_dashboard',
-        component: InstructorDashboard
+        component: () => import('@/views/Instructor/instructor_dashboard.vue')
       },
       {
         path: 'section/:id',
@@ -88,12 +61,12 @@ const routes = [
       {
         path: 'activity/:activityId',
         name: 'ActivityDetails',
-        component: Activity_details
+        component: () => import('@/views/Instructor/Activity/Activity_details.vue')
       },
       {
         path: 'activity/:activityId/student/:studentId/score',
         name: 'InstructorStudentScore',
-        component: InstructorStudentScore
+        component: () => import('@/views/Instructor/Activity/instructor_students_score.vue')
       },
       {
         path: 'activity/:activityId/toplist',
@@ -128,7 +101,7 @@ const routes = [
       {
         path: 'profile',
         name: 'InstructorProfile',
-        component: ProfileView
+        component: () => import('@/views/Profile/ProfileView.vue')
       }
     ]
   },
@@ -148,7 +121,7 @@ const routes = [
       {
         path: 'dashboard',
         name: 'StudentDashboard',
-        component: StudentDashboard
+        component: () => import('@/views/Student/Student_dashboard.vue')
       },
       {
         path: 'home',
@@ -163,7 +136,7 @@ const routes = [
       {
         path: 'activity/:id',
         name: 'StudentActivityDetails',
-        component: StudentActivityDetails,
+        component: () => import('@/views/Student/Activities/Student_activity_details.vue'),
         props: true
       },
       {
@@ -194,12 +167,12 @@ const routes = [
   {
     path: '/airbus-321',
     name: 'Airbus321',
-    component: AirbusA321Layout
+    component: () => import('@/components/seatmaps/AirbusA321Layout.vue')
   },
   {
     path: '/',
     name: 'Home',
-    component: HomeView,
+    component: () => import('@/views/booking/HomeView.vue'),
     meta: {
       layout: 'BookingLayout',
       title: 'Book a Flight | Philippine Airlines',
@@ -223,37 +196,37 @@ const routes = [
     path: '/flights/search',
     name: 'SearchResults',
     meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true },
-    component: SearchResults
+    component: () => import('@/views/booking/SearchResultsView.vue')
   },
   {
     path: '/booking/passengers',
     name: 'PassengerDetails',
     meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true, requireActiveBookingSession: true },
-    component: PassengerDetails
+    component: () => import('@/views/booking/PassengerDetailsView.vue')
   },
   {
     path: '/addons',
     name: 'Addons',
     meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true, requireActiveBookingSession: true },
-    component: AddonsView
+    component: () => import('@/views/booking/AddonsView.vue')
   },
   {
     path: '/addons/seats',
     name: 'SeatSelection',
     meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true, requireActiveBookingSession: true },
-    component: SeatSelection
+    component: () => import('@/views/booking/SeatSelectionView.vue')
   },
   {
     path: '/review/booking',
     name: 'ReviewBooking',
     meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true, requireActiveBookingSession: true },
-    component: ReviewBooking
+    component: () => import('@/views/booking/ReviewBookingView.vue')
   },
   {
     path: '/payment',
     name: 'Payment',
     meta: { layout: 'BookingLayout', requiresAuth: true, isBookingProtected: true, requireActiveBookingSession: true },
-    component: Payment
+    component: () => import('@/views/booking/PaymentView.vue')
   },
   {
     path: '/payment-callback',
@@ -269,26 +242,26 @@ const routes = [
   },
   {
     path: '/dcs',
-    component: DcsLayout,
+    component: () => import('@/views/dcs/DcsLayout.vue'),
     meta: { requiresAuth: true, role: 'student' },
     children: [
       {
         path: 'dashboard',
         name: 'DcsDashboard',
-        component: FlightDashboardView,
+        component: () => import('@/views/dcs/FlightDashboardView.vue'),
         meta: { title: 'DCS | Flight Dashboard' }
       },
       {
         path: 'manifest/:schedule_id',
         name: 'DcsManifest',
-        component: ManifestView,
+        component: () => import('@/views/dcs/ManifestView.vue'),
         meta: { title: 'DCS | Passenger Manifest' },
         props: true
       },
       {
         path: 'checkin/:booking_detail_id',
         name: 'DcsCheckin',
-        component: CheckinCounterView,
+        component: () => import('@/views/dcs/CheckinCounterView.vue'),
         meta: { title: 'DCS | Check-in Counter' },
         props: true
       },
@@ -319,10 +292,10 @@ router.beforeEach((to, from, next) => {
     document.title = to.meta.title;
   }
 
-  const token = AuthStorage.getToken();
-  const userRole = AuthStorage.getRole();
-  // Full check: requires token + sessionId + role to be a valid active session
-  const isFullyAuthenticated = AuthStorage.isAuthenticated();
+  const session = AuthStorage.getSession();
+  const token = session.token;
+  const userRole = session.role;
+  const isFullyAuthenticated = session.isAuthenticated;
 
   console.log('🛡️ Router Guard:', to.path);
   console.log('🔑 Token exists:', !!token);

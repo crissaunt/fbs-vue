@@ -76,6 +76,14 @@ export const useBookingStore = defineStore('booking', {
   persist: {
     key: 'booking-store',
     storage: localStorage,
+    paths: [
+      'booking_id', 'booking_reference', 'booking_status', 'booking_total',
+      'selectedOutbound', 'selectedReturn', 'tripType', 'multiCitySegments',
+      'passengerCount', 'contactInfo', 'activityCode', 'activityId',
+      'isPractice', 'hasActivityCodeValidation', 'activityExpiresAt',
+      'sessionExpiry', 'isFreshSession', 'bookingSessionId', 'fareFamilies',
+      'fareFamilyNames', 'nonStopOnly', 'stopPreference'
+    ],
   },
 
   getters: {
@@ -146,81 +154,80 @@ export const useBookingStore = defineStore('booking', {
       return segments;
     },
 
-    totalSeatsPrice(state) {
+    addonPrices(state) {
       const seats = state.addons?.seats || {};
-      let total = 0;
-      const activeSegments = this.allSegments;
-
-      activeSegments.forEach((seg, index) => {
-        const segKey = this.isMultiCity ? index.toString() : seg.type;
-
-        // Skip seat pricing if Premium fare is selected for this segment
-        if (state.fareFamilies[segKey] === 'premium') {
-          return;
-        }
-
-        const segmentSeats = seats[segKey] || {};
-        Object.values(segmentSeats).forEach(seat => {
-          if (seat) {
-            // Support both internal property names and backend-serialized names
-            const price = seat.final_price ?? seat.seat_price ?? seat.price ?? 0;
-            total += parseFloat(price) || 0;
-          }
-        });
-      });
-      return total;
-    },
-
-    totalBaggagePrice(state) {
-      let total = 0;
       const baggage = state.addons?.baggage || {};
+      const meals = state.addons?.meals || {};
+      const wheelchairData = state.addons?.wheelchair || {};
       const activeSegments = this.allSegments;
+
+      let seatsTotal = 0;
+      let baggageTotal = 0;
+      let mealsTotal = 0;
+      let assistanceTotal = 0;
 
       activeSegments.forEach((seg, index) => {
         const segKey = this.isMultiCity ? index.toString() : seg.type;
-        const segmentBaggage = baggage[segKey] || {};
-
         const isPremium = state.fareFamilies[segKey] === 'premium';
 
+        // Seats
+        if (!isPremium) {
+          const segmentSeats = seats[segKey] || {};
+          Object.values(segmentSeats).forEach(seat => {
+            if (seat) {
+              const price = seat.final_price ?? seat.seat_price ?? seat.price ?? 0;
+              seatsTotal += parseFloat(price) || 0;
+            }
+          });
+        }
+
+        // Baggage
+        const segmentBaggage = baggage[segKey] || {};
         Object.values(segmentBaggage).forEach(baggageItem => {
           if (baggageItem && typeof baggageItem === 'object') {
             const rawPrice = baggageItem.sale_price ?? baggageItem.price ?? 0;
             let price = parseFloat(rawPrice) || 0;
-
-            if (isPremium && baggageItem.weight_kg <= 20) {
-              price = 0;
-            } else if (isPremium && baggageItem.weight_kg > 20) {
-              price = 0;
-            }
-
-            total += price;
+            if (isPremium) price = 0;
+            baggageTotal += price;
           }
         });
-      });
-      return total;
-    },
 
-    totalMealsPrice(state) {
-      let total = 0;
-      const meals = state.addons?.meals || {};
-      const activeSegments = this.allSegments;
-
-      activeSegments.forEach((seg, index) => {
-        const segKey = this.isMultiCity ? index.toString() : seg.type;
+        // Meals
         const segmentMeals = meals[segKey] || {};
         Object.values(segmentMeals).forEach(mealArray => {
           if (Array.isArray(mealArray)) {
             mealArray.forEach(meal => {
               if (meal && typeof meal === 'object') {
                 const price = meal.sale_price ?? meal.price ?? 0;
-                total += (parseFloat(price) || 0);
+                mealsTotal += (parseFloat(price) || 0);
               }
             });
           }
         });
       });
-      return total;
+
+      // Assistance (not segment-specific)
+      Object.keys(wheelchairData).forEach(segKey => {
+        const segmentAssistance = wheelchairData[segKey] || {};
+        Object.values(segmentAssistance).forEach(assistance => {
+          if (assistance && typeof assistance === 'object' && assistance.price) {
+            assistanceTotal += parseFloat(assistance.price) || 0;
+          }
+        });
+      });
+
+      return {
+        seats: seatsTotal,
+        baggage: baggageTotal,
+        meals: mealsTotal,
+        assistance: assistanceTotal,
+        total: seatsTotal + baggageTotal + mealsTotal + assistanceTotal
+      };
     },
+
+    totalSeatsPrice() { return this.addonPrices.seats; },
+    totalBaggagePrice() { return this.addonPrices.baggage; },
+    totalMealsPrice() { return this.addonPrices.meals; },
 
     combinedBasePrice(state) {
       let base = 0;
@@ -335,9 +342,7 @@ export const useBookingStore = defineStore('booking', {
     },
 
     // Total for all selected add-ons (Active segments only)
-    totalAddonsPrice(state) {
-      return (this.totalBaggagePrice || 0) + (this.totalMealsPrice || 0) + (this.totalSeatsPrice || 0) + (this.totalAssistancePrice || 0);
-    },
+    totalAddonsPrice() { return this.addonPrices.total; },
 
     // Insurance price (per passenger: Adult + Child)
     insurancePrice(state) {
@@ -346,21 +351,7 @@ export const useBookingStore = defineStore('booking', {
       return perPerson * count;
     },
 
-    // Assistance price (active segments only)
-    totalAssistancePrice(state) {
-      let total = 0;
-      const wheelchairData = state.addons.wheelchair || {};
-
-      Object.keys(wheelchairData).forEach(segKey => {
-        const segmentAssistance = wheelchairData[segKey] || {};
-        Object.values(segmentAssistance).forEach(assistance => {
-          if (assistance && typeof assistance === 'object' && assistance.price) {
-            total += parseFloat(assistance.price) || 0;
-          }
-        });
-      });
-      return total;
-    },
+    totalAssistancePrice() { return this.addonPrices.assistance; },
 
     // Final aggregated amount (Rounded UP)
     grandTotal(state) {
@@ -1169,58 +1160,56 @@ export const useBookingStore = defineStore('booking', {
         return { success: false, error: 'No return flight selected' };
       }
 
-      const results = [];
+      // Fetch the return seat map ONCE before the loop
+      const seatMapRes = await seatService.getSeatsBySchedule(returnScheduleId, sessionId);
+      if (!seatMapRes.success) {
+        console.error('❌ Cannot copy seats: Failed to fetch return seat map');
+        return { success: false, error: 'Failed to fetch return seat map' };
+      }
+
+      const returnSeatMap = seatMapRes.seats;
       const passengerKeys = Object.keys(returnSeats);
 
-      for (const passengerKey of passengerKeys) {
+      // Parallelize all seat lock operations
+      const lockOperations = passengerKeys.map(async (passengerKey) => {
         const seat = returnSeats[passengerKey];
-        if (seat && seat.id) {
-          // Attempt to lock this seat for the return flight
-          // NOTE: In a real system, the 'seat.id' for the departure flight 
-          // might not be the same ID for the return flight even if it's the 
-          // same physical plane. However, the frontend logic seems to assume 
-          // seat objects are mapped. 
-          // CRITICAL: We need to find the seat ID in the RETURN flight map that 
-          // matches the seat_code from the departure flight.
+        if (!seat || !seat.id) return { passengerKey, success: false, error: 'No seat data' };
 
-          try {
-            // First, find the matching seat in the return flight
-            const res = await seatService.getSeatsBySchedule(returnScheduleId, sessionId);
-            if (res.success) {
-              const matchingSeat = res.seats.find(s => s.seat_code === seat.seat_code);
-              if (matchingSeat && matchingSeat.is_available) {
-                const lockRes = await seatService.lockSeat(matchingSeat.id, sessionId);
-                if (lockRes.success) {
-                  returnSeats[passengerKey] = {
-                    ...seat,
-                    id: matchingSeat.id,
-                    flight_segment: 'return',
-                    schedule_id: returnScheduleId,
-                    locked_until: lockRes.locked_until
-                  };
-                  results.push({ passengerKey, success: true });
-                } else {
-                  console.warn(`⚠️ Could not lock seat ${seat.seat_code} for return:`, lockRes.error);
-                  delete returnSeats[passengerKey];
-                  results.push({ passengerKey, success: false, error: lockRes.error });
-                }
-              } else {
-                console.warn(`⚠️ Seat ${seat.seat_code} not available or not found in return flight`);
-                delete returnSeats[passengerKey];
-                results.push({ passengerKey, success: false, error: 'Seat not available' });
-              }
-            }
-          } catch (err) {
-            console.error(`❌ Error copying seat for ${passengerKey}:`, err);
+        try {
+          const matchingSeat = returnSeatMap.find(s => s.seat_code === seat.seat_code);
+          if (!matchingSeat || !matchingSeat.is_available) {
             delete returnSeats[passengerKey];
+            return { passengerKey, success: false, error: 'Seat not available' };
           }
+
+          const lockRes = await seatService.lockSeat(matchingSeat.id, sessionId);
+          if (lockRes.success) {
+            returnSeats[passengerKey] = {
+              ...seat,
+              id: matchingSeat.id,
+              flight_segment: 'return',
+              schedule_id: returnScheduleId,
+              locked_until: lockRes.locked_until
+            };
+            return { passengerKey, success: true };
+          } else {
+            delete returnSeats[passengerKey];
+            return { passengerKey, success: false, error: lockRes.error };
+          }
+        } catch (err) {
+          console.error(`❌ Error copying seat for ${passengerKey}:`, err);
+          delete returnSeats[passengerKey];
+          return { passengerKey, success: false, error: err.message };
         }
-      }
+      });
+
+      const results = await Promise.allSettled(lockOperations);
+      const flatResults = results.map(r => r.status === 'fulfilled' ? r.value : { success: false });
 
       this.addons.seats.return = returnSeats;
       return {
-        success: results.every(r => r.success),
-        results
+        success: flatResults.every(r => r.success),
+        results: flatResults
       };
     },
 

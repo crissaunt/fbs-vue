@@ -78,15 +78,12 @@ const props = defineProps({
   weekDays: Array,
   weekRange: String,
   currentWeekContainsSelectedDate: Boolean,
-  flights: Array
+  flightCounts: Object
 });
 
 defineEmits(['prev-week', 'next-week', 'go-to-current', 'select-day']);
 
 const getFlightCount = (dateString) => {
-  return props.flights.filter(f => {
-    const flightDate = new Date(f.departure_time);
-    return flightDate.toISOString().split('T')[0] === dateString;
-  }).length;
+  return props.flightCounts[dateString] || 0;
 };
 </script>

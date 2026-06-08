@@ -13,18 +13,18 @@ export const paymentPollingService = {
   },
 
   /**
-   * Simple polling for booking status
+   * Simple polling for booking status with exponential backoff
    * Returns immediately if booking is confirmed
    */
   async pollBookingStatus(bookingId, options = {}) {
     const {
-      maxAttempts = 30,
+      maxAttempts = 15,
       interval = 2000,
       onProgress = () => { },
-      immediateFirstCheck = true
     } = options;
 
     let attempts = 0;
+    let currentInterval = interval;
 
     const checkStatus = async () => {
       attempts++;
@@ -32,13 +32,10 @@ export const paymentPollingService = {
       try {
         console.log(`🔄 Polling booking status (attempt ${attempts}/${maxAttempts})...`);
 
-        // Use the simple endpoint that doesn't search PayMongo
         let response;
         try {
           response = await api.get(`flightapp/check-booking-status/${bookingId}/`);
         } catch (simpleError) {
-          // If simple endpoint returns 404 or other error, fall back to full status check.
-          // This avoids hard-failing polling on transient or route-level issues.
           const fallback = await this.runFullPaymentCheck(bookingId);
           onProgress({
             attempt: attempts,
@@ -85,12 +82,13 @@ export const paymentPollingService = {
           };
         }
 
-        // Continue polling
+        // Exponential backoff: multiply interval by 1.5 each attempt, cap at 30s
+        currentInterval = Math.min(currentInterval * 1.5, 30000);
         return new Promise((resolve) => {
           setTimeout(async () => {
             const result = await checkStatus();
             resolve(result);
-          }, interval);
+          }, currentInterval);
         });
 
       } catch (error) {
@@ -104,7 +102,6 @@ export const paymentPollingService = {
       }
     };
 
-    // Start polling
     return checkStatus();
   },
 

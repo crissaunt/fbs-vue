@@ -690,7 +690,7 @@
             :weekDays="dateSelector.weekDays"
             :weekRange="formatWeekRange"
             :currentWeekContainsSelectedDate="currentWeekContainsSelectedDate"
-            :flights="flights"
+            :flightCounts="flightCountsByDate"
             @prev-week="prevWeek"
             @next-week="nextWeek"
             @go-to-current="goToCurrentWeek"
@@ -1231,43 +1231,30 @@ const filterOptions = ref({
 // Quick Sort Tabs Data
 const quickSortTabs = computed(() => {
   if (filteredFlights.value.length === 0) return [];
-  
-  // Find cheapest
-  const cheapest = [...filteredFlights.value].sort((a, b) => a.price - b.price)[0];
-  
-  // Find quickest (shortest duration)
-  const quickest = [...filteredFlights.value].sort((a, b) => (a.duration_minutes || 0) - (b.duration_minutes || 0))[0];
-  
-  // Find best (optimal balance of price and duration)
-  // Simplified formula: normalize price and duration (0-1), add them. Lowest score wins.
-  const maxPrice = Math.max(...filteredFlights.value.map(f => f.price));
-  const maxDuration = Math.max(...filteredFlights.value.map(f => f.duration_minutes || 1000));
-  
-  const best = [...filteredFlights.value].sort((a, b) => {
-    const scoreA = (a.price / maxPrice) * 0.6 + ((a.duration_minutes || 0) / maxDuration) * 0.4;
-    const scoreB = (b.price / maxPrice) * 0.6 + ((b.duration_minutes || 0) / maxDuration) * 0.4;
-    return scoreA - scoreB;
-  })[0];
+
+  let cheapest = filteredFlights.value[0];
+  let quickest = filteredFlights.value[0];
+  let best = filteredFlights.value[0];
+  let maxPrice = cheapest.price;
+  let maxDuration = cheapest.duration_minutes || 0;
+  let bestScore = Infinity;
+
+  for (const f of filteredFlights.value) {
+    if (f.price < cheapest.price) cheapest = f;
+    if ((f.duration_minutes || 0) < (quickest.duration_minutes || 0)) quickest = f;
+    if (f.price > maxPrice) maxPrice = f.price;
+    if ((f.duration_minutes || 0) > maxDuration) maxDuration = f.duration_minutes || 0;
+  }
+
+  for (const f of filteredFlights.value) {
+    const score = (f.price / maxPrice) * 0.6 + ((f.duration_minutes || 0) / maxDuration) * 0.4;
+    if (score < bestScore) { bestScore = score; best = f; }
+  }
 
   return [
-    { 
-      value: 'price_low', 
-      label: 'Cheapest', 
-      price: cheapest?.price, 
-      duration: formatDuration(cheapest?.duration_minutes) 
-    },
-    { 
-      value: 'best', 
-      label: 'Best', 
-      price: best?.price,
-      duration: formatDuration(best?.duration_minutes)
-    },
-    { 
-      value: 'duration', 
-      label: 'Quickest', 
-      price: quickest?.price, 
-      duration: formatDuration(quickest?.duration_minutes) 
-    }
+    { value: 'price_low', label: 'Cheapest', price: cheapest.price, duration: formatDuration(cheapest.duration_minutes) },
+    { value: 'best', label: 'Best', price: best.price, duration: formatDuration(best.duration_minutes) },
+    { value: 'duration', label: 'Quickest', price: quickest.price, duration: formatDuration(quickest.duration_minutes) }
   ];
 });
 
@@ -1613,6 +1600,9 @@ const initializeEditSearch = () => {
 };
 
 // Search airports for autocomplete
+const airportSearchCache = new Map()
+const CACHE_TTL = 60000
+
 const searchEditAirports = debounce(async (query, target, index = null) => {
   if (query.includes(' - ')) return;
 
@@ -1627,28 +1617,37 @@ const searchEditAirports = debounce(async (query, target, index = null) => {
     return;
   }
 
-  try {
-    const response = await airportService.searchAirports(searchQuery);
-    const airports = response.data.results || response.data;
-    
-    // Filter out opposite selected airport
-    let oppositeCode = null;
-    if (index !== null) {
-      const leg = editSearchForm.value.legs[index];
-      oppositeCode = target === 'from' ? leg.selectedTo?.code : leg.selectedFrom?.code;
-    } else {
-      oppositeCode = target === 'from' ? selectedToAirport.value?.code : selectedFromAirport.value?.code;
+  let airports;
+  const cacheKey = `${searchQuery}_${target}`;
+  if (airportSearchCache.has(cacheKey)) {
+    airports = airportSearchCache.get(cacheKey);
+  } else {
+    try {
+      const response = await airportService.searchAirports(searchQuery);
+      airports = response.data.results || response.data;
+      airportSearchCache.set(cacheKey, airports);
+      setTimeout(() => airportSearchCache.delete(cacheKey), CACHE_TTL);
+    } catch (error) {
+      console.error("Airport search error:", error);
+      return;
     }
-    const filtered = airports.filter(a => a.code !== oppositeCode);
+  }
 
-    if (index !== null) {
-      editSearchForm.value.legs[index][target === 'from' ? 'fromResults' : 'toResults'] = filtered;
-    } else {
-      if (target === 'from') fromResults.value = filtered;
-      else toResults.value = filtered;
-    }
-  } catch (error) {
-    console.error("Airport search error:", error);
+  // Filter out opposite selected airport
+  let oppositeCode = null;
+  if (index !== null) {
+    const leg = editSearchForm.value.legs[index];
+    oppositeCode = target === 'from' ? leg.selectedTo?.code : leg.selectedFrom?.code;
+  } else {
+    oppositeCode = target === 'from' ? selectedToAirport.value?.code : selectedFromAirport.value?.code;
+  }
+  const filtered = airports.filter(a => a.code !== oppositeCode);
+
+  if (index !== null) {
+    editSearchForm.value.legs[index][target === 'from' ? 'fromResults' : 'toResults'] = filtered;
+  } else {
+    if (target === 'from') fromResults.value = filtered;
+    else toResults.value = filtered;
   }
 }, 300);
 
@@ -2761,6 +2760,16 @@ const uniqueDates = computed(() => {
     };
   });
 });
+
+// Pre-compute flight counts per date for DateNavigator (avoids filtering on every render)
+const flightCountsByDate = computed(() => {
+  const counts = {}
+  flights.value.forEach(f => {
+    const date = new Date(f.departure_time).toISOString().split('T')[0]
+    counts[date] = (counts[date] || 0) + 1
+  })
+  return counts
+})
 
 // Proceed to passenger details
 const proceedToPassengerDetails = () => {

@@ -3,39 +3,52 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBookingStore } from '@/stores/booking'
 import { useModalStore } from '@/stores/modal'
-import { useNotificationStore } from '@/stores/notification'
 
 const router = useRouter()
 const bookingStore = useBookingStore()
 const modalStore = useModalStore()
-const notificationStore = useNotificationStore()
 
-const isSessionValid = computed(() => bookingStore.isSessionValid)
 const isPracticeMode = computed(() => bookingStore.isPractice)
 const hasValidation = computed(() => bookingStore.hasActivityCodeValidation)
-const timeLeft = computed(() => bookingStore.timeLeftFormatted)
-const secondsLeft = computed(() => bookingStore.secondsLeft)
-const isUrgent = computed(() => secondsLeft.value < 120 && secondsLeft.value > 0)
 const isManageDropdownOpen = ref(false)
 
-let timerInterval = null
+const now = ref(Date.now())
+let displayTimer = null
+let sessionCheckTimer = null
+
+const secondsLeft = computed(() => {
+  if (!bookingStore.activityExpiresAt) return 0
+  return Math.max(0, Math.round((new Date(bookingStore.activityExpiresAt).getTime() - now.value) / 1000))
+})
+
+const timeLeft = computed(() => {
+  const totalSecs = secondsLeft.value
+  if (totalSecs <= 0) return '0m 0s'
+  const mins = Math.floor(totalSecs / 60)
+  const secs = totalSecs % 60
+  return `${mins}m ${secs}s`
+})
+
+const isUrgent = computed(() => secondsLeft.value < 120 && secondsLeft.value > 0)
 
 onMounted(() => {
   window.addEventListener('click', handleGlobalClick)
-  timerInterval = setInterval(() => {
-    // Session validation does not run during Online Check-in
+  displayTimer = setInterval(() => {
+    now.value = Date.now()
+  }, 1000)
+  sessionCheckTimer = setInterval(() => {
     if (router.currentRoute.value.path === '/check-in') return
-
     const session = bookingStore.checkSession()
     if (!session.valid && hasValidation.value) {
       handleTimeUp()
     }
-  }, 1000)
+  }, 10000)
 })
 
 onUnmounted(() => {
   window.removeEventListener('click', handleGlobalClick)
-  if (timerInterval) clearInterval(timerInterval)
+  if (displayTimer) clearInterval(displayTimer)
+  if (sessionCheckTimer) clearInterval(sessionCheckTimer)
 })
 
 const isTimeUpHandled = ref(false)
@@ -44,9 +57,9 @@ async function handleTimeUp() {
   if (isTimeUpHandled.value) return
   isTimeUpHandled.value = true
   
-  if (timerInterval) clearInterval(timerInterval)
+  if (displayTimer) clearInterval(displayTimer)
+  if (sessionCheckTimer) clearInterval(sessionCheckTimer)
   
-  // Call backend to fail the activity first
   if (!isPracticeMode.value) {
     await bookingStore.failActivity()
   }
